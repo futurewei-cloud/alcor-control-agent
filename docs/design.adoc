@@ -63,10 +63,23 @@ The network agent will have the follow roles, the code below will live in one bi
 
 [width="100%",options="header"]
 |====================
-| VPC table |  |Network Table  |  |Endpoint Table   |  |  |  
-| VPC0 | {10.0.0.0/16,[172.3,172.4]} |Net0   |{10.0.0.0/25[172.1,172.2]}  |10.0.0.1  |Net0  |VPC0  |172.1  
-|  |  |  |  |10.0.0.2    |Net0  |VPC0  |172.2  
+| VPC table  |
+| VPC0 | {10.0.0.0/16,[172.3,172.4]} 
 |====================
+
+[width="100%",options="header"]
+|====================
+|Network Table   |
+|Net0   |{10.0.0.0/25[172.1,172.2]}  
+|====================
+
+[width="100%",options="header"]
+|====================
+|Endpoint Table   |  |  |  
+|10.0.0.1  |Net0  |VPC0  |172.1  
+|10.0.0.2    |Net0  |VPC0  |172.2  
+|====================
+
 
 == Interface with Network Controller
 Working in progress...
