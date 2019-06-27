@@ -6,7 +6,7 @@ The Cloud Fabric Network Control Agent runs on each host machine. It serves as a
 
 == Requirements
 
-. Network Control Agent will reside on each host machine to interface between network controller and host networking components. The main responsible is the create and configure network to 
+. Network Control Agent will reside on each host machine to interface between network controller and host networking components. The main responsibility is to create and configure network to 
 enable connectivity (VPC IP < - > Physical IP mapping) between VMs/Containers within the datacenter and the outside world through EIP.
 
 . It will update networking configuration on the host:
