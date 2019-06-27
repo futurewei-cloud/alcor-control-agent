@@ -11,14 +11,12 @@ enable connectivity (VPC IP < - > Physical IP mapping) between VMs/Containers wi
 
 . It will update networking configuration on the host:
 	.. Setup networking/linux bridge/OVS on the host (if not exist)
-	.. Create vNIC and vPort for VM (unless this is done by Compute agent)
-	.. Configure vNIC and vPort, connect to the VM
+	.. Create vNIC and vPort for VM/Container (unless this is done by Compute agent)
+	.. Configure vNIC and vPort, connect to the VM/Container
 	.. Attach Security group to a vNIC TODO: add more detail
 	.. Attached transit switch/router to the corresponding vNIC(veth)
 	
 . It will also update VPC Configuration (VPC, Subnet, Security Group, Routing) including CRUD (create/Read/Update/Delete) VPC/Subnet/Endpoint.
-
-. Interface with SN agent for passing network monitoring data (for https://github.com/futurewei-cloud/Transit/blob/master/docs/modules/ROOT/pages/design/monitoring.adoc[Network Monitoring] option B only)
 
 == Roles
 
@@ -96,9 +94,9 @@ Openstack only talks about using authentication token: +
 https://docs.openstack.org/ocata/config-reference/common-configurations/auth.html
 
 
-== Interaction with Monitoring system (SN)
+== Network Monitoring system (SN)
 
-Since Network Control Agent is a simple stateless proxy, SN monitoring agent will pull metrics data based on the type of networking data it needs, on the frequency required for its analytical system (for the 9/30 delivery).  https://github.com/futurewei-cloud/Transit/blob/master/docs/modules/ROOT/pages/design/monitoring.adoc[See here for more detail.]
+Network Control Agent and SN Agent will work independently. https://github.com/futurewei-cloud/Transit/blob/master/docs/modules/ROOT/pages/design/monitoring.adoc[See here for more detail.]
 
 
 == API Versioning of Network Control Agent and Network Controller
@@ -126,8 +124,6 @@ Further implementation options are compared below ^[2],[3],[4]^
 . CRUD (create/Read/Update/Delete) VPC/Subnet/Endpoint  
 
 . CRUD of Network Security Group and attachment to the Subnet/Endpoint
-
-. Get metrics call from SN (for https://github.com/futurewei-cloud/Transit/blob/master/docs/modules/ROOT/pages/design/monitoring.adoc[Network Monitoring] option B only)
 
 == Reference
 
