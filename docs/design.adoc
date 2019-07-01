@@ -103,11 +103,11 @@ Network Control Agent and SN Agent will work independently. https://github.com/f
 
 === Communication Manager
 
-This component will interface with Kafka to process orders from Network Controller. It will subscribe to topics published by Network Controller
+This will interface with Kafka to process messages from Network Controller. It will subscribe to topics published by Network Controller.
 
 === Network Configurator
 
-This module will receive commands from Network Controller and configure the host networking components. It includes OVS, vNICs/vPorts, etc. It is also responsible to connect the vNICs to the vPorts on OVS once the VM/Container is running.
+Based on message from Network Controller, it will configure host networking components. That includes OVS, vNICs/vPorts, etc. It is also responsible to connect vNICs to the vPorts on OVS once the VM/Container is running.
 
 === Security policy Manager
 
@@ -115,11 +115,11 @@ Responsible to configure and update the security policies on vNICs/vPorts.
 
 === Transit Agent programmer
 
-This module will interface with Transit daemon to program to transit router/switch/endpoint.
+This will interface with user mode Transit daemon to program the transit router/switch/endpoint.
 
 === Log Mangaer
 
-It will create the log file, manage the configuration and maintain the Network control agent logs.
+It will create the log file, manage the log configuration and maintain the Network control agent logs.
 
 
 == API Versioning of Network Control Agent and Network Controller
