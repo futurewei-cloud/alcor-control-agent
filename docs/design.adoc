@@ -44,11 +44,11 @@ The network agent will have the follow roles, the code below will live in one bi
 
 . Customer Creates a new VPC
 	.. Allocate transit router
-		... Smart place [router1, router2]
+		... Smart placement [router1, router2]
 		... Go to router1, router2 and add VPC to the VPC table (Call “Update VPC”) (VPC table)
 . Customer creates new network(subnet)
 	.. Allocate transit switch
-		... Smart place [Switch1, Switch2]
+		... Smart placement [Switch1, Switch2]
 		... Go to router1, and router2 and “Update net” (net table)
 		... Go to s1, s2, s3 and call “Update net" (net table)
 		... Go to s1, s2, s3 and call “Update VPC” (VPC table)
@@ -68,7 +68,7 @@ The network agent will have the follow roles, the code below will live in one bi
 [width="100%",options="header"]
 |====================
 |Network Table   |
-|Net0   |{10.0.0.0/25[172.1,172.2]}  
+|Net0   |{10.0.0.0/25,[172.1,172.2]}  
 |====================
 
 [width="100%",options="header"]
@@ -97,6 +97,29 @@ https://docs.openstack.org/ocata/config-reference/common-configurations/auth.htm
 == Network Monitoring system (SN)
 
 Network Control Agent and SN Agent will work independently. https://github.com/futurewei-cloud/Transit/blob/master/docs/modules/ROOT/pages/design/monitoring.adoc[See here for more detail.]
+
+
+== Highlevel Components
+
+=== Communication Manager
+
+This component will interface with Kafka to process orders from Network Controller. It will subscribe to topics published by Network Controller
+
+=== Network Configurator
+
+This module will receive commands from Network Controller and configure the host networking components. It includes OVS, vNICs/vPorts, etc. It is also responsible to connect the vNICs to the vPorts on OVS once the VM/Container is running.
+
+=== Security policy Manager
+
+Responsible to configure and update the security policies on vNICs/vPorts.
+
+=== Transit Agent programmer
+
+This module will interface with Transit daemon to program to transit router/switch/endpoint.
+
+=== Log Mangaer
+
+It will create the log file, manage the configuration and maintain the Network control agent logs.
 
 
 == API Versioning of Network Control Agent and Network Controller
