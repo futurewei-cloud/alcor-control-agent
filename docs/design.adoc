@@ -107,17 +107,26 @@ This will interface with Kafka to process messages from Network Controller. It w
 
 === Network Configurator
 
-Based on message from Network Controller, it will configure host networking components. That includes OVS, vNICs/vPorts, etc. It is also responsible to connect vNICs to the vPorts on OVS once the VM/Container is running.
+1. It will collect the network configuration from the host machine and send to Network Controller through Kafka, including:
+. SRIOV support
+. DPDK support
+. Bandwidth (10G/25G/40G)
+. IP of the host machine (is it DHCP or assigned?)
+2. It will call OVS daemon to setup and configure OVS
+. What is the OVS API?
+3. Connect vNICs to the vPorts on OVS once the VM/Container is running.
+. What is the OVS API?
 
 === Security policy Manager
 
 Responsible to configure and update the security policies on vNICs/vPorts.
 
-=== Transit Agent programmer
+=== Transit Agent Manager
 
 This will interface with user mode Transit daemon to program the transit router/switch/endpoint.
+. Put in API information here when it is available.
 
-=== Log Mangaer
+=== Log Manager
 
 It will create the log file, manage the log configuration and maintain the Network control agent logs.
 
