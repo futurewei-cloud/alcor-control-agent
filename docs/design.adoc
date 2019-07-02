@@ -112,9 +112,9 @@ This will interface with Kafka to process messages from Network Controller. It w
 . IP of the host machine (is it DHCP or assigned?)
 2. Network Controller will decide what network configuration to be applied on the host machine, and send it to network control agent through Kafka.
 2. It will call OVS daemon to setup and configure OVS
-. What is the OVS API?
+. See OVS solution example in the reference session
 3. Connect vNICs to the vPorts on OVS once the VM/Container is running.
-. What is the OVS API?
+. e.g. ovs-vsctl add-port br0 eth0
 
 === Security policy Manager
 
@@ -177,7 +177,8 @@ Further implementation options are compared below ^[2],[3],[4]^
 . https://docs.openstack.org/neutron/pike/contributor/internals/openvswitch_agent.html
 . https://github.com/kubernetes/community/blob/master/contributors/design-proposals/release/versioning.md
 . https://dzone.com/articles/backward-compatibility-check-for-rest-apis
-. https://stackoverflow.com/questions/29871744/how-do-you-manage-the-underlying-codebase-for-a-versioned-api 
+. https://stackoverflow.com/questions/29871744/how-do-you-manage-the-underlying-codebase-for-a-versioned-api
+. https://stackoverflow.com/questions/29876818/how-can-i-connect-open-vswitch-port-and-virtual-ethernet-interface[OVS solution example]
 . https://github.com/futurewei-cloud/Transit/blob/master/docs/modules/ROOT/pages/design/monitoring.adoc[Network Control Agent and SN Agent will work independently]
 . https://support.huaweicloud.com/en-us/usermanual-ecs/en-us_topic_0030878383.html[Security Group Rule format in Huawei Cloud]
 
