@@ -7,6 +7,8 @@
 using namespace std;
 using namespace cppkafka;
 
+namespace messagemanager{ 
+
 class MessageProducer {
 
 private:
@@ -19,11 +21,13 @@ private:
 
     Configuration config;       //Configuration of a producer
 
-    Producer& m_producer;       //An instance of kafka producer
+    Producer* ptr_producer;     //A pointer to the kafka producer
 
 public: 
 
     MessageProducer(string brokers, string topic, int partition); 
+
+    ~MessageProducer();
 
     string getBrokers() const;
 
@@ -41,5 +45,7 @@ private:
 
     void setBrokers(string brokers);
 };
+
+} // meesagemanager 
 
 #endif

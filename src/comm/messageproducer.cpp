@@ -5,35 +5,40 @@
 using namespace std;
 using namespace cppkafka;
 
+namespace messagemanager{
+
 MessageProducer::MessageProducer(string brokers, string topic, int partition){
 	setBrokers(brokers);
 	setTopicName(topic);
 	setPartitionValue(partition);
 
 	// Construct the configuration
-    	config = {
+	this->config = {
         	{ "metadata.broker.list", brokers_list }
     	};
 
     	// Create the producer
-     	Producer producer(config);
-    	m_producer = producer;
+	this->ptr_producer = new Producer(this->config);
 } 
 
+MessageProducer::~MessageProducer(){
+	delete ptr_producer;
+}
+
 string MessageProducer::getBrokers() const{
-	return brokers_list;
+	return this->brokers_list;
 }
 
 string MessageProducer::getTopicName() const{
-	return topic_name;
+	return this->topic_name;
 }
 
 void MessageProducer::setTopicName(string topic){
-	topic_name = topic;
+	this->topic_name = topic;
 }
 
 int MessageProducer::getPartitionValue() const{
-	return partition_value;
+	return this->partition_value;
 }
 
 void MessageProducer::setPartitionValue(int partition){
@@ -41,31 +46,32 @@ void MessageProducer::setPartitionValue(int partition){
 		throw invalid_argument("Negative partition value");
 	}
 
-	partition_value = partition;
+	this->partition_value = partition;
 }
  
 void MessageProducer::publish(string message){
-	 
-	 // Create a message builder for this topic
-         MessageBuilder builder(topic_name);
 
-         // Get the partition we want to write to. If no partition is provided, this will be
-         // an unassigned one
+	 // Create a message builder for this topic
+         MessageBuilder builder(this->topic_name);
+
+         // Get the partition. If no partition is provided, this will be an unassigned one
         if (partition_value != -1) {
-           builder.partition(partition_value);
+           builder.partition(this->partition_value);
         }  
 
 	// Set the payload on this builder
         builder.payload(message);
 
-        // Actually produce the message we've built
-        m_producer.produce(builder);
-    
+        // Actually produce the message
+        this->ptr_producer->produce(builder);
+
 	// Flush all produced messages
-    	m_producer.flush();
+	this->ptr_producer->flush();
 }
 
 void MessageProducer::setBrokers(string brokers){
 	//TODO: validate string as IP address
-	brokers_list = brokers;
+	this->brokers_list = brokers;
 }
+
+} //messagemanager
