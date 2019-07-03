@@ -145,6 +145,9 @@ Note: XDP programs are preloaded on both physical NIC and vNIC as created by the
 
 It will create the log file, manage the log configuration and maintain the Network control agent logs. Need to decide on how many days to keep the logs, e.g. 7 days. 
 
+The log should at least contain a timestamp, source file name and line number, message. The network control agent code should be able to specify the log level and can accept the targetted log level through command line.
+Syslog is a good target framework, it is a proven mechanism in linux and it is https://askubuntu.com/questions/184949/how-do-i-limit-the-size-of-my-syslog[configurable for our needs]. See reference session for more information.
+
 
 == API Versioning of Network Control Agent and Network Controller
 
@@ -180,6 +183,7 @@ Further implementation options are compared below ^[2],[3],[4]^
 . https://stackoverflow.com/questions/29871744/how-do-you-manage-the-underlying-codebase-for-a-versioned-api
 . https://stackoverflow.com/questions/29876818/how-can-i-connect-open-vswitch-port-and-virtual-ethernet-interface[OVS solution example]
 . https://github.com/futurewei-cloud/Transit/blob/master/docs/modules/ROOT/pages/design/monitoring.adoc[Network Control Agent and SN Agent will work independently]
+. https://stackoverflow.com/questions/158457/daemon-logging-in-linux[Logging in Linux]
 . https://support.huaweicloud.com/en-us/usermanual-ecs/en-us_topic_0030878383.html[Security Group Rule format in Huawei Cloud]
 
 [width="100%",options="header"]
