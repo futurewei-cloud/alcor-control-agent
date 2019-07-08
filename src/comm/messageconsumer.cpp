@@ -2,8 +2,14 @@
 #include <stdexcept>
 #include "messageconsumer.h"
 
-using namespace std;
-using namespace cppkafka;
+using std::string;
+using std::exception;
+using std::cout;
+using std::endl;
+using cppkafka::Consumer;
+using cppkafka::Configuration;
+using cppkafka::Message;
+using cppkafka::TopicPartitionList;
 
 namespace messagemanager{ 
 
@@ -24,7 +30,6 @@ MessageConsumer::MessageConsumer(string brokers, string group_id){
 }
 
 MessageConsumer::~MessageConsumer(){
-	cout << "before deleting: " <<  ptr_consumer << endl;
 	delete ptr_consumer;
 }
 

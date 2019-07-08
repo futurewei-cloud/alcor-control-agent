@@ -4,8 +4,9 @@
 #include "cppkafka/consumer.h"
 #include "cppkafka/configuration.h"
 
-using namespace std;
-using namespace cppkafka;
+using std::string;
+using cppkafka::Consumer;
+using cppkafka::Configuration;
 
 namespace messagemanager{ 
 
