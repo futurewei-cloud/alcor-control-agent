@@ -1,6 +1,6 @@
 // c includes
 #include "nca_log.h"
-#include "../../Transit/src/rpcgen/trn_rpc_protocol.h" // TODO: need to use a better path
+//#include "../../Transit/src/rpcgen/trn_rpc_protocol.h" // TODO: need to use a better path
 
 // cpp includes
 #include <iostream>
