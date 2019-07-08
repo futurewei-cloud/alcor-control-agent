@@ -1,8 +1,13 @@
 #include <iostream>
+#include <chrono>
+#include <thread>
 #include "messageproducer.h"
+#include "messageconsumer.h"
 
 using namespace std;
+using namespace std::chrono_literals;
 using messagemanager::MessageProducer;
+using messagemanager::MessageConsumer;
 
 int main() {
     
@@ -10,8 +15,9 @@ int main() {
     //TODO: load it from configuration file 
     string host_id = "00000000-0000-0000-0000-000000000000";
     string broker_list = "10.213.43.188:9092";
-    string topic_host_spec = "kafka_test";  //"/hostid/" + host_id + "/hostspec/";
+    string topic_host_spec = "kafka_test2";  //"/hostid/" + host_id + "/hostspec/";
     int partition_value = 0;
+    bool keep_listen = true;
 
     //Check if OVS and/or OVS daemon exists; if not, launch the program
     
@@ -30,14 +36,30 @@ int main() {
     cout << "partition:" << host_spec_producer.getPartitionValue() << endl;
 
     string host_network_spec = "fake config";
-    cout << "Prepare for publishing " << host_network_spec  <<endl;
-    host_spec_producer.publish(host_network_spec);
-    cout << "Publish completed" << endl;
+    //cout << "Prepare for publishing " << host_network_spec  <<endl;
+    //host_spec_producer.publish(host_network_spec);
+    //cout << "Publish completed" << endl;
 
     //Listen to Kafka clusters for any network configuration operations
-    
+    MessageConsumer network_config_consumer(broker_list, "test");
+    string** payload;
+
+    while(keep_listen){
+    	bool pool_res = network_config_consumer.consume(topic_host_spec, payload);
+    	if(pool_res){
+    		cout << "Processing payload....: " << **payload << endl;    
+    	}
+    	else{
+		//cout << "pool fails" << endl;
+    	}
+
+	//if(payload != nullptr && *payload != nullptr){
+	//	delete *payload;
+	//}
+        std::this_thread::sleep_for(5s);	
+    }
+
     //Receive and deserialize any new configuration
     
     //Depending on different operations, program XDP through corresponding RPC apis by transit daemon
 }
-

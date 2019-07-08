@@ -14,7 +14,7 @@ MessageProducer::MessageProducer(string brokers, string topic, int partition){
 
 	// Construct the configuration
 	this->config = {
-        	{ "metadata.broker.list", brokers_list }
+		{ "metadata.broker.list", this->brokers_list }
     	};
 
     	// Create the producer
