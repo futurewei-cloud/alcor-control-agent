@@ -9,6 +9,7 @@ FIND_LIBRARY(MESSAGEMANAGER messagemanager ${CMAKE_CURRENT_SOURCE_DIR}/../includ
 link_libraries(${RDKAFKA} ${CPPKAFKA})
 include_directories(${RDKAFKA_INCLUDE_DIR} ${CPPKAFKA_INCLUDE_DIR})
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../include)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../../Transit/src/rpcgen)
 
 add_library(networkControlAgentLib STATIC ${SOURCES})
 add_executable(networkControlAgent netwagent.cpp)
