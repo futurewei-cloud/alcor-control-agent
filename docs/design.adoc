@@ -137,12 +137,12 @@ Syslog is a good target framework, it is a proven mechanism in linux and it is h
 == Interface with Network Controller
 Working in progress...
 
-. Security Group API
+. Security Group API: +
 https://github.com/openstack/neutron/blob/master/neutron/agent/securitygroups_rpc.py
 
 . Communication Method (Kafka) and message format 
 
-. Authentication and Authorization
+. Authentication and Authorization: +
 Huawei Cloud allow either using tokens (valid for 24 hours) or AK/SK when calling ECS APIs. +
 https://support-intl.huaweicloud.com/en-us/api-ecs/en-us_topic_0124306062.html +
 Openstack only talks about using authentication token: +
