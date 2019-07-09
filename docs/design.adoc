@@ -12,9 +12,9 @@ enable connectivity (VPC IP < - > Physical IP mapping) between VMs/Containers wi
 
 . It will update networking configuration on the host:
 	.. Setup networking/linux bridge/OVS on the host (if not exist)
-	.. Create vNIC and vPort for VM/Container (unless this is done by Compute agent) TODO: need to confirm with XiaoNing
-	.. Configure vNIC and vPort, connect to the VM/Container
-	.. Attach Security group to a vNIC TODO: add more detail
+	.. Create vPort for VM/Container (unless this is done by Compute agent)
+	.. Configure vNIC and vPort, connect them for the VM/Container
+	.. Attach Security group to a vNIC TODO: add more detail after dataplane performance analysis without it
 	.. Attached transit agent to the corresponding vNIC(veth) and transit switch/router on the physical NIC
 	
 . It will also update VPC Configuration (VPC, Subnet, Security Group, Routing) including CRUD (Create/Read/Update/Delete) VPC/Subnet/Endpoint.
@@ -24,8 +24,8 @@ enable connectivity (VPC IP < - > Physical IP mapping) between VMs/Containers wi
 The network control agent will have the following roles, the code below will live in one binary. 
 
 . Local Host Networking Agent
-. Network Agent Health management, transit daemon and agents health 
-.. TODO: need to expand this, may live in a seperate doc, post 9/30
+. Network Control Agent Health management, transit daemon and agents health, VM/Container networking health monitoring
+.. TODO: need to expand this, will likely live in a seperate doc, post 9/30
 . Transit (dataplane) user mode Agent
 . Network Component upgrade Agent
 
@@ -45,7 +45,7 @@ The network control agent will have the following roles, the code below will liv
 
 == Workflow
 
-. Customer Creates a new VPC
+. Customer creates a new VPC
 	.. Allocate transit router
 		... Smart placement [router1, router2]
 		... Go to router1, router2 and add VPC to the VPC table (Call “Update VPC”) (VPC table)
@@ -80,21 +80,6 @@ The network control agent will have the following roles, the code below will liv
 |10.0.0.1  |Net0  |VPC0  |[172.1,...]  
 |10.0.0.2    |Net0  |VPC0  |[172.2,...]  
 |====================
-
-
-== Interface with Network Controller
-Working in progress...
-
-. API
-https://github.com/openstack/neutron/blob/master/neutron/agent/securitygroups_rpc.py
-
-. Protocol 
-
-. Authentication 
-Huawei Cloud allow either using tokens (valid for 24 hours) or AK/SK when calling ECS APIs. +
-https://support-intl.huaweicloud.com/en-us/api-ecs/en-us_topic_0124306062.html +
-Openstack only talks about using authentication token: +
-https://docs.openstack.org/ocata/config-reference/common-configurations/auth.html
 
 
 == Highlevel Components
@@ -145,8 +130,23 @@ Note: XDP programs are preloaded on both physical NIC and vNIC as created by the
 
 It will create the log file, manage the log configuration and maintain the Network control agent logs. Need to decide on how many days to keep the logs, e.g. 7 days. 
 
-The log should at least contain a timestamp, source file name and line number, message. The network control agent code should be able to specify the log level and can accept the targetted log level through command line.
+The log should at least contain a timestamp, source file name and line number, message. The network control agent code should be able to specify the log level and can configure the targetted log level at runtime.
 Syslog is a good target framework, it is a proven mechanism in linux and it is https://askubuntu.com/questions/184949/how-do-i-limit-the-size-of-my-syslog[configurable for our needs]. See reference session for more information.
+
+
+== Interface with Network Controller
+Working in progress...
+
+. Security Group API
+https://github.com/openstack/neutron/blob/master/neutron/agent/securitygroups_rpc.py
+
+. Communication Method (Kafka) and message format 
+
+. Authentication and Authorization
+Huawei Cloud allow either using tokens (valid for 24 hours) or AK/SK when calling ECS APIs. +
+https://support-intl.huaweicloud.com/en-us/api-ecs/en-us_topic_0124306062.html +
+Openstack only talks about using authentication token: +
+https://docs.openstack.org/ocata/config-reference/common-configurations/auth.html
 
 
 == API Versioning of Network Control Agent and Network Controller
@@ -167,13 +167,6 @@ Further implementation options are compared below ^[2],[3],[4]^
 | Maintain multiple branches for major API versions | Easy to delete old API versions | Convoluted branch structure deployment pipeline     
 |====================
 
-== API Design
-
-. Heart beat with the controller
-
-. CRUD (create/Read/Update/Delete) VPC/Subnet/Endpoint  
-
-. CRUD of Network Security Group and attachment to the Subnet/Endpoint
 
 == Reference
 
