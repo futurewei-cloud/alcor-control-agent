@@ -36,6 +36,8 @@ Download cppkafka from GitHub [here](https://github.com/mfontanini/cppkafka/blob
 
 ## Compiling NetworkAgent
 
+Note that _networkcontrolagent_ depends on transit daemon interface to invoke it (through RPC) to program XDP. Therefore, it expect to have a transit code in parallel to the root "AliothControlAgent" directory and it can compile to generate the needed "trn_rpc_protocol.h" header file.
+
 In order to compile _networkcontrolagent_ you need to run,
 
 ```Shell
