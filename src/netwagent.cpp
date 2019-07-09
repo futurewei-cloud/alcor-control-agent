@@ -19,11 +19,11 @@ using messagemanager::MessageProducer;
 // function to parse and process the command from network controller
 int aca_parse_and_program(string raw_string)
 {
-    static CLIENT *clnt;
+    static CLIENT *client;
     char LOCALHOST[] = "localhost";
     char UDP[] = "udp";
-    char *server = LOCALHOST;
-    char *protocol = UDP;
+    char *rpc_server = LOCALHOST;
+    char *rpc_protocol = UDP;
     uint controller_command = 0;
     int *rc;
 
@@ -35,98 +35,101 @@ int aca_parse_and_program(string raw_string)
     //Depending on different operations, program XDP through corresponding RPC
     //apis by transit daemon
     //P0, tracked by issue#17
-    ACA_LOG_INFO("Connecting to %s using %s protocol.\n", server, protocol);
+    ACA_LOG_INFO("Connecting to %s using %s protocol.\n", rpc_server, rpc_protocol);
 
-    clnt = clnt_create(server, RPC_TRANSIT_REMOTE_PROTOCOL,
-                       RPC_TRANSIT_ALFAZERO, protocol);
+    client = clnt_create(rpc_server, RPC_TRANSIT_REMOTE_PROTOCOL,
+                         RPC_TRANSIT_ALFAZERO, rpc_protocol);
 
-    if (clnt == NULL)
+    if (client == NULL)
     {
-        clnt_pcreateerror(server);
+        clnt_pcreateerror(rpc_server);
         ACA_LOG_EMERG("Not able to create the RPC connection to Transit daemon.\n");
-    }
-
-    switch (controller_command)
-    {
-    case UPDATE_VPC:
-        // rc = update_vpc_1 ...
-        break;
-    case UPDATE_NET:
-        // rc = UPDATE_NET_1 ...
-        break;
-    case UPDATE_EP:
-        // rc = UPDATE_EP_1 ...
-        break;
-    case UPDATE_AGENT_EP:
-        // rc = UPDATE_AGENT_EP_1 ...
-        break;
-    case UPDATE_AGENT_MD:
-        // rc = UPDATE_AGENT_MD ...
-        break;
-    case DELETE_NET:
-        // rc = DELETE_NET ...
-        break;
-    case DELETE_EP:
-        // rc = DELETE_EP ...
-        break;
-    case DELETE_AGENT_EP:
-        // rc = DELETE_AGENT_EP ...
-        break;
-    case DELETE_AGENT_MD:
-        // rc = DELETE_AGENT_MD ...
-        break;
-    case GET_VPC:
-        // rpc_trn_vpc_t = GET_VPC ...
-        break;
-    case GET_NET:
-        // rpc_trn_vpc_t = GET_NET ...
-        break;
-    case GET_EP:
-        // rpc_trn_vpc_t = GET_EP ...
-        break;
-    case GET_AGENT_EP:
-        // rpc_trn_vpc_t = GET_AGENT_EP ...
-        break;
-    case GET_AGENT_MD:
-        // rpc_trn_vpc_t = GET_AGENT_MD ...
-        break;
-    case LOAD_TRANSIT_XDP:
-        // rc = LOAD_TRANSIT_XDP ...
-        break;
-    case LOAD_TRANSIT_AGENT_XDP:
-        // rc = LOAD_TRANSIT_AGENT_XDP ...
-        break;
-    case UNLOAD_TRANSIT_XDP:
-        // rc = UNLOAD_TRANSIT_XDP ...
-        break;
-    case UNLOAD_TRANSIT_AGENT_XDP:
-        // rc = UNLOAD_TRANSIT_AGENT_XDP ...
-        break;
-
-    default:
-        ACA_LOG_ERROR("Unknown controller command: %d\n", controller_command);
         *rc = -1;
-        break;
     }
-
-    if (rc == (int *)NULL)
+    else
     {
-        clnt_perror(clnt, "Call failed to update Transit daemon");
-        ACA_LOG_EMERG("Call failed to update Transit daemon, command: %d.\n",
-                      controller_command);
-    }
-    else if (*rc != 0)
-    {
-        ACA_LOG_EMERG("Fatal error for command: %d, see transitd logs for details.\n",
-                      controller_command);
-        // TODO: report the error back to network controller
-    }
+        switch (controller_command)
+        {
+        case UPDATE_VPC:
+            // rc = update_vpc_1 ...
+            break;
+        case UPDATE_NET:
+            // rc = UPDATE_NET_1 ...
+            break;
+        case UPDATE_EP:
+            // rc = UPDATE_EP_1 ...
+            break;
+        case UPDATE_AGENT_EP:
+            // rc = UPDATE_AGENT_EP_1 ...
+            break;
+        case UPDATE_AGENT_MD:
+            // rc = UPDATE_AGENT_MD ...
+            break;
+        case DELETE_NET:
+            // rc = DELETE_NET ...
+            break;
+        case DELETE_EP:
+            // rc = DELETE_EP ...
+            break;
+        case DELETE_AGENT_EP:
+            // rc = DELETE_AGENT_EP ...
+            break;
+        case DELETE_AGENT_MD:
+            // rc = DELETE_AGENT_MD ...
+            break;
+        case GET_VPC:
+            // rpc_trn_vpc_t = GET_VPC ...
+            break;
+        case GET_NET:
+            // rpc_trn_vpc_t = GET_NET ...
+            break;
+        case GET_EP:
+            // rpc_trn_vpc_t = GET_EP ...
+            break;
+        case GET_AGENT_EP:
+            // rpc_trn_vpc_t = GET_AGENT_EP ...
+            break;
+        case GET_AGENT_MD:
+            // rpc_trn_vpc_t = GET_AGENT_MD ...
+            break;
+        case LOAD_TRANSIT_XDP:
+            // rc = LOAD_TRANSIT_XDP ...
+            break;
+        case LOAD_TRANSIT_AGENT_XDP:
+            // rc = LOAD_TRANSIT_AGENT_XDP ...
+            break;
+        case UNLOAD_TRANSIT_XDP:
+            // rc = UNLOAD_TRANSIT_XDP ...
+            break;
+        case UNLOAD_TRANSIT_AGENT_XDP:
+            // rc = UNLOAD_TRANSIT_AGENT_XDP ...
+            break;
 
-    ACA_LOG_INFO("Successfully updated transitd with command %d.\n",
-                 controller_command);
-    // TODO: can print out more command specific info
+        default:
+            ACA_LOG_ERROR("Unknown controller command: %d\n", controller_command);
+            *rc = -1;
+            break;
+        }
 
-    clnt_destroy(clnt);
+        if (rc == (int *)NULL)
+        {
+            clnt_perror(client, "Call failed to program Transit daemon");
+            ACA_LOG_EMERG("Call failed to program Transit daemon, command: %d.\n",
+                        controller_command);
+        }
+        else if (*rc != 0)
+        {
+            ACA_LOG_EMERG("Fatal error for command: %d, see transitd logs for details.\n",
+                        controller_command);
+            // TODO: report the error back to network controller
+        }
+
+        ACA_LOG_INFO("Successfully updated transitd with command %d.\n",
+                    controller_command);
+        // TODO: can print out more command specific info
+
+        clnt_destroy(client);
+    }
 
     return *rc;
 }
@@ -158,6 +161,7 @@ int aca_comm_mgr_listen(bool keep_listening)
         else
         {
             cout << "pool fails" << endl;
+            // TODO: remove the break below to continuously listening
             break;
         }
 
