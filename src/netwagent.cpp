@@ -3,7 +3,6 @@
 #include "trn_rpc_protocol.h"
 
 // cpp includes
-#include <iostream>
 #include <chrono>
 #include <thread>
 #include "messageproducer.h"
@@ -27,7 +26,7 @@ int aca_parse_and_program(string raw_string)
     uint controller_command = 0;
     int *rc;
 
-    *rc = -1;
+    *rc = EXIT_FAILURE;
 
     //deserialize any new configuration
     //P0, tracked by issue#16
@@ -44,7 +43,7 @@ int aca_parse_and_program(string raw_string)
     {
         clnt_pcreateerror(rpc_server);
         ACA_LOG_EMERG("Not able to create the RPC connection to Transit daemon.\n");
-        *rc = -1;
+        *rc = EXIT_FAILURE;
     }
     else
     {
@@ -107,7 +106,7 @@ int aca_parse_and_program(string raw_string)
 
         default:
             ACA_LOG_ERROR("Unknown controller command: %d\n", controller_command);
-            *rc = -1;
+            *rc = EXIT_FAILURE;
             break;
         }
 
@@ -117,9 +116,9 @@ int aca_parse_and_program(string raw_string)
             ACA_LOG_EMERG("Call failed to program Transit daemon, command: %d.\n",
                         controller_command);
         }
-        else if (*rc != 0)
+        else if (*rc != EXIT_SUCCESS)
         {
-            ACA_LOG_EMERG("Fatal error for command: %d, see transitd logs for details.\n",
+            ACA_LOG_EMERG("Fatal error for command: %d.\n",
                         controller_command);
             // TODO: report the error back to network controller
         }
@@ -142,7 +141,7 @@ int aca_comm_mgr_listen(bool keep_listening)
     string broker_list = "10.213.43.188:9092";
     string topic_host_spec = "kafka_test2"; //"/hostid/" + host_id + "/hostspec/";
     int partition_value = 0;
-    int rc = -1;
+    int rc = EXIT_FAILURE;
 
     //Listen to Kafka clusters for any network configuration operations
     //P0, tracked by issue#15
@@ -156,11 +155,11 @@ int aca_comm_mgr_listen(bool keep_listening)
         pool_res = network_config_consumer.consume(topic_host_spec, payload);
         if (pool_res)
         {
-            cout << "Processing payload....: " << **payload << endl;
+            ACA_LOG_INFO("Processing payload....: %s.\n", (**payload).c_str());
         }
         else
         {
-            cout << "pool fails" << endl;
+            ACA_LOG_INFO("pool fails.\n");
             // TODO: remove the break below to continuously listening
             break;
         }
@@ -178,7 +177,7 @@ int aca_comm_mgr_listen(bool keep_listening)
 
 int main(int argc, char **argv)
 {
-    int rc = -1;
+    int rc = EXIT_FAILURE;
 
     ACA_LOG_INIT(ACALOGNAME);
 
