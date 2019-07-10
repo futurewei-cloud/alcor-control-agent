@@ -150,12 +150,14 @@ int aca_comm_mgr_listen(bool keep_listening)
 
     bool pool_res = false;
 
-    while (keep_listening)
+    do
     {
         pool_res = network_config_consumer.consume(topic_host_spec, payload);
         if (pool_res)
         {
             ACA_LOG_INFO("Processing payload....: %s.\n", (**payload).c_str());
+
+            rc = aca_parse_and_program(**payload);
         }
         else
         {
@@ -164,15 +166,16 @@ int aca_comm_mgr_listen(bool keep_listening)
             break;
         }
 
-        rc = aca_parse_and_program(**payload);
-
         if (pool_res && (payload != nullptr) && (*payload != nullptr))
         {
             delete *payload;
         }
 
         std::this_thread::sleep_for(5s);
-    }
+        
+    } while (keep_listening);
+
+    return rc;
 }
 
 int main(int argc, char **argv)
