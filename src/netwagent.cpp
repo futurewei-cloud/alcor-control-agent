@@ -121,17 +121,17 @@ static int aca_parse_and_program(char *rpc_server, char *rpc_protocol, string ra
         {
             clnt_perror(client, "Call failed to program Transit daemon");
             ACA_LOG_EMERG("Call failed to program Transit daemon, command: %d.\n",
-                        controller_command);
+                          controller_command);
         }
         else if (*rc != EXIT_SUCCESS)
         {
             ACA_LOG_EMERG("Fatal error for command: %d.\n",
-                        controller_command);
+                          controller_command);
             // TODO: report the error back to network controller
         }
 
         ACA_LOG_INFO("Successfully updated transitd with command %d.\n",
-                    controller_command);
+                     controller_command);
         // TODO: can print out more command specific info
 
         clnt_destroy(client);
@@ -159,7 +159,8 @@ static int aca_comm_mgr_listen(char *rpc_server, char *rpc_protocol, bool keep_l
     if (keep_listening)
     {
         ACA_LOG_ERROR("Going into keep listening loop, press ctrl-C or kill process ID #: "
-                      "%d to exit.\n", getpid());
+                      "%d to exit.\n",
+                      getpid());
     }
 
     do
@@ -182,7 +183,7 @@ static int aca_comm_mgr_listen(char *rpc_server, char *rpc_protocol, bool keep_l
         }
 
         std::this_thread::sleep_for(5s);
-        
+
     } while (keep_listening);
 
     return rc;
@@ -198,7 +199,7 @@ int main(int argc, char *argv[])
     int rc = EXIT_FAILURE;
 
     ACA_LOG_INIT(ACALOGNAME);
-    
+
     // Register the signal handlers
     signal(SIGINT, aca_signal_handler);
     signal(SIGTERM, aca_signal_handler);
@@ -207,36 +208,35 @@ int main(int argc, char *argv[])
     {
         switch (option)
         {
-            case 's':
-                rpc_server = (char*) malloc(sizeof(char) * strlen(optarg));
-                if (rpc_server != NULL)
-                {
-			        strcpy(rpc_server, optarg);
-                }
-                else
-                {
-                    ACA_LOG_EMERG("Out of memory when allocating string with size: %lu.\n",
-                                  (sizeof(char) * strlen(optarg)));
-                }                
-                break;
-            case 'p':
-                rpc_protocol = (char*) malloc(sizeof(char) * strlen(optarg));
-                if (rpc_protocol != NULL)
-                {
-			        strcpy(rpc_server, optarg);
-                }
-                else
-                {
-                    ACA_LOG_EMERG("Out of memory when allocating string with size: %lu.\n",
-                                  (sizeof(char) * strlen(optarg)));
-                }                
-                break;
-            default: /* the '?' case when the option is not recognized */
-                fprintf(stderr, "Usage: %s [-s transitd RPC server] [-p transitd RPC protocol]\n",
-                        argv[0]);
-                exit(EXIT_FAILURE);                
+        case 's':
+            rpc_server = (char *)malloc(sizeof(char) * strlen(optarg));
+            if (rpc_server != NULL)
+            {
+                strncpy(rpc_server, optarg, strlen(optarg));
+            }
+            else
+            {
+                ACA_LOG_EMERG("Out of memory when allocating string with size: %lu.\n",
+                              (sizeof(char) * strlen(optarg)));
+            }
+            break;
+        case 'p':
+            rpc_protocol = (char *)malloc(sizeof(char) * strlen(optarg));
+            if (rpc_protocol != NULL)
+            {
+                strncpy(rpc_server, optarg, strlen(optarg));
+            }
+            else
+            {
+                ACA_LOG_EMERG("Out of memory when allocating string with size: %lu.\n",
+                              (sizeof(char) * strlen(optarg)));
+            }
+            break;
+        default: /* the '?' case when the option is not recognized */
+            fprintf(stderr, "Usage: %s [-s transitd RPC server] [-p transitd RPC protocol]\n",
+                    argv[0]);
+            exit(EXIT_FAILURE);
         }
-
     }
 
     //Check if OVS and/or OVS daemon exists; if not, launch the program
