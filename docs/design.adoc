@@ -21,7 +21,7 @@ enable connectivity (VPC IP < - > Physical IP mapping) between VMs/Containers wi
 
 == Roles
 
-The network control agent will have the following roles, the code below will live in one binary. 
+The network control agent will have the following roles, the code will live in one binary. 
 
 . Local Host Networking Agent
 . Network Control Agent Health management, transit daemon and agents health, VM/Container networking health monitoring
@@ -53,12 +53,12 @@ The network control agent will have the following roles, the code below will liv
 	.. Allocate transit switch
 		... Smart placement [Switch1, Switch2]
 		... Go to router1, and router2 and “Update net” (net table)
-		... Go to s1, s2, s3 and call “Update net" (net table)
-		... Go to s1, s2, s3 and call “Update VPC” (VPC table)
+		... Go to s1, s2 and call “Update net" (net table)
+		... Go to s1, s2 and call “Update VPC” (VPC table)
 . Customer create a VM with endpoint 1 at net0
 	.. Allocate endpoint
 		... Go to VM Host create endpoint and update the transit switch info in endpoint table
-		... Go to all switches (s1,s2,s3) update endpoint
+		... Go to all switches (s1,s2) update endpoint
 
 == Network Configuration
 
