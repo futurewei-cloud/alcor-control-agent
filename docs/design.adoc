@@ -52,7 +52,7 @@ The network control agent will have the following roles, the code will live in o
 	.. Allocate transit switch
 		... Smart placement [Switch1, Switch2]
 		... Go to router1, and router2 and “Update net” (net table)
-		... Go to s1, s2 and call “Update net" (net table)	
+		... Go to s1, s2 and call “Update net" (net table)
 . Customer create a VM with endpoint 1 at net0
 	.. Allocate endpoint
 		... Go to all switches (s1,s2) update endpoint
@@ -149,23 +149,23 @@ https://docs.openstack.org/ocata/config-reference/common-configurations/auth.htm
 == API Versioning of Network Control Agent and Network Controller
 
 ==== Motivation
-When making major changes to code, we want to version our components in such a way so that old clients have time to upgrade, and new clients can use the new features without issues.
+When making major changes to code, the components need to be versioned in such a way so that old clients have time to upgrade, and new clients can use the new features without issues.
 
 ==== Strategy
-Our strategy is to have the two components explicitly state the API version in their messages.
-Every message/call between the Controller and the Network Control Agent will have an API version tagged. +
+The strategy is to have the two components, agent and controller, explicitly state the API version in their messages.
+Thus, every message/call between the Controller and the Network Control Agent will have an API version tagged. +
 
-Our components will support a range of different API versions by defining the max API version and min API version supported. +
-We will increment each of these fields respectively as we upgrade +
-also deprecate API versions.
+The components will support a range of different API versions by defining the max API version and min API version supported. +
+These fields will then be incremented respectively as features are +
+upgraded, and deprecated.
 
-For major version upgrades, we will
+For major version upgrades, the strategy will be to
 
 . Deploy changes to all Network Control Agents first
-. Deploy changes to Network Controller once all Agents have been upgrades
+. Deploy changes to Network Controller once all Agents have been upgraded
 
 ==== Example
-We want to support SR-IOV.
+For example, say there is a new update to support SR-IOV.
 
 [width="100%",options="header"]
 |====================
