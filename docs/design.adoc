@@ -7,7 +7,7 @@ The Cloud Fabric Network Control Agent runs on each host machine. It serves as a
 
 == Requirements
 
-. Network Control Agent will reside on each host machine to interface between network controller and host networking components. The main responsibility is to create and configure network to 
+. Network Control Agent will reside on each host machine to interface between network controller and host networking components. The main responsibility is to create and configure network to
 enable connectivity (VPC IP < - > Physical IP mapping) between VMs/Containers within the datacenter and the outside world through EIP.
 
 . It will update networking configuration on the host:
@@ -16,12 +16,12 @@ enable connectivity (VPC IP < - > Physical IP mapping) between VMs/Containers wi
 	.. Configure vNIC and vPort, connect them for the VM/Container
 	.. Attach Security group to a vNIC TODO: add more detail after dataplane performance analysis without it
 	.. Attached transit agent to the corresponding vNIC(veth) and transit switch/router on the physical NIC
-	
+
 . It will also update VPC Configuration (VPC, Subnet, Security Group, Routing) including CRUD (Create/Read/Update/Delete) VPC/Subnet/Endpoint.
 
 == Roles
 
-The network control agent will have the following roles, the code will live in one binary. 
+The network control agent will have the following roles, the code will live in one binary.
 
 . Local Host Networking Agent
 . Network Control Agent Health management, transit daemon and agents health, VM/Container networking health monitoring
@@ -39,7 +39,7 @@ The network control agent will have the following roles, the code will live in o
                     +------------------ -+   User Mode
          +--------------------------------------------------+
                     +--------------------+   Kernel Mode
-                    |  Transit Agent     |      
+                    |  Transit Agent     |
                     |     xdp program    |
                     +--------------------+
 
@@ -65,20 +65,20 @@ The network control agent will have the following roles, the code will live in o
 [width="100%",options="header"]
 |====================
 | VPC table  |
-| VPC0 | {10.0.0.0/16,[172.3,172.4]} 
+| VPC0 | {10.0.0.0/16,[172.3,172.4]}
 |====================
 
 [width="100%",options="header"]
 |====================
 |Network Table   |
-|Net0   |{10.0.0.0/25,[172.1,172.2]}  
+|Net0   |{10.0.0.0/25,[172.1,172.2]}
 |====================
 
 [width="100%",options="header"]
 |====================
-|Endpoint Table   |  |  |  
-|10.0.0.1  |Net0  |VPC0  |[172.1,...]  
-|10.0.0.2    |Net0  |VPC0  |[172.2,...]  
+|Endpoint Table   |  |  |
+|10.0.0.1  |Net0  |VPC0  |[172.1,...]
+|10.0.0.2    |Net0  |VPC0  |[172.2,...]
 |====================
 
 
@@ -128,7 +128,7 @@ Note: XDP programs are preloaded on both physical NIC and vNIC as created by the
 
 === Log Manager
 
-It will create the log file, manage the log configuration and maintain the Network control agent logs. Need to decide on how many days to keep the logs, e.g. 7 days. 
+It will create the log file, manage the log configuration and maintain the Network control agent logs. Need to decide on how many days to keep the logs, e.g. 7 days.
 
 The log should at least contain a timestamp, source file name and line number, message. The network control agent code should be able to specify the log level and can configure the targetted log level at runtime.
 Syslog is a good target framework, it is a proven mechanism in linux and it is https://askubuntu.com/questions/184949/how-do-i-limit-the-size-of-my-syslog[configurable for our needs]. See reference session for more information.
@@ -140,7 +140,7 @@ Working in progress...
 . Security Group API: +
 https://github.com/openstack/neutron/blob/master/neutron/agent/securitygroups_rpc.py
 
-. Communication Method (Kafka) and message format 
+. Communication Method (Kafka) and message format
 
 . Authentication and Authorization: +
 Huawei Cloud allow either using tokens (valid for 24 hours) or AK/SK when calling ECS APIs. +
@@ -152,21 +152,30 @@ https://docs.openstack.org/ocata/config-reference/common-configurations/auth.htm
 == API Versioning of Network Control Agent and Network Controller
 
 ==== Motivation
-When upgrading our codebase, we want to version our components in such a way so that old clients have time to upgrade/adopt, and new clients can use the new features without issues. +
-There are multiple strategies that can be used to allow this, and their use cases are project dependent. +
+When making major changes to code, we want to version our components in such a way so that old clients have time to upgrade, and new clients can use the new features without issues.
 
 ==== Strategy
-The current planned strategy is to have clients explicitly state the API version in a config XML/JSON/yaml file. The Network Control Agent will then consume, and execute the correct calls accordingly. +
-Further implementation options are compared below ^[2],[3],[4]^
+Our strategy is to have the two components explicitly state the API version in their messages.
+Every message/call between the Controller and the Network Control Agent will have an API version tagged. +
+
+Our components will support a range of different API versions by defining the max API version and min API version supported. +
+We will increment each of these fields respectively as we upgrade +
+also deprecate API versions.
+
+For major version upgrades, we will
+
+. Deploy changes to all Network Control Agents first
+. Deploy changes to Network Controller once all Agents have been upgrades
+
+==== Example
+We want to support SR-IOV.
 
 [width="100%",options="header"]
 |====================
-| Strategy | Pros | Cons 
-| Make API self-aware of versions | Maintain only one codebase | Difficult to remove deprecated resources and endpoints 
-|   | Deploy just one API codebase  |
-| Maintain multiple branches for major API versions | Easy to delete old API versions | Convoluted branch structure deployment pipeline     
+|Case|Controller Action|Agent Action
+|V1 Agent and V2 Controller|Controller sends a new V2 config to enable SR-IOV.|Agent sees unknown version in message and fails
+|V2 Agent and V1 Controller|Controller sends a V1 Config|Agent sees V1 version in message and executes V1 calls
 |====================
-
 
 == Reference
 
@@ -181,10 +190,10 @@ Further implementation options are compared below ^[2],[3],[4]^
 
 [width="100%",options="header"]
 |====================
-| Parameter | Description | Example Value 
+| Parameter | Description | Example Value
 | Protocol | Specifies the network protocol for which the security group rule takes effect. The value can be **TCP**, **UDP**, **ICMP**, **HTTP**, or others.
- | TCP 
-| Port | Specifies the port or port range for which the security group rule takes effect. The value ranges from **0** to **65535**. | 22 or 22-30 
+ | TCP
+| Port | Specifies the port or port range for which the security group rule takes effect. The value ranges from **0** to **65535**. | 22 or 22-30
 | Source | Specifies the source for which the security group rule takes effect. This parameter is required when **Transfer Direction** is set to **Inbound**. The value can be an IP address or a security group.
  | 0.0.0.0/0
 default
