@@ -153,7 +153,7 @@ When making major changes to code, the components need to be versioned in such a
 
 ==== Strategy
 The strategy is to have the two components, agent and controller, explicitly state the API version in their messages.
-Thus, very message/call between the Controller and the Network Control Agent will have an API version tagged. +
+Thus, every message/call between the Controller and the Network Control Agent will have an API version tagged. +
 
 The components will support a range of different API versions by defining the max API version and min API version supported. +
 These fields will then be incremented respectively as features are +
