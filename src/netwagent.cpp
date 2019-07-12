@@ -15,14 +15,21 @@ using namespace std::chrono_literals;
 using messagemanager::MessageConsumer;
 using messagemanager::MessageProducer;
 
+// function to handle ctrl-c and kill process
+static void aca_signal_handler(int sig_num)
+{
+    ACA_LOG_ERROR("Caught signal: %d\n", sig_num);
+
+    // perform all the necessary cleanup here
+    ACA_LOG_CLOSE();
+
+    exit(sig_num);
+}
+
 // function to parse and process the command from network controller
-int aca_parse_and_program(string raw_string)
+static int aca_parse_and_program(char *rpc_server, char *rpc_protocol, string raw_string)
 {
     static CLIENT *client;
-    char LOCALHOST[] = "localhost";
-    char UDP[] = "udp";
-    char *rpc_server = LOCALHOST;
-    char *rpc_protocol = UDP;
     uint controller_command = 0;
     int *rc;
 
@@ -114,17 +121,17 @@ int aca_parse_and_program(string raw_string)
         {
             clnt_perror(client, "Call failed to program Transit daemon");
             ACA_LOG_EMERG("Call failed to program Transit daemon, command: %d.\n",
-                        controller_command);
+                          controller_command);
         }
         else if (*rc != EXIT_SUCCESS)
         {
             ACA_LOG_EMERG("Fatal error for command: %d.\n",
-                        controller_command);
+                          controller_command);
             // TODO: report the error back to network controller
         }
 
         ACA_LOG_INFO("Successfully updated transitd with command %d.\n",
-                    controller_command);
+                     controller_command);
         // TODO: can print out more command specific info
 
         clnt_destroy(client);
@@ -133,7 +140,7 @@ int aca_parse_and_program(string raw_string)
     return *rc;
 }
 
-int aca_comm_mgr_listen(bool keep_listening)
+static int aca_comm_mgr_listen(char *rpc_server, char *rpc_protocol, bool keep_listening)
 {
     //Preload network agent configuration
     //TODO: load it from configuration file
@@ -141,6 +148,7 @@ int aca_comm_mgr_listen(bool keep_listening)
     string broker_list = "10.213.43.188:9092";
     string topic_host_spec = "kafka_test2"; //"/hostid/" + host_id + "/hostspec/";
     int partition_value = 0;
+    bool pool_res = false;
     int rc = EXIT_FAILURE;
 
     //Listen to Kafka clusters for any network configuration operations
@@ -148,7 +156,12 @@ int aca_comm_mgr_listen(bool keep_listening)
     MessageConsumer network_config_consumer(broker_list, "test");
     string **payload;
 
-    bool pool_res = false;
+    if (keep_listening)
+    {
+        ACA_LOG_ERROR("Going into keep listening loop, press ctrl-C or kill process ID #: "
+                      "%d to exit.\n",
+                      getpid());
+    }
 
     do
     {
@@ -157,13 +170,11 @@ int aca_comm_mgr_listen(bool keep_listening)
         {
             ACA_LOG_INFO("Processing payload....: %s.\n", (**payload).c_str());
 
-            rc = aca_parse_and_program(**payload);
+            rc = aca_parse_and_program(rpc_server, rpc_protocol, **payload);
         }
         else
         {
-            ACA_LOG_INFO("pool fails.\n");
-            // TODO: remove the break below to continuously listening
-            break;
+            ACA_LOG_ERROR("pool fails.\n");
         }
 
         if (pool_res && (payload != nullptr) && (*payload != nullptr))
@@ -172,17 +183,61 @@ int aca_comm_mgr_listen(bool keep_listening)
         }
 
         std::this_thread::sleep_for(5s);
-        
+
     } while (keep_listening);
 
     return rc;
 }
 
-int main(int argc, char **argv)
+int main(int argc, char *argv[])
 {
+    int option;
+    char LOCALHOST[] = "localhost";
+    char UDP[] = "udp";
+    char *rpc_server = LOCALHOST;
+    char *rpc_protocol = UDP;
     int rc = EXIT_FAILURE;
 
     ACA_LOG_INIT(ACALOGNAME);
+
+    // Register the signal handlers
+    signal(SIGINT, aca_signal_handler);
+    signal(SIGTERM, aca_signal_handler);
+
+    while ((option = getopt(argc, argv, "s:p:")) != -1)
+    {
+        switch (option)
+        {
+        case 's':
+            rpc_server = (char *)malloc(sizeof(char) * strlen(optarg));
+            if (rpc_server != NULL)
+            {
+                strncpy(rpc_server, optarg, strlen(optarg));
+            }
+            else
+            {
+                ACA_LOG_EMERG("Out of memory when allocating string with size: %lu.\n",
+                              (sizeof(char) * strlen(optarg)));
+            }
+            break;
+        case 'p':
+            rpc_protocol = (char *)malloc(sizeof(char) * strlen(optarg));
+            if (rpc_protocol != NULL)
+            {
+                strncpy(rpc_server, optarg, strlen(optarg));
+            }
+            else
+            {
+                ACA_LOG_EMERG("Out of memory when allocating string with size: %lu.\n",
+                              (sizeof(char) * strlen(optarg)));
+            }
+            break;
+        default: /* the '?' case when the option is not recognized */
+            fprintf(stderr, "Usage: %s [-s transitd RPC server] [-p transitd RPC protocol]\n",
+                    argv[0]);
+            exit(EXIT_FAILURE);
+        }
+    }
 
     //Check if OVS and/or OVS daemon exists; if not, launch the program
     //tracked by issue#10, may not needed based on discussion with XiaoNing
@@ -211,7 +266,7 @@ int main(int argc, char **argv)
     //host_spec_producer.publish(host_network_spec);
     //cout << "Publish completed" << endl;
 
-    rc = aca_comm_mgr_listen(true);
+    rc = aca_comm_mgr_listen(rpc_server, rpc_protocol, true);
 
     ACA_LOG_CLOSE();
 
