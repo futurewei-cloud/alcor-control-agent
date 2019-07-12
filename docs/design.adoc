@@ -1,4 +1,4 @@
-= Cloud Fabric Network Agent
+= Cloud Fabric Network Control Agent
 
 == Summary
 
@@ -11,7 +11,6 @@ The Cloud Fabric Network Control Agent runs on each host machine. It serves as a
 enable connectivity (VPC IP < - > Physical IP mapping) between VMs/Containers within the datacenter and the outside world through EIP.
 
 . It will update networking configuration on the host:
-	.. Setup networking/linux bridge/OVS on the host (if not exist)
 	.. Create vPort for VM/Container (unless this is done by Compute agent)
 	.. Configure vNIC and vPort, connect them for the VM/Container
 	.. Attach Security group to a vNIC TODO: add more detail after dataplane performance analysis without it
@@ -23,13 +22,13 @@ enable connectivity (VPC IP < - > Physical IP mapping) between VMs/Containers wi
 
 The network control agent will have the following roles, the code will live in one binary.
 
-. Local Host Networking Agent
+. Local Host Networking configuration
 . Network Control Agent Health management, transit daemon and agents health, VM/Container networking health monitoring
 .. TODO: need to expand this, will likely live in a seperate doc, post 9/30
-. Transit (dataplane) user mode Agent
-. Network Component upgrade Agent
+. Transit (dataplane) user mode programming proxy
+. Network Component upgrade manager
 
-== Communication between Network Control Agent and Transit Agent
+== Communication between Network Control Agent and kernel mode Transit Agent
 
                     +--------------------+
                     |  Network Control   |
@@ -53,12 +52,13 @@ The network control agent will have the following roles, the code will live in o
 	.. Allocate transit switch
 		... Smart placement [Switch1, Switch2]
 		... Go to router1, and router2 and “Update net” (net table)
-		... Go to s1, s2 and call “Update net" (net table)
-		... Go to s1, s2 and call “Update VPC” (VPC table)
+		... Go to s1, s2 and call “Update net" (net table)	
 . Customer create a VM with endpoint 1 at net0
 	.. Allocate endpoint
-		... Go to VM Host create endpoint and update the transit switch info in endpoint table
 		... Go to all switches (s1,s2) update endpoint
+			.... make sure at least one or more transit switch ready before the next step
+			.... TODO: need to be able to notify network controller that a particular transit switch programming is completed
+		... Go to VM Host create endpoint and update the transit switch info in endpoint table
 
 == Network Configuration
 
@@ -96,10 +96,7 @@ This will interface with Kafka to process messages from Network Controller. It w
 . Bandwidth (10G/25G/40G)
 . IP of the host machine (is it DHCP or assigned?)
 2. Network Controller will decide what network configuration to be applied on the host machine, and send it to network control agent through Kafka.
-2. It will call OVS daemon to setup and configure OVS
-. See OVS solution example in the reference session
-3. Connect vNICs to the vPorts on OVS once the VM/Container is running.
-. e.g. ovs-vsctl add-port br0 eth0
+3. Connect vNICs to the vPorts once the VM/Container is running.
 
 === Security policy Manager
 
@@ -177,13 +174,16 @@ We want to support SR-IOV.
 |V2 Agent and V1 Controller|Controller sends a V1 Config|Agent sees V1 version in message and executes V1 calls
 |====================
 
+== TODO
+. need to define the milestones for 7/30, 8/30 and 9/30
+. need to define the responsiblity and boundry for different networking agent and maybe compute agent
+
 == Reference
 
 . https://docs.openstack.org/neutron/pike/contributor/internals/openvswitch_agent.html
 . https://github.com/kubernetes/community/blob/master/contributors/design-proposals/release/versioning.md
 . https://dzone.com/articles/backward-compatibility-check-for-rest-apis
 . https://stackoverflow.com/questions/29871744/how-do-you-manage-the-underlying-codebase-for-a-versioned-api
-. https://stackoverflow.com/questions/29876818/how-can-i-connect-open-vswitch-port-and-virtual-ethernet-interface[OVS solution example]
 . https://github.com/futurewei-cloud/Transit/blob/master/docs/modules/ROOT/pages/design/monitoring.adoc[Network Control Agent and SN Agent will work independently]
 . https://stackoverflow.com/questions/158457/daemon-logging-in-linux[Logging in Linux]
 . https://support.huaweicloud.com/en-us/usermanual-ecs/en-us_topic_0030878383.html[Security Group Rule format in Huawei Cloud]
