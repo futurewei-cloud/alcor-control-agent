@@ -1,6 +1,7 @@
 set(SOURCES
     ./comm/messageproducer.cpp
     ./comm/messageconsumer.cpp
+    ./comm/aca_comm_mgr.cpp
 )
 FIND_LIBRARY(RDKAFKA rdkafka /usr/lib/x86_64-linux-gnu NO_DEFAULT_PATH)
 FIND_LIBRARY(CPPKAFKA cppkafka /usr/local/lib64 NO_DEFAULT_PATH)
