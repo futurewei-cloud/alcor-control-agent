@@ -1,0 +1,6 @@
+[submodule "AliothController"]
+	path = AliothController
+	url = https://github.com/futurewei-cloud/AliothController.git
+[submodule "Transit"]
+	path = Transit
+	url = https://github.com/futurewei-cloud/Transit.git
