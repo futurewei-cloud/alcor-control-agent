@@ -9,12 +9,18 @@ FIND_LIBRARY(MESSAGEMANAGER messagemanager ${CMAKE_CURRENT_SOURCE_DIR}/../includ
 link_libraries(${RDKAFKA} ${CPPKAFKA})
 include_directories(${RDKAFKA_INCLUDE_DIR} ${CPPKAFKA_INCLUDE_DIR})
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../include)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/proto3)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../../Transit/src/rpcgen)
+
+FIND_PACKAGE(Protobuf REQUIRED)
 
 add_library(networkControlAgentLib STATIC ${SOURCES})
 add_executable(networkControlAgent netwagent.cpp)
 target_link_libraries(networkControlAgent cppkafka)
 target_link_libraries(networkControlAgent rdkafka)
 target_link_libraries(networkControlAgent networkControlAgentLib)
-target_link_libraries(networkControlAgent proto ${PROTOBUF_LIBRARY})
+target_link_libraries(networkControlAgent proto)
+target_link_libraries(networkControlAgent ${PROTOBUF_LIBRARY})
+
+add_dependencies(networkControlAgentLib proto)
 add_subdirectory(proto3)

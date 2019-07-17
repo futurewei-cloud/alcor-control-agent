@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-message load_transit_xdp_interface {
+message pb_load_transit_xdp_interface {
     int32 version = 1;
     int32 command = 2;
     string interface = 3;

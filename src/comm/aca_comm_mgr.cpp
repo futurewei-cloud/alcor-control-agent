@@ -7,6 +7,7 @@
 #include "aca_comm_mgr.h"
 #include "messageconsumer.h"
 // #include "messageproducer.h"
+#include "aca_interface.pb.h"
 
 using std::string;
 // using std::exception;
@@ -92,10 +93,20 @@ int Aca_Comm_Manager::deserialize(string binary_message, void *parsed_struct){
     //deserialize any new configuration
     //P0, tracked by issue#16
 
+    // Verify that the version of the library that we linked against is
+    // compatible with the version of the headers we compiled against.
+    // GOOGLE_PROTOBUF_VERIFY_VERSION;
+
+    pb_load_transit_xdp_interface pb_load_transit_xdp_inf;
+
+    // pb_load_transit_xdp_inf.ParseFromIstream(NULL);
+
+    pb_load_transit_xdp_inf.ParseFromString(binary_message);
+
 	return EXIT_FAILURE;
 }
 
-int Aca_Comm_Manager::program_transitD(void *parsed_struct){
+int Aca_Comm_Manager::execute_command(void *parsed_struct){
     static CLIENT *client;
     uint controller_command = 0;
     int *rc;

@@ -136,13 +136,9 @@ int main(int argc, char *argv[])
      }
     else // g_test_mode == TRUE
     {
-        
+        // TODO:...
     }
     
-
-
-
-
     ACA_LOG_CLOSE();
 
     return rc;

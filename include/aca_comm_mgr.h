@@ -21,7 +21,7 @@ public:
 
     int deserialize(string binary_message, void *parsed_struct);
 
-    int program_transitD(void *parsed_struct);
+    int execute_command(void *parsed_struct);
 
 };
 
