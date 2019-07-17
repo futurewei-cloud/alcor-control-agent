@@ -5,9 +5,8 @@
 // cpp includes
 #include <chrono>
 #include <thread>
+#include <unistd.h>    /* for getopt */
 #include "aca_comm_mgr.h"
-#include "messageproducer.h"
-#include "messageconsumer.h"
 #include "aca_interface.pb.h"
 
 #define ACALOGNAME "AliothControlAgent"
