@@ -1,31 +1,27 @@
 #include "aca_log.h"
 #include "trn_rpc_protocol.h"
 #include <iostream>
-// #include <stdexcept>
 #include <chrono>
 #include <thread>
 #include "aca_comm_mgr.h"
 #include "messageconsumer.h"
-// #include "messageproducer.h"
 #include "aca_interface.pb.h"
 
 using std::string;
-// using std::exception;
-// using std::cout;
-// using std::endl;
 using namespace std::chrono_literals;
 using messagemanager::MessageConsumer;
-// using messagemanager::MessageProducer;
 
 extern bool g_test_mode;
 extern char *g_rpc_server;
 extern char *g_rpc_protocol;
 
-namespace aca_comm_manager{ 
+namespace aca_comm_manager
+{
 
-int Aca_Comm_Manager::process_messages(){
+int Aca_Comm_Manager::process_messages()
+{
 
-	void *parsed_struct;
+    void *parsed_struct;
     int rc = EXIT_FAILURE;
 
     //Preload network agent configuration
@@ -34,7 +30,7 @@ int Aca_Comm_Manager::process_messages(){
     string broker_list = "10.213.43.188:9092";
     string topic_host_spec = "kafka_test2"; //"/hostid/" + host_id + "/hostspec/";
     // int partition_value = 0;
-    
+
     //Listen to Kafka clusters for any network configuration operations
     //P0, tracked by issue#15
     MessageConsumer network_config_consumer(broker_list, "test");
@@ -42,7 +38,8 @@ int Aca_Comm_Manager::process_messages(){
     Aca_Comm_Manager comm_manager;
 
     ACA_LOG_DEBUG("Going into keep listening loop, press ctrl-C or kill process ID #: "
-                  "%d to exit.\n", getpid());
+                  "%d to exit.\n",
+                  getpid());
 
     do
     {
@@ -66,7 +63,7 @@ int Aca_Comm_Manager::process_messages(){
                 else
                 {
                     ACA_LOG_ERROR("Unable to execute the network controller command: %d\n",
-                                rc);
+                                  rc);
                 }
             }
 
@@ -78,7 +75,6 @@ int Aca_Comm_Manager::process_messages(){
         else
         {
             ACA_LOG_ERROR("Consume message failed.\n");
-
         }
 
         std::this_thread::sleep_for(5s);
@@ -89,31 +85,30 @@ int Aca_Comm_Manager::process_messages(){
     return rc;
 }
 
-int Aca_Comm_Manager::deserialize(string binary_message, void *parsed_struct){
+int Aca_Comm_Manager::deserialize(string kafka_message, void *parsed_struct)
+{
     //deserialize any new configuration
     //P0, tracked by issue#16
 
     // Verify that the version of the library that we linked against is
     // compatible with the version of the headers we compiled against.
-    // GOOGLE_PROTOBUF_VERIFY_VERSION;
+    GOOGLE_PROTOBUF_VERIFY_VERSION;
 
-    pb_load_transit_xdp_interface pb_load_transit_xdp_inf;
+    // pb_load_transit_xdp_interface pb_load_transit_xdp_inf;
 
-    // pb_load_transit_xdp_inf.ParseFromIstream(NULL);
+    // pb_load_transit_xdp_inf.ParseFromString(kafka_message);
 
-    pb_load_transit_xdp_inf.ParseFromString(binary_message);
-
-	return EXIT_FAILURE;
+    return EXIT_FAILURE;
 }
 
-int Aca_Comm_Manager::execute_command(void *parsed_struct){
+int Aca_Comm_Manager::execute_command(void *parsed_struct)
+{
     static CLIENT *client;
     uint controller_command = 0;
     int *rc;
 
     *rc = EXIT_FAILURE;
 
-/*
     //Depending on different operations, program XDP through corresponding RPC
     //apis by transit daemon
     //P0, tracked by issue#17
@@ -212,9 +207,8 @@ int Aca_Comm_Manager::execute_command(void *parsed_struct){
 
         clnt_destroy(client);
     }
-    */
 
     return *rc;
 }
 
-} // Aca_Comm_Manager
+} // namespace aca_comm_manager

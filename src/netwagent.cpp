@@ -8,6 +8,7 @@
 #include "aca_comm_mgr.h"
 #include "messageproducer.h"
 #include "messageconsumer.h"
+#include "aca_interface.pb.h"
 
 #define ACALOGNAME "AliothControlAgent"
 
@@ -24,13 +25,23 @@ char *g_test_message;
 char *g_rpc_server = LOCALHOST;
 char *g_rpc_protocol = UDP;
 
+static void aca_cleanup()
+{
+    // Optional:  Delete all global objects allocated by libprotobuf.
+    google::protobuf::ShutdownProtobufLibrary();
+
+    ACA_LOG_INFO("Program exiting, cleaning up...\n");
+
+    ACA_LOG_CLOSE();
+}
+
 // function to handle ctrl-c and kill process
 static void aca_signal_handler(int sig_num)
 {
     ACA_LOG_ERROR("Caught signal: %d\n", sig_num);
 
     // perform all the necessary cleanup here
-    ACA_LOG_CLOSE();
+    aca_cleanup();
 
     exit(sig_num);
 }
@@ -93,20 +104,18 @@ int main(int argc, char *argv[])
             break;
         default: /* the '?' case when the option is not recognized */
             fprintf(stderr, "Usage: %s\n"
-                                    "\t\t[-t test message to parse and enable test mode]\n"
-                                    "\t\t[-s transitd RPC server]\n"
-                                    "\t\t[-p transitd RPC protocol]\n",
+                            "\t\t[-t test message to parse and enable test mode]\n"
+                            "\t\t[-s transitd RPC server]\n"
+                            "\t\t[-p transitd RPC protocol]\n",
                     argv[0]);
             exit(EXIT_FAILURE);
         }
     }
 
-
     //Check if transit program exists on Physical NIC; if not, launch the program
     //P0, tracked by issue#11
 
     Aca_Comm_Manager comm_manager;
-    string *binary_message;
 
     //Announce this host (agent) and register in every kafka cluster
     //P0, tracked by issue#12
@@ -133,13 +142,13 @@ int main(int argc, char *argv[])
     {
         rc = comm_manager.process_messages();
         /* never reached */
-     }
+    }
     else // g_test_mode == TRUE
     {
         // TODO:...
     }
-    
-    ACA_LOG_CLOSE();
+  
+    aca_cleanup();
 
     return rc;
 }
