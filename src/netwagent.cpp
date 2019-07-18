@@ -20,14 +20,29 @@ static char UDP[] = "udp";
 
 // Global variables
 bool g_test_mode = false;
-char *g_test_message;
-char *g_rpc_server = LOCALHOST;
-char *g_rpc_protocol = UDP;
+char *g_test_message = NULL;
+char *g_rpc_server = NULL;
+char *g_rpc_protocol = NULL;
 
 static void aca_cleanup()
 {
     // Optional:  Delete all global objects allocated by libprotobuf.
     google::protobuf::ShutdownProtobufLibrary();
+
+    if (g_test_message != NULL){
+        free(g_test_message);
+        g_test_message = NULL;
+    }
+
+    if (g_rpc_server != NULL){
+        free(g_rpc_server);
+        g_rpc_server = NULL;
+    }
+
+    if (g_rpc_protocol != NULL){
+        free(g_rpc_protocol);
+        g_rpc_protocol = NULL;
+    }    
 
     ACA_LOG_INFO("Program exiting, cleaning up...\n");
 
@@ -107,6 +122,36 @@ int main(int argc, char *argv[])
                             "\t\t[-s transitd RPC server]\n"
                             "\t\t[-p transitd RPC protocol]\n",
                     argv[0]);
+            exit(EXIT_FAILURE);
+        }
+    }
+
+    // fill in the RPC server and protocol if it is not provided in command line arg
+    if (g_rpc_server == NULL)
+    {
+        g_rpc_server = (char *)malloc(sizeof(char) * strlen(LOCALHOST));
+        if (g_rpc_server != NULL)
+        {
+            strncpy(g_rpc_server, LOCALHOST, strlen(LOCALHOST));
+        }
+        else
+        {
+            ACA_LOG_EMERG("Out of memory when allocating string with size: %lu.\n",
+                            (sizeof(char) * strlen(LOCALHOST)));
+            exit(EXIT_FAILURE);
+        }
+    }
+    if (g_rpc_protocol == NULL)
+    {
+        g_rpc_protocol = (char *)malloc(sizeof(char) * strlen(UDP));
+        if (g_rpc_protocol != NULL)
+        {
+            strncpy(g_rpc_protocol, UDP, strlen(UDP));
+        }
+        else
+        {
+            ACA_LOG_EMERG("Out of memory when allocating string with size: %lu.\n",
+                            (sizeof(char) * strlen(UDP)));
             exit(EXIT_FAILURE);
         }
     }
