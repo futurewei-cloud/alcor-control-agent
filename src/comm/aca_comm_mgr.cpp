@@ -1,11 +1,12 @@
-#include "aca_log.h"
-#include "trn_rpc_protocol.h"
 #include <iostream>
 #include <chrono>
 #include <thread>
+#include <errno.h>
+#include "aca_log.h"
+#include "trn_rpc_protocol.h"
 #include "aca_comm_mgr.h"
 #include "messageconsumer.h"
-#include "aca_interface.pb.h"
+#include "goalstate.pb.h"
 
 using std::string;
 using namespace std::chrono_literals;
@@ -21,7 +22,7 @@ namespace aca_comm_manager
 int Aca_Comm_Manager::process_messages()
 {
 
-    void *parsed_struct;
+    aliothcontroller::GoalState parsed_struct;
     int rc = EXIT_FAILURE;
 
     //Preload network agent configuration
@@ -43,8 +44,8 @@ int Aca_Comm_Manager::process_messages()
 
     do
     {
-        bool pool_res = network_config_consumer.consume(topic_host_spec, payload);
-        if (pool_res)
+        bool poll_res = network_config_consumer.consume(topic_host_spec, payload);
+        if (poll_res)
         {
             ACA_LOG_INFO("Processing payload....: %s.\n", (**payload).c_str());
 
@@ -85,23 +86,42 @@ int Aca_Comm_Manager::process_messages()
     return rc;
 }
 
-int Aca_Comm_Manager::deserialize(string kafka_message, void *parsed_struct)
+int Aca_Comm_Manager::deserialize(string kafka_message, aliothcontroller::GoalState parsed_struct)
 {
+    int rc = EXIT_FAILURE;
+
     //deserialize any new configuration
     //P0, tracked by issue#16
+
+    if (kafka_message.empty())
+    {
+        ACA_LOG_ERROR("Empty kafka message rc: %d\n", rc);
+        return EINVAL;
+    }
+
+    if (parsed_struct.IsInitialized() == false)
+    {
+        ACA_LOG_ERROR("Uninitialized parsed_struct rc: %d\n", rc);
+        return EINVAL;
+    }
 
     // Verify that the version of the library that we linked against is
     // compatible with the version of the headers we compiled against.
     GOOGLE_PROTOBUF_VERIFY_VERSION;
 
-    // pb_load_transit_xdp_interface pb_load_transit_xdp_inf;
-
-    // pb_load_transit_xdp_inf.ParseFromString(kafka_message);
-
-    return EXIT_FAILURE;
+    if (parsed_struct.ParseFromArray(kafka_message.c_str(), kafka_message.size()))
+    {
+        ACA_LOG_INFO("Successfully converted kafka message to protobuf struct\n");
+        return EXIT_SUCCESS;
+    }
+    else
+    {
+        ACA_LOG_ERROR("Failed to convert kafka message to protobuf struct\n");
+        return EXIT_FAILURE;
+    }
 }
 
-int Aca_Comm_Manager::execute_command(void *parsed_struct)
+int Aca_Comm_Manager::execute_command(aliothcontroller::GoalState parsed_struct)
 {
     static CLIENT *client;
     uint controller_command = 0;

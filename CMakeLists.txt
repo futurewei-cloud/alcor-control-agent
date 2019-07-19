@@ -10,3 +10,4 @@ set(CPPKAFKA_VERSION "${CPPKAFKA_VERSION_MAJOR}.${CPPKAFKA_VERSION_MINOR}.${CPPK
 set(RDKAFKA_MIN_VERSION 0x00090400)
 
 add_subdirectory(src)
+add_subdirectory(test)

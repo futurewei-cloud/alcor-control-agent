@@ -62,3 +62,11 @@ dkms.conf
 **/*.cbp
 **/CMakeScripts
 **/compile_commands.json
+
+# Other files to ignore
+.vscode/
+cppkafka/
+networkControlAgent
+aca_func_tests
+*.pb.h
+*.pb.cc

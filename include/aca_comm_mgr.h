@@ -1,6 +1,8 @@
 #ifndef ACA_COMM_MGR_H
 #define ACA_COMM_MGR_H
 
+#include "goalstate.pb.h"
+
 using std::string;
 
 namespace aca_comm_manager
@@ -17,9 +19,9 @@ public:
 
     int process_messages();
 
-    int deserialize(string kafka_message, void *parsed_struct);
+    int deserialize(string kafka_message, aliothcontroller::GoalState parsed_struct);
 
-    int execute_command(void *parsed_struct);
+    int execute_command(aliothcontroller::GoalState parsed_struct);
 };
 
 } // namespace aca_comm_manager
