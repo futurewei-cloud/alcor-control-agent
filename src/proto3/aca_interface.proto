@@ -1,9 +1,0 @@
-syntax = "proto3";
-
-message pb_load_transit_xdp_interface {
-    int32 version = 1;
-    int32 command = 2;
-    string interface = 3;
-    string xdp_path = 4;
-    string pcapfile = 5;
-}
