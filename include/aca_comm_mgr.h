@@ -19,7 +19,7 @@ public:
 
     int process_messages();
 
-    int deserialize(string kafka_message, aliothcontroller::GoalState parsed_struct);
+    int deserialize(string kafka_message, aliothcontroller::GoalState &parsed_struct);
 
     int execute_command(aliothcontroller::GoalState parsed_struct);
 };

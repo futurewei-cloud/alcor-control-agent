@@ -86,7 +86,7 @@ int Aca_Comm_Manager::process_messages()
     return rc;
 }
 
-int Aca_Comm_Manager::deserialize(string kafka_message, aliothcontroller::GoalState parsed_struct)
+int Aca_Comm_Manager::deserialize(string kafka_message, aliothcontroller::GoalState &parsed_struct)
 {
     int rc = EXIT_FAILURE;
 

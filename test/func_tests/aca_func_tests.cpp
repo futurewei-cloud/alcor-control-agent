@@ -151,27 +151,55 @@ int main(int argc, char *argv[])
 
     string string_message;
 
+    // ***TODO, need to serialize it to binary array
     GoalState_builder.SerializeToString(&string_message);
     fprintf(stdout, "Serialized protobuf string: %s\n",
             string_message.c_str());
 
-
-    uint byteSize = GoalState_builder.ByteSize(); 
-    void *byteBuffer = malloc(byteSize);
-
-    GoalState_builder.SerializeToArray(byteBuffer, byteSize);
-    // want to find a better way to print it on screen
-    // fprintf(stdout, "Serialized protobuf binary: %x\n", byteBuffer);
-
-
-
     Aca_Comm_Manager comm_manager;
 
-    // rc = comm_manager.deserialize(**payload, parsed_struct);
+    aliothcontroller::GoalState deserialized_GoalState;
 
-/* if we want to execute the command
+    rc = comm_manager.deserialize(string_message, deserialized_GoalState);
+
     if (rc == EXIT_SUCCESS)
     {
+
+        fprintf(stdout, "Deserialize succeed, comparing the content now...\n");
+
+        fprintf(stdout, "deserialized_GoalState.vpc_states_size() = %d; \n"
+                "GoalState_builder.vpc_states_size() = %d\n", 
+                deserialized_GoalState.vpc_states_size(),
+                GoalState_builder.vpc_states_size());
+
+        assert(deserialized_GoalState.vpc_states_size() == GoalState_builder.vpc_states_size() );
+
+        for (int i = 0; i < deserialized_GoalState.vpc_states_size(); i++) {
+
+            assert(deserialized_GoalState.vpc_states(i).operation_type() == GoalState_builder.vpc_states(i).operation_type() );
+            fprintf(stdout, "deserialized_GoalState.vpc_states(i).operation_type(): %d matched \n",
+                deserialized_GoalState.vpc_states(i).operation_type());
+
+            assert(deserialized_GoalState.vpc_states(i).configuration().project_id() == GoalState_builder.vpc_states(i).configuration().project_id());
+            fprintf(stdout, "deserialized_GoalState.vpc_states(i).configuration().project_id(): %s matched \n",
+                deserialized_GoalState.vpc_states(i).configuration().project_id().c_str());
+
+            assert(deserialized_GoalState.vpc_states(i).configuration().id() == GoalState_builder.vpc_states(i).configuration().id());
+            fprintf(stdout, "deserialized_GoalState.vpc_states(i).configuration().id(): %s matched \n",
+                deserialized_GoalState.vpc_states(i).configuration().id().c_str());
+
+            assert(deserialized_GoalState.vpc_states(i).configuration().name() == GoalState_builder.vpc_states(i).configuration().name());
+            fprintf(stdout, "deserialized_GoalState.vpc_states(i).configuration().name(): %s matched \n",
+                deserialized_GoalState.vpc_states(i).configuration().name().c_str());
+
+            assert(deserialized_GoalState.vpc_states(i).configuration().cidr() == GoalState_builder.vpc_states(i).configuration().cidr());
+            fprintf(stdout, "deserialized_GoalState.vpc_states(i).configuration().cidr(): %s matched \n",
+                deserialized_GoalState.vpc_states(i).configuration().cidr().c_str());
+        }
+
+
+
+        /*
         rc = comm_manager.execute_command(parsed_struct);
 
         if (rc == EXIT_SUCCESS)
@@ -185,8 +213,12 @@ int main(int argc, char *argv[])
             ACA_LOG_ERROR("Unable to execute the network controller command: %d\n",
                             rc);
         }
+        */
     }
-    */
+    else
+    {
+        fprintf(stdout, "Deserialize failed with error code: %u\n", rc);
+    }
 
 /*
     if ((payload != nullptr) && (*payload != nullptr))
@@ -202,11 +234,6 @@ int main(int argc, char *argv[])
 
     }
 
-
-    if (byteBuffer != nullptr)
-    {
-        free(byteBuffer);
-    }
 
     // free the allocated VpcConfiguration since we are done with it now
     new_vpc_states->clear_configuration();
