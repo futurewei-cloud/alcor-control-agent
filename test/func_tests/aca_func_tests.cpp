@@ -18,25 +18,22 @@ char *g_rpc_protocol = NULL;
 
 using std::string;
 
+static inline void aca_free(void *pointer)
+{
+    if (pointer != NULL){
+        free(pointer);
+        pointer = NULL;
+    }
+}
+
 static void aca_cleanup()
 {
     // Optional:  Delete all global objects allocated by libprotobuf.
     google::protobuf::ShutdownProtobufLibrary();
 
-    if (g_test_message != NULL){
-        free(g_test_message);
-        g_test_message = NULL;
-    }
-
-    if (g_rpc_server != NULL){
-        free(g_rpc_server);
-        g_rpc_server = NULL;
-    }
-
-    if (g_rpc_protocol != NULL){
-        free(g_rpc_protocol);
-        g_rpc_protocol = NULL;
-    }    
+    aca_free(g_test_message);
+    aca_free(g_rpc_server);
+    aca_free(g_rpc_protocol); 
 
     fprintf(stdout, "Program exiting, cleaning up...\n");
 }
@@ -151,16 +148,26 @@ int main(int argc, char *argv[])
 
     string string_message;
 
-    // ***TODO, need to serialize it to binary array
+    // Serialize it to string
     GoalState_builder.SerializeToString(&string_message);
-    fprintf(stdout, "Serialized protobuf string: %s\n",
+    fprintf(stdout, "(NOTE USED) Serialized protobuf string: %s\n",
             string_message.c_str());
+
+    // Serialize it to binary array
+    size_t size = GoalState_builder.ByteSize(); 
+    char *buffer = (char*) malloc(size);
+    GoalState_builder.SerializeToArray(buffer, size);
+    string binary_message(buffer, size);
+    fprintf(stdout, "Serialized protobuf binary array: %s\n",
+            binary_message.c_str());
 
     Aca_Comm_Manager comm_manager;
 
     aliothcontroller::GoalState deserialized_GoalState;
 
-    rc = comm_manager.deserialize(string_message, deserialized_GoalState);
+    rc = comm_manager.deserialize(binary_message, deserialized_GoalState);
+
+    aca_free(buffer);
 
     if (rc == EXIT_SUCCESS)
     {
