@@ -2,6 +2,7 @@
 #include <unistd.h>    /* for getopt */
 #include "aca_comm_mgr.h"
 #include "goalstate.pb.h"
+#include "trn_rpc_protocol.h"
 
 using namespace std;
 using aca_comm_manager::Aca_Comm_Manager;
@@ -239,13 +240,20 @@ int main(int argc, char *argv[])
         // we can just execute command here
         // rc = comm_manager.process_messages();
 
+        static CLIENT *client;
+        client = clnt_create(g_rpc_server, RPC_TRANSIT_REMOTE_PROTOCOL,
+                         RPC_TRANSIT_ALFAZERO, g_rpc_protocol);
+        rpc_trn_xdp_intf_t *intf = (rpc_trn_xdp_intf_t *)(malloc(sizeof(rpc_trn_xdp_intf_t)));
+        intf->interface = (char *)"eth0";
+        intf->xdp_path = (char *)"/mnt/Transit/build/xdp/transit_xdp_ebpf.o";
+        intf->pcapfile = (char *)"/sys/fs/bpf/transitxdp.pcap";
+        load_transit_agent_xdp_1(intf, client);
     }
 
 
     // free the allocated VpcConfiguration since we are done with it now
     new_vpc_states->clear_configuration();
 
-   
     aca_cleanup();
 
     return rc;

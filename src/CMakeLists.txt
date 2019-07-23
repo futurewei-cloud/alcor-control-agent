@@ -10,7 +10,7 @@ link_libraries(${RDKAFKA} ${CPPKAFKA})
 include_directories(${RDKAFKA_INCLUDE_DIR} ${CPPKAFKA_INCLUDE_DIR})
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../include)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/proto3)
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../../Transit/src/rpcgen)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../Transit/src/rpcgen)
 
 FIND_PACKAGE(Protobuf REQUIRED)
 
