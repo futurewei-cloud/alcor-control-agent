@@ -15,7 +15,20 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../Transit/src/rpcgen)
 FIND_PACKAGE(Protobuf REQUIRED)
 
 add_library(networkControlAgentLib STATIC ${SOURCES})
-add_executable(networkControlAgent netwagent.cpp)
+
+SET(OBJS
+    ${CMAKE_CURRENT_SOURCE_DIR}/../Transit/src/rpcgen/trn_rpc_protocol_clnt.o
+    ${CMAKE_CURRENT_SOURCE_DIR}/../Transit/src/rpcgen/trn_rpc_protocol_xdr.o
+)
+
+SET_SOURCE_FILES_PROPERTIES(
+    ${OBJS}
+    PROPERTIES
+    EXTERNAL_OBJECT true
+    GENERATED true
+)
+
+add_executable(networkControlAgent netwagent.cpp ${OBJS})
 target_link_libraries(networkControlAgent cppkafka)
 target_link_libraries(networkControlAgent rdkafka)
 target_link_libraries(networkControlAgent networkControlAgentLib)
