@@ -7,6 +7,7 @@
 #include <errno.h>
 #include <iostream>
 #include <thread>
+#include <arpa/inet.h>
 
 using std::string;
 using namespace std::chrono_literals;
@@ -48,8 +49,6 @@ int Aca_Comm_Manager::process_messages() {
       rc = this->deserialize(**payload, deserialized_GoalState);
 
       if (rc == EXIT_SUCCESS) {
-        fprintf(stdout, "deserialized_GoalState.vpc_states_size() = %d; \n",
-                deserialized_GoalState.vpc_states_size());
         // Call parse_goal_state
         rc = update_goal_state(deserialized_GoalState);
         if (rc != EXIT_SUCCESS) {
@@ -110,36 +109,6 @@ int Aca_Comm_Manager::update_goal_state(
     aliothcontroller::GoalState &deserialized_GoalState) {
   int rc = EXIT_FAILURE;
   for (int i = 0; i < deserialized_GoalState.vpc_states_size(); i++) {
-
-    fprintf(
-        stdout,
-        "deserialized_GoalState.vpc_states(i).operation_type(): %d matched \n",
-        deserialized_GoalState.vpc_states(i).operation_type());
-
-    fprintf(stdout,
-            "deserialized_GoalState.vpc_states(i).configuration().project_id():"
-            " %s matched \n",
-            deserialized_GoalState.vpc_states(i)
-                .configuration()
-                .project_id()
-                .c_str());
-
-    fprintf(stdout,
-            "deserialized_GoalState.vpc_states(i).configuration().id(): %s "
-            "matched \n",
-            deserialized_GoalState.vpc_states(i).configuration().id().c_str());
-
-    fprintf(
-        stdout,
-        "deserialized_GoalState.vpc_states(i).configuration().name(): %s "
-        "matched \n",
-        deserialized_GoalState.vpc_states(i).configuration().name().c_str());
-
-    fprintf(
-        stdout,
-        "deserialized_GoalState.vpc_states(i).configuration().cidr(): %s "
-        "matched \n",
-        deserialized_GoalState.vpc_states(i).configuration().cidr().c_str());
     int transitd_command = 0;
     void *transitd_input;
 
@@ -153,6 +122,16 @@ int Aca_Comm_Manager::update_goal_state(
         vpc_input->interface = (char *)"eth0";
         vpc_input->tunid = std::stoi(
             deserialized_GoalState.vpc_states(i).configuration().id().c_str());
+        vpc_input->routers_ips.routers_ips_len = 1;
+        uint32_t routers[RPC_TRN_MAX_VPC_ROUTERS];
+        vpc_input->routers_ips.routers_ips_val = routers;
+
+        struct sockaddr_in sa;
+        inet_pton(AF_INET, "10.0.0.1",
+            &(sa.sin_addr));
+        vpc_input->routers_ips.routers_ips_val[0] =
+          sa.sin_addr.s_addr;
+
         rc = EXIT_SUCCESS;
       } else {
         ACA_LOG_EMERG("Out of memory when allocating with size: %lu.\n",
@@ -262,7 +241,6 @@ int Aca_Comm_Manager::execute_command(int command, void *input_struct) {
     case UNLOAD_TRANSIT_AGENT_XDP:
       // rc = UNLOAD_TRANSIT_AGENT_XDP ...
       break;
-
     default:
       ACA_LOG_ERROR("Unknown controller command: %d\n", command);
       rc = EXIT_FAILURE;
@@ -274,8 +252,7 @@ int Aca_Comm_Manager::execute_command(int command, void *input_struct) {
       ACA_LOG_EMERG("Call failed to program Transit daemon, command: %d.\n",
                     command);
       rc = EXIT_FAILURE;
-    } else if (transitd_return != EXIT_SUCCESS) {
-      ACA_LOG_EMERG("Fatal error for command: %d.\n", command);
+    } else if (*transitd_return != EXIT_SUCCESS) {
       // TODO: report the error back to network controller
       rc = EXIT_FAILURE;
     }
@@ -287,7 +264,6 @@ int Aca_Comm_Manager::execute_command(int command, void *input_struct) {
 
     clnt_destroy(client);
   }
-
   return rc;
 }
 } // namespace aca_comm_manager
