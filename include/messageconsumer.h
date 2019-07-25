@@ -40,6 +40,8 @@ public:
  
     bool consume(string topic, string** ptr_payload);
 
+    bool cosumeDispatched(string topic);
+
 private:
 
     void setBrokers(string brokers);

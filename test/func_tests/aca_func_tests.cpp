@@ -5,9 +5,15 @@
 #include "trn_rpc_protocol.h"
 #include <unistd.h> /* for getopt */
 #define ACALOGNAME "AliothControlAgent"
+#include "messageconsumer.h"
+#include "messageproducer.h"
+#include <chrono>
+#include <string.h>
+#include <thread>
 
 using namespace std;
 using aca_comm_manager::Aca_Comm_Manager;
+using messagemanager::MessageConsumer;
 
 // Defines
 static char LOCALHOST[] = "localhost";
@@ -21,14 +27,17 @@ char *g_rpc_protocol = NULL;
 
 using std::string;
 
-static inline void aca_free(void *pointer) {
-  if (pointer != NULL) {
+static inline void aca_free(void *pointer)
+{
+  if (pointer != NULL)
+  {
     free(pointer);
     pointer = NULL;
   }
 }
 
-static void aca_cleanup() {
+static void aca_cleanup()
+{
   // Optional:  Delete all global objects allocated by libprotobuf.
   google::protobuf::ShutdownProtobufLibrary();
 
@@ -43,7 +52,8 @@ static void aca_cleanup() {
 }
 
 // function to handle ctrl-c and kill process
-static void aca_signal_handler(int sig_num) {
+static void aca_signal_handler(int sig_num)
+{
   fprintf(stdout, "Caught signal: %d\n", sig_num);
 
   // perform all the necessary cleanup here
@@ -52,7 +62,8 @@ static void aca_signal_handler(int sig_num) {
   exit(sig_num);
 }
 
-int main(int argc, char *argv[]) {
+int main(int argc, char *argv[])
+{
   int option;
   int rc;
   ACA_LOG_INIT(ACALOGNAME);
@@ -61,16 +72,21 @@ int main(int argc, char *argv[]) {
   signal(SIGINT, aca_signal_handler);
   signal(SIGTERM, aca_signal_handler);
 
-  while ((option = getopt(argc, argv, "ls:p:")) != -1) {
-    switch (option) {
+  while ((option = getopt(argc, argv, "ls:p:")) != -1)
+  {
+    switch (option)
+    {
     case 'l':
       g_load_mode = true;
       break;
     case 's':
       g_rpc_server = (char *)malloc(sizeof(char) * strlen(optarg) + 1);
-      if (g_rpc_server != NULL) {
+      if (g_rpc_server != NULL)
+      {
         strncpy(g_rpc_server, optarg, strlen(optarg) + 1);
-      } else {
+      }
+      else
+      {
         fprintf(stdout,
                 "Out of memory when allocating string with size: %lu.\n",
                 (sizeof(char) * strlen(optarg) + 1));
@@ -79,9 +95,12 @@ int main(int argc, char *argv[]) {
       break;
     case 'p':
       g_rpc_protocol = (char *)malloc(sizeof(char) * strlen(optarg) + 1);
-      if (g_rpc_protocol != NULL) {
+      if (g_rpc_protocol != NULL)
+      {
         strncpy(g_rpc_protocol, optarg, strlen(optarg) + 1);
-      } else {
+      }
+      else
+      {
         fprintf(stdout,
                 "Out of memory when allocating string with size: %lu.\n",
                 (sizeof(char) * strlen(optarg) + 1));
@@ -101,31 +120,40 @@ int main(int argc, char *argv[]) {
 
   // fill in the RPC server and protocol if it is not provided in command line
   // arg
-  if (g_rpc_server == NULL) {
+  if (g_rpc_server == NULL)
+  {
     g_rpc_server = (char *)malloc(sizeof(char) * strlen(LOCALHOST) + 1);
-    if (g_rpc_server != NULL) {
+    if (g_rpc_server != NULL)
+    {
       strncpy(g_rpc_server, LOCALHOST, strlen(LOCALHOST) + 1);
-    } else {
+    }
+    else
+    {
       fprintf(stdout, "Out of memory when allocating string with size: %lu.\n",
               (sizeof(char) * strlen(LOCALHOST) + 1));
       exit(EXIT_FAILURE);
     }
   }
-  if (g_rpc_protocol == NULL) {
+  if (g_rpc_protocol == NULL)
+  {
     g_rpc_protocol = (char *)malloc(sizeof(char) * strlen(UDP) + 1);
-    if (g_rpc_protocol != NULL) {
+    if (g_rpc_protocol != NULL)
+    {
       strncpy(g_rpc_protocol, UDP, strlen(UDP) + 1);
-    } else {
+    }
+    else
+    {
       fprintf(stdout, "Out of memory when allocating string with size: %lu.\n",
               (sizeof(char) * strlen(UDP) + 1));
       exit(EXIT_FAILURE);
     }
   }
 
-  if (g_load_mode) {
+  if (g_load_mode)
+  {
     // we can just execute command here
     // rc = comm_manager.process_messages();
-
+    /*
     static CLIENT *client;
     client = clnt_create(g_rpc_server, RPC_TRANSIT_REMOTE_PROTOCOL,
                          RPC_TRANSIT_ALFAZERO, g_rpc_protocol);
@@ -136,7 +164,39 @@ int main(int argc, char *argv[]) {
     intf->pcapfile = (char *)"/sys/fs/bpf/transitxdp.pcap";
     int *rc = load_transit_xdp_1(intf, client);
     fprintf(stdout, "Return code for load_transit_xdp is %d\n", *rc);
-  } else {
+    */
+    string broker_list = "10.213.43.188:9092";
+    //string topic_host_spec = "hostid-bb009e95-3839-4a9d-abd9-9ad70b538112";  //"/hostid/" + host_id + "/hostspec/";
+    string topic_host_spec = "my_topic";
+    //int partition_value = 0;
+    bool keep_listen = true;
+
+    MessageConsumer network_config_consumer(broker_list, "test");
+    //MessageProducer network_config_producer(broker_list, topic_host_spec, 0);
+
+    bool pool_res = network_config_consumer.cosumeDispatched(topic_host_spec);
+    //network_config_producer.publish("Hello");
+    // while (keep_listen)
+    // {
+      
+    //   bool pool_res = network_config_consumer.consume(topic_host_spec, payload);
+    //   if (pool_res)
+    //   {
+    //     fprintf(stdout, "Processing payload....%s: ", (**payload).c_str());
+    //   }
+    //   else
+    //   {
+    //     //cout << "pool fails" << endl;
+    //   }
+
+    //   //if(payload != nullptr && *payload != nullptr){
+    //   //	delete *payload;
+    //   //}
+    //   std::this_thread::sleep_for(5s);
+    // }
+  }
+  else
+  {
     // Verify that the version of the library that we linked against is
     // compatible with the version of the headers we compiled against.
     GOOGLE_PROTOBUF_VERIFY_VERSION;
@@ -179,7 +239,8 @@ int main(int argc, char *argv[]) {
 
     aca_free(buffer);
 
-    if (rc == EXIT_SUCCESS) {
+    if (rc == EXIT_SUCCESS)
+    {
 
       fprintf(stdout, "Deserialize succeed, comparing the content now...\n");
 
@@ -192,7 +253,8 @@ int main(int argc, char *argv[]) {
       assert(deserialized_GoalState.vpc_states_size() ==
              GoalState_builder.vpc_states_size());
 
-      for (int i = 0; i < deserialized_GoalState.vpc_states_size(); i++) {
+      for (int i = 0; i < deserialized_GoalState.vpc_states_size(); i++)
+      {
 
         assert(deserialized_GoalState.vpc_states(i).operation_type() ==
                GoalState_builder.vpc_states(i).operation_type());
@@ -242,13 +304,18 @@ int main(int argc, char *argv[]) {
       }
 
       int rc = comm_manager.update_goal_state(deserialized_GoalState);
-      if (rc == EXIT_SUCCESS) {
+      if (rc == EXIT_SUCCESS)
+      {
         fprintf(stdout, "Successfully executed the network controller command");
-      } else {
+      }
+      else
+      {
         fprintf(stdout,
                 "Unable to execute the network controller command: %d\n", rc);
       }
-    } else {
+    }
+    else
+    {
       fprintf(stdout, "Deserialize failed with error code: %u\n", rc);
     }
     // free the allocated VpcConfiguration since we are done with it now
