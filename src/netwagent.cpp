@@ -1,7 +1,7 @@
-#include <unistd.h>    /* for getopt */
-#include "aca_log.h"
 #include "aca_comm_mgr.h"
+#include "aca_log.h"
 #include "goalstate.pb.h"
+#include <unistd.h> /* for getopt */
 
 #define ACALOGNAME "AliothControlAgent"
 
@@ -23,20 +23,23 @@ static void aca_cleanup()
     // Optional:  Delete all global objects allocated by libprotobuf.
     google::protobuf::ShutdownProtobufLibrary();
 
-    if (g_test_message != NULL){
+    if (g_test_message != NULL)
+    {
         free(g_test_message);
         g_test_message = NULL;
     }
 
-    if (g_rpc_server != NULL){
+    if (g_rpc_server != NULL)
+    {
         free(g_rpc_server);
         g_rpc_server = NULL;
     }
 
-    if (g_rpc_protocol != NULL){
+    if (g_rpc_protocol != NULL)
+    {
         free(g_rpc_protocol);
         g_rpc_protocol = NULL;
-    }    
+    }
 
     ACA_LOG_INFO("Program exiting, cleaning up...\n");
 
@@ -111,70 +114,72 @@ int main(int argc, char *argv[])
             }
             break;
         default: /* the '?' case when the option is not recognized */
-            fprintf(stderr, "Usage: %s\n"
-                            "\t\t[-t test message to parse and enable test mode]\n"
-                            "\t\t[-s transitd RPC server]\n"
-                            "\t\t[-p transitd RPC protocol]\n",
+            fprintf(stderr,
+                    "Usage: %s\n"
+                    "\t\t[-t test message to parse and enable test mode]\n"
+                    "\t\t[-s transitd RPC server]\n"
+                    "\t\t[-p transitd RPC protocol]\n",
                     argv[0]);
             exit(EXIT_FAILURE);
         }
     }
 
-    // fill in the RPC server and protocol if it is not provided in command line arg
+    // fill in the RPC server and protocol if it is not provided in command line
+    // arg
     if (g_rpc_server == NULL)
     {
-        g_rpc_server = (char *)malloc(sizeof(char) * strlen(LOCALHOST));
+        g_rpc_server = (char *)malloc(sizeof(char) * strlen(LOCALHOST) + 1);
         if (g_rpc_server != NULL)
         {
-            strncpy(g_rpc_server, LOCALHOST, strlen(LOCALHOST));
+            strncpy(g_rpc_server, LOCALHOST, strlen(LOCALHOST) + 1);
         }
         else
         {
             ACA_LOG_EMERG("Out of memory when allocating string with size: %lu.\n",
-                            (sizeof(char) * strlen(LOCALHOST)));
+                          (sizeof(char) * strlen(LOCALHOST)));
             exit(EXIT_FAILURE);
         }
     }
     if (g_rpc_protocol == NULL)
     {
-        g_rpc_protocol = (char *)malloc(sizeof(char) * strlen(UDP));
+        g_rpc_protocol = (char *)malloc(sizeof(char) * strlen(UDP) + 1);
         if (g_rpc_protocol != NULL)
         {
-            strncpy(g_rpc_protocol, UDP, strlen(UDP));
+            strncpy(g_rpc_protocol, UDP, strlen(UDP) + 1);
         }
         else
         {
             ACA_LOG_EMERG("Out of memory when allocating string with size: %lu.\n",
-                            (sizeof(char) * strlen(UDP)));
+                          (sizeof(char) * strlen(UDP)));
             exit(EXIT_FAILURE);
         }
     }
 
-    //Check if transit program exists on Physical NIC; if not, launch the program
-    //P0, tracked by issue#11
+    // Check if transit program exists on Physical NIC; if not, launch the program
+    // P0, tracked by issue#11
 
     Aca_Comm_Manager comm_manager;
 
-    //Announce this host (agent) and register in every kafka cluster
-    //P0, tracked by issue#12
+    // Announce this host (agent) and register in every kafka cluster
+    // P0, tracked by issue#12
 
-    //Launch background threads to monitor and to emit network health status
+    // Launch background threads to monitor and to emit network health status
     //	for customer VMs, containers, as well as
     //	infra host services including OVS, transit etc.
-    //P1, tracked by issue#13
+    // P1, tracked by issue#13
 
-    //Upload or refresh the networking spec of this host
+    // Upload or refresh the networking spec of this host
     // (including DPDK, SR-IOV, bandwidth etc.)
-    //P1, tracked by issue#14
-    // MessageProducer host_spec_producer(broker_list, topic_host_spec, partition_value);
-    // cout << "broker list:" << host_spec_producer.getBrokers() << endl;
-    // cout << "topic:" << host_spec_producer.getTopicName() << endl;
+    // P1, tracked by issue#14
+    // MessageProducer host_spec_producer(broker_list, topic_host_spec,
+    // partition_value); cout << "broker list:" << host_spec_producer.getBrokers()
+    // << endl; cout << "topic:" << host_spec_producer.getTopicName() << endl;
     // cout << "partition:" << host_spec_producer.getPartitionValue() << endl;
 
     // string host_network_spec = "fake config";
-    //cout << "Prepare for publishing " << host_network_spec  <<endl;
-    //host_spec_producer.publish(host_network_spec);
-    //cout << "Publish completed" << endl;
+    // cout << "Prepare for publishing " << host_network_spec  <<endl;
+    // host_spec_producer.publish(host_network_spec);
+    // cout << "Publish completed" << endl;
 
     if (g_test_mode == false)
     {
@@ -185,7 +190,7 @@ int main(int argc, char *argv[])
     {
         // TODO:...
     }
-  
+
     aca_cleanup();
 
     return rc;

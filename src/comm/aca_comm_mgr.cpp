@@ -1,12 +1,13 @@
-#include <iostream>
-#include <chrono>
-#include <thread>
-#include <errno.h>
-#include "aca_log.h"
-#include "trn_rpc_protocol.h"
 #include "aca_comm_mgr.h"
-#include "messageconsumer.h"
+#include "aca_log.h"
 #include "goalstate.pb.h"
+#include "messageconsumer.h"
+#include "trn_rpc_protocol.h"
+#include <chrono>
+#include <errno.h>
+#include <iostream>
+#include <thread>
+#include <arpa/inet.h>
 
 using std::string;
 using namespace std::chrono_literals;
@@ -22,25 +23,25 @@ namespace aca_comm_manager
 int Aca_Comm_Manager::process_messages()
 {
 
-    aliothcontroller::GoalState parsed_struct;
+    aliothcontroller::GoalState deserialized_GoalState;
     int rc = EXIT_FAILURE;
 
-    //Preload network agent configuration
-    //TODO: load it from configuration file
+    // Preload network agent configuration
+    // TODO: load it from configuration file
     // string host_id = "00000000-0000-0000-0000-000000000000";
     string broker_list = "10.213.43.188:9092";
-    string topic_host_spec = "kafka_test2"; //"/hostid/" + host_id + "/hostspec/";
-    // int partition_value = 0;
+    // string topic_host_spec = "hostid-696239f7-bff2-4b34-9923-ef904eacd77a"; //"/hostid/" + host_id + "/hostspec/";
+    string topic_host_spec = "my_topic"; //"/hostid/" + host_id + "/hostspec/";
+    // int partition_value = 1;
 
-    //Listen to Kafka clusters for any network configuration operations
-    //P0, tracked by issue#15
+    // Listen to Kafka clusters for any network configuration operations
+    // P0, tracked by issue#15
     MessageConsumer network_config_consumer(broker_list, "test");
     string **payload;
-    Aca_Comm_Manager comm_manager;
-
-    ACA_LOG_DEBUG("Going into keep listening loop, press ctrl-C or kill process ID #: "
-                  "%d to exit.\n",
-                  getpid());
+    ACA_LOG_DEBUG(
+        "Going into keep listening loop, press ctrl-C or kill process ID #: "
+        "%d to exit.\n",
+        getpid());
 
     do
     {
@@ -49,25 +50,22 @@ int Aca_Comm_Manager::process_messages()
         {
             ACA_LOG_INFO("Processing payload....: %s.\n", (**payload).c_str());
 
-            rc = comm_manager.deserialize(**payload, parsed_struct);
+            rc = this->deserialize(**payload, deserialized_GoalState);
 
             if (rc == EXIT_SUCCESS)
             {
-                rc = comm_manager.execute_command(parsed_struct);
-
-                if (rc == EXIT_SUCCESS)
+                // Call parse_goal_state
+                rc = update_goal_state(deserialized_GoalState);
+                if (rc != EXIT_SUCCESS)
                 {
-                    ACA_LOG_INFO("Successfully executed the network controller command");
-
-                    // TODO: need to free parsed_struct since we are done with it
+                    ACA_LOG_ERROR("Failed to update transitd with goal state %d.\n", rc);
                 }
                 else
                 {
-                    ACA_LOG_ERROR("Unable to execute the network controller command: %d\n",
+                    ACA_LOG_ERROR("Successfully updated transitd with goal state %d.\n",
                                   rc);
                 }
             }
-
             if ((payload != nullptr) && (*payload != nullptr))
             {
                 delete *payload;
@@ -86,12 +84,13 @@ int Aca_Comm_Manager::process_messages()
     return rc;
 }
 
-int Aca_Comm_Manager::deserialize(string kafka_message, aliothcontroller::GoalState &parsed_struct)
+int Aca_Comm_Manager::deserialize(string kafka_message,
+                                  aliothcontroller::GoalState &parsed_struct)
 {
     int rc = EXIT_FAILURE;
 
-    //deserialize any new configuration
-    //P0, tracked by issue#16
+    // deserialize any new configuration
+    // P0, tracked by issue#16
 
     if (kafka_message.empty())
     {
@@ -109,9 +108,97 @@ int Aca_Comm_Manager::deserialize(string kafka_message, aliothcontroller::GoalSt
     // compatible with the version of the headers we compiled against.
     GOOGLE_PROTOBUF_VERIFY_VERSION;
 
-    if (parsed_struct.ParseFromArray(kafka_message.c_str(), kafka_message.size()))
+    if (parsed_struct.ParseFromArray(kafka_message.c_str(),
+                                     kafka_message.size()))
     {
         ACA_LOG_INFO("Successfully converted kafka message to protobuf struct\n");
+
+        for (int i = 0; i < parsed_struct.vpc_states_size(); i++)
+        {
+            fprintf(stdout,
+                    "parsed_struct.vpc_states(%d).operation_type(): %d\n", i,
+                    parsed_struct.vpc_states(i).operation_type());
+
+            fprintf(stdout,
+                    "parsed_struct.vpc_states(%d).configuration().project_id(): %s\n", i,
+                    parsed_struct.vpc_states(i).configuration().project_id().c_str());
+
+            fprintf(stdout,
+                "parsed_struct.vpc_states(%d).configuration().id(): %s\n", i,
+                parsed_struct.vpc_states(i).configuration().id().c_str());
+
+            fprintf(stdout,
+                    "parsed_struct.vpc_states(%d).configuration().name(): %s \n", i,
+                    parsed_struct.vpc_states(i)
+                        .configuration()
+                        .name()
+                        .c_str());
+
+            fprintf(stdout,
+                    "parsed_struct.vpc_states(%d).configuration().cidr(): %s \n", i,
+                    parsed_struct.vpc_states(i)
+                        .configuration()
+                        .cidr()
+                        .c_str());
+
+            for (int j = 0; j < parsed_struct.vpc_states(i).configuration().subnet_ids_size(); j++)
+            {
+                fprintf(stdout,
+                        "parsed_struct.vpc_states(%d).configuration().subnet_ids(%d): %s \n",
+                        i, j,
+                        parsed_struct.vpc_states(i)
+                            .configuration()
+                            .subnet_ids(j)
+                            .id()
+                            .c_str());
+            }
+
+            for (int k = 0; k < parsed_struct.vpc_states(i).configuration().routes_size(); k++)
+            {
+                fprintf(stdout,
+                        "parsed_struct.vpc_states(%d).configuration().routes(%d).destination(): "
+                        "%s \n",
+                        i, k,
+                        parsed_struct.vpc_states(i)
+                            .configuration()
+                            .routes(k)
+                            .destination()
+                            .c_str());
+
+                fprintf(stdout,
+                        "parsed_struct.vpc_states(%d).configuration().routes(%d).next_hop(): "
+                        "%s \n",
+                        i, k,
+                        parsed_struct.vpc_states(i)
+                            .configuration()
+                            .routes(k)
+                            .next_hop()
+                            .c_str());
+            }
+
+            for (int l = 0; l < parsed_struct.vpc_states(i).configuration().transit_router_ips_size(); l++)
+            {
+                fprintf(stdout,
+                        "parsed_struct.vpc_states(%d).configuration().transit_router_ips(%d).vpc_id(): "
+                        "%s \n",
+                        i, l,
+                        parsed_struct.vpc_states(i)
+                            .configuration()
+                            .transit_router_ips(l)
+                            .vpc_id()
+                            .c_str());
+
+                fprintf(stdout,
+                        "parsed_struct.vpc_states(%d).configuration().transit_router_ips(%d).ip_address(): "
+                        "%s \n",
+                        i, l,
+                        parsed_struct.vpc_states(i)
+                            .configuration()
+                            .transit_router_ips(l)
+                            .ip_address()
+                            .c_str());
+            }
+        }
         return EXIT_SUCCESS;
     }
     else
@@ -121,18 +208,92 @@ int Aca_Comm_Manager::deserialize(string kafka_message, aliothcontroller::GoalSt
     }
 }
 
-int Aca_Comm_Manager::execute_command(aliothcontroller::GoalState parsed_struct)
+// Calls execute
+int Aca_Comm_Manager::update_goal_state(
+    aliothcontroller::GoalState &deserialized_GoalState)
+{
+    int rc = EXIT_FAILURE;
+    for (int i = 0; i < deserialized_GoalState.vpc_states_size(); i++)
+    {
+        int transitd_command = 0;
+        void *transitd_input;
+
+        switch (deserialized_GoalState.vpc_states(i).operation_type())
+        {
+        case aliothcontroller::OperationType::CREATE:
+        case aliothcontroller::OperationType::UPDATE:
+            transitd_command = UPDATE_VPC;
+            transitd_input = (rpc_trn_vpc_t *)malloc(sizeof(rpc_trn_vpc_t));
+            if (transitd_input != NULL)
+            {
+                rpc_trn_vpc_t *vpc_input = (rpc_trn_vpc_t *)transitd_input;
+                vpc_input->interface = (char *)"eth0";
+                vpc_input->tunid = std::stoi(
+                    deserialized_GoalState.vpc_states(i).configuration().id().c_str());
+                vpc_input->routers_ips.routers_ips_len = 1;
+                uint32_t routers[RPC_TRN_MAX_VPC_ROUTERS];
+                vpc_input->routers_ips.routers_ips_val = routers;
+
+                struct sockaddr_in sa;
+                // TODO: use the info from deserialized_GoalState
+                inet_pton(AF_INET, "10.0.0.1",
+                          &(sa.sin_addr));
+                vpc_input->routers_ips.routers_ips_val[0] =
+                    sa.sin_addr.s_addr;
+
+                rc = EXIT_SUCCESS;
+            }
+            else
+            {
+                ACA_LOG_EMERG("Out of memory when allocating with size: %lu.\n",
+                              sizeof(rpc_trn_vpc_t));
+                rc = ENOMEM;
+            }
+            break;
+        case aliothcontroller::OperationType::DELETE:
+            /* code */
+            break;
+        case aliothcontroller::OperationType::GET:
+            /* code */
+            break;
+        default:
+            ACA_LOG_DEBUG("Invalid VPC state operation type %d/n",
+                          deserialized_GoalState.vpc_states(i).operation_type());
+            break;
+        }
+        if (rc == EXIT_SUCCESS)
+        {
+            rc = this->execute_command(transitd_command, transitd_input);
+            if (rc == EXIT_SUCCESS)
+            {
+                ACA_LOG_INFO("Successfully executed the network controller command");
+            }
+            else
+            {
+                ACA_LOG_ERROR("Unable to execute the network controller command: %d\n",
+                              rc);
+                // TODO: Notify the Network Controller if the command is not successful.
+            }
+            if (transitd_input)
+            {
+                free(transitd_input);
+                transitd_input = NULL;
+            }
+        }
+    }
+    return rc;
+}
+
+int Aca_Comm_Manager::execute_command(int command, void *input_struct)
 {
     static CLIENT *client;
-    uint controller_command = 0;
-    int *rc;
-
-    *rc = EXIT_FAILURE;
-
-    //Depending on different operations, program XDP through corresponding RPC
-    //apis by transit daemon
-    //P0, tracked by issue#17
-    ACA_LOG_INFO("Connecting to %s using %s protocol.\n", g_rpc_server, g_rpc_protocol);
+    int rc = EXIT_SUCCESS;
+    int *transitd_return;
+    // Depending on different operations, program XDP through corresponding RPC
+    // apis by transit daemon
+    // P0, tracked by issue#17
+    ACA_LOG_INFO("Connecting to %s using %s protocol.\n", g_rpc_server,
+                 g_rpc_protocol);
 
     client = clnt_create(g_rpc_server, RPC_TRANSIT_REMOTE_PROTOCOL,
                          RPC_TRANSIT_ALFAZERO, g_rpc_protocol);
@@ -141,14 +302,14 @@ int Aca_Comm_Manager::execute_command(aliothcontroller::GoalState parsed_struct)
     {
         clnt_pcreateerror(g_rpc_server);
         ACA_LOG_EMERG("Not able to create the RPC connection to Transit daemon.\n");
-        *rc = EXIT_FAILURE;
+        rc = EXIT_FAILURE;
     }
     else
     {
-        switch (controller_command)
+        switch (command)
         {
         case UPDATE_VPC:
-            // rc = update_vpc_1 ...
+            transitd_return = update_vpc_1((rpc_trn_vpc_t *)input_struct, client);
             break;
         case UPDATE_NET:
             // rc = UPDATE_NET_1 ...
@@ -201,34 +362,33 @@ int Aca_Comm_Manager::execute_command(aliothcontroller::GoalState parsed_struct)
         case UNLOAD_TRANSIT_AGENT_XDP:
             // rc = UNLOAD_TRANSIT_AGENT_XDP ...
             break;
-
         default:
-            ACA_LOG_ERROR("Unknown controller command: %d\n", controller_command);
-            *rc = EXIT_FAILURE;
+            ACA_LOG_ERROR("Unknown controller command: %d\n", command);
+            rc = EXIT_FAILURE;
             break;
         }
 
-        if (rc == (int *)NULL)
+        if (transitd_return == (int *)NULL)
         {
             clnt_perror(client, "Call failed to program Transit daemon");
             ACA_LOG_EMERG("Call failed to program Transit daemon, command: %d.\n",
-                          controller_command);
+                          command);
+            rc = EXIT_FAILURE;
         }
-        else if (*rc != EXIT_SUCCESS)
+        else if (*transitd_return != EXIT_SUCCESS)
         {
-            ACA_LOG_EMERG("Fatal error for command: %d.\n",
-                          controller_command);
             // TODO: report the error back to network controller
+            rc = EXIT_FAILURE;
         }
-
-        ACA_LOG_INFO("Successfully updated transitd with command %d.\n",
-                     controller_command);
+        if (rc == EXIT_SUCCESS)
+        {
+            ACA_LOG_INFO("Successfully updated transitd with command %d.\n",
+                         command);
+        }
         // TODO: can print out more command specific info
 
         clnt_destroy(client);
     }
-
-    return *rc;
+    return rc;
 }
-
 } // namespace aca_comm_manager
