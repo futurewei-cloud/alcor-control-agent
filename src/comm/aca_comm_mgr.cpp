@@ -112,6 +112,94 @@ int Aca_Comm_Manager::deserialize(string kafka_message,
                                      kafka_message.size()))
     {
         ACA_LOG_INFO("Successfully converted kafka message to protobuf struct\n");
+
+        for (int i = 0; i < parsed_struct.vpc_states_size(); i++)
+        {
+            fprintf(stdout,
+                    "parsed_struct.vpc_states(%d).operation_type(): %d\n", i,
+                    parsed_struct.vpc_states(i).operation_type());
+
+            fprintf(stdout,
+                    "parsed_struct.vpc_states(%d).configuration().project_id(): %s\n", i,
+                    parsed_struct.vpc_states(i).configuration().project_id().c_str());
+
+            fprintf(
+                stdout,
+                "parsed_struct.vpc_states(%d).configuration().id(): %s\n", i,
+                parsed_struct.vpc_states(i).configuration().id().c_str());
+
+            fprintf(stdout,
+                    "parsed_struct.vpc_states(%d).configuration().name(): %s \n", i,
+                    parsed_struct.vpc_states(i)
+                        .configuration()
+                        .name()
+                        .c_str());
+
+            fprintf(stdout,
+                    "parsed_struct.vpc_states(%d).configuration().cidr(): %s \n", i,
+                    parsed_struct.vpc_states(i)
+                        .configuration()
+                        .cidr()
+                        .c_str());
+
+            for (int j = 0; j < parsed_struct.vpc_states(i).configuration().subnet_ids_size(); j++)
+            {
+                fprintf(stdout,
+                        "parsed_struct.vpc_states(%d).configuration().subnet_ids(%d): %s \n",
+                        i, j,
+                        parsed_struct.vpc_states(i)
+                            .configuration()
+                            .subnet_ids(j)
+                            .id()
+                            .c_str());
+            }
+
+            for (int k = 0; k < parsed_struct.vpc_states(i).configuration().routes_size(); k++)
+            {
+                fprintf(stdout,
+                        "parsed_struct.vpc_states(%d).configuration().routes(%d).destination(): "
+                        "%s \n",
+                        i, k,
+                        parsed_struct.vpc_states(i)
+                            .configuration()
+                            .routes(k)
+                            .destination()
+                            .c_str());
+
+                fprintf(stdout,
+                        "parsed_struct.vpc_states(%d).configuration().routes(%d).next_hop(): "
+                        "%s \n",
+                        i, k,
+                        parsed_struct.vpc_states(i)
+                            .configuration()
+                            .routes(k)
+                            .next_hop()
+                            .c_str());
+            }
+
+            for (int l = 0; l < parsed_struct.vpc_states(i).configuration().transit_router_ips_size(); l++)
+            {
+                fprintf(stdout,
+                        "parsed_struct.vpc_states(%d).configuration().transit_router_ips(%d).vpc_id(): "
+                        "%s \n",
+                        i, l,
+                        parsed_struct.vpc_states(i)
+                            .configuration()
+                            .transit_router_ips(l)
+                            .vpc_id()
+                            .c_str());
+
+                fprintf(stdout,
+                        "parsed_struct.vpc_states(%d).configuration().transit_router_ips(%d).ip_address(): "
+                        "%s \n",
+                        i, l,
+                        parsed_struct.vpc_states(i)
+                            .configuration()
+                            .transit_router_ips(l)
+                            .ip_address()
+                            .c_str());
+            }
+        }
         return EXIT_SUCCESS;
     }
     else
@@ -148,6 +236,7 @@ int Aca_Comm_Manager::update_goal_state(
                 vpc_input->routers_ips.routers_ips_val = routers;
 
                 struct sockaddr_in sa;
+                // TODO: use the info from deserialized_GoalState
                 inet_pton(AF_INET, "10.0.0.1",
                           &(sa.sin_addr));
                 vpc_input->routers_ips.routers_ips_val[0] =
