@@ -123,8 +123,7 @@ int Aca_Comm_Manager::deserialize(string kafka_message,
                     "parsed_struct.vpc_states(%d).configuration().project_id(): %s\n", i,
                     parsed_struct.vpc_states(i).configuration().project_id().c_str());
 
-            fprintf(
-                stdout,
+            fprintf(stdout,
                 "parsed_struct.vpc_states(%d).configuration().id(): %s\n", i,
                 parsed_struct.vpc_states(i).configuration().id().c_str());
 
