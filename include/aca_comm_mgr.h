@@ -21,9 +21,11 @@ namespace aca_comm_manager
       int deserialize(string kafka_message,
                       aliothcontroller::GoalState &parsed_struct);
 
-      int update_goal_state(aliothcontroller::GoalState &deserialized_GoalState);
+      int update_goal_state(aliothcontroller::GoalState &parsed_struct);
 
       int execute_command(int command, void *input_struct);
+
+      void print_goal_state(aliothcontroller::GoalState parsed_struct);
   };
 } // namespace aca_comm_manager
 #endif

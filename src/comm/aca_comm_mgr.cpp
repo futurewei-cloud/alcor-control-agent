@@ -113,92 +113,8 @@ int Aca_Comm_Manager::deserialize(string kafka_message,
     {
         ACA_LOG_INFO("Successfully converted kafka message to protobuf struct\n");
 
-        for (int i = 0; i < parsed_struct.vpc_states_size(); i++)
-        {
-            fprintf(stdout,
-                    "parsed_struct.vpc_states(%d).operation_type(): %d\n", i,
-                    parsed_struct.vpc_states(i).operation_type());
+        this->print_goal_state(parsed_struct);
 
-            fprintf(stdout,
-                    "parsed_struct.vpc_states(%d).configuration().project_id(): %s\n", i,
-                    parsed_struct.vpc_states(i).configuration().project_id().c_str());
-
-            fprintf(stdout,
-                "parsed_struct.vpc_states(%d).configuration().id(): %s\n", i,
-                parsed_struct.vpc_states(i).configuration().id().c_str());
-
-            fprintf(stdout,
-                    "parsed_struct.vpc_states(%d).configuration().name(): %s \n", i,
-                    parsed_struct.vpc_states(i)
-                        .configuration()
-                        .name()
-                        .c_str());
-
-            fprintf(stdout,
-                    "parsed_struct.vpc_states(%d).configuration().cidr(): %s \n", i,
-                    parsed_struct.vpc_states(i)
-                        .configuration()
-                        .cidr()
-                        .c_str());
-
-            for (int j = 0; j < parsed_struct.vpc_states(i).configuration().subnet_ids_size(); j++)
-            {
-                fprintf(stdout,
-                        "parsed_struct.vpc_states(%d).configuration().subnet_ids(%d): %s \n",
-                        i, j,
-                        parsed_struct.vpc_states(i)
-                            .configuration()
-                            .subnet_ids(j)
-                            .id()
-                            .c_str());
-            }
-
-            for (int k = 0; k < parsed_struct.vpc_states(i).configuration().routes_size(); k++)
-            {
-                fprintf(stdout,
-                        "parsed_struct.vpc_states(%d).configuration().routes(%d).destination(): "
-                        "%s \n",
-                        i, k,
-                        parsed_struct.vpc_states(i)
-                            .configuration()
-                            .routes(k)
-                            .destination()
-                            .c_str());
-
-                fprintf(stdout,
-                        "parsed_struct.vpc_states(%d).configuration().routes(%d).next_hop(): "
-                        "%s \n",
-                        i, k,
-                        parsed_struct.vpc_states(i)
-                            .configuration()
-                            .routes(k)
-                            .next_hop()
-                            .c_str());
-            }
-
-            for (int l = 0; l < parsed_struct.vpc_states(i).configuration().transit_router_ips_size(); l++)
-            {
-                fprintf(stdout,
-                        "parsed_struct.vpc_states(%d).configuration().transit_router_ips(%d).vpc_id(): "
-                        "%s \n",
-                        i, l,
-                        parsed_struct.vpc_states(i)
-                            .configuration()
-                            .transit_router_ips(l)
-                            .vpc_id()
-                            .c_str());
-
-                fprintf(stdout,
-                        "parsed_struct.vpc_states(%d).configuration().transit_router_ips(%d).ip_address(): "
-                        "%s \n",
-                        i, l,
-                        parsed_struct.vpc_states(i)
-                            .configuration()
-                            .transit_router_ips(l)
-                            .ip_address()
-                            .c_str());
-            }
-        }
         return EXIT_SUCCESS;
     }
     else
@@ -210,15 +126,15 @@ int Aca_Comm_Manager::deserialize(string kafka_message,
 
 // Calls execute
 int Aca_Comm_Manager::update_goal_state(
-    aliothcontroller::GoalState &deserialized_GoalState)
+    aliothcontroller::GoalState &parsed_struct)
 {
+    int transitd_command = 0;
+    void *transitd_input;
     int rc = EXIT_FAILURE;
-    for (int i = 0; i < deserialized_GoalState.vpc_states_size(); i++)
-    {
-        int transitd_command = 0;
-        void *transitd_input;
 
-        switch (deserialized_GoalState.vpc_states(i).operation_type())
+    for (int i = 0; i < parsed_struct.vpc_states_size(); i++)
+    {
+        switch (parsed_struct.vpc_states(i).operation_type())
         {
         case aliothcontroller::OperationType::CREATE:
         case aliothcontroller::OperationType::UPDATE:
@@ -228,19 +144,21 @@ int Aca_Comm_Manager::update_goal_state(
             {
                 rpc_trn_vpc_t *vpc_input = (rpc_trn_vpc_t *)transitd_input;
                 vpc_input->interface = (char *)"eth0";
-                vpc_input->tunid = std::stoi(
-                    deserialized_GoalState.vpc_states(i).configuration().id().c_str());
-                vpc_input->routers_ips.routers_ips_len = 1;
+                vpc_input->tunid = 1;
+                vpc_input->routers_ips.routers_ips_len =
+                    parsed_struct.vpc_states(i).configuration().transit_router_ips_size();
                 uint32_t routers[RPC_TRN_MAX_VPC_ROUTERS];
                 vpc_input->routers_ips.routers_ips_val = routers;
 
-                struct sockaddr_in sa;
-                // TODO: use the info from deserialized_GoalState
-                inet_pton(AF_INET, "10.0.0.1",
-                          &(sa.sin_addr));
-                vpc_input->routers_ips.routers_ips_val[0] =
-                    sa.sin_addr.s_addr;
-
+                for (int j = 0; j < parsed_struct.vpc_states(i).configuration().transit_router_ips_size(); j++)
+                {
+                    struct sockaddr_in sa;
+                    // TODO: need to check return value, it returns 1 for success 0 for failure
+                    inet_pton(AF_INET, parsed_struct.vpc_states(i).configuration().transit_router_ips(j).ip_address().c_str(),
+                              &(sa.sin_addr));
+                    vpc_input->routers_ips.routers_ips_val[j] =
+                        sa.sin_addr.s_addr;
+                }
                 rc = EXIT_SUCCESS;
             }
             else
@@ -258,7 +176,7 @@ int Aca_Comm_Manager::update_goal_state(
             break;
         default:
             ACA_LOG_DEBUG("Invalid VPC state operation type %d/n",
-                          deserialized_GoalState.vpc_states(i).operation_type());
+                          parsed_struct.vpc_states(i).operation_type());
             break;
         }
         if (rc == EXIT_SUCCESS)
@@ -281,6 +199,93 @@ int Aca_Comm_Manager::update_goal_state(
             }
         }
     }
+
+    for (int i = 0; i < parsed_struct.subnet_states_size(); i++)
+    {
+        switch (parsed_struct.subnet_states(i).operation_type())
+        {
+        case aliothcontroller::OperationType::CREATE:
+        case aliothcontroller::OperationType::UPDATE:
+            transitd_command = UPDATE_NET;
+            transitd_input = (rpc_trn_network_t *)malloc(sizeof(rpc_trn_network_t));
+            if (transitd_input != NULL)
+            {
+                rpc_trn_network_t *network_input = (rpc_trn_network_t *)transitd_input;
+                network_input->interface = (char *)"eth0";
+                // hashing VPC string into 64bit int
+                network_input->tunid = std::hash<std::string>{}(
+                    parsed_struct.subnet_states(i).configuration().vpc_id().c_str());
+
+                string my_cidr = parsed_struct.subnet_states(i).configuration().cidr();
+                int slash_pos = my_cidr.find("/");
+                // TODO: substr throw exceptions also
+                string my_ip_address = my_cidr.substr(0, slash_pos);
+
+                struct sockaddr_in sa;
+                // TODO: need to check return value, it returns 1 for success 0 for failure
+                inet_pton(AF_INET, my_ip_address.c_str(),
+                          &(sa.sin_addr));
+                network_input->netip = sa.sin_addr.s_addr;
+
+                string my_prefixlen = my_cidr.substr(slash_pos+1);
+                // TODO: stoi throw invalid argument exception when it cannot covert
+                network_input->prefixlen = std::stoi(my_prefixlen);
+
+                network_input->switches_ips.switches_ips_len =
+                    parsed_struct.subnet_states(i).configuration().transit_switch_ips_size();
+                uint32_t switches[RPC_TRN_MAX_NET_SWITCHES];
+                network_input->switches_ips.switches_ips_val = switches;
+
+                for (int j = 0; j < parsed_struct.subnet_states(i).configuration().transit_switch_ips_size(); j++)
+                {
+                    struct sockaddr_in sa;
+                    // TODO: need to check return value, it returns 1 for success 0 for failure
+                    inet_pton(AF_INET, parsed_struct.subnet_states(i).configuration().transit_switch_ips(j).ip_address().c_str(),
+                              &(sa.sin_addr));
+                    network_input->switches_ips.switches_ips_val[j] =
+                        sa.sin_addr.s_addr;
+                }
+                rc = EXIT_SUCCESS;
+            }
+            else
+            {
+                ACA_LOG_EMERG("Out of memory when allocating with size: %lu.\n",
+                              sizeof(rpc_trn_vpc_t));
+                rc = ENOMEM;
+            }
+            break;
+        case aliothcontroller::OperationType::DELETE:
+            /* code */
+            break;
+        case aliothcontroller::OperationType::GET:
+            /* code */
+            break;
+        default:
+            ACA_LOG_DEBUG("Invalid VPC state operation type %d/n",
+                          parsed_struct.vpc_states(i).operation_type());
+            break;
+        }
+        if (rc == EXIT_SUCCESS)
+        {
+            rc = this->execute_command(transitd_command, transitd_input);
+            if (rc == EXIT_SUCCESS)
+            {
+                ACA_LOG_INFO("Successfully executed the network controller command");
+            }
+            else
+            {
+                ACA_LOG_ERROR("Unable to execute the network controller command: %d\n",
+                              rc);
+                // TODO: Notify the Network Controller if the command is not successful.
+            }
+            if (transitd_input)
+            {
+                free(transitd_input);
+                transitd_input = NULL;
+            }
+        }
+    }
+
     return rc;
 }
 
@@ -391,4 +396,140 @@ int Aca_Comm_Manager::execute_command(int command, void *input_struct)
     }
     return rc;
 }
+
+void Aca_Comm_Manager::print_goal_state(aliothcontroller::GoalState parsed_struct)
+{
+    for (int i = 0; i < parsed_struct.vpc_states_size(); i++)
+    {
+        fprintf(stdout,
+                "parsed_struct.vpc_states(%d).operation_type(): %d\n", i,
+                parsed_struct.vpc_states(i).operation_type());
+
+        fprintf(stdout,
+                "parsed_struct.vpc_states(%d).configuration().project_id(): %s\n", i,
+                parsed_struct.vpc_states(i).configuration().project_id().c_str());
+
+        fprintf(stdout,
+                "parsed_struct.vpc_states(%d).configuration().id(): %s\n", i,
+                parsed_struct.vpc_states(i).configuration().id().c_str());
+
+        fprintf(stdout,
+                "parsed_struct.vpc_states(%d).configuration().name(): %s \n", i,
+                parsed_struct.vpc_states(i)
+                    .configuration()
+                    .name()
+                    .c_str());
+
+        fprintf(stdout,
+                "parsed_struct.vpc_states(%d).configuration().cidr(): %s \n", i,
+                parsed_struct.vpc_states(i)
+                    .configuration()
+                    .cidr()
+                    .c_str());
+
+        for (int j = 0; j < parsed_struct.vpc_states(i).configuration().subnet_ids_size(); j++)
+        {
+            fprintf(stdout,
+                    "parsed_struct.vpc_states(%d).configuration().subnet_ids(%d): %s \n",
+                    i, j,
+                    parsed_struct.vpc_states(i)
+                        .configuration()
+                        .subnet_ids(j)
+                        .id()
+                        .c_str());
+        }
+
+        for (int k = 0; k < parsed_struct.vpc_states(i).configuration().routes_size(); k++)
+        {
+            fprintf(stdout,
+                    "parsed_struct.vpc_states(%d).configuration().routes(%d).destination(): "
+                    "%s \n",
+                    i, k,
+                    parsed_struct.vpc_states(i)
+                        .configuration()
+                        .routes(k)
+                        .destination()
+                        .c_str());
+
+            fprintf(stdout,
+                    "parsed_struct.vpc_states(%d).configuration().routes(%d).next_hop(): "
+                    "%s \n",
+                    i, k,
+                    parsed_struct.vpc_states(i)
+                        .configuration()
+                        .routes(k)
+                        .next_hop()
+                        .c_str());
+        }
+
+        for (int l = 0; l < parsed_struct.vpc_states(i).configuration().transit_router_ips_size(); l++)
+        {
+            fprintf(stdout,
+                    "parsed_struct.vpc_states(%d).configuration().transit_router_ips(%d).vpc_id(): "
+                    "%s \n",
+                    i, l,
+                    parsed_struct.vpc_states(i)
+                        .configuration()
+                        .transit_router_ips(l)
+                        .vpc_id()
+                        .c_str());
+
+            fprintf(stdout,
+                    "parsed_struct.vpc_states(%d).configuration().transit_router_ips(%d).ip_address(): "
+                    "%s \n",
+                    i, l,
+                    parsed_struct.vpc_states(i)
+                        .configuration()
+                        .transit_router_ips(l)
+                        .ip_address()
+                        .c_str());
+        }
+    }
+
+    for (int i = 0; i < parsed_struct.subnet_states_size(); i++)
+    {
+        fprintf(stdout,
+                "parsed_struct.subnet_states(%d).operation_type(): %d\n", i,
+                parsed_struct.subnet_states(i).operation_type());
+
+        fprintf(stdout,
+                "parsed_struct.subnet_states(%d).configuration().project_id(): %s\n", i,
+                parsed_struct.subnet_states(i).configuration().project_id().c_str());
+
+        fprintf(stdout,
+                "parsed_struct.subnet_states(%d).configuration().vpc_id(): %s\n", i,
+                parsed_struct.subnet_states(i).configuration().vpc_id().c_str());
+
+        fprintf(stdout,
+                "parsed_struct.subnet_states(%d).configuration().id(): %s\n", i,
+                parsed_struct.subnet_states(i).configuration().id().c_str());
+
+        fprintf(stdout,
+                "parsed_struct.subnet_states(%d).configuration().name(): %s \n", i,
+                parsed_struct.subnet_states(i)
+                    .configuration()
+                    .name()
+                    .c_str());
+
+        fprintf(stdout,
+                "parsed_struct.subnet_states(%d).configuration().cidr(): %s \n", i,
+                parsed_struct.subnet_states(i)
+                    .configuration()
+                    .cidr()
+                    .c_str());
+
+        for (int j = 0; j < parsed_struct.subnet_states(i).configuration().transit_switch_ips_size(); j++)
+        {
+            fprintf(stdout,
+                    "parsed_struct.subnet_states(%d).configuration().transit_switch_ips(%d): %s \n",
+                    i, j,
+                    parsed_struct.subnet_states(i)
+                        .configuration()
+                        .transit_switch_ips(j)
+                        .subnet_id()
+                        .c_str());
+        }
+    }
+}
+
 } // namespace aca_comm_manager

@@ -151,20 +151,6 @@ int main(int argc, char *argv[])
 
     if (g_load_mode)
     {
-        // we can just execute command here
-        // rc = comm_manager.process_messages();
-        /*
-    static CLIENT *client;
-    client = clnt_create(g_rpc_server, RPC_TRANSIT_REMOTE_PROTOCOL,
-                         RPC_TRANSIT_ALFAZERO, g_rpc_protocol);
-    rpc_trn_xdp_intf_t *intf =
-        (rpc_trn_xdp_intf_t *)(malloc(sizeof(rpc_trn_xdp_intf_t)));
-    intf->interface = (char *)"eth0";
-    intf->xdp_path = (char *)"/mnt/Transit/build/xdp/transit_xdp_ebpf.o";
-    intf->pcapfile = (char *)"/sys/fs/bpf/transitxdp.pcap";
-    int *rc = load_transit_xdp_1(intf, client);
-    fprintf(stdout, "Return code for load_transit_xdp is %d\n", *rc);
-    */
         string broker_list = "10.213.43.188:9092";
         //string topic_host_spec = "hostid-bb009e95-3839-4a9d-abd9-9ad70b538112";  //"/hostid/" + host_id + "/hostspec/";
         string topic_host_spec = "my_topic";
@@ -175,25 +161,6 @@ int main(int argc, char *argv[])
         //MessageProducer network_config_producer(broker_list, topic_host_spec, 0);
 
         bool pool_res = network_config_consumer.cosumeDispatched(topic_host_spec);
-        //network_config_producer.publish("Hello");
-        // while (keep_listen)
-        // {
-
-        //   bool pool_res = network_config_consumer.consume(topic_host_spec, payload);
-        //   if (pool_res)
-        //   {
-        //     fprintf(stdout, "Processing payload....%s: ", (**payload).c_str());
-        //   }
-        //   else
-        //   {
-        //     //cout << "pool fails" << endl;
-        //   }
-
-        //   //if(payload != nullptr && *payload != nullptr){
-        //   //	delete *payload;
-        //   //}
-        //   std::this_thread::sleep_for(5s);
-        // }
     }
     else
     {
@@ -220,6 +187,8 @@ int main(int argc, char *argv[])
             VpcConiguration_builder->add_transit_router_ips();
         TransitRouterIp_builder->set_vpc_id("12345");
         TransitRouterIp_builder->set_ip_address("10.0.0.2");
+
+        // need to fill in the subnet structs
 
         string string_message;
 
@@ -263,108 +232,48 @@ int main(int argc, char *argv[])
 
                 assert(parsed_struct.vpc_states(i).operation_type() ==
                        GoalState_builder.vpc_states(i).operation_type());
-                fprintf(stdout,
-                        "parsed_struct.vpc_states(%d).operation_type(): %d\n", i,
-                        parsed_struct.vpc_states(i).operation_type());
 
                 assert(
                     parsed_struct.vpc_states(i).configuration().project_id() ==
                     GoalState_builder.vpc_states(i).configuration().project_id());
-                fprintf(stdout,
-                        "parsed_struct.vpc_states(%d).configuration().project_id(): %s\n", i,
-                        parsed_struct.vpc_states(i).configuration().project_id().c_str());
-
+               
                 assert(parsed_struct.vpc_states(i).configuration().id() ==
                        GoalState_builder.vpc_states(i).configuration().id());
-                fprintf(stdout,
-                        "parsed_struct.vpc_states(%d).configuration().id(): %s\n", i,
-                        parsed_struct.vpc_states(i).configuration().id().c_str());
-
+                
                 assert(parsed_struct.vpc_states(i).configuration().name() ==
                        GoalState_builder.vpc_states(i).configuration().name());
-                fprintf(stdout,
-                        "parsed_struct.vpc_states(%d).configuration().name(): %s \n", i,
-                        parsed_struct.vpc_states(i)
-                            .configuration()
-                            .name()
-                            .c_str());
-
+                
                 assert(parsed_struct.vpc_states(i).configuration().cidr() ==
                        GoalState_builder.vpc_states(i).configuration().cidr());
-                fprintf(stdout,
-                        "parsed_struct.vpc_states(%d).configuration().cidr(): %s \n", i,
-                        parsed_struct.vpc_states(i)
-                            .configuration()
-                            .cidr()
-                            .c_str());
 
                 for (int j = 0; j < parsed_struct.vpc_states(i).configuration().subnet_ids_size(); j++)
                 {
                     assert(parsed_struct.vpc_states(i).configuration().subnet_ids(j).id() ==
                            GoalState_builder.vpc_states(i).configuration().subnet_ids(j).id());
-                    fprintf(stdout,
-                            "parsed_struct.vpc_states(%d).configuration().subnet_ids(%d): %s \n",
-                            i, j,
-                            parsed_struct.vpc_states(i)
-                                .configuration()
-                                .subnet_ids(j)
-                                .id()
-                                .c_str());
                 }
 
                 for (int k = 0; k < parsed_struct.vpc_states(i).configuration().routes_size(); k++)
                 {
                     assert(parsed_struct.vpc_states(i).configuration().routes(k).destination() ==
                            GoalState_builder.vpc_states(i).configuration().routes(k).destination());
-                    fprintf(stdout,
-                            "parsed_struct.vpc_states(%d).configuration().routes(%d).destination(): "
-                            "%s \n",
-                            i, k,
-                            parsed_struct.vpc_states(i)
-                                .configuration()
-                                .routes(k)
-                                .destination()
-                                .c_str());
 
                     assert(parsed_struct.vpc_states(i).configuration().routes(k).next_hop() ==
                            GoalState_builder.vpc_states(i).configuration().routes(k).next_hop());
-                    fprintf(stdout,
-                            "parsed_struct.vpc_states(%d).configuration().routes(%d).next_hop(): "
-                            "%s \n",
-                            i, k,
-                            parsed_struct.vpc_states(i)
-                                .configuration()
-                                .routes(k)
-                                .next_hop()
-                                .c_str());
                 }
 
                 for (int l = 0; l < parsed_struct.vpc_states(i).configuration().transit_router_ips_size(); l++)
                 {
                     assert(parsed_struct.vpc_states(i).configuration().transit_router_ips(l).vpc_id() ==
                            GoalState_builder.vpc_states(i).configuration().transit_router_ips(l).vpc_id());
-                    fprintf(stdout,
-                            "parsed_struct.vpc_states(%d).configuration().transit_router_ips(%d).vpc_id(): "
-                            "%s \n",
-                            i, l,
-                            parsed_struct.vpc_states(i)
-                                .configuration()
-                                .transit_router_ips(l)
-                                .vpc_id()
-                                .c_str());
 
                     assert(parsed_struct.vpc_states(i).configuration().transit_router_ips(l).ip_address() ==
                            GoalState_builder.vpc_states(i).configuration().transit_router_ips(l).ip_address());
-                    fprintf(stdout,
-                            "parsed_struct.vpc_states(%d).configuration().transit_router_ips(%d).ip_address(): "
-                            "%s \n",
-                            i, l,
-                            parsed_struct.vpc_states(i)
-                                .configuration()
-                                .transit_router_ips(l)
-                                .ip_address()
-                                .c_str());
+
                 }
+
+                // TODO, need to also assert/check on the subnet fields
+
+                comm_manager.print_goal_state(parsed_struct);
             }
 
             int rc = comm_manager.update_goal_state(parsed_struct);
@@ -385,12 +294,6 @@ int main(int argc, char *argv[])
         // free the allocated VpcConfiguration since we are done with it now
         new_vpc_states->clear_configuration();
     }
-    /*
-      if ((payload != nullptr) && (*payload != nullptr))
-      {
-          delete *payload;
-      }
-  */
 
     aca_cleanup();
 
