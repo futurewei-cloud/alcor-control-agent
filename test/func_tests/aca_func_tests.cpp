@@ -171,9 +171,15 @@ int main(int argc, char *argv[])
         aliothcontroller::GoalState GoalState_builder;
         aliothcontroller::VpcState *new_vpc_states =
             GoalState_builder.add_vpc_states();
-        new_vpc_states->set_operation_type(aliothcontroller::OperationType::CREATE);
+        aliothcontroller::SubnetState *new_subnet_states =
+            GoalState_builder.add_subnet_states();
+
+        // fill in the vpc state structs
 
         // this will allocate new VpcConfiguration, need to free it later
+
+        new_vpc_states->set_operation_type(aliothcontroller::OperationType::CREATE);
+
         aliothcontroller::VpcConfiguration *VpcConiguration_builder =
             new_vpc_states->mutable_configuration();
         VpcConiguration_builder->set_project_id(
@@ -188,7 +194,24 @@ int main(int argc, char *argv[])
         TransitRouterIp_builder->set_vpc_id("12345");
         TransitRouterIp_builder->set_ip_address("10.0.0.2");
 
-        // need to fill in the subnet structs
+        // fill in the subnet state structs
+
+        new_subnet_states->set_operation_type(aliothcontroller::OperationType::CREATE);
+
+        // this will allocate new SubnetConfiguration, need to free it later
+        aliothcontroller::SubnetConfiguration *SubnetConiguration_builder =
+            new_subnet_states->mutable_configuration();
+        SubnetConiguration_builder->set_project_id(
+            "dbf72700-5106-4a7a-918f-111111111111");
+        // VpcConiguration_builder->set_id("99d9d709-8478-4b46-9f3f-2206b1023fd3");
+        SubnetConiguration_builder->set_vpc_id("99d9d709-8478-4b46-9f3f-2206b1023fd3");
+        SubnetConiguration_builder->set_id("22222");
+        SubnetConiguration_builder->set_name("SuperSubnet");
+        SubnetConiguration_builder->set_cidr("10.0.0.1/16");
+        // this will allocate new VpcConfiguration_TransitRouterIp, may to free it later
+        aliothcontroller::SubnetConfiguration_TransitSwitchIp *TransitSwitchIp_builder =
+            SubnetConiguration_builder->add_transit_switch_ips();
+        TransitSwitchIp_builder->set_ip_address("10.0.0.3");
 
         string string_message;
 
@@ -218,12 +241,6 @@ int main(int argc, char *argv[])
 
             fprintf(stdout, "Deserialize succeed, comparing the content now...\n");
 
-            fprintf(stdout,
-                    "parsed_struct.vpc_states_size() = %d; \n"
-                    "GoalState_builder.vpc_states_size() = %d\n",
-                    parsed_struct.vpc_states_size(),
-                    GoalState_builder.vpc_states_size());
-
             assert(parsed_struct.vpc_states_size() ==
                    GoalState_builder.vpc_states_size());
 
@@ -236,13 +253,13 @@ int main(int argc, char *argv[])
                 assert(
                     parsed_struct.vpc_states(i).configuration().project_id() ==
                     GoalState_builder.vpc_states(i).configuration().project_id());
-               
+
                 assert(parsed_struct.vpc_states(i).configuration().id() ==
                        GoalState_builder.vpc_states(i).configuration().id());
-                
+
                 assert(parsed_struct.vpc_states(i).configuration().name() ==
                        GoalState_builder.vpc_states(i).configuration().name());
-                
+
                 assert(parsed_struct.vpc_states(i).configuration().cidr() ==
                        GoalState_builder.vpc_states(i).configuration().cidr());
 
@@ -268,23 +285,53 @@ int main(int argc, char *argv[])
 
                     assert(parsed_struct.vpc_states(i).configuration().transit_router_ips(l).ip_address() ==
                            GoalState_builder.vpc_states(i).configuration().transit_router_ips(l).ip_address());
-
                 }
 
-                // TODO, need to also assert/check on the subnet fields
+                assert(parsed_struct.subnet_states_size() ==
+                       GoalState_builder.subnet_states_size());
 
-                comm_manager.print_goal_state(parsed_struct);
+                for (int i = 0; i < parsed_struct.subnet_states_size(); i++)
+                {
+
+                    assert(parsed_struct.subnet_states(i).operation_type() ==
+                           GoalState_builder.subnet_states(i).operation_type());
+
+                    assert(
+                        parsed_struct.subnet_states(i).configuration().project_id() ==
+                        GoalState_builder.subnet_states(i).configuration().project_id());
+
+                    assert(parsed_struct.subnet_states(i).configuration().vpc_id() ==
+                           GoalState_builder.subnet_states(i).configuration().vpc_id());   
+                           
+                    assert(parsed_struct.subnet_states(i).configuration().id() ==
+                           GoalState_builder.subnet_states(i).configuration().id());                 
+
+                    assert(parsed_struct.subnet_states(i).configuration().name() ==
+                           GoalState_builder.subnet_states(i).configuration().name());
+
+                    assert(parsed_struct.subnet_states(i).configuration().cidr() ==
+                           GoalState_builder.subnet_states(i).configuration().cidr());
+
+                    for (int j = 0; j < parsed_struct.subnet_states(i).configuration().transit_switch_ips_size(); j++)
+                    {
+                        assert(parsed_struct.subnet_states(i).configuration().transit_switch_ips(j).ip_address() ==
+                               GoalState_builder.subnet_states(i).configuration().transit_switch_ips(j).ip_address());
+                    }
+                }
+
+                // don't need to print here as it is already printed in deserialized function currently
+                // comm_manager.print_goal_state(parsed_struct);
             }
 
             int rc = comm_manager.update_goal_state(parsed_struct);
             if (rc == EXIT_SUCCESS)
             {
-                fprintf(stdout, "Successfully executed the network controller command");
+                fprintf(stdout, "[Functional test] Successfully executed the network controller command");
             }
             else
             {
                 fprintf(stdout,
-                        "Unable to execute the network controller command: %d\n", rc);
+                        "[Funtional test] Unable to execute the network controller command: %d\n", rc);
             }
         }
         else
@@ -292,6 +339,7 @@ int main(int argc, char *argv[])
             fprintf(stdout, "Deserialize failed with error code: %u\n", rc);
         }
         // free the allocated VpcConfiguration since we are done with it now
+        new_subnet_states->clear_configuration();
         new_vpc_states->clear_configuration();
     }
 

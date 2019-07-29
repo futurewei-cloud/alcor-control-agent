@@ -188,7 +188,7 @@ int Aca_Comm_Manager::update_goal_state(
             }
             else
             {
-                ACA_LOG_ERROR("Unable to execute the network controller command: %d\n",
+                ACA_LOG_ERROR("[update_goal_state] Unable to execute the network controller command: %d\n",
                               rc);
                 // TODO: Notify the Network Controller if the command is not successful.
             }
@@ -227,7 +227,7 @@ int Aca_Comm_Manager::update_goal_state(
                           &(sa.sin_addr));
                 network_input->netip = sa.sin_addr.s_addr;
 
-                string my_prefixlen = my_cidr.substr(slash_pos+1);
+                string my_prefixlen = my_cidr.substr(slash_pos + 1);
                 // TODO: stoi throw invalid argument exception when it cannot covert
                 network_input->prefixlen = std::stoi(my_prefixlen);
 
@@ -250,7 +250,7 @@ int Aca_Comm_Manager::update_goal_state(
             else
             {
                 ACA_LOG_EMERG("Out of memory when allocating with size: %lu.\n",
-                              sizeof(rpc_trn_vpc_t));
+                              sizeof(rpc_trn_network_t));
                 rc = ENOMEM;
             }
             break;
@@ -261,8 +261,8 @@ int Aca_Comm_Manager::update_goal_state(
             /* code */
             break;
         default:
-            ACA_LOG_DEBUG("Invalid VPC state operation type %d/n",
-                          parsed_struct.vpc_states(i).operation_type());
+            ACA_LOG_DEBUG("Invalid subnet state operation type %d/n",
+                          parsed_struct.subnet_states(i).operation_type());
             break;
         }
         if (rc == EXIT_SUCCESS)
@@ -289,6 +289,7 @@ int Aca_Comm_Manager::update_goal_state(
     return rc;
 }
 
+// TODO: fix the memory leaks introduced when the RPC call failed
 int Aca_Comm_Manager::execute_command(int command, void *input_struct)
 {
     static CLIENT *client;
@@ -317,7 +318,7 @@ int Aca_Comm_Manager::execute_command(int command, void *input_struct)
             transitd_return = update_vpc_1((rpc_trn_vpc_t *)input_struct, client);
             break;
         case UPDATE_NET:
-            // rc = UPDATE_NET_1 ...
+            transitd_return = update_net_1((rpc_trn_network_t *)input_struct, client);
             break;
         case UPDATE_EP:
             // rc = UPDATE_EP_1 ...
@@ -394,6 +395,7 @@ int Aca_Comm_Manager::execute_command(int command, void *input_struct)
 
         clnt_destroy(client);
     }
+
     return rc;
 }
 
@@ -526,7 +528,7 @@ void Aca_Comm_Manager::print_goal_state(aliothcontroller::GoalState parsed_struc
                     parsed_struct.subnet_states(i)
                         .configuration()
                         .transit_switch_ips(j)
-                        .subnet_id()
+                        .ip_address()
                         .c_str());
         }
     }
