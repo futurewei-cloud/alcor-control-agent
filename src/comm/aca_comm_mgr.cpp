@@ -134,10 +134,15 @@ int Aca_Comm_Manager::update_goal_state(
 
     for (int i = 0; i < parsed_struct.vpc_states_size(); i++)
     {
+        aliothcontroller::VpcConfiguration current_VpcConfiguration =
+            parsed_struct.vpc_states(i).configuration();
+
         switch (parsed_struct.vpc_states(i).operation_type())
         {
         case aliothcontroller::OperationType::CREATE:
         case aliothcontroller::OperationType::UPDATE:
+            // TODO: There might be slight difference between Create and Update.
+            // E.g. Create could require pre-check that if a VPC exists in this host etc.
             transitd_command = UPDATE_VPC;
             transitd_input = (rpc_trn_vpc_t *)malloc(sizeof(rpc_trn_vpc_t));
             if (transitd_input != NULL)
@@ -146,15 +151,15 @@ int Aca_Comm_Manager::update_goal_state(
                 vpc_input->interface = (char *)"eth0";
                 vpc_input->tunid = 1;
                 vpc_input->routers_ips.routers_ips_len =
-                    parsed_struct.vpc_states(i).configuration().transit_router_ips_size();
+                    current_VpcConfiguration.transit_router_ips_size();
                 uint32_t routers[RPC_TRN_MAX_VPC_ROUTERS];
                 vpc_input->routers_ips.routers_ips_val = routers;
 
-                for (int j = 0; j < parsed_struct.vpc_states(i).configuration().transit_router_ips_size(); j++)
+                for (int j = 0; j < current_VpcConfiguration.transit_router_ips_size(); j++)
                 {
                     struct sockaddr_in sa;
                     // TODO: need to check return value, it returns 1 for success 0 for failure
-                    inet_pton(AF_INET, parsed_struct.vpc_states(i).configuration().transit_router_ips(j).ip_address().c_str(),
+                    inet_pton(AF_INET, current_VpcConfiguration.transit_router_ips(j).ip_address().c_str(),
                               &(sa.sin_addr));
                     vpc_input->routers_ips.routers_ips_val[j] =
                         sa.sin_addr.s_addr;
@@ -202,21 +207,25 @@ int Aca_Comm_Manager::update_goal_state(
 
     for (int i = 0; i < parsed_struct.subnet_states_size(); i++)
     {
+
+        aliothcontroller::SubnetConfiguration current_SubnetConfiguration =
+            parsed_struct.subnet_states(i).configuration();
+
         switch (parsed_struct.subnet_states(i).operation_type())
         {
         case aliothcontroller::OperationType::CREATE:
         case aliothcontroller::OperationType::UPDATE:
+            // TODO: There might be slight difference between Create and Update.
+            // E.g. Create could require pre-check that if a subnet exists in this host etc.        
             transitd_command = UPDATE_NET;
             transitd_input = (rpc_trn_network_t *)malloc(sizeof(rpc_trn_network_t));
             if (transitd_input != NULL)
             {
                 rpc_trn_network_t *network_input = (rpc_trn_network_t *)transitd_input;
                 network_input->interface = (char *)"eth0";
-                // hashing VPC string into 64bit int
-                network_input->tunid = std::hash<std::string>{}(
-                    parsed_struct.subnet_states(i).configuration().vpc_id().c_str());
+                network_input->tunid = current_SubnetConfiguration.tunnel_id();
 
-                string my_cidr = parsed_struct.subnet_states(i).configuration().cidr();
+                string my_cidr = current_SubnetConfiguration.cidr();
                 int slash_pos = my_cidr.find("/");
                 // TODO: substr throw exceptions also
                 string my_ip_address = my_cidr.substr(0, slash_pos);
@@ -232,15 +241,15 @@ int Aca_Comm_Manager::update_goal_state(
                 network_input->prefixlen = std::stoi(my_prefixlen);
 
                 network_input->switches_ips.switches_ips_len =
-                    parsed_struct.subnet_states(i).configuration().transit_switch_ips_size();
+                    current_SubnetConfiguration.transit_switch_ips_size();
                 uint32_t switches[RPC_TRN_MAX_NET_SWITCHES];
                 network_input->switches_ips.switches_ips_val = switches;
 
-                for (int j = 0; j < parsed_struct.subnet_states(i).configuration().transit_switch_ips_size(); j++)
+                for (int j = 0; j < current_SubnetConfiguration.transit_switch_ips_size(); j++)
                 {
                     struct sockaddr_in sa;
                     // TODO: need to check return value, it returns 1 for success 0 for failure
-                    inet_pton(AF_INET, parsed_struct.subnet_states(i).configuration().transit_switch_ips(j).ip_address().c_str(),
+                    inet_pton(AF_INET, current_SubnetConfiguration.transit_switch_ips(j).ip_address().c_str(),
                               &(sa.sin_addr));
                     network_input->switches_ips.switches_ips_val[j] =
                         sa.sin_addr.s_addr;
@@ -295,12 +304,12 @@ int Aca_Comm_Manager::execute_command(int command, void *input_struct)
     static CLIENT *client;
     int rc = EXIT_SUCCESS;
     int *transitd_return;
-    // Depending on different operations, program XDP through corresponding RPC
-    // apis by transit daemon
-    // P0, tracked by issue#17
+
     ACA_LOG_INFO("Connecting to %s using %s protocol.\n", g_rpc_server,
                  g_rpc_protocol);
 
+    // TODO: We may change it to have a static client for health checking on
+    // transit daemon in the future.
     client = clnt_create(g_rpc_server, RPC_TRANSIT_REMOTE_PROTOCOL,
                          RPC_TRANSIT_ALFAZERO, g_rpc_protocol);
 
@@ -399,6 +408,7 @@ int Aca_Comm_Manager::execute_command(int command, void *input_struct)
     return rc;
 }
 
+// TODO: only print it during debug mode
 void Aca_Comm_Manager::print_goal_state(aliothcontroller::GoalState parsed_struct)
 {
     for (int i = 0; i < parsed_struct.vpc_states_size(); i++)
@@ -407,84 +417,68 @@ void Aca_Comm_Manager::print_goal_state(aliothcontroller::GoalState parsed_struc
                 "parsed_struct.vpc_states(%d).operation_type(): %d\n", i,
                 parsed_struct.vpc_states(i).operation_type());
 
-        fprintf(stdout,
-                "parsed_struct.vpc_states(%d).configuration().project_id(): %s\n", i,
-                parsed_struct.vpc_states(i).configuration().project_id().c_str());
+        aliothcontroller::VpcConfiguration current_VpcConfiguration =
+            parsed_struct.vpc_states(i).configuration();
 
         fprintf(stdout,
-                "parsed_struct.vpc_states(%d).configuration().id(): %s\n", i,
-                parsed_struct.vpc_states(i).configuration().id().c_str());
+                "current_VpcConfiguration.version(): %d\n",
+                current_VpcConfiguration.version());
 
         fprintf(stdout,
-                "parsed_struct.vpc_states(%d).configuration().name(): %s \n", i,
-                parsed_struct.vpc_states(i)
-                    .configuration()
-                    .name()
-                    .c_str());
+                "current_VpcConfiguration.project_id(): %s\n",
+                current_VpcConfiguration.project_id().c_str());
 
         fprintf(stdout,
-                "parsed_struct.vpc_states(%d).configuration().cidr(): %s \n", i,
-                parsed_struct.vpc_states(i)
-                    .configuration()
-                    .cidr()
-                    .c_str());
+                "current_VpcConfiguration.id(): %s\n",
+                current_VpcConfiguration.id().c_str());
 
-        for (int j = 0; j < parsed_struct.vpc_states(i).configuration().subnet_ids_size(); j++)
+        fprintf(stdout,
+                "current_VpcConfiguration.name(): %s \n",
+                current_VpcConfiguration.name().c_str());
+
+        fprintf(stdout,
+                "current_VpcConfiguration.cidr(): %s \n",
+                current_VpcConfiguration.cidr().c_str());
+
+        fprintf(stdout,
+                "current_VpcConfiguration.tunnel_id(): %ld \n",
+                current_VpcConfiguration.tunnel_id());
+
+        for (int j = 0; j < current_VpcConfiguration.subnet_ids_size(); j++)
         {
             fprintf(stdout,
-                    "parsed_struct.vpc_states(%d).configuration().subnet_ids(%d): %s \n",
-                    i, j,
-                    parsed_struct.vpc_states(i)
-                        .configuration()
-                        .subnet_ids(j)
-                        .id()
-                        .c_str());
+                    "current_VpcConfiguration.subnet_ids(%d): %s \n", j,
+                    current_VpcConfiguration.subnet_ids(j).id().c_str());
         }
 
-        for (int k = 0; k < parsed_struct.vpc_states(i).configuration().routes_size(); k++)
+        for (int k = 0; k < current_VpcConfiguration.routes_size(); k++)
         {
             fprintf(stdout,
-                    "parsed_struct.vpc_states(%d).configuration().routes(%d).destination(): "
+                    "current_VpcConfiguration.routes(%d).destination(): "
                     "%s \n",
-                    i, k,
-                    parsed_struct.vpc_states(i)
-                        .configuration()
-                        .routes(k)
-                        .destination()
-                        .c_str());
+                    k,
+                    current_VpcConfiguration.routes(k).destination().c_str());
 
             fprintf(stdout,
-                    "parsed_struct.vpc_states(%d).configuration().routes(%d).next_hop(): "
+                    "current_VpcConfiguration.routes(%d).next_hop(): "
                     "%s \n",
-                    i, k,
-                    parsed_struct.vpc_states(i)
-                        .configuration()
-                        .routes(k)
-                        .next_hop()
-                        .c_str());
+                    k,
+                    current_VpcConfiguration.routes(k).next_hop().c_str());
         }
 
-        for (int l = 0; l < parsed_struct.vpc_states(i).configuration().transit_router_ips_size(); l++)
+        for (int l = 0; l < current_VpcConfiguration.transit_router_ips_size(); l++)
         {
             fprintf(stdout,
-                    "parsed_struct.vpc_states(%d).configuration().transit_router_ips(%d).vpc_id(): "
+                    "current_VpcConfiguration.transit_router_ips(%d).vpc_id(): "
                     "%s \n",
-                    i, l,
-                    parsed_struct.vpc_states(i)
-                        .configuration()
-                        .transit_router_ips(l)
-                        .vpc_id()
-                        .c_str());
+                    l,
+                    current_VpcConfiguration.transit_router_ips(l).vpc_id().c_str());
 
             fprintf(stdout,
-                    "parsed_struct.vpc_states(%d).configuration().transit_router_ips(%d).ip_address(): "
+                    "current_VpcConfiguration.transit_router_ips(%d).ip_address(): "
                     "%s \n",
-                    i, l,
-                    parsed_struct.vpc_states(i)
-                        .configuration()
-                        .transit_router_ips(l)
-                        .ip_address()
-                        .c_str());
+                    l,
+                    current_VpcConfiguration.transit_router_ips(l).ip_address().c_str());
         }
     }
 
@@ -494,42 +488,42 @@ void Aca_Comm_Manager::print_goal_state(aliothcontroller::GoalState parsed_struc
                 "parsed_struct.subnet_states(%d).operation_type(): %d\n", i,
                 parsed_struct.subnet_states(i).operation_type());
 
-        fprintf(stdout,
-                "parsed_struct.subnet_states(%d).configuration().project_id(): %s\n", i,
-                parsed_struct.subnet_states(i).configuration().project_id().c_str());
+        aliothcontroller::SubnetConfiguration current_SubnetConfiguration =
+            parsed_struct.subnet_states(i).configuration();
 
         fprintf(stdout,
-                "parsed_struct.subnet_states(%d).configuration().vpc_id(): %s\n", i,
-                parsed_struct.subnet_states(i).configuration().vpc_id().c_str());
+                "current_SubnetConfiguration.version(): %d\n",
+                current_SubnetConfiguration.version());
 
         fprintf(stdout,
-                "parsed_struct.subnet_states(%d).configuration().id(): %s\n", i,
-                parsed_struct.subnet_states(i).configuration().id().c_str());
+                "current_SubnetConfiguration.project_id(): %s\n",
+                current_SubnetConfiguration.project_id().c_str());
 
         fprintf(stdout,
-                "parsed_struct.subnet_states(%d).configuration().name(): %s \n", i,
-                parsed_struct.subnet_states(i)
-                    .configuration()
-                    .name()
-                    .c_str());
+                "current_SubnetConfiguration.vpc_id(): %s\n",
+                current_SubnetConfiguration.vpc_id().c_str());
 
         fprintf(stdout,
-                "parsed_struct.subnet_states(%d).configuration().cidr(): %s \n", i,
-                parsed_struct.subnet_states(i)
-                    .configuration()
-                    .cidr()
-                    .c_str());
+                "current_SubnetConfiguration.id(): %s\n",
+                current_SubnetConfiguration.id().c_str());
 
-        for (int j = 0; j < parsed_struct.subnet_states(i).configuration().transit_switch_ips_size(); j++)
+        fprintf(stdout,
+                "current_SubnetConfiguration.name(): %s \n",
+                current_SubnetConfiguration.name().c_str());
+
+        fprintf(stdout,
+                "current_SubnetConfiguration.cidr(): %s \n",
+                current_SubnetConfiguration.cidr().c_str());
+
+        fprintf(stdout,
+                "current_SubnetConfiguration.tunnel_id(): %ld \n",
+                current_SubnetConfiguration.tunnel_id());
+
+        for (int j = 0; j < current_SubnetConfiguration.transit_switch_ips_size(); j++)
         {
             fprintf(stdout,
-                    "parsed_struct.subnet_states(%d).configuration().transit_switch_ips(%d): %s \n",
-                    i, j,
-                    parsed_struct.subnet_states(i)
-                        .configuration()
-                        .transit_switch_ips(j)
-                        .ip_address()
-                        .c_str());
+                    "current_SubnetConfiguration.transit_switch_ips(%d): %s \n", j,
+                    current_SubnetConfiguration.transit_switch_ips(j).ip_address().c_str());
         }
     }
 }

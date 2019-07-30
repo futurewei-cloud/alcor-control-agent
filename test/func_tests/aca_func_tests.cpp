@@ -182,12 +182,14 @@ int main(int argc, char *argv[])
 
         aliothcontroller::VpcConfiguration *VpcConiguration_builder =
             new_vpc_states->mutable_configuration();
+        VpcConiguration_builder->set_version(1);
         VpcConiguration_builder->set_project_id(
             "dbf72700-5106-4a7a-918f-a016853911f8");
         // VpcConiguration_builder->set_id("99d9d709-8478-4b46-9f3f-2206b1023fd3");
         VpcConiguration_builder->set_id("1");
         VpcConiguration_builder->set_name("SuperVpc");
         VpcConiguration_builder->set_cidr("192.168.0.0/24");
+        VpcConiguration_builder->set_tunnel_id(11111);
         // this will allocate new VpcConfiguration_TransitRouterIp, may to free it later
         aliothcontroller::VpcConfiguration_TransitRouterIp *TransitRouterIp_builder =
             VpcConiguration_builder->add_transit_router_ips();
@@ -201,14 +203,16 @@ int main(int argc, char *argv[])
         // this will allocate new SubnetConfiguration, need to free it later
         aliothcontroller::SubnetConfiguration *SubnetConiguration_builder =
             new_subnet_states->mutable_configuration();
+        SubnetConiguration_builder->set_version(1);
         SubnetConiguration_builder->set_project_id(
             "dbf72700-5106-4a7a-918f-111111111111");
         // VpcConiguration_builder->set_id("99d9d709-8478-4b46-9f3f-2206b1023fd3");
         SubnetConiguration_builder->set_vpc_id("99d9d709-8478-4b46-9f3f-2206b1023fd3");
-        SubnetConiguration_builder->set_id("22222");
+        SubnetConiguration_builder->set_id("2");
         SubnetConiguration_builder->set_name("SuperSubnet");
         SubnetConiguration_builder->set_cidr("10.0.0.1/16");
-        // this will allocate new VpcConfiguration_TransitRouterIp, may to free it later
+        SubnetConiguration_builder->set_tunnel_id(22222);
+        // this will allocate new SubnetConfiguration_TransitSwitchIp, may to free it later
         aliothcontroller::SubnetConfiguration_TransitSwitchIp *TransitSwitchIp_builder =
             SubnetConiguration_builder->add_transit_switch_ips();
         TransitSwitchIp_builder->set_ip_address("10.0.0.3");
@@ -241,18 +245,56 @@ int main(int argc, char *argv[])
 
             fprintf(stdout, "Deserialize succeed, comparing the content now...\n");
 
+            assert(parsed_struct.subnet_states_size() ==
+                   GoalState_builder.subnet_states_size());
+
+            for (int i = 0; i < parsed_struct.subnet_states_size(); i++)
+            {
+
+                assert(parsed_struct.subnet_states(i).operation_type() ==
+                       GoalState_builder.subnet_states(i).operation_type());
+
+                assert(parsed_struct.subnet_states(i).configuration().version() ==
+                       GoalState_builder.subnet_states(i).configuration().version());                       
+
+                assert(parsed_struct.subnet_states(i).configuration().project_id() ==
+                    GoalState_builder.subnet_states(i).configuration().project_id());
+
+                assert(parsed_struct.subnet_states(i).configuration().vpc_id() ==
+                       GoalState_builder.subnet_states(i).configuration().vpc_id());
+
+                assert(parsed_struct.subnet_states(i).configuration().id() ==
+                       GoalState_builder.subnet_states(i).configuration().id());
+
+                assert(parsed_struct.subnet_states(i).configuration().name() ==
+                       GoalState_builder.subnet_states(i).configuration().name());
+
+                assert(parsed_struct.subnet_states(i).configuration().cidr() ==
+                       GoalState_builder.subnet_states(i).configuration().cidr());
+
+                assert(parsed_struct.subnet_states(i).configuration().transit_switch_ips_size() ==
+                       GoalState_builder.subnet_states(i).configuration().transit_switch_ips_size());                       
+
+                for (int j = 0; j < parsed_struct.subnet_states(i).configuration().transit_switch_ips_size(); j++)
+                {
+                    assert(parsed_struct.subnet_states(i).configuration().transit_switch_ips(j).ip_address() ==
+                           GoalState_builder.subnet_states(i).configuration().transit_switch_ips(j).ip_address());
+                }
+            }
+
             assert(parsed_struct.vpc_states_size() ==
                    GoalState_builder.vpc_states_size());
 
             for (int i = 0; i < parsed_struct.vpc_states_size(); i++)
             {
-
                 assert(parsed_struct.vpc_states(i).operation_type() ==
                        GoalState_builder.vpc_states(i).operation_type());
 
-                assert(
-                    parsed_struct.vpc_states(i).configuration().project_id() ==
-                    GoalState_builder.vpc_states(i).configuration().project_id());
+                assert(parsed_struct.vpc_states(i).configuration().version() ==
+                       GoalState_builder.vpc_states(i).configuration().version());
+
+                assert(parsed_struct.vpc_states(i).configuration().project_id() ==
+                       GoalState_builder.vpc_states(i).configuration().project_id());
 
                 assert(parsed_struct.vpc_states(i).configuration().id() ==
                        GoalState_builder.vpc_states(i).configuration().id());
@@ -263,11 +305,20 @@ int main(int argc, char *argv[])
                 assert(parsed_struct.vpc_states(i).configuration().cidr() ==
                        GoalState_builder.vpc_states(i).configuration().cidr());
 
+                assert(parsed_struct.vpc_states(i).configuration().tunnel_id() ==
+                       GoalState_builder.vpc_states(i).configuration().tunnel_id());
+
+                assert(parsed_struct.vpc_states(i).configuration().subnet_ids_size() ==
+                       GoalState_builder.vpc_states(i).configuration().subnet_ids_size());
+
                 for (int j = 0; j < parsed_struct.vpc_states(i).configuration().subnet_ids_size(); j++)
                 {
                     assert(parsed_struct.vpc_states(i).configuration().subnet_ids(j).id() ==
                            GoalState_builder.vpc_states(i).configuration().subnet_ids(j).id());
                 }
+
+                assert(parsed_struct.vpc_states(i).configuration().routes_size() ==
+                       GoalState_builder.vpc_states(i).configuration().routes_size());
 
                 for (int k = 0; k < parsed_struct.vpc_states(i).configuration().routes_size(); k++)
                 {
@@ -278,6 +329,9 @@ int main(int argc, char *argv[])
                            GoalState_builder.vpc_states(i).configuration().routes(k).next_hop());
                 }
 
+                assert(parsed_struct.vpc_states(i).configuration().transit_router_ips_size() ==
+                       GoalState_builder.vpc_states(i).configuration().transit_router_ips_size());
+
                 for (int l = 0; l < parsed_struct.vpc_states(i).configuration().transit_router_ips_size(); l++)
                 {
                     assert(parsed_struct.vpc_states(i).configuration().transit_router_ips(l).vpc_id() ==
@@ -286,41 +340,6 @@ int main(int argc, char *argv[])
                     assert(parsed_struct.vpc_states(i).configuration().transit_router_ips(l).ip_address() ==
                            GoalState_builder.vpc_states(i).configuration().transit_router_ips(l).ip_address());
                 }
-
-                assert(parsed_struct.subnet_states_size() ==
-                       GoalState_builder.subnet_states_size());
-
-                for (int i = 0; i < parsed_struct.subnet_states_size(); i++)
-                {
-
-                    assert(parsed_struct.subnet_states(i).operation_type() ==
-                           GoalState_builder.subnet_states(i).operation_type());
-
-                    assert(
-                        parsed_struct.subnet_states(i).configuration().project_id() ==
-                        GoalState_builder.subnet_states(i).configuration().project_id());
-
-                    assert(parsed_struct.subnet_states(i).configuration().vpc_id() ==
-                           GoalState_builder.subnet_states(i).configuration().vpc_id());   
-                           
-                    assert(parsed_struct.subnet_states(i).configuration().id() ==
-                           GoalState_builder.subnet_states(i).configuration().id());                 
-
-                    assert(parsed_struct.subnet_states(i).configuration().name() ==
-                           GoalState_builder.subnet_states(i).configuration().name());
-
-                    assert(parsed_struct.subnet_states(i).configuration().cidr() ==
-                           GoalState_builder.subnet_states(i).configuration().cidr());
-
-                    for (int j = 0; j < parsed_struct.subnet_states(i).configuration().transit_switch_ips_size(); j++)
-                    {
-                        assert(parsed_struct.subnet_states(i).configuration().transit_switch_ips(j).ip_address() ==
-                               GoalState_builder.subnet_states(i).configuration().transit_switch_ips(j).ip_address());
-                    }
-                }
-
-                // don't need to print here as it is already printed in deserialized function currently
-                // comm_manager.print_goal_state(parsed_struct);
             }
 
             int rc = comm_manager.update_goal_state(parsed_struct);
