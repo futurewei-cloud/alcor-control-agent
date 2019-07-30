@@ -149,7 +149,7 @@ int Aca_Comm_Manager::update_goal_state(
             {
                 rpc_trn_vpc_t *vpc_input = (rpc_trn_vpc_t *)transitd_input;
                 vpc_input->interface = (char *)"eth0";
-                vpc_input->tunid = 1;
+                vpc_input->tunid = current_VpcConfiguration.tunnel_id();                
                 vpc_input->routers_ips.routers_ips_len =
                     current_VpcConfiguration.transit_router_ips_size();
                 uint32_t routers[RPC_TRN_MAX_VPC_ROUTERS];
