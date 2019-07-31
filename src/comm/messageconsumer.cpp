@@ -35,14 +35,8 @@ MessageConsumer::MessageConsumer(string brokers, string group_id)
 		{"enable.auto.commit", false},
 		{"auto.offset.reset", "latest"}};
 
-	cout << "Broker list " << this->brokers_list << endl;
-	cout << "group.id " << this->group_id << endl;
-
 	// Create the consumer
 	this->ptr_consumer = new Consumer(this->config);
-	// this->ptr_consumer->set_assignment_callback([](const TopicPartitionList &partitions) {
-	// 	cout << "Got assigned: " << partitions << endl;
-	// });
 }
 
 MessageConsumer::~MessageConsumer()
@@ -70,55 +64,6 @@ void MessageConsumer::setGroupId(string group_id)
 	this->group_id = group_id;
 }
 
-bool MessageConsumer::consume(string topic, string **ptr_payload)
-{
-	if (this->ptr_consumer == nullptr)
-	{
-		cout << "[MessageConsumer]: no consumer has been created" << endl;
-		return false;
-	}
-
-	this->ptr_consumer->subscribe({topic});
-	cout << "Consuming messages from topic " << topic << endl;
-	setLastTopicName(topic);
-
-	Message message = this->ptr_consumer->poll();
-	if (!message)
-	{
-		cout << "[MessageConsumer]: consumer unable to poll messages from topic " << topic << endl;
-		return false;
-	}
-
-	// If we managed to get a message
-	if (message.get_error())
-	{
-		// Ignore EOF notifications from rdkafka
-		if (!message.is_eof())
-		{
-			cout << "[+] Received error notification: " << message.get_error() << endl;
-			return false;
-		}
-		else
-		{
-			cout << "message is eof" << endl;
-			ptr_payload = nullptr;
-			return false;
-		}
-	}
-
-	// Print the key (if any) and payload
-	if (message.get_key())
-	{
-		cout << message.get_key() << " -> ";
-	}
-	cout << "Received message : " << message.get_payload() << endl;
-
-	*ptr_payload = new string(message.get_payload());
-	this->ptr_consumer->commit(message);
-
-	return true;
-}
-
 bool MessageConsumer::cosumeDispatched(string topic)
 {
 	string *payload;
@@ -126,7 +71,6 @@ bool MessageConsumer::cosumeDispatched(string topic)
     int rc = EXIT_FAILURE;
 
 	this->ptr_consumer->subscribe({topic});
-	Aca_Comm_Manager comm_manager;
 
 	cout << "Dispatcher consuming messages from topic " << topic << endl;
 
@@ -147,11 +91,11 @@ bool MessageConsumer::cosumeDispatched(string topic)
 			cout << message.get_payload() << endl;
 			payload = new string(message.get_payload());
 			// TODO: Check string allocation for errors.
-			rc = comm_manager.deserialize(*payload, deserialized_GoalState);
+			rc = Aca_Comm_Manager::get_instance().deserialize(*payload, deserialized_GoalState);
             if (rc == EXIT_SUCCESS)
             {
                 // Call parse_goal_state
-                rc = comm_manager.update_goal_state(deserialized_GoalState);
+                rc = Aca_Comm_Manager::get_instance().update_goal_state(deserialized_GoalState);
                 if (rc != EXIT_SUCCESS)
                 {
 					cout << "Failed to update transitd with goal state" << rc << endl;

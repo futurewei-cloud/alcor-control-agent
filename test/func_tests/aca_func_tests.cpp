@@ -232,11 +232,9 @@ int main(int argc, char *argv[])
         fprintf(stdout, "Serialized protobuf binary array: %s\n",
                 binary_message.c_str());
 
-        Aca_Comm_Manager comm_manager;
-
         aliothcontroller::GoalState parsed_struct;
 
-        rc = comm_manager.deserialize(binary_message, parsed_struct);
+        rc = Aca_Comm_Manager::get_instance().deserialize(binary_message, parsed_struct);
 
         aca_free(buffer);
 
@@ -255,10 +253,10 @@ int main(int argc, char *argv[])
                        GoalState_builder.subnet_states(i).operation_type());
 
                 assert(parsed_struct.subnet_states(i).configuration().version() ==
-                       GoalState_builder.subnet_states(i).configuration().version());                       
+                       GoalState_builder.subnet_states(i).configuration().version());
 
                 assert(parsed_struct.subnet_states(i).configuration().project_id() ==
-                    GoalState_builder.subnet_states(i).configuration().project_id());
+                       GoalState_builder.subnet_states(i).configuration().project_id());
 
                 assert(parsed_struct.subnet_states(i).configuration().vpc_id() ==
                        GoalState_builder.subnet_states(i).configuration().vpc_id());
@@ -273,7 +271,7 @@ int main(int argc, char *argv[])
                        GoalState_builder.subnet_states(i).configuration().cidr());
 
                 assert(parsed_struct.subnet_states(i).configuration().transit_switch_ips_size() ==
-                       GoalState_builder.subnet_states(i).configuration().transit_switch_ips_size());                       
+                       GoalState_builder.subnet_states(i).configuration().transit_switch_ips_size());
 
                 for (int j = 0; j < parsed_struct.subnet_states(i).configuration().transit_switch_ips_size(); j++)
                 {
@@ -342,7 +340,9 @@ int main(int argc, char *argv[])
                 }
             }
 
-            int rc = comm_manager.update_goal_state(parsed_struct);
+            fprintf(stdout, "All content matched, send the parsed_struct to update_goal_state...\n");
+
+            int rc = Aca_Comm_Manager::get_instance().update_goal_state(parsed_struct);
             if (rc == EXIT_SUCCESS)
             {
                 fprintf(stdout, "[Functional test] Successfully executed the network controller command");

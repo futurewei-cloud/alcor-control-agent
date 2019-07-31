@@ -7,25 +7,32 @@ using std::string;
 
 namespace aca_comm_manager
 {
-  class Aca_Comm_Manager
-  {
+class Aca_Comm_Manager
+{
+public:
+  // constructor and destructor purposely omitted to use the default one
+  // provided by the compiler
+  // Aca_Comm_Manager();
+  // ~Aca_Comm_Manager();
 
-    public:
-      // constructor and destructor purposely omitted to use the default one
-      // provided by the compiler
-      // Aca_Comm_Manager();
-      // ~Aca_Comm_Manager();
+  static Aca_Comm_Manager &get_instance();
 
-      int process_messages();
+  int deserialize(string kafka_message,
+                  aliothcontroller::GoalState &parsed_struct);
 
-      int deserialize(string kafka_message,
-                      aliothcontroller::GoalState &parsed_struct);
+  int update_goal_state(aliothcontroller::GoalState &parsed_struct);
 
-      int update_goal_state(aliothcontroller::GoalState &parsed_struct);
+  int execute_command(int command, void *input_struct);
 
-      int execute_command(int command, void *input_struct);
+  void print_goal_state(aliothcontroller::GoalState parsed_struct);
 
-      void print_goal_state(aliothcontroller::GoalState parsed_struct);
-  };
+  // compiler will flag the error when below is called.
+  Aca_Comm_Manager(Aca_Comm_Manager const &) = delete;
+  void operator=(Aca_Comm_Manager const &) = delete;
+
+private:
+  Aca_Comm_Manager() {};
+  ~Aca_Comm_Manager() {};
+};
 } // namespace aca_comm_manager
 #endif

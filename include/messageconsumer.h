@@ -37,8 +37,6 @@ public:
     string getGroupId() const;
 
     void setGroupId(string group_id);
- 
-    bool consume(string topic, string** ptr_payload);
 
     bool cosumeDispatched(string topic);
 

@@ -1,12 +1,14 @@
-#include "aca_comm_mgr.h"
 #include "aca_log.h"
 #include "goalstate.pb.h"
+#include "messageconsumer.h"
 #include <unistd.h> /* for getopt */
+
+using std::string;
+using messagemanager::MessageConsumer;
 
 #define ACALOGNAME "AliothControlAgent"
 
 using namespace std;
-using aca_comm_manager::Aca_Comm_Manager;
 
 // Defines
 static char LOCALHOST[] = "localhost";
@@ -124,8 +126,7 @@ int main(int argc, char *argv[])
         }
     }
 
-    // fill in the RPC server and protocol if it is not provided in command line
-    // arg
+    // fill in the RPC server and protocol if not provided in command line args
     if (g_rpc_server == NULL)
     {
         g_rpc_server = (char *)malloc(sizeof(char) * strlen(LOCALHOST) + 1);
@@ -155,11 +156,6 @@ int main(int argc, char *argv[])
         }
     }
 
-    // Check if transit program exists on Physical NIC; if not, launch the program
-    // P0, tracked by issue#11
-
-    Aca_Comm_Manager comm_manager;
-
     // Announce this host (agent) and register in every kafka cluster
     // P0, tracked by issue#12
 
@@ -183,7 +179,12 @@ int main(int argc, char *argv[])
 
     if (g_test_mode == false)
     {
-        rc = comm_manager.process_messages();
+        string broker_list = "10.213.43.188:9092";
+        string topic_host_spec = "my_topic";
+
+        MessageConsumer network_config_consumer(broker_list, "test");
+
+        network_config_consumer.cosumeDispatched(topic_host_spec);
         /* never reached */
     }
     else // g_test_mode == TRUE

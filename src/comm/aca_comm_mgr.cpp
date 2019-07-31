@@ -20,68 +20,12 @@ extern char *g_rpc_protocol;
 namespace aca_comm_manager
 {
 
-int Aca_Comm_Manager::process_messages()
+Aca_Comm_Manager& Aca_Comm_Manager::get_instance()
 {
-
-    aliothcontroller::GoalState deserialized_GoalState;
-    int rc = EXIT_FAILURE;
-
-    // Preload network agent configuration
-    // TODO: load it from configuration file
-    // string host_id = "00000000-0000-0000-0000-000000000000";
-    string broker_list = "10.213.43.188:9092";
-    // string topic_host_spec = "hostid-696239f7-bff2-4b34-9923-ef904eacd77a"; //"/hostid/" + host_id + "/hostspec/";
-    string topic_host_spec = "my_topic"; //"/hostid/" + host_id + "/hostspec/";
-    // int partition_value = 1;
-
-    // Listen to Kafka clusters for any network configuration operations
-    // P0, tracked by issue#15
-    MessageConsumer network_config_consumer(broker_list, "test");
-    string **payload;
-    ACA_LOG_DEBUG(
-        "Going into keep listening loop, press ctrl-C or kill process ID #: "
-        "%d to exit.\n",
-        getpid());
-
-    do
-    {
-        bool poll_res = network_config_consumer.consume(topic_host_spec, payload);
-        if (poll_res)
-        {
-            ACA_LOG_INFO("Processing payload....: %s.\n", (**payload).c_str());
-
-            rc = this->deserialize(**payload, deserialized_GoalState);
-
-            if (rc == EXIT_SUCCESS)
-            {
-                // Call parse_goal_state
-                rc = update_goal_state(deserialized_GoalState);
-                if (rc != EXIT_SUCCESS)
-                {
-                    ACA_LOG_ERROR("Failed to update transitd with goal state %d.\n", rc);
-                }
-                else
-                {
-                    ACA_LOG_ERROR("Successfully updated transitd with goal state %d.\n",
-                                  rc);
-                }
-            }
-            if ((payload != nullptr) && (*payload != nullptr))
-            {
-                delete *payload;
-            }
-        }
-        else
-        {
-            ACA_LOG_ERROR("Consume message failed.\n");
-        }
-
-        std::this_thread::sleep_for(5s);
-
-    } while (true);
-
-    /* never reached */
-    return rc;
+    // instance is destroyed when program exits.
+    // It is Instantiated on first use.
+    static Aca_Comm_Manager instance;
+    return instance;
 }
 
 int Aca_Comm_Manager::deserialize(string kafka_message,
@@ -149,7 +93,7 @@ int Aca_Comm_Manager::update_goal_state(
             {
                 rpc_trn_vpc_t *vpc_input = (rpc_trn_vpc_t *)transitd_input;
                 vpc_input->interface = (char *)"eth0";
-                vpc_input->tunid = current_VpcConfiguration.tunnel_id();                
+                vpc_input->tunid = current_VpcConfiguration.tunnel_id();
                 vpc_input->routers_ips.routers_ips_len =
                     current_VpcConfiguration.transit_router_ips_size();
                 uint32_t routers[RPC_TRN_MAX_VPC_ROUTERS];
@@ -216,7 +160,7 @@ int Aca_Comm_Manager::update_goal_state(
         case aliothcontroller::OperationType::CREATE:
         case aliothcontroller::OperationType::UPDATE:
             // TODO: There might be slight difference between Create and Update.
-            // E.g. Create could require pre-check that if a subnet exists in this host etc.        
+            // E.g. Create could require pre-check that if a subnet exists in this host etc.
             transitd_command = UPDATE_NET;
             transitd_input = (rpc_trn_network_t *)malloc(sizeof(rpc_trn_network_t));
             if (transitd_input != NULL)
