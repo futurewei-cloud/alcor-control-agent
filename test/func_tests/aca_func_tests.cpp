@@ -173,6 +173,8 @@ int main(int argc, char *argv[])
             GoalState_builder.add_vpc_states();
         aliothcontroller::SubnetState *new_subnet_states =
             GoalState_builder.add_subnet_states();
+        aliothcontroller::PortState *new_port_states =
+            GoalState_builder.add_port_states();
 
         // fill in the vpc state structs
 
@@ -215,7 +217,45 @@ int main(int argc, char *argv[])
         // this will allocate new SubnetConfiguration_TransitSwitchIp, may to free it later
         aliothcontroller::SubnetConfiguration_TransitSwitchIp *TransitSwitchIp_builder =
             SubnetConiguration_builder->add_transit_switch_ips();
-        TransitSwitchIp_builder->set_ip_address("10.0.0.3");
+        TransitSwitchIp_builder->set_ip_address("172.0.0.1");
+
+        // fill in port state structs
+
+        new_port_states->set_operation_type(aliothcontroller::OperationType::CREATE);
+
+        // this will allocate new PortConfiguration, will need to free it later
+        aliothcontroller::PortConfiguration *PortConfiguration_builder =
+            new_port_states->mutable_configuration();
+        PortConfiguration_builder->set_version(1);
+        PortConfiguration_builder->set_project_id(
+            "dbf72700-5106-4a7a-918f-111111111111");
+        PortConfiguration_builder->set_network_id("2");
+        PortConfiguration_builder->set_id("dd12d1dadad2g4h");
+        PortConfiguration_builder->set_name("Peer1");
+        PortConfiguration_builder->set_admin_state_up(true);
+        PortConfiguration_builder->set_mac_address("fa:16:3e:d7:f2:6c");
+        PortConfiguration_builder->set_veth_name("veth0");
+        PortConfiguration_builder->set_host_ip("172.0.0.2");
+        // this will allocate new PortConfiguration_FixedIp will need to free later
+        aliothcontroller::PortConfiguration_FixedIp *PortIp_builder =
+            PortConfiguration_builder->add_fixed_ips();
+        PortIp_builder->set_ip_address("10.0.0.2");
+        PortIp_builder->set_subnet_id("2");
+        // this will allocate new PortConfiguration_SecurityGroupId will need to free later
+        aliothcontroller::PortConfiguration_SecurityGroupId *SecurityGroup_builder =
+            PortConfiguration_builder->add_security_group_ids();
+        SecurityGroup_builder->set_id("1");
+        // this will allocate new PortConfiguration_AllowAddressPair will need to free later
+        aliothcontroller::PortConfiguration_AllowAddressPair
+        *AddressPair_builder =
+            PortConfiguration_builder->add_allow_address_pairs();
+        AddressPair_builder->set_ip_address("10.0.0.5");
+        AddressPair_builder->set_mac_address("fa:16:3e:d7:f2:9f");
+        // this will allocate new PortConfiguration_ExtraDhcpOption will need to free later
+        aliothcontroller::PortConfiguration_ExtraDhcpOption *ExtraDhcp_builder =
+            PortConfiguration_builder->add_extra_dhcp_options();
+        ExtraDhcp_builder->set_name("opt_1");
+        ExtraDhcp_builder->set_value("12");
 
         string string_message;
 
@@ -243,6 +283,84 @@ int main(int argc, char *argv[])
 
             fprintf(stdout, "Deserialize succeed, comparing the content now...\n");
 
+            assert(parsed_struct.port_states_size() ==
+                    GoalState_builder.port_states_size());
+            for (int i = 0; i < parsed_struct.port_states_size(); i++)
+            {
+                assert(parsed_struct.port_states(i).operation_type() ==
+                       GoalState_builder.port_states(i).operation_type());
+
+                assert(parsed_struct.port_states(i).configuration().version() ==
+                       GoalState_builder.port_states(i).configuration().version());
+
+                assert(parsed_struct.port_states(i).configuration().project_id() ==
+                       GoalState_builder.port_states(i).configuration().project_id());
+
+                assert(parsed_struct.port_states(i).configuration().network_id() ==
+                       GoalState_builder.port_states(i).configuration().network_id());
+
+                assert(parsed_struct.port_states(i).configuration().id() ==
+                       GoalState_builder.port_states(i).configuration().id());
+
+                assert(parsed_struct.port_states(i).configuration().name() ==
+                       GoalState_builder.port_states(i).configuration().name());
+
+                assert(parsed_struct.port_states(i).configuration().name() ==
+                       GoalState_builder.port_states(i).configuration().name());
+
+                assert(parsed_struct.port_states(i).configuration().admin_state_up() ==
+                       GoalState_builder.port_states(i).configuration().admin_state_up());
+
+                assert(parsed_struct.port_states(i).configuration().mac_address() ==
+                       GoalState_builder.port_states(i).configuration().mac_address());
+
+                assert(parsed_struct.port_states(i).configuration().veth_name() ==
+                       GoalState_builder.port_states(i).configuration().veth_name());
+
+                assert(parsed_struct.port_states(i).configuration().host_ip() ==
+                       GoalState_builder.port_states(i).configuration().host_ip());
+
+                assert(parsed_struct.port_states(i).configuration().fixed_ips_size() ==
+                       GoalState_builder.port_states(i).configuration().fixed_ips_size());
+                for (int j = 0; j < parsed_struct.port_states(i).configuration().fixed_ips_size(); j++)
+                {
+                    assert(parsed_struct.port_states(i).configuration().fixed_ips(j).subnet_id() ==
+                       GoalState_builder.port_states(i).configuration().fixed_ips(j).subnet_id());
+
+                    assert(parsed_struct.port_states(i).configuration().fixed_ips(j).ip_address() ==
+                       GoalState_builder.port_states(i).configuration().fixed_ips(j).ip_address());
+                }
+
+                assert(parsed_struct.port_states(i).configuration().security_group_ids_size() ==
+                       GoalState_builder.port_states(i).configuration().security_group_ids_size());
+                for (int j = 0; j < parsed_struct.port_states(i).configuration().security_group_ids_size(); j++)
+                {
+                    assert(parsed_struct.port_states(i).configuration().security_group_ids(j).id() ==
+                       GoalState_builder.port_states(i).configuration().security_group_ids(j).id());
+                }
+
+                assert(parsed_struct.port_states(i).configuration().allow_address_pairs_size() ==
+                       GoalState_builder.port_states(i).configuration().allow_address_pairs_size());
+                for (int j = 0; j < parsed_struct.port_states(i).configuration().allow_address_pairs_size(); j++)
+                {
+                    assert(parsed_struct.port_states(i).configuration().allow_address_pairs(j).ip_address() ==
+                       GoalState_builder.port_states(i).configuration().allow_address_pairs(j).ip_address());
+
+                    assert(parsed_struct.port_states(i).configuration().allow_address_pairs(j).mac_address() ==
+                       GoalState_builder.port_states(i).configuration().allow_address_pairs(j).mac_address());
+                }
+
+                assert(parsed_struct.port_states(i).configuration().extra_dhcp_options_size() ==
+                       GoalState_builder.port_states(i).configuration().extra_dhcp_options_size());
+                for (int j = 0; j < parsed_struct.port_states(i).configuration().extra_dhcp_options_size(); j++)
+                {
+                    assert(parsed_struct.port_states(i).configuration().extra_dhcp_options(j).name() ==
+                       GoalState_builder.port_states(i).configuration().extra_dhcp_options(j).name());
+
+                    assert(parsed_struct.port_states(i).configuration().extra_dhcp_options(j).value() ==
+                       GoalState_builder.port_states(i).configuration().extra_dhcp_options(j).value());
+                }
+            }
             assert(parsed_struct.subnet_states_size() ==
                    GoalState_builder.subnet_states_size());
 

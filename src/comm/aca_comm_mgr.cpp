@@ -355,6 +355,130 @@ int Aca_Comm_Manager::execute_command(int command, void *input_struct)
 // TODO: only print it during debug mode
 void Aca_Comm_Manager::print_goal_state(aliothcontroller::GoalState parsed_struct)
 {
+   for (int i = 0; i < parsed_struct.port_states_size(); i++)
+    {
+        fprintf(stdout,
+                "parsed_struct.subnet_states(%d).operation_type(): %d\n", i,
+                parsed_struct.port_states(i).operation_type());
+
+        aliothcontroller::PortConfiguration current_PortConfiguration =
+            parsed_struct.port_states(i).configuration();
+
+        fprintf(stdout,
+                "current_PortConfiguration.version(): %d\n",
+                current_PortConfiguration.version());
+
+        fprintf(stdout,
+                "current_PortConfiguration.project_id(): %s\n",
+                current_PortConfiguration.project_id().c_str());
+
+        fprintf(stdout,
+                "current_PortConfiguration.network_id(): %s\n",
+                current_PortConfiguration.network_id().c_str());
+
+        fprintf(stdout,
+                "current_PortConfiguration.id(): %s\n",
+                current_PortConfiguration.id().c_str());
+
+        fprintf(stdout,
+                "current_PortConfiguration.name(): %s \n",
+                current_PortConfiguration.name().c_str());
+
+        fprintf(stdout,
+                "current_PortConfiguration.admin_state_up(): %d \n",
+                current_PortConfiguration.admin_state_up());
+
+        fprintf(stdout,
+                "current_PortConfiguration.mac_address(): %s \n",
+                current_PortConfiguration.mac_address().c_str());
+
+        fprintf(stdout,
+                "current_PortConfiguration.veth_name(): %s \n",
+                current_PortConfiguration.veth_name().c_str());
+
+        fprintf(stdout,
+                "current_PortConfiguration.host_ip(): %s \n",
+                current_PortConfiguration.host_ip().c_str());
+
+        for (int j = 0; j < current_PortConfiguration.fixed_ips_size(); j++)
+        {
+            fprintf(stdout,
+                    "current_PortConfiguration.fixed_ips(%d): subnet_id %s, ip_address %s \n", j,
+                    current_PortConfiguration.fixed_ips(j).subnet_id().c_str(),
+                    current_PortConfiguration.fixed_ips(j).ip_address().c_str());
+        }
+
+        for (int j = 0; j < current_PortConfiguration.security_group_ids_size(); j++)
+        {
+            fprintf(stdout,
+                    "current_PortConfiguration.security_group_ids(%d): id %s, \n", j,
+                    current_PortConfiguration.security_group_ids(j).id().c_str());
+        }
+
+        for (int j = 0; j < current_PortConfiguration.allow_address_pairs_size(); j++)
+        {
+            fprintf(stdout,
+                    "current_PortConfiguration.allow_address_pairs(%d): ip_address %s, mac_address %s \n", j,
+                    current_PortConfiguration.allow_address_pairs(j).ip_address().c_str(),
+                    current_PortConfiguration.allow_address_pairs(j).mac_address().c_str());
+        }
+
+        for (int j = 0; j < current_PortConfiguration.extra_dhcp_options_size(); j++)
+        {
+            fprintf(stdout,
+                    "current_PortConfiguration.extra_dhcp_options(%d): name %s, value %s \n", j,
+                    current_PortConfiguration.extra_dhcp_options(j).name().c_str(),
+                    current_PortConfiguration.extra_dhcp_options(j).value().c_str());
+        }
+    printf("\n");
+    }
+
+    for (int i = 0; i < parsed_struct.subnet_states_size(); i++)
+    {
+        fprintf(stdout,
+                "parsed_struct.subnet_states(%d).operation_type(): %d\n", i,
+                parsed_struct.subnet_states(i).operation_type());
+
+        aliothcontroller::SubnetConfiguration current_SubnetConfiguration =
+            parsed_struct.subnet_states(i).configuration();
+
+        fprintf(stdout,
+                "current_SubnetConfiguration.version(): %d\n",
+                current_SubnetConfiguration.version());
+
+        fprintf(stdout,
+                "current_SubnetConfiguration.project_id(): %s\n",
+                current_SubnetConfiguration.project_id().c_str());
+
+        fprintf(stdout,
+                "current_SubnetConfiguration.vpc_id(): %s\n",
+                current_SubnetConfiguration.vpc_id().c_str());
+
+        fprintf(stdout,
+                "current_SubnetConfiguration.id(): %s\n",
+                current_SubnetConfiguration.id().c_str());
+
+        fprintf(stdout,
+                "current_SubnetConfiguration.name(): %s \n",
+                current_SubnetConfiguration.name().c_str());
+
+        fprintf(stdout,
+                "current_SubnetConfiguration.cidr(): %s \n",
+                current_SubnetConfiguration.cidr().c_str());
+
+        fprintf(stdout,
+                "current_SubnetConfiguration.tunnel_id(): %ld \n",
+                current_SubnetConfiguration.tunnel_id());
+
+        for (int j = 0; j < current_SubnetConfiguration.transit_switch_ips_size(); j++)
+        {
+            fprintf(stdout,
+                    "current_SubnetConfiguration.transit_switch_ips(%d): %s \n", j,
+                    current_SubnetConfiguration.transit_switch_ips(j).ip_address().c_str());
+        }
+        printf("\n");
+    }
+
     for (int i = 0; i < parsed_struct.vpc_states_size(); i++)
     {
         fprintf(stdout,
@@ -424,51 +548,7 @@ void Aca_Comm_Manager::print_goal_state(aliothcontroller::GoalState parsed_struc
                     l,
                     current_VpcConfiguration.transit_router_ips(l).ip_address().c_str());
         }
-    }
-
-    for (int i = 0; i < parsed_struct.subnet_states_size(); i++)
-    {
-        fprintf(stdout,
-                "parsed_struct.subnet_states(%d).operation_type(): %d\n", i,
-                parsed_struct.subnet_states(i).operation_type());
-
-        aliothcontroller::SubnetConfiguration current_SubnetConfiguration =
-            parsed_struct.subnet_states(i).configuration();
-
-        fprintf(stdout,
-                "current_SubnetConfiguration.version(): %d\n",
-                current_SubnetConfiguration.version());
-
-        fprintf(stdout,
-                "current_SubnetConfiguration.project_id(): %s\n",
-                current_SubnetConfiguration.project_id().c_str());
-
-        fprintf(stdout,
-                "current_SubnetConfiguration.vpc_id(): %s\n",
-                current_SubnetConfiguration.vpc_id().c_str());
-
-        fprintf(stdout,
-                "current_SubnetConfiguration.id(): %s\n",
-                current_SubnetConfiguration.id().c_str());
-
-        fprintf(stdout,
-                "current_SubnetConfiguration.name(): %s \n",
-                current_SubnetConfiguration.name().c_str());
-
-        fprintf(stdout,
-                "current_SubnetConfiguration.cidr(): %s \n",
-                current_SubnetConfiguration.cidr().c_str());
-
-        fprintf(stdout,
-                "current_SubnetConfiguration.tunnel_id(): %ld \n",
-                current_SubnetConfiguration.tunnel_id());
-
-        for (int j = 0; j < current_SubnetConfiguration.transit_switch_ips_size(); j++)
-        {
-            fprintf(stdout,
-                    "current_SubnetConfiguration.transit_switch_ips(%d): %s \n", j,
-                    current_SubnetConfiguration.transit_switch_ips(j).ip_address().c_str());
-        }
+        printf("\n");
     }
 }
 
