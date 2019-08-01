@@ -376,7 +376,7 @@ int Aca_Comm_Manager::execute_command(int command, void *input_struct)
             transitd_return = update_net_1((rpc_trn_network_t *)input_struct, client);
             break;
         case UPDATE_EP:
-            // rc = UPDATE_EP_1 ...
+            transitd_return = update_ep_1((rpc_trn_endpoint_t *)input_struct, client);
             break;
         case UPDATE_AGENT_EP:
             // rc = UPDATE_AGENT_EP_1 ...

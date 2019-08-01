@@ -478,6 +478,7 @@ int main(int argc, char *argv[])
         // free the allocated VpcConfiguration since we are done with it now
         new_subnet_states->clear_configuration();
         new_vpc_states->clear_configuration();
+        new_port_states->clear_configuration();
     }
 
     aca_cleanup();
