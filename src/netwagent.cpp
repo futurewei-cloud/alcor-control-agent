@@ -1,47 +1,42 @@
+
+#include <unistd.h> /* for getopt */
 #include "aca_log.h"
+#include "aca_util.h"
 #include "goalstate.pb.h"
 #include "messageconsumer.h"
-#include <unistd.h> /* for getopt */
 
-using std::string;
 using messagemanager::MessageConsumer;
+using std::string;
 
 #define ACALOGNAME "AliothControlAgent"
 
 using namespace std;
 
 // Defines
+static char BROKER_LIST[] = "10.213.43.158:9092";
+static char KAFKA_TOPIC[] = "Host-ts-1";
 static char LOCALHOST[] = "localhost";
 static char UDP[] = "udp";
 
 // Global variables
-bool g_test_mode = false;
-char *g_test_message = NULL;
+char *g_broker_list = NULL;
+char *g_kafka_topic = NULL;
 char *g_rpc_server = NULL;
 char *g_rpc_protocol = NULL;
+bool g_test_mode = false;
+char *g_test_message = NULL;
+bool g_debug_mode = false;
 
 static void aca_cleanup()
 {
-    // Optional:  Delete all global objects allocated by libprotobuf.
+    // Optional: Delete all global objects allocated by libprotobuf.
     google::protobuf::ShutdownProtobufLibrary();
 
-    if (g_test_message != NULL)
-    {
-        free(g_test_message);
-        g_test_message = NULL;
-    }
-
-    if (g_rpc_server != NULL)
-    {
-        free(g_rpc_server);
-        g_rpc_server = NULL;
-    }
-
-    if (g_rpc_protocol != NULL)
-    {
-        free(g_rpc_protocol);
-        g_rpc_protocol = NULL;
-    }
+    aca_free(g_broker_list);
+    aca_free(g_kafka_topic);
+    aca_free(g_rpc_server);
+    aca_free(g_rpc_protocol);
+    aca_free(g_test_message);
 
     ACA_LOG_INFO("Program exiting, cleaning up...\n");
 
@@ -70,66 +65,125 @@ int main(int argc, char *argv[])
     signal(SIGINT, aca_signal_handler);
     signal(SIGTERM, aca_signal_handler);
 
-    while ((option = getopt(argc, argv, "t:s:p:")) != -1)
+    while ((option = getopt(argc, argv, "b:h:s:p:t:d")) != -1)
     {
         switch (option)
         {
-        case 't':
-            g_test_mode = true;
-
-            g_test_message = (char *)malloc(sizeof(char) * strlen(optarg));
-            if (g_test_message != NULL)
+        case 'b':
+            g_broker_list = (char *)malloc(sizeof(optarg));
+            if (g_broker_list != NULL)
             {
-                strncpy(g_test_message, optarg, strlen(optarg));
+                strncpy(g_broker_list, optarg, strlen(optarg) + 1);
             }
             else
             {
                 ACA_LOG_EMERG("Out of memory when allocating string with size: %lu.\n",
-                              (sizeof(char) * strlen(optarg)));
+                              sizeof(optarg));
+                exit(EXIT_FAILURE);
+            }
+            break;
+        case 'h':
+            g_kafka_topic = (char *)malloc(sizeof(optarg));
+            if (g_kafka_topic != NULL)
+            {
+                strncpy(g_kafka_topic, optarg, strlen(optarg) + 1);
+            }
+            else
+            {
+                ACA_LOG_EMERG("Out of memory when allocating string with size: %lu.\n",
+                              sizeof(optarg));
                 exit(EXIT_FAILURE);
             }
             break;
         case 's':
-            g_rpc_server = (char *)malloc(sizeof(char) * strlen(optarg));
+            g_rpc_server = (char *)malloc(sizeof(optarg));
             if (g_rpc_server != NULL)
             {
-                strncpy(g_rpc_server, optarg, strlen(optarg));
+                strncpy(g_rpc_server, optarg, strlen(optarg) + 1);
             }
             else
             {
                 ACA_LOG_EMERG("Out of memory when allocating string with size: %lu.\n",
-                              (sizeof(char) * strlen(optarg)));
+                              sizeof(optarg));
                 exit(EXIT_FAILURE);
             }
             break;
         case 'p':
-            g_rpc_protocol = (char *)malloc(sizeof(char) * strlen(optarg));
+            g_rpc_protocol = (char *)malloc(sizeof(optarg));
             if (g_rpc_protocol != NULL)
             {
-                strncpy(g_rpc_protocol, optarg, strlen(optarg));
+                strncpy(g_rpc_protocol, optarg, strlen(optarg) + 1);
             }
             else
             {
                 ACA_LOG_EMERG("Out of memory when allocating string with size: %lu.\n",
-                              (sizeof(char) * strlen(optarg)));
+                              sizeof(optarg));
                 exit(EXIT_FAILURE);
             }
+            break;
+        case 't':
+            g_test_mode = true;
+            g_test_message = (char *)malloc(sizeof(optarg));
+            if (g_test_message != NULL)
+            {
+                strncpy(g_test_message, optarg, strlen(optarg) + 1);
+            }
+            else
+            {
+                ACA_LOG_EMERG("Out of memory when allocating string with size: %lu.\n",
+                              sizeof(optarg));
+                exit(EXIT_FAILURE);
+            }
+            break;
+        case 'd':
+            g_debug_mode = true;
             break;
         default: /* the '?' case when the option is not recognized */
             fprintf(stderr,
                     "Usage: %s\n"
-                    "\t\t[-t test message to parse and enable test mode]\n"
+                    "\t\t[-b kafka broker list]\n"
+                    "\t\t[-h kafka host topic to listen]\n"
                     "\t\t[-s transitd RPC server]\n"
-                    "\t\t[-p transitd RPC protocol]\n",
+                    "\t\t[-p transitd RPC protocol]\n"
+                    "\t\t[-t test message to parse and enable test mode]\n"
+                    "\t\t[-d enable debug mode]\n",
                     argv[0]);
             exit(EXIT_FAILURE);
         }
     }
 
-    // fill in the RPC server and protocol if not provided in command line args
+    // fill in the information if not provided in command line args
+    if (g_broker_list == NULL)
+    {
+        g_broker_list = (char *)malloc(sizeof(BROKER_LIST));
+        if (g_broker_list != NULL)
+        {
+            strncpy(g_broker_list, BROKER_LIST, strlen(BROKER_LIST) + 1);
+        }
+        else
+        {
+            ACA_LOG_EMERG("Out of memory when allocating string with size: %lu.\n",
+                          sizeof(BROKER_LIST));
+            exit(EXIT_FAILURE);
+        }
+    }
+    if (g_kafka_topic == NULL)
+    {
+        g_kafka_topic = (char *)malloc(sizeof(KAFKA_TOPIC));
+        if (g_kafka_topic != NULL)
+        {
+            strncpy(g_kafka_topic, KAFKA_TOPIC, strlen(KAFKA_TOPIC) + 1);
+        }
+        else
+        {
+            ACA_LOG_EMERG("Out of memory when allocating string with size: %lu.\n",
+                          sizeof(KAFKA_TOPIC));
+            exit(EXIT_FAILURE);
+        }
+    }
     if (g_rpc_server == NULL)
     {
-        g_rpc_server = (char *)malloc(sizeof(char) * strlen(LOCALHOST) + 1);
+        g_rpc_server = (char *)malloc(sizeof(LOCALHOST));
         if (g_rpc_server != NULL)
         {
             strncpy(g_rpc_server, LOCALHOST, strlen(LOCALHOST) + 1);
@@ -137,13 +191,13 @@ int main(int argc, char *argv[])
         else
         {
             ACA_LOG_EMERG("Out of memory when allocating string with size: %lu.\n",
-                          (sizeof(char) * strlen(LOCALHOST)));
+                          sizeof(LOCALHOST));
             exit(EXIT_FAILURE);
         }
     }
     if (g_rpc_protocol == NULL)
     {
-        g_rpc_protocol = (char *)malloc(sizeof(char) * strlen(UDP) + 1);
+        g_rpc_protocol = (char *)malloc(sizeof(UDP));
         if (g_rpc_protocol != NULL)
         {
             strncpy(g_rpc_protocol, UDP, strlen(UDP) + 1);
@@ -151,7 +205,7 @@ int main(int argc, char *argv[])
         else
         {
             ACA_LOG_EMERG("Out of memory when allocating string with size: %lu.\n",
-                          (sizeof(char) * strlen(UDP)));
+                          sizeof(UDP));
             exit(EXIT_FAILURE);
         }
     }
@@ -179,8 +233,8 @@ int main(int argc, char *argv[])
 
     if (g_test_mode == false)
     {
-        string broker_list = "10.213.43.188:9092";
-        string topic_host_spec = "my_topic";
+        string broker_list(g_broker_list);
+        string topic_host_spec(g_kafka_topic);
 
         MessageConsumer network_config_consumer(broker_list, "test");
 

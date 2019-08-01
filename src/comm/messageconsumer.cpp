@@ -6,6 +6,9 @@
 #include "aca_comm_mgr.h"
 #include "aca_log.h"
 
+extern bool g_debug_mode;
+
+using aca_comm_manager::Aca_Comm_Manager;
 using cppkafka::Configuration;
 using cppkafka::Consumer;
 using cppkafka::ConsumerDispatcher;
@@ -17,7 +20,6 @@ using std::cout;
 using std::endl;
 using std::exception;
 using std::string;
-using aca_comm_manager::Aca_Comm_Manager;
 
 namespace messagemanager
 {
@@ -33,7 +35,13 @@ MessageConsumer::MessageConsumer(string brokers, string group_id)
 		{"group.id", this->group_id},
 		// Disable auto commit
 		{"enable.auto.commit", false},
-		{"auto.offset.reset", "latest"}};
+		{"auto.offset.reset", "earliest"}};
+
+	if (g_debug_mode)
+	{
+		cout << "Broker list " << this->brokers_list << endl;
+		cout << "Consumer group.id " << this->group_id << endl;
+	}
 
 	// Create the consumer
 	this->ptr_consumer = new Consumer(this->config);
@@ -68,7 +76,12 @@ bool MessageConsumer::cosumeDispatched(string topic)
 {
 	string *payload;
 	aliothcontroller::GoalState deserialized_GoalState;
-    int rc = EXIT_FAILURE;
+	int rc = EXIT_FAILURE;
+
+	if (g_debug_mode)
+	{
+		cout << "Subscribing to topic " << topic << endl;
+	}
 
 	this->ptr_consumer->subscribe({topic});
 
@@ -92,32 +105,32 @@ bool MessageConsumer::cosumeDispatched(string topic)
 			payload = new string(message.get_payload());
 			// TODO: Check string allocation for errors.
 			rc = Aca_Comm_Manager::get_instance().deserialize(*payload, deserialized_GoalState);
-            if (rc == EXIT_SUCCESS)
-            {
-                // Call parse_goal_state
-                rc = Aca_Comm_Manager::get_instance().update_goal_state(deserialized_GoalState);
-                if (rc != EXIT_SUCCESS)
-                {
+			if (rc == EXIT_SUCCESS)
+			{
+				// Call parse_goal_state
+				rc = Aca_Comm_Manager::get_instance().update_goal_state(deserialized_GoalState);
+				if (rc != EXIT_SUCCESS)
+				{
 					cout << "Failed to update transitd with goal state" << rc << endl;
-                    ACA_LOG_ERROR("Failed to update transitd with goal state %d.\n", rc);
-                }
-                else
-                {
+					ACA_LOG_ERROR("Failed to update transitd with goal state %d.\n", rc);
+				}
+				else
+				{
 					cout << "Successfully updated transitd with goal state" << rc << endl;
-                    ACA_LOG_ERROR("Successfully updated transitd with goal state %d.\n",
-                                  rc);
-                }
-            }
+					ACA_LOG_ERROR("Successfully updated transitd with goal state %d.\n",
+								  rc);
+				}
+			}
 			else
 			{
 				cout << "Deserialization failed with error code" << rc << endl;
 				ACA_LOG_ERROR("Deserialization failed with error code %d.\n", rc);
 			}
-            if (payload != nullptr)
-            {
-                delete payload;
+			if (payload != nullptr)
+			{
+				delete payload;
 				payload = nullptr;
-            }
+			}
 			// Now commit the message
 			this->ptr_consumer->commit(message);
 		},
