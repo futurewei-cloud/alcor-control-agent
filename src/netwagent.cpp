@@ -236,7 +236,7 @@ int main(int argc, char *argv[])
         string broker_list(g_broker_list);
         string topic_host_spec(g_kafka_topic);
 
-        MessageConsumer network_config_consumer(broker_list, "test");
+        MessageConsumer network_config_consumer(broker_list, "my-test");
 
         network_config_consumer.cosumeDispatched(topic_host_spec);
         /* never reached */

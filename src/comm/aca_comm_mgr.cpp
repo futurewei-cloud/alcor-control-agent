@@ -74,7 +74,7 @@ int Aca_Comm_Manager::update_goal_state(
     aliothcontroller::GoalState &parsed_struct)
 {
     int transitd_command = 0;
-    void *transitd_input;
+    void *transitd_input = NULL;
     int rc = EXIT_FAILURE;
 
     for (int i = 0; i < parsed_struct.port_states_size(); i++)
@@ -193,7 +193,6 @@ int Aca_Comm_Manager::update_goal_state(
 
     for (int i = 0; i < parsed_struct.subnet_states_size(); i++)
     {
-
         aliothcontroller::SubnetConfiguration current_SubnetConfiguration =
             parsed_struct.subnet_states(i).configuration();
 
