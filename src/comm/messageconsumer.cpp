@@ -78,14 +78,12 @@ bool MessageConsumer::cosumeDispatched(string topic)
 	aliothcontroller::GoalState deserialized_GoalState;
 	int rc = EXIT_FAILURE;
 
-	if (g_debug_mode)
-	{
-		cout << "Subscribing to topic " << topic << endl;
-	}
-
 	this->ptr_consumer->subscribe({topic});
 
-	cout << "Dispatcher consuming messages from topic " << topic << endl;
+	if (g_debug_mode)
+	{
+		cout << "Dispatcher consuming messages from topic " << topic << endl;
+	}
 
 	// Create a consumer dispatcher
 	ConsumerDispatcher dispatcher(*(this->ptr_consumer));
@@ -96,12 +94,16 @@ bool MessageConsumer::cosumeDispatched(string topic)
 		// Callback executed whenever a new message is consumed
 		[&](Message message) {
 			// Print the key (if any)
-			if (message.get_key())
+			if (g_debug_mode)
 			{
-				cout << message.get_key() << " -> ";
+				if (message.get_key())
+				{
+					cout << message.get_key() << " -> ";
+				}
+				// Print the payload
+				cout << message.get_payload() << endl;
 			}
-			// Print the payload
-			cout << message.get_payload() << endl;
+
 			payload = new string(message.get_payload());
 			// TODO: Check string allocation for errors.
 			rc = Aca_Comm_Manager::get_instance().deserialize(*payload, deserialized_GoalState);
@@ -111,19 +113,21 @@ bool MessageConsumer::cosumeDispatched(string topic)
 				rc = Aca_Comm_Manager::get_instance().update_goal_state(deserialized_GoalState);
 				if (rc != EXIT_SUCCESS)
 				{
-					cout << "Failed to update transitd with goal state" << rc << endl;
-					ACA_LOG_ERROR("Failed to update transitd with goal state %d.\n", rc);
+					if (g_debug_mode)
+						cout << "Failed to update transitd with latest goal state, rc=" << rc << endl;
+					ACA_LOG_ERROR("Failed to update transitd with latest goal state %d.\n", rc);
 				}
 				else
 				{
-					cout << "Successfully updated transitd with goal state" << rc << endl;
-					ACA_LOG_ERROR("Successfully updated transitd with goal state %d.\n",
-								  rc);
+					if (g_debug_mode)
+						cout << "Successfully updated transitd with latest goal state, rc=" << rc << endl;
+					ACA_LOG_ERROR("Successfully updated transitd with latest goal state %d.\n", rc);
 				}
 			}
 			else
 			{
-				cout << "Deserialization failed with error code" << rc << endl;
+				if (g_debug_mode)
+					cout << "Deserialization failed with error code" << rc << endl;
 				ACA_LOG_ERROR("Deserialization failed with error code %d.\n", rc);
 			}
 			if (payload != nullptr)
@@ -136,11 +140,13 @@ bool MessageConsumer::cosumeDispatched(string topic)
 		},
 		// Whenever there's an error (other than the EOF soft error)
 		[](Error error) {
-			cout << "[+] Received error notification: " << error << endl;
+			if (g_debug_mode)
+				cout << "[+] Received error notification: " << error << endl;
 		},
 		// Whenever EOF is reached on a partition, print this
 		[](ConsumerDispatcher::EndOfFile, const TopicPartition &topic_partition) {
-			cout << "Reached EOF on partition " << topic_partition << endl;
+			if (g_debug_mode)
+				cout << "Reached EOF on partition " << topic_partition << endl;
 		});
 }
 
