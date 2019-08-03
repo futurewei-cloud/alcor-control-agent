@@ -4,6 +4,7 @@
 #include "aca_util.h"
 #include "goalstate.pb.h"
 #include "messageconsumer.h"
+#include "cppkafka/utils/consumer_dispatcher.h"
 
 using messagemanager::MessageConsumer;
 using std::string;
@@ -17,8 +18,8 @@ static char BROKER_LIST[] = "10.213.43.158:9092";
 static char KAFKA_TOPIC[] = "Host-ts-1";
 static char LOCALHOST[] = "localhost";
 static char UDP[] = "udp";
-
 // Global variables
+cppkafka::ConsumerDispatcher *dispatcher = NULL;
 char *g_broker_list = NULL;
 char *g_kafka_topic = NULL;
 char *g_rpc_server = NULL;
@@ -37,6 +38,14 @@ static void aca_cleanup()
     aca_free(g_rpc_server);
     aca_free(g_rpc_protocol);
     aca_free(g_test_message);
+    // Stop sets a private variable running_ to False
+    // The Dispatch checks the variable in a loop and stops when running is
+    // no longer set to True.
+    if(dispatcher != NULL)
+    {
+        dispatcher->stop();
+        delete dispatcher;
+    }
 
     ACA_LOG_INFO("Program exiting, cleaning up...\n");
 

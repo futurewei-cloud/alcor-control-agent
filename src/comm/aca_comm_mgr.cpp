@@ -9,6 +9,7 @@
 #include <iostream>
 #include <thread>
 #include <arpa/inet.h>
+#include "cppkafka/utils/consumer_dispatcher.h"
 
 using std::string;
 using namespace std::chrono_literals;
@@ -17,6 +18,7 @@ using messagemanager::MessageConsumer;
 extern bool g_test_mode;
 extern char *g_rpc_server;
 extern char *g_rpc_protocol;
+
 
 namespace aca_comm_manager
 {

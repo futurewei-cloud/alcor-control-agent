@@ -7,6 +7,7 @@
 #include "aca_log.h"
 
 extern bool g_debug_mode;
+extern cppkafka::ConsumerDispatcher *dispatcher;
 
 using aca_comm_manager::Aca_Comm_Manager;
 using cppkafka::Configuration;
@@ -86,11 +87,11 @@ bool MessageConsumer::cosumeDispatched(string topic)
 	}
 
 	// Create a consumer dispatcher
-	ConsumerDispatcher dispatcher(*(this->ptr_consumer));
+	dispatcher = new ConsumerDispatcher(*(this->ptr_consumer));
 
 	// Now run the dispatcher, providing a callback to handle messages, one to handle
 	// errors and another one to handle EOF on a partition
-	dispatcher.run(
+	dispatcher->run(
 		// Callback executed whenever a new message is consumed
 		[&](Message message) {
 			// Print the key (if any)
