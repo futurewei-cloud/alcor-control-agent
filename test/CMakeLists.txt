@@ -4,6 +4,7 @@ FIND_LIBRARY(MESSAGEMANAGER messagemanager ${CMAKE_CURRENT_SOURCE_DIR}/../includ
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../include)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../src/proto3)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../Transit/src/rpcgen)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../Transit/src/include)
 link_libraries(${RDKAFKA} ${CPPKAFKA})
 
 FIND_PACKAGE(Protobuf REQUIRED)

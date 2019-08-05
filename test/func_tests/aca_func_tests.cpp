@@ -21,6 +21,7 @@ static char UDP[] = "udp";
 // Global variables
 char *g_rpc_server = NULL;
 char *g_rpc_protocol = NULL;
+bool g_debug_mode = false;
 
 using std::string;
 
@@ -31,8 +32,6 @@ static void aca_cleanup()
 
     aca_free(g_rpc_server);
     aca_free(g_rpc_protocol);
-
-    fprintf(stdout, "Program exiting, cleaning up...\n");
 
     ACA_LOG_INFO("Program exiting, cleaning up...\n");
     ACA_LOG_CLOSE();
@@ -59,7 +58,7 @@ int main(int argc, char *argv[])
     signal(SIGINT, aca_signal_handler);
     signal(SIGTERM, aca_signal_handler);
 
-    while ((option = getopt(argc, argv, "s:p:")) != -1)
+    while ((option = getopt(argc, argv, "s:p:d")) != -1)
     {
         switch (option)
         {
@@ -91,11 +90,15 @@ int main(int argc, char *argv[])
                 exit(EXIT_FAILURE);
             }
             break;
+        case 'd':
+            g_debug_mode = true;
+            break;
         default: /* the '?' case when the option is not recognized */
             fprintf(stderr,
                     "Usage: %s\n"
                     "\t\t[-s transitd RPC server]\n"
-                    "\t\t[-p transitd RPC protocol]\n",
+                    "\t\t[-p transitd RPC protocol]\n"
+                    "\t\t[-d enable debug mode]\n",
                     argv[0]);
             exit(EXIT_FAILURE);
         }

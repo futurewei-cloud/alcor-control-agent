@@ -78,8 +78,12 @@ int Aca_Comm_Manager::update_goal_state(
     void *transitd_input = NULL;
     int rc = EXIT_FAILURE;
 
+    ACA_LOG_DEBUG("Starting to update goal state\n");
+
     for (int i = 0; i < parsed_struct.port_states_size(); i++)
     {
+        ACA_LOG_DEBUG("parsing port state #%d\n", i);
+
         aliothcontroller::PortConfiguration current_PortConfiguration =
             parsed_struct.port_states(i).configuration();
 
@@ -103,6 +107,8 @@ int Aca_Comm_Manager::update_goal_state(
 
                 endpoint_input->eptype = 0;
 
+                uint32_t remote_ips[RPC_TRN_MAX_REMOTE_IPS];
+                endpoint_input->remote_ips.remote_ips_val = remote_ips;
                 endpoint_input->remote_ips.remote_ips_len = 1;
                 inet_pton(AF_INET, current_PortConfiguration.host_ip().c_str(),
                           &(sa.sin_addr));
@@ -468,6 +474,8 @@ int Aca_Comm_Manager::update_goal_state(
 
     for (int i = 0; i < parsed_struct.subnet_states_size(); i++)
     {
+        ACA_LOG_DEBUG("parsing subnet state #%d\n", i);
+
         aliothcontroller::SubnetConfiguration current_SubnetConfiguration =
             parsed_struct.subnet_states(i).configuration();
 
@@ -621,6 +629,8 @@ int Aca_Comm_Manager::update_goal_state(
 
     for (int i = 0; i < parsed_struct.vpc_states_size(); i++)
     {
+        ACA_LOG_DEBUG("parsing VPC state #%d\n", i);
+
         aliothcontroller::VpcConfiguration current_VpcConfiguration =
             parsed_struct.vpc_states(i).configuration();
 
