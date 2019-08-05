@@ -19,7 +19,6 @@ extern bool g_test_mode;
 extern char *g_rpc_server;
 extern char *g_rpc_protocol;
 
-
 namespace aca_comm_manager
 {
 
@@ -126,14 +125,20 @@ int Aca_Comm_Manager::update_goal_state(
                 strncpy(endpoint_input->veth, current_PortConfiguration.name().c_str(),
                         strlen(current_PortConfiguration.name().c_str() + 1));
 
-                string peer_name = current_PortConfiguration.name() + "_peer";
-                int peer_name_size = sizeof(peer_name.c_str());
-                endpoint_input->hosted_interface = (char *)malloc(peer_name_size);
-                strncpy(endpoint_input->hosted_interface, peer_name.c_str(),
-                        strlen(peer_name.c_str()) + 1);
+                if (parsed_struct.port_states(i).operation_type() == aliothcontroller::OperationType::CREATE)
+                {
+                    endpoint_input->hosted_interface = (char *)"";
+                }
+                else // it must be OperationType::CREATE_UPDATE_SWITCH
+                {
+                    string peer_name = current_PortConfiguration.name() + "_peer";
+                    int peer_name_size = sizeof(peer_name.c_str());
+                    endpoint_input->hosted_interface = (char *)malloc(peer_name_size);
+                    strncpy(endpoint_input->hosted_interface, peer_name.c_str(),
+                            strlen(peer_name.c_str()) + 1);
+                }
 
                 bool tunnel_id_found = false;
-
                 // Look up the subnet configuration to query for tunnel_id
                 for (int j = 0; j < parsed_struct.subnet_states_size(); j++)
                 {
@@ -152,7 +157,6 @@ int Aca_Comm_Manager::update_goal_state(
                         }
                     }
                 }
-
                 if (!tunnel_id_found)
                 {
                     ACA_LOG_ERROR("Not able to find the tunnel ID information from subnet config.\n");
@@ -168,7 +172,7 @@ int Aca_Comm_Manager::update_goal_state(
             }
             break;
         case aliothcontroller::OperationType::FINALIZE:
-            transitd_command = UPDATE_EP;
+            transitd_command = UPDATE_AGENT_MD;
             transitd_input = (rpc_trn_agent_metadata_t *)malloc(sizeof(rpc_trn_agent_metadata_t));
             if (transitd_input != NULL)
             {
@@ -214,7 +218,6 @@ int Aca_Comm_Manager::update_goal_state(
                 agent_md_input->ep.hosted_interface = (char *)"eth0";
 
                 bool subnet_info_found = false;
-
                 // Look up the subnet configuration
                 for (int j = 0; j < parsed_struct.subnet_states_size(); j++)
                 {
@@ -230,6 +233,7 @@ int Aca_Comm_Manager::update_goal_state(
                             agent_md_input->ep.tunid = current_SubnetConfiguration.tunnel_id();
 
                             agent_md_input->net.interface = (char *)"eth0";
+                            agent_md_input->net.tunid = current_SubnetConfiguration.tunnel_id();
 
                             string my_cidr = current_SubnetConfiguration.cidr();
                             int slash_pos = my_cidr.find("/");
@@ -265,7 +269,6 @@ int Aca_Comm_Manager::update_goal_state(
                         }
                     }
                 }
-
                 if (!subnet_info_found)
                 {
                     ACA_LOG_ERROR("Not able to find the tunnel ID information from subnet config.\n");
@@ -300,13 +303,20 @@ int Aca_Comm_Manager::update_goal_state(
             }
         }
 
-        aca_free(((rpc_trn_endpoint_t *)transitd_input)->veth);
-        aca_free(((rpc_trn_endpoint_t *)transitd_input)->hosted_interface);
-        aca_free(transitd_input);
-
-        // do we need to call update substrate?
-        if (parsed_struct.port_states(i).operation_type() == aliothcontroller::OperationType::CREATE_UPDATE_SWITCH)
+        if (parsed_struct.port_states(i).operation_type() == aliothcontroller::OperationType::CREATE)
         {
+            // free allocated memory since the call to transit daemon is completed
+            aca_free(((rpc_trn_endpoint_t *)transitd_input)->veth);
+            aca_free(transitd_input);
+        }
+        else if (parsed_struct.port_states(i).operation_type() == aliothcontroller::OperationType::CREATE_UPDATE_SWITCH)
+        {
+            // free allocated memory since the call to transit daemon is completed
+            aca_free(((rpc_trn_endpoint_t *)transitd_input)->veth);
+            aca_free(((rpc_trn_endpoint_t *)transitd_input)->hosted_interface);
+            aca_free(transitd_input);
+
+            // update substrate
             transitd_command = UPDATE_EP;
 
             rpc_trn_endpoint_t *substrate_input = (rpc_trn_endpoint_t *)malloc(sizeof(rpc_trn_endpoint_t));
@@ -369,6 +379,11 @@ int Aca_Comm_Manager::update_goal_state(
         }
         else if (parsed_struct.port_states(i).operation_type() == aliothcontroller::OperationType::FINALIZE)
         {
+            // free allocated memory since the call to transit daemon is completed
+            aca_free(((rpc_trn_agent_metadata_t *)transitd_input)->ep.veth);
+            aca_free(transitd_input);
+
+            // update substrate
             transitd_command = UPDATE_AGENT_EP;
 
             // Look up the subnet info
@@ -400,6 +415,7 @@ int Aca_Comm_Manager::update_goal_state(
                                 uint32_t remote_ips[RPC_TRN_MAX_REMOTE_IPS];
                                 substrate_input->remote_ips.remote_ips_val = remote_ips;
                                 substrate_input->remote_ips.remote_ips_len = 0;
+                                // TODO: use the host mac info from the latest schema
                                 if (sscanf("hh:ii:jj:kk:ll:mm",
                                            "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx",
                                            &substrate_input->mac[0],
@@ -467,7 +483,7 @@ int Aca_Comm_Manager::update_goal_state(
         case aliothcontroller::OperationType::UPDATE:
             // TODO: There might be slight difference between Create and Update.
             // E.g. Create could require pre-check that if a subnet exists in this host etc.
-            // TODO: not sure if below is needed based on the latest contract with controller.
+            // TODO: not used based on the current simple scenario contract with controller.
             transitd_command = UPDATE_NET;
             transitd_input = (rpc_trn_network_t *)malloc(sizeof(rpc_trn_network_t));
             if (transitd_input != NULL)
@@ -557,6 +573,7 @@ int Aca_Comm_Manager::update_goal_state(
                     uint32_t remote_ips[RPC_TRN_MAX_REMOTE_IPS];
                     substrate_input->remote_ips.remote_ips_val = remote_ips;
                     substrate_input->remote_ips.remote_ips_len = 0;
+                    // TODO: use the mac from the latest schema
                     if (sscanf("hh:ii:jj:kk:ll:mm",
                                "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx",
                                &substrate_input->mac[0],
@@ -659,12 +676,14 @@ int Aca_Comm_Manager::update_goal_state(
                 // TODO: Notify the Network Controller if the command is not successful.
             }
         }
-        aca_free(transitd_input);
 
-        // do we need to call update substrate?
         if (parsed_struct.vpc_states(i).operation_type() ==
             aliothcontroller::OperationType::CREATE_UPDATE_SWITCH)
         {
+            // free allocated memory since the call to transit daemon is completed
+            aca_free(transitd_input);
+
+            // update substrate
             transitd_command = UPDATE_EP;
 
             for (int j = 0; j < current_VpcConfiguration.transit_router_ips_size(); j++)
@@ -684,6 +703,7 @@ int Aca_Comm_Manager::update_goal_state(
                     uint32_t remote_ips[RPC_TRN_MAX_REMOTE_IPS];
                     substrate_input->remote_ips.remote_ips_val = remote_ips;
                     substrate_input->remote_ips.remote_ips_len = 0;
+                    // TODO: use the mac from the latest schema
                     if (sscanf("aa:bb:cc:dd:ee:ff",
                                "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx",
                                &substrate_input->mac[0],
@@ -728,7 +748,7 @@ int Aca_Comm_Manager::update_goal_state(
     } // for (int i = 0; i < parsed_struct.vpc_states_size(); i++)
 
     return rc;
-} 
+}
 
 // TODO: fix the memory leaks introduced when the RPC call failed
 int Aca_Comm_Manager::execute_command(int command, void *input_struct)
