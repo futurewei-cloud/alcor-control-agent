@@ -20,6 +20,9 @@ see instructions [here](https://docs.confluent.io/current/installation/installin
  $ apt-get install zlib1g-dev
  $ apt-get install libboost-program-options-dev
  $ apt-get install libboost-all-dev
+ 
+ # for Transit:
+ $ apt install libcmocka-dev
  ```
 
 Download cppkafka from GitHub [here](https://github.com/mfontanini/cppkafka/blob/master/README.md) and install cppkafka using the following commands: 
