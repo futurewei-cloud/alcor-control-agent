@@ -14,10 +14,6 @@
 using namespace std;
 using aca_comm_manager::Aca_Comm_Manager;
 
-// Defines
-static char LOCALHOST[] = "localhost";
-static char UDP[] = "udp";
-
 // Global variables
 char *g_rpc_server = NULL;
 char *g_rpc_protocol = NULL;
@@ -63,30 +59,28 @@ int main(int argc, char *argv[])
         switch (option)
         {
         case 's':
-            g_rpc_server = (char *)malloc(sizeof(char) * strlen(optarg) + 1);
+            g_rpc_server = (char *)malloc(sizeof(optarg));
             if (g_rpc_server != NULL)
             {
                 strncpy(g_rpc_server, optarg, strlen(optarg) + 1);
             }
             else
             {
-                fprintf(stdout,
-                        "Out of memory when allocating string with size: %lu.\n",
-                        (sizeof(char) * strlen(optarg) + 1));
+                ACA_LOG_EMERG("Out of memory when allocating string with size: %lu.\n",
+                              sizeof(optarg));
                 exit(EXIT_FAILURE);
             }
             break;
         case 'p':
-            g_rpc_protocol = (char *)malloc(sizeof(char) * strlen(optarg) + 1);
+            g_rpc_protocol = (char *)malloc(sizeof(optarg));
             if (g_rpc_protocol != NULL)
             {
                 strncpy(g_rpc_protocol, optarg, strlen(optarg) + 1);
             }
             else
             {
-                fprintf(stdout,
-                        "Out of memory when allocating string with size: %lu.\n",
-                        (sizeof(char) * strlen(optarg) + 1));
+                ACA_LOG_EMERG("Out of memory when allocating string with size: %lu.\n",
+                              sizeof(optarg));
                 exit(EXIT_FAILURE);
             }
             break;
@@ -104,33 +98,32 @@ int main(int argc, char *argv[])
         }
     }
 
-    // fill in the RPC server and protocol if it is not provided in command line
-    // arg
+    // fill in the RPC server and protocol if it is not provided in command line arg
     if (g_rpc_server == NULL)
     {
-        g_rpc_server = (char *)malloc(sizeof(char) * strlen(LOCALHOST) + 1);
+        g_rpc_server = (char *)malloc(sizeof(LOCALHOST));
         if (g_rpc_server != NULL)
         {
             strncpy(g_rpc_server, LOCALHOST, strlen(LOCALHOST) + 1);
         }
         else
         {
-            fprintf(stdout, "Out of memory when allocating string with size: %lu.\n",
-                    (sizeof(char) * strlen(LOCALHOST) + 1));
+            ACA_LOG_EMERG("Out of memory when allocating string with size: %lu.\n",
+                          sizeof(LOCALHOST));
             exit(EXIT_FAILURE);
         }
     }
     if (g_rpc_protocol == NULL)
     {
-        g_rpc_protocol = (char *)malloc(sizeof(char) * strlen(UDP) + 1);
+        g_rpc_protocol = (char *)malloc(sizeof(UDP));
         if (g_rpc_protocol != NULL)
         {
             strncpy(g_rpc_protocol, UDP, strlen(UDP) + 1);
         }
         else
         {
-            fprintf(stdout, "Out of memory when allocating string with size: %lu.\n",
-                    (sizeof(char) * strlen(UDP) + 1));
+            ACA_LOG_EMERG("Out of memory when allocating string with size: %lu.\n",
+                          sizeof(UDP));
             exit(EXIT_FAILURE);
         }
     }
@@ -140,55 +133,12 @@ int main(int argc, char *argv[])
     GOOGLE_PROTOBUF_VERIFY_VERSION;
 
     aliothcontroller::GoalState GoalState_builder;
-    aliothcontroller::VpcState *new_vpc_states =
-        GoalState_builder.add_vpc_states();
-    aliothcontroller::SubnetState *new_subnet_states =
-        GoalState_builder.add_subnet_states();
     aliothcontroller::PortState *new_port_states =
         GoalState_builder.add_port_states();
-
-    // fill in the vpc state structs
-
-    // this will allocate new VpcConfiguration, need to free it later
-
-    new_vpc_states->set_operation_type(aliothcontroller::OperationType::CREATE);
-
-    aliothcontroller::VpcConfiguration *VpcConiguration_builder =
-        new_vpc_states->mutable_configuration();
-    VpcConiguration_builder->set_version(1);
-    VpcConiguration_builder->set_project_id(
-        "dbf72700-5106-4a7a-918f-a016853911f8");
-    // VpcConiguration_builder->set_id("99d9d709-8478-4b46-9f3f-2206b1023fd3");
-    VpcConiguration_builder->set_id("1");
-    VpcConiguration_builder->set_name("SuperVpc");
-    VpcConiguration_builder->set_cidr("192.168.0.0/24");
-    VpcConiguration_builder->set_tunnel_id(11111);
-    // this will allocate new VpcConfiguration_TransitRouterIp, may to free it later
-    aliothcontroller::VpcConfiguration_TransitRouterIp *TransitRouterIp_builder =
-        VpcConiguration_builder->add_transit_router_ips();
-    TransitRouterIp_builder->set_vpc_id("12345");
-    TransitRouterIp_builder->set_ip_address("10.0.0.2");
-
-    // fill in the subnet state structs
-
-    new_subnet_states->set_operation_type(aliothcontroller::OperationType::CREATE);
-
-    // this will allocate new SubnetConfiguration, need to free it later
-    aliothcontroller::SubnetConfiguration *SubnetConiguration_builder =
-        new_subnet_states->mutable_configuration();
-    SubnetConiguration_builder->set_version(1);
-    SubnetConiguration_builder->set_project_id(
-        "dbf72700-5106-4a7a-918f-111111111111");
-    // VpcConiguration_builder->set_id("99d9d709-8478-4b46-9f3f-2206b1023fd3");
-    SubnetConiguration_builder->set_vpc_id("99d9d709-8478-4b46-9f3f-2206b1023fd3");
-    SubnetConiguration_builder->set_id("2");
-    SubnetConiguration_builder->set_name("SuperSubnet");
-    SubnetConiguration_builder->set_cidr("10.0.0.1/16");
-    SubnetConiguration_builder->set_tunnel_id(22222);
-    // this will allocate new SubnetConfiguration_TransitSwitchIp, may to free it later
-    aliothcontroller::SubnetConfiguration_TransitSwitchIp *TransitSwitchIp_builder =
-        SubnetConiguration_builder->add_transit_switch_ips();
-    TransitSwitchIp_builder->set_ip_address("172.0.0.1");
+    aliothcontroller::SubnetState *new_subnet_states =
+        GoalState_builder.add_subnet_states();
+    aliothcontroller::VpcState *new_vpc_states =
+        GoalState_builder.add_vpc_states();
 
     // fill in port state structs
 
@@ -227,6 +177,49 @@ int main(int argc, char *argv[])
         PortConfiguration_builder->add_extra_dhcp_options();
     ExtraDhcp_builder->set_name("opt_1");
     ExtraDhcp_builder->set_value("12");
+
+    // fill in the subnet state structs
+
+    new_subnet_states->set_operation_type(aliothcontroller::OperationType::INFO);
+
+    // this will allocate new SubnetConfiguration, need to free it later
+    aliothcontroller::SubnetConfiguration *SubnetConiguration_builder =
+        new_subnet_states->mutable_configuration();
+    SubnetConiguration_builder->set_version(1);
+    SubnetConiguration_builder->set_project_id(
+        "dbf72700-5106-4a7a-918f-111111111111");
+    // VpcConiguration_builder->set_id("99d9d709-8478-4b46-9f3f-2206b1023fd3");
+    SubnetConiguration_builder->set_vpc_id("99d9d709-8478-4b46-9f3f-2206b1023fd3");
+    SubnetConiguration_builder->set_id("2");
+    SubnetConiguration_builder->set_name("SuperSubnet");
+    SubnetConiguration_builder->set_cidr("10.0.0.1/16");
+    SubnetConiguration_builder->set_tunnel_id(22222);
+    // this will allocate new SubnetConfiguration_TransitSwitchIp, may to free it later
+    aliothcontroller::SubnetConfiguration_TransitSwitchIp *TransitSwitchIp_builder =
+        SubnetConiguration_builder->add_transit_switch_ips();
+    TransitSwitchIp_builder->set_ip_address("172.0.0.1");
+
+    // fill in the vpc state structs
+
+    // this will allocate new VpcConfiguration, need to free it later
+
+    new_vpc_states->set_operation_type(aliothcontroller::OperationType::CREATE_UPDATE_SWITCH);
+
+    aliothcontroller::VpcConfiguration *VpcConiguration_builder =
+        new_vpc_states->mutable_configuration();
+    VpcConiguration_builder->set_version(1);
+    VpcConiguration_builder->set_project_id(
+        "dbf72700-5106-4a7a-918f-a016853911f8");
+    // VpcConiguration_builder->set_id("99d9d709-8478-4b46-9f3f-2206b1023fd3");
+    VpcConiguration_builder->set_id("1");
+    VpcConiguration_builder->set_name("SuperVpc");
+    VpcConiguration_builder->set_cidr("192.168.0.0/24");
+    VpcConiguration_builder->set_tunnel_id(11111);
+    // this will allocate new VpcConfiguration_TransitRouterIp, may to free it later
+    aliothcontroller::VpcConfiguration_TransitRouterIp *TransitRouterIp_builder =
+        VpcConiguration_builder->add_transit_router_ips();
+    TransitRouterIp_builder->set_vpc_id("12345");
+    TransitRouterIp_builder->set_ip_address("10.0.0.2");
 
     string string_message;
 

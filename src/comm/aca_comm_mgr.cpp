@@ -15,7 +15,6 @@ using std::string;
 using namespace std::chrono_literals;
 using messagemanager::MessageConsumer;
 
-extern bool g_test_mode;
 extern char *g_rpc_server;
 extern char *g_rpc_protocol;
 
@@ -77,12 +76,13 @@ int Aca_Comm_Manager::update_goal_state(
     int transitd_command = 0;
     void *transitd_input = NULL;
     int rc = EXIT_FAILURE;
+    int exec_command_rc = EXIT_FAILURE;
 
     ACA_LOG_DEBUG("Starting to update goal state\n");
 
     for (int i = 0; i < parsed_struct.port_states_size(); i++)
     {
-        ACA_LOG_DEBUG("parsing port state #%d\n", i);
+        ACA_LOG_DEBUG("=====>parsing port state #%d\n", i);
 
         aliothcontroller::PortConfiguration current_PortConfiguration =
             parsed_struct.port_states(i).configuration();
@@ -96,7 +96,7 @@ int Aca_Comm_Manager::update_goal_state(
             if (transitd_input != NULL)
             {
                 rpc_trn_endpoint_t *endpoint_input = (rpc_trn_endpoint_t *)transitd_input;
-                endpoint_input->interface = (char *)"eth0";
+                endpoint_input->interface = PHYSICAL_IF;
 
                 assert(current_PortConfiguration.fixed_ips_size() == 1);
                 string my_ep_ip_address = current_PortConfiguration.fixed_ips(0).ip_address();
@@ -105,7 +105,7 @@ int Aca_Comm_Manager::update_goal_state(
                 inet_pton(AF_INET, my_ep_ip_address.c_str(), &(sa.sin_addr));
                 endpoint_input->ip = sa.sin_addr.s_addr;
 
-                endpoint_input->eptype = 0;
+                endpoint_input->eptype = TRAN_SIMPLE_EP;
 
                 uint32_t remote_ips[RPC_TRN_MAX_REMOTE_IPS];
                 endpoint_input->remote_ips.remote_ips_val = remote_ips;
@@ -133,11 +133,11 @@ int Aca_Comm_Manager::update_goal_state(
 
                 if (parsed_struct.port_states(i).operation_type() == aliothcontroller::OperationType::CREATE)
                 {
-                    endpoint_input->hosted_interface = (char *)"";
+                    endpoint_input->hosted_interface = EMPTY_STRING;
                 }
                 else // it must be OperationType::CREATE_UPDATE_SWITCH
                 {
-                    string peer_name = current_PortConfiguration.name() + "_peer";
+                    string peer_name = current_PortConfiguration.name() + PEER_POSTFIX;
                     int peer_name_size = sizeof(peer_name.c_str());
                     endpoint_input->hosted_interface = (char *)malloc(peer_name_size);
                     strncpy(endpoint_input->hosted_interface, peer_name.c_str(),
@@ -165,6 +165,7 @@ int Aca_Comm_Manager::update_goal_state(
                 }
                 if (!tunnel_id_found)
                 {
+                    // TODO: print out more information for troubleshooting
                     ACA_LOG_ERROR("Not able to find the tunnel ID information from subnet config.\n");
                 }
 
@@ -174,7 +175,7 @@ int Aca_Comm_Manager::update_goal_state(
             {
                 ACA_LOG_EMERG("Out of memory when allocating with size: %lu.\n",
                               sizeof(rpc_trn_endpoint_t));
-                rc = ENOMEM;
+                rc = -ENOMEM;
             }
             break;
         case aliothcontroller::OperationType::FINALIZE:
@@ -183,18 +184,23 @@ int Aca_Comm_Manager::update_goal_state(
             if (transitd_input != NULL)
             {
                 rpc_trn_agent_metadata_t *agent_md_input = (rpc_trn_agent_metadata_t *)transitd_input;
-                agent_md_input->interface = (char *)"eth0";
 
-                agent_md_input->eth.interface = (char *)"eth0";
+                string peer_name = current_PortConfiguration.name() + PEER_POSTFIX;
+                int peer_name_size = sizeof(peer_name.c_str());
+                agent_md_input->interface = (char *)malloc(peer_name_size);
+                strncpy(agent_md_input->interface, peer_name.c_str(),
+                        strlen(peer_name.c_str()) + 1);                
 
-                agent_md_input->ep.interface = (char *)"eth0";
+                agent_md_input->eth.interface = PHYSICAL_IF;
+
+                agent_md_input->ep.interface = PHYSICAL_IF;
                 assert(current_PortConfiguration.fixed_ips_size() == 1);
                 string my_ep_host_ip_address = current_PortConfiguration.host_ip();
                 struct sockaddr_in sa;
                 // TODO: need to check return value, it returns 1 for success 0 for failure
                 inet_pton(AF_INET, my_ep_host_ip_address.c_str(), &(sa.sin_addr));
                 agent_md_input->ep.ip = sa.sin_addr.s_addr;
-                agent_md_input->ep.eptype = 0;
+                agent_md_input->ep.eptype = TRAN_SIMPLE_EP;
 
                 uint32_t remote_ips[RPC_TRN_MAX_REMOTE_IPS];
                 agent_md_input->ep.remote_ips.remote_ips_val = remote_ips;
@@ -221,7 +227,7 @@ int Aca_Comm_Manager::update_goal_state(
                 strncpy(agent_md_input->ep.veth, current_PortConfiguration.name().c_str(),
                         strlen(current_PortConfiguration.name().c_str() + 1));
 
-                agent_md_input->ep.hosted_interface = (char *)"eth0";
+                agent_md_input->ep.hosted_interface = PHYSICAL_IF;
 
                 bool subnet_info_found = false;
                 // Look up the subnet configuration
@@ -238,7 +244,7 @@ int Aca_Comm_Manager::update_goal_state(
                         {
                             agent_md_input->ep.tunid = current_SubnetConfiguration.tunnel_id();
 
-                            agent_md_input->net.interface = (char *)"eth0";
+                            agent_md_input->net.interface = PHYSICAL_IF;
                             agent_md_input->net.tunid = current_SubnetConfiguration.tunnel_id();
 
                             string my_cidr = current_SubnetConfiguration.cidr();
@@ -286,7 +292,7 @@ int Aca_Comm_Manager::update_goal_state(
             {
                 ACA_LOG_EMERG("Out of memory when allocating with size: %lu.\n",
                               sizeof(rpc_trn_agent_metadata_t));
-                rc = ENOMEM;
+                rc = -ENOMEM;
             }
             break;
         default:
@@ -294,21 +300,23 @@ int Aca_Comm_Manager::update_goal_state(
                           parsed_struct.port_states(i).operation_type());
             break;
         }
+
         if (rc == EXIT_SUCCESS)
         {
-            rc = this->execute_command(transitd_command, transitd_input);
-            if (rc == EXIT_SUCCESS)
+            exec_command_rc = this->execute_command(transitd_command, transitd_input);
+            if (exec_command_rc == EXIT_SUCCESS)
             {
                 ACA_LOG_INFO("Successfully executed the network controller command\n");
             }
             else
             {
                 ACA_LOG_ERROR("Unable to execute the network controller command: %d\n",
-                              rc);
+                              exec_command_rc);
                 // TODO: Notify the Network Controller if the command is not successful.
             }
         }
 
+        // free memory and check if we need to call update substrate (MAC address)
         if (parsed_struct.port_states(i).operation_type() == aliothcontroller::OperationType::CREATE)
         {
             // free allocated memory since the call to transit daemon is completed
@@ -329,14 +337,14 @@ int Aca_Comm_Manager::update_goal_state(
 
             if (substrate_input != NULL)
             {
-                substrate_input->interface = (char *)"";
+                substrate_input->interface = EMPTY_STRING;
 
                 struct sockaddr_in sa;
                 // TODO: need to check return value, it returns 1 for success 0 for failure
                 inet_pton(AF_INET, current_PortConfiguration.host_ip().c_str(),
                           &(sa.sin_addr));
                 substrate_input->ip = sa.sin_addr.s_addr;
-                substrate_input->eptype = 0;
+                substrate_input->eptype = TRAN_SUBSTRT_EP;
                 uint32_t remote_ips[RPC_TRN_MAX_REMOTE_IPS];
                 substrate_input->remote_ips.remote_ips_val = remote_ips;
                 substrate_input->remote_ips.remote_ips_len = 0;
@@ -354,9 +362,9 @@ int Aca_Comm_Manager::update_goal_state(
                 {
                     ACA_LOG_ERROR("Invalid mac input: TBD.\n");
                 }
-                substrate_input->hosted_interface = (char *)"";
-                substrate_input->veth = (char *)"";
-                substrate_input->tunid = (uint64_t) "";
+                substrate_input->hosted_interface = EMPTY_STRING;
+                substrate_input->veth = EMPTY_STRING;
+                substrate_input->tunid = TRAN_SUBSTRT_VNI;
 
                 rc = EXIT_SUCCESS;
             }
@@ -364,19 +372,19 @@ int Aca_Comm_Manager::update_goal_state(
             {
                 ACA_LOG_EMERG("Out of memory when allocating with size: %lu.\n",
                               sizeof(rpc_trn_endpoint_t));
-                rc = ENOMEM;
+                rc = -ENOMEM;
             }
 
             if (rc == EXIT_SUCCESS)
             {
-                rc = this->execute_command(transitd_command, substrate_input);
-                if (rc == EXIT_SUCCESS)
+                exec_command_rc = this->execute_command(transitd_command, substrate_input);
+                if (exec_command_rc == EXIT_SUCCESS)
                 {
                     ACA_LOG_INFO("Successfully updated substrate in transit daemon\n");
                 }
                 else
                 {
-                    ACA_LOG_ERROR("Unable to update substrate in transit daemon: %d\n", rc);
+                    ACA_LOG_ERROR("Unable to update substrate in transit daemon: %d\n", exec_command_rc);
                     // TODO: Notify the Network Controller if the command is not successful.
                 }
             }
@@ -386,6 +394,7 @@ int Aca_Comm_Manager::update_goal_state(
         else if (parsed_struct.port_states(i).operation_type() == aliothcontroller::OperationType::FINALIZE)
         {
             // free allocated memory since the call to transit daemon is completed
+            aca_free(((rpc_trn_agent_metadata_t *)transitd_input)->interface);
             aca_free(((rpc_trn_agent_metadata_t *)transitd_input)->ep.veth);
             aca_free(transitd_input);
 
@@ -410,14 +419,14 @@ int Aca_Comm_Manager::update_goal_state(
 
                             if (substrate_input != NULL)
                             {
-                                substrate_input->interface = (char *)"";
+                                substrate_input->interface = EMPTY_STRING;
 
                                 struct sockaddr_in sa;
                                 // TODO: need to check return value, it returns 1 for success 0 for failure
                                 inet_pton(AF_INET, current_SubnetConfiguration.transit_switch_ips(k).ip_address().c_str(),
                                           &(sa.sin_addr));
                                 substrate_input->ip = sa.sin_addr.s_addr;
-                                substrate_input->eptype = 0;
+                                substrate_input->eptype = TRAN_SUBSTRT_EP;
                                 uint32_t remote_ips[RPC_TRN_MAX_REMOTE_IPS];
                                 substrate_input->remote_ips.remote_ips_val = remote_ips;
                                 substrate_input->remote_ips.remote_ips_len = 0;
@@ -433,9 +442,9 @@ int Aca_Comm_Manager::update_goal_state(
                                 {
                                     ACA_LOG_ERROR("Invalid mac input: TBD.\n");
                                 }
-                                substrate_input->hosted_interface = (char *)"";
-                                substrate_input->veth = (char *)"";
-                                substrate_input->tunid = (uint64_t) "";
+                                substrate_input->hosted_interface = EMPTY_STRING;
+                                substrate_input->veth = EMPTY_STRING;
+                                substrate_input->tunid = TRAN_SUBSTRT_VNI;
 
                                 rc = EXIT_SUCCESS;
                             }
@@ -443,20 +452,20 @@ int Aca_Comm_Manager::update_goal_state(
                             {
                                 ACA_LOG_EMERG("Out of memory when allocating with size: %lu.\n",
                                               sizeof(rpc_trn_endpoint_t));
-                                rc = ENOMEM;
+                                rc = -ENOMEM;
                             }
 
                             if (rc == EXIT_SUCCESS)
                             {
-                                rc = this->execute_command(transitd_command, substrate_input);
-                                if (rc == EXIT_SUCCESS)
+                                exec_command_rc = this->execute_command(transitd_command, substrate_input);
+                                if (exec_command_rc == EXIT_SUCCESS)
                                 {
                                     ACA_LOG_INFO("Successfully updated substrate in transit daemon\n");
                                 }
                                 else
                                 {
                                     ACA_LOG_ERROR("Unable to update substrate in transit daemon: %d\n",
-                                                  rc);
+                                                  exec_command_rc);
                                     // TODO: Notify the Network Controller if the command is not successful.
                                 }
                             }
@@ -474,7 +483,7 @@ int Aca_Comm_Manager::update_goal_state(
 
     for (int i = 0; i < parsed_struct.subnet_states_size(); i++)
     {
-        ACA_LOG_DEBUG("parsing subnet state #%d\n", i);
+        ACA_LOG_DEBUG("=====>parsing subnet state #%d\n", i);
 
         aliothcontroller::SubnetConfiguration current_SubnetConfiguration =
             parsed_struct.subnet_states(i).configuration();
@@ -497,7 +506,7 @@ int Aca_Comm_Manager::update_goal_state(
             if (transitd_input != NULL)
             {
                 rpc_trn_network_t *network_input = (rpc_trn_network_t *)transitd_input;
-                network_input->interface = (char *)"eth0";
+                network_input->interface = PHYSICAL_IF;
                 network_input->tunid = current_SubnetConfiguration.tunnel_id();
 
                 string my_cidr = current_SubnetConfiguration.cidr();
@@ -535,7 +544,7 @@ int Aca_Comm_Manager::update_goal_state(
             {
                 ACA_LOG_EMERG("Out of memory when allocating with size: %lu.\n",
                               sizeof(rpc_trn_network_t));
-                rc = ENOMEM;
+                rc = -ENOMEM;
             }
             break;
         default:
@@ -545,18 +554,25 @@ int Aca_Comm_Manager::update_goal_state(
         }
         if (rc == EXIT_SUCCESS)
         {
-            rc = this->execute_command(transitd_command, transitd_input);
-            if (rc == EXIT_SUCCESS)
+            exec_command_rc = this->execute_command(transitd_command, transitd_input);
+            if (exec_command_rc == EXIT_SUCCESS)
             {
                 ACA_LOG_INFO("Successfully executed the network controller command\n");
             }
             else
             {
-                ACA_LOG_ERROR("Unable to execute the network controller command: %d\n", rc);
+                ACA_LOG_ERROR("Unable to execute the network controller command: %d\n", exec_command_rc);
                 // TODO: Notify the Network Controller if the command is not successful.
             }
         }
-        aca_free(transitd_input);
+
+        if ((parsed_struct.subnet_states(i).operation_type() ==
+             aliothcontroller::OperationType::CREATE) ||
+            (parsed_struct.subnet_states(i).operation_type() ==
+             aliothcontroller::OperationType::UPDATE))
+        {
+            aca_free(transitd_input);
+        }
 
         // do we need to call update substrate?
         if (parsed_struct.subnet_states(i).operation_type() ==
@@ -570,14 +586,14 @@ int Aca_Comm_Manager::update_goal_state(
 
                 if (substrate_input != NULL)
                 {
-                    substrate_input->interface = (char *)"";
+                    substrate_input->interface = EMPTY_STRING;
 
                     struct sockaddr_in sa;
                     // TODO: need to check return value, it returns 1 for success 0 for failure
                     inet_pton(AF_INET, current_SubnetConfiguration.transit_switch_ips(j).ip_address().c_str(),
                               &(sa.sin_addr));
                     substrate_input->ip = sa.sin_addr.s_addr;
-                    substrate_input->eptype = 0;
+                    substrate_input->eptype = TRAN_SUBSTRT_EP;
                     uint32_t remote_ips[RPC_TRN_MAX_REMOTE_IPS];
                     substrate_input->remote_ips.remote_ips_val = remote_ips;
                     substrate_input->remote_ips.remote_ips_len = 0;
@@ -593,9 +609,9 @@ int Aca_Comm_Manager::update_goal_state(
                     {
                         ACA_LOG_ERROR("Invalid mac input: TBD.\n");
                     }
-                    substrate_input->hosted_interface = (char *)"";
-                    substrate_input->veth = (char *)"";
-                    substrate_input->tunid = (uint64_t) "";
+                    substrate_input->hosted_interface = EMPTY_STRING;
+                    substrate_input->veth = EMPTY_STRING;
+                    substrate_input->tunid = TRAN_SUBSTRT_VNI;
 
                     rc = EXIT_SUCCESS;
                 }
@@ -603,20 +619,20 @@ int Aca_Comm_Manager::update_goal_state(
                 {
                     ACA_LOG_EMERG("Out of memory when allocating with size: %lu.\n",
                                   sizeof(rpc_trn_endpoint_t));
-                    rc = ENOMEM;
+                    rc = -ENOMEM;
                 }
 
                 if (rc == EXIT_SUCCESS)
                 {
-                    rc = this->execute_command(transitd_command, substrate_input);
-                    if (rc == EXIT_SUCCESS)
+                    exec_command_rc = this->execute_command(transitd_command, substrate_input);
+                    if (exec_command_rc == EXIT_SUCCESS)
                     {
                         ACA_LOG_INFO("Successfully updated substrate in transit daemon\n");
                     }
                     else
                     {
                         ACA_LOG_ERROR("Unable to update substrate in transit daemon: %d\n",
-                                      rc);
+                                      exec_command_rc);
                         // TODO: Notify the Network Controller if the command is not successful.
                     }
                 }
@@ -629,7 +645,7 @@ int Aca_Comm_Manager::update_goal_state(
 
     for (int i = 0; i < parsed_struct.vpc_states_size(); i++)
     {
-        ACA_LOG_DEBUG("parsing VPC state #%d\n", i);
+        ACA_LOG_DEBUG("=====>parsing VPC state #%d\n", i);
 
         aliothcontroller::VpcConfiguration current_VpcConfiguration =
             parsed_struct.vpc_states(i).configuration();
@@ -642,7 +658,7 @@ int Aca_Comm_Manager::update_goal_state(
             if (transitd_input != NULL)
             {
                 rpc_trn_vpc_t *vpc_input = (rpc_trn_vpc_t *)transitd_input;
-                vpc_input->interface = (char *)"eth0";
+                vpc_input->interface = PHYSICAL_IF;
                 vpc_input->tunid = current_VpcConfiguration.tunnel_id();
                 vpc_input->routers_ips.routers_ips_len =
                     current_VpcConfiguration.transit_router_ips_size();
@@ -664,25 +680,25 @@ int Aca_Comm_Manager::update_goal_state(
             {
                 ACA_LOG_EMERG("Out of memory when allocating with size: %lu.\n",
                               sizeof(rpc_trn_vpc_t));
-                rc = ENOMEM;
+                rc = -ENOMEM;
             }
             break;
         default:
-            ACA_LOG_DEBUG("Invalid VPC state operation type %d/n",
+            ACA_LOG_DEBUG("Invalid VPC state operation type %d\n",
                           parsed_struct.vpc_states(i).operation_type());
             break;
         }
         if (rc == EXIT_SUCCESS)
         {
-            rc = this->execute_command(transitd_command, transitd_input);
-            if (rc == EXIT_SUCCESS)
+            exec_command_rc = this->execute_command(transitd_command, transitd_input);
+            if (exec_command_rc == EXIT_SUCCESS)
             {
                 ACA_LOG_INFO("Successfully executed the network controller command\n");
             }
             else
             {
                 ACA_LOG_ERROR("[update_goal_state] Unable to execute the network controller command: %d\n",
-                              rc);
+                              exec_command_rc);
                 // TODO: Notify the Network Controller if the command is not successful.
             }
         }
@@ -702,14 +718,14 @@ int Aca_Comm_Manager::update_goal_state(
 
                 if (substrate_input != NULL)
                 {
-                    substrate_input->interface = (char *)"";
+                    substrate_input->interface = EMPTY_STRING;
 
                     struct sockaddr_in sa;
                     // TODO: need to check return value, it returns 1 for success 0 for failure
                     inet_pton(AF_INET, current_VpcConfiguration.transit_router_ips(j).ip_address().c_str(),
                               &(sa.sin_addr));
                     substrate_input->ip = sa.sin_addr.s_addr;
-                    substrate_input->eptype = 0;
+                    substrate_input->eptype = TRAN_SUBSTRT_EP;
                     uint32_t remote_ips[RPC_TRN_MAX_REMOTE_IPS];
                     substrate_input->remote_ips.remote_ips_val = remote_ips;
                     substrate_input->remote_ips.remote_ips_len = 0;
@@ -725,9 +741,9 @@ int Aca_Comm_Manager::update_goal_state(
                     {
                         ACA_LOG_ERROR("Invalid mac input: TBD.\n");
                     }
-                    substrate_input->hosted_interface = (char *)"";
-                    substrate_input->veth = (char *)"";
-                    substrate_input->tunid = (uint64_t) "";
+                    substrate_input->hosted_interface = EMPTY_STRING;
+                    substrate_input->veth = EMPTY_STRING;
+                    substrate_input->tunid = TRAN_SUBSTRT_VNI;
 
                     rc = EXIT_SUCCESS;
                 }
@@ -735,20 +751,20 @@ int Aca_Comm_Manager::update_goal_state(
                 {
                     ACA_LOG_EMERG("Out of memory when allocating with size: %lu.\n",
                                   sizeof(rpc_trn_endpoint_t));
-                    rc = ENOMEM;
+                    rc = -ENOMEM;
                 }
 
                 if (rc == EXIT_SUCCESS)
                 {
-                    rc = this->execute_command(transitd_command, substrate_input);
-                    if (rc == EXIT_SUCCESS)
+                    exec_command_rc = this->execute_command(transitd_command, substrate_input);
+                    if (exec_command_rc == EXIT_SUCCESS)
                     {
                         ACA_LOG_INFO("Successfully updated substrate in transit daemon\n");
                     }
                     else
                     {
                         ACA_LOG_ERROR("Unable to update substrate in transit daemon: %d\n",
-                                      rc);
+                                      exec_command_rc);
                         // TODO: Notify the Network Controller if the command is not successful.
                     }
                 }
@@ -760,7 +776,6 @@ int Aca_Comm_Manager::update_goal_state(
     return rc;
 }
 
-// TODO: fix the memory leaks introduced when the RPC call failed
 int Aca_Comm_Manager::execute_command(int command, void *input_struct)
 {
     static CLIENT *client;

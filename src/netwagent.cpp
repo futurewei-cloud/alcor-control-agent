@@ -13,11 +13,6 @@ using std::string;
 
 using namespace std;
 
-// Defines
-static char BROKER_LIST[] = "10.213.43.158:9092";
-static char KAFKA_TOPIC[] = "Host-ts-1";
-static char LOCALHOST[] = "localhost";
-static char UDP[] = "udp";
 // Global variables
 cppkafka::ConsumerDispatcher *dispatcher = NULL;
 char *g_broker_list = NULL;
@@ -41,7 +36,7 @@ static void aca_cleanup()
     // Stop sets a private variable running_ to False
     // The Dispatch checks the variable in a loop and stops when running is
     // no longer set to True.
-    if(dispatcher != NULL)
+    if (dispatcher != NULL)
     {
         dispatcher->stop();
         delete dispatcher;
@@ -74,7 +69,7 @@ int main(int argc, char *argv[])
     signal(SIGINT, aca_signal_handler);
     signal(SIGTERM, aca_signal_handler);
 
-    while ((option = getopt(argc, argv, "b:h:s:p:t:d")) != -1)
+    while ((option = getopt(argc, argv, "b:h:s:p:d")) != -1)
     {
         switch (option)
         {
@@ -130,20 +125,6 @@ int main(int argc, char *argv[])
                 exit(EXIT_FAILURE);
             }
             break;
-        case 't':
-            g_test_mode = true;
-            g_test_message = (char *)malloc(sizeof(optarg));
-            if (g_test_message != NULL)
-            {
-                strncpy(g_test_message, optarg, strlen(optarg) + 1);
-            }
-            else
-            {
-                ACA_LOG_EMERG("Out of memory when allocating string with size: %lu.\n",
-                              sizeof(optarg));
-                exit(EXIT_FAILURE);
-            }
-            break;
         case 'd':
             g_debug_mode = true;
             break;
@@ -154,7 +135,6 @@ int main(int argc, char *argv[])
                     "\t\t[-h kafka host topic to listen]\n"
                     "\t\t[-s transitd RPC server]\n"
                     "\t\t[-p transitd RPC protocol]\n"
-                    "\t\t[-t test message to parse and enable test mode]\n"
                     "\t\t[-d enable debug mode]\n",
                     argv[0]);
             exit(EXIT_FAILURE);
@@ -240,20 +220,13 @@ int main(int argc, char *argv[])
     // host_spec_producer.publish(host_network_spec);
     // cout << "Publish completed" << endl;
 
-    if (g_test_mode == false)
-    {
-        string broker_list(g_broker_list);
-        string topic_host_spec(g_kafka_topic);
+    string broker_list(g_broker_list);
+    string topic_host_spec(g_kafka_topic);
 
-        MessageConsumer network_config_consumer(broker_list, "my-test");
+    MessageConsumer network_config_consumer(broker_list, "my-test");
 
-        network_config_consumer.cosumeDispatched(topic_host_spec);
-        /* never reached */
-    }
-    else // g_test_mode == TRUE
-    {
-        // TODO:...
-    }
+    network_config_consumer.cosumeDispatched(topic_host_spec);
+    /* never reached */
 
     aca_cleanup();
 
