@@ -1,6 +1,7 @@
 #ifndef ACA_COMM_MGR_H
 #define ACA_COMM_MGR_H
 
+#include "cppkafka/buffer.h"
 #include "goalstate.pb.h"
 
 using std::string;
@@ -17,7 +18,7 @@ public:
 
   static Aca_Comm_Manager &get_instance();
 
-  int deserialize(string kafka_message,
+  int deserialize(const cppkafka::Buffer *kafka_buffer,
                   aliothcontroller::GoalState &parsed_struct);
 
   int update_goal_state(aliothcontroller::GoalState &parsed_struct);

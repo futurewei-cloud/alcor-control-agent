@@ -75,7 +75,6 @@ void MessageConsumer::setGroupId(string group_id)
 
 bool MessageConsumer::cosumeDispatched(string topic)
 {
-	string *payload;
 	aliothcontroller::GoalState deserialized_GoalState;
 	int rc = EXIT_FAILURE;
 
@@ -105,9 +104,7 @@ bool MessageConsumer::cosumeDispatched(string topic)
 				cout << endl << "<=====incoming message: " << message.get_payload() << endl;
 			}
 
-			payload = new string(message.get_payload());
-			// TODO: Check string allocation for errors.
-			rc = Aca_Comm_Manager::get_instance().deserialize(*payload, deserialized_GoalState);
+			rc = Aca_Comm_Manager::get_instance().deserialize(&(message.get_payload()), deserialized_GoalState);
 			if (rc == EXIT_SUCCESS)
 			{
 				// Call parse_goal_state
@@ -131,11 +128,7 @@ bool MessageConsumer::cosumeDispatched(string topic)
 					cout << "Deserialization failed with error code" << rc << endl;
 				ACA_LOG_ERROR("Deserialization failed with error code %d.\n", rc);
 			}
-			if (payload != nullptr)
-			{
-				delete payload;
-				payload = nullptr;
-			}
+
 			// Now commit the message
 			this->ptr_consumer->commit(message);
 		},

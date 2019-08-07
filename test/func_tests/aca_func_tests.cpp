@@ -3,6 +3,7 @@
 #include "aca_log.h"
 #include "aca_util.h"
 #include "goalstate.pb.h"
+#include "cppkafka/buffer.h"
 #include <unistd.h> /* for getopt */
 #include <chrono>
 #include <string.h>
@@ -232,7 +233,7 @@ int main(int argc, char *argv[])
 
        // Serialize it to string
        GoalState_builder.SerializeToString(&string_message);
-       fprintf(stdout, "(NOTE USED) Serialized protobuf string: %s\n",
+       fprintf(stdout, "(NOT USED) Serialized protobuf string: %s\n",
                string_message.c_str());
 
        // Serialize it to binary array
@@ -240,12 +241,14 @@ int main(int argc, char *argv[])
        char *buffer = (char *)malloc(size);
        GoalState_builder.SerializeToArray(buffer, size);
        string binary_message(buffer, size);
-       fprintf(stdout, "Serialized protobuf binary array: %s\n",
+       fprintf(stdout, "(USING THIS) Serialized protobuf binary array: %s\n",
                binary_message.c_str());
 
        aliothcontroller::GoalState parsed_struct;
 
-       rc = Aca_Comm_Manager::get_instance().deserialize(binary_message, parsed_struct);
+       cppkafka::Buffer kafka_buffer(buffer, size);
+
+       rc = Aca_Comm_Manager::get_instance().deserialize(&kafka_buffer, parsed_struct);
 
        aca_free(buffer);
 
@@ -444,7 +447,7 @@ int main(int argc, char *argv[])
                      }
               }
 
-              fprintf(stdout, "All content matched, send the parsed_struct to update_goal_state...\n");
+              fprintf(stdout, "All content matched, sending the parsed_struct to update_goal_state...\n");
 
               int rc = Aca_Comm_Manager::get_instance().update_goal_state(parsed_struct);
               if (rc == EXIT_SUCCESS)

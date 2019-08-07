@@ -29,34 +29,31 @@ Aca_Comm_Manager &Aca_Comm_Manager::get_instance()
     return instance;
 }
 
-int Aca_Comm_Manager::deserialize(string kafka_message,
+int Aca_Comm_Manager::deserialize(const cppkafka::Buffer *kafka_buffer,
                                   aliothcontroller::GoalState &parsed_struct)
 {
-    int rc = EXIT_FAILURE;
+    int rc = -EXIT_FAILURE;
 
-    // deserialize any new configuration
-    // P0, tracked by issue#16
-
-    if (kafka_message.empty())
+    if (kafka_buffer->get_data() == NULL)
     {
-        ACA_LOG_ERROR("Empty kafka message rc: %d\n", rc);
-        return EINVAL;
+        return -EINVAL;
+        ACA_LOG_ERROR("Empty kafka kafka_buffer data rc: %d\n", rc);
     }
 
     if (parsed_struct.IsInitialized() == false)
     {
+        return -EINVAL;
         ACA_LOG_ERROR("Uninitialized parsed_struct rc: %d\n", rc);
-        return EINVAL;
     }
 
     // Verify that the version of the library that we linked against is
     // compatible with the version of the headers we compiled against.
     GOOGLE_PROTOBUF_VERIFY_VERSION;
 
-    if (parsed_struct.ParseFromArray(kafka_message.c_str(),
-                                     kafka_message.size()))
+    if (parsed_struct.ParseFromArray(kafka_buffer->get_data(),
+                                     kafka_buffer->get_size()))
     {
-        ACA_LOG_INFO("Successfully converted kafka message to protobuf struct\n");
+        ACA_LOG_INFO("Successfully converted kafka buffer to protobuf struct\n");
 
         this->print_goal_state(parsed_struct);
 
@@ -65,7 +62,7 @@ int Aca_Comm_Manager::deserialize(string kafka_message,
     else
     {
         ACA_LOG_ERROR("Failed to convert kafka message to protobuf struct\n");
-        return EXIT_FAILURE;
+        return -EXIT_FAILURE;
     }
 }
 
@@ -837,6 +834,11 @@ int Aca_Comm_Manager::execute_command(int command, void *input_struct)
 // TODO: only print it during debug mode
 void Aca_Comm_Manager::print_goal_state(aliothcontroller::GoalState parsed_struct)
 {
+    if (g_debug_mode == false)
+    {
+        return;
+    }
+    
     for (int i = 0; i < parsed_struct.port_states_size(); i++)
     {
         fprintf(stdout,
