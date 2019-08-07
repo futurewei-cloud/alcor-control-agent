@@ -193,7 +193,7 @@ int Aca_Comm_Manager::update_goal_state(
             // TODO: ensure the input name is 20 char or less
             strncpy(peer_name, peer_name_string.c_str(),
                     strlen(peer_name_string.c_str() + 1));
-            agent_md_in.interface = peer_name;
+            agent_md_in.interface = (char *)"peer0";
 
             agent_md_in.eth.interface = PHYSICAL_IF;
 
@@ -389,7 +389,7 @@ int Aca_Comm_Manager::update_goal_state(
                             uint32_t remote_ips[RPC_TRN_MAX_REMOTE_IPS];
                             substrate_in.remote_ips.remote_ips_val = remote_ips;
                             substrate_in.remote_ips.remote_ips_len = 0;
-                            if (sscanf(current_SubnetConfiguration.transit_switches(k).ip_address().c_str(),
+                            if (sscanf(current_SubnetConfiguration.transit_switches(k).mac_address().c_str(),
                                        "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx",
                                        &substrate_in.mac[0],
                                        &substrate_in.mac[1],
@@ -398,7 +398,7 @@ int Aca_Comm_Manager::update_goal_state(
                                        &substrate_in.mac[4],
                                        &substrate_in.mac[5]) != 6)
                             {
-                                ACA_LOG_ERROR("Invalid mac input: %s.\n", current_SubnetConfiguration.transit_switches(k).ip_address().c_str());
+                                ACA_LOG_ERROR("Invalid mac input: %s.\n", current_SubnetConfiguration.transit_switches(k).mac_address().c_str());
                             }
                             substrate_in.hosted_interface = EMPTY_STRING;
                             substrate_in.veth = EMPTY_STRING;
@@ -535,7 +535,7 @@ int Aca_Comm_Manager::update_goal_state(
                                &substrate_in.mac[4],
                                &substrate_in.mac[5]) != 6)
                     {
-                        ACA_LOG_ERROR("Invalid mac input: %s.\n", current_SubnetConfiguration.transit_switches(j).ip_address().c_str());
+                        ACA_LOG_ERROR("Invalid mac input: %s.\n", current_SubnetConfiguration.transit_switches(j).mac_address().c_str());
                     }
                     substrate_in.hosted_interface = EMPTY_STRING;
                     substrate_in.veth = EMPTY_STRING;
