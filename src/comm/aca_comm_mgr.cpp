@@ -90,6 +90,7 @@ int Aca_Comm_Manager::update_goal_state(
     char peer_name[20];
     char hosted_interface[20];
     string my_cidr;
+    string peer_name_string;
     int slash_pos = 0;
     string my_ip_address;
     string my_prefixlen;
@@ -153,7 +154,7 @@ int Aca_Comm_Manager::update_goal_state(
             }
             else // it must be OperationType::CREATE_UPDATE_SWITCH
             {
-                string peer_name_string = current_PortConfiguration.name() + PEER_POSTFIX;
+                peer_name_string = current_PortConfiguration.name() + PEER_POSTFIX;
                 // TODO: ensure the input name is 20 char or less
                 strncpy(peer_name, peer_name_string.c_str(),
                         strlen(peer_name_string.c_str() + 1));
@@ -190,7 +191,12 @@ int Aca_Comm_Manager::update_goal_state(
             transitd_command = UPDATE_AGENT_MD;
             transitd_input = &agent_md_in;
 
-            agent_md_in.interface = EMPTY_STRING;
+            peer_name_string = current_PortConfiguration.name() + PEER_POSTFIX;
+            // TODO: ensure the input name is 20 char or less
+            // TODO: clear the peer_name also
+            strncpy(peer_name, peer_name_string.c_str(),
+                    strlen(peer_name_string.c_str() + 1));
+            agent_md_in.interface = peer_name;
 
             agent_md_in.eth.interface = PHYSICAL_IF;
 
@@ -879,6 +885,10 @@ void Aca_Comm_Manager::print_goal_state(aliothcontroller::GoalState parsed_struc
         fprintf(stdout,
                 "current_PortConfiguration.host_info().mac_address(): %s \n",
                 current_PortConfiguration.host_info().mac_address().c_str());
+
+        fprintf(stdout,
+                "current_PortConfiguration.fixed_ips_size(): %u \n",
+                current_PortConfiguration.fixed_ips_size());
 
         for (int j = 0; j < current_PortConfiguration.fixed_ips_size(); j++)
         {

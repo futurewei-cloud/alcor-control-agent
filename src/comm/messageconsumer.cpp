@@ -102,7 +102,7 @@ bool MessageConsumer::cosumeDispatched(string topic)
 					cout << message.get_key() << " -> ";
 				}
 				// Print the payload
-				cout << message.get_payload() << endl;
+				cout << endl << "<=====incoming message: " << message.get_payload() << endl;
 			}
 
 			payload = new string(message.get_payload());

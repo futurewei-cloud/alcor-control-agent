@@ -58,7 +58,7 @@ int main(int argc, char *argv[])
               switch (option)
               {
               case 's':
-                     g_rpc_server = (char *)malloc(sizeof(optarg));
+                     g_rpc_server = (char *)malloc(strlen(optarg) + 1);
                      if (g_rpc_server != NULL)
                      {
                             strncpy(g_rpc_server, optarg, strlen(optarg) + 1);
@@ -66,12 +66,12 @@ int main(int argc, char *argv[])
                      else
                      {
                             ACA_LOG_EMERG("Out of memory when allocating string with size: %lu.\n",
-                                          sizeof(optarg));
+                                          strlen(optarg) + 1);
                             exit(EXIT_FAILURE);
                      }
                      break;
               case 'p':
-                     g_rpc_protocol = (char *)malloc(sizeof(optarg));
+                     g_rpc_protocol = (char *)malloc(strlen(optarg) + 1);
                      if (g_rpc_protocol != NULL)
                      {
                             strncpy(g_rpc_protocol, optarg, strlen(optarg) + 1);
@@ -79,7 +79,7 @@ int main(int argc, char *argv[])
                      else
                      {
                             ACA_LOG_EMERG("Out of memory when allocating string with size: %lu.\n",
-                                          sizeof(optarg));
+                                          strlen(optarg) + 1);
                             exit(EXIT_FAILURE);
                      }
                      break;

@@ -74,7 +74,7 @@ int main(int argc, char *argv[])
         switch (option)
         {
         case 'b':
-            g_broker_list = (char *)malloc(sizeof(optarg));
+            g_broker_list = (char *)malloc(strlen(optarg) + 1);
             if (g_broker_list != NULL)
             {
                 strncpy(g_broker_list, optarg, strlen(optarg) + 1);
@@ -82,12 +82,12 @@ int main(int argc, char *argv[])
             else
             {
                 ACA_LOG_EMERG("Out of memory when allocating string with size: %lu.\n",
-                              sizeof(optarg));
+                              strlen(optarg) + 1);
                 exit(EXIT_FAILURE);
             }
             break;
         case 'h':
-            g_kafka_topic = (char *)malloc(sizeof(optarg));
+            g_kafka_topic = (char *)malloc(strlen(optarg) + 1);
             if (g_kafka_topic != NULL)
             {
                 strncpy(g_kafka_topic, optarg, strlen(optarg) + 1);
@@ -95,12 +95,12 @@ int main(int argc, char *argv[])
             else
             {
                 ACA_LOG_EMERG("Out of memory when allocating string with size: %lu.\n",
-                              sizeof(optarg));
+                              strlen(optarg) + 1);
                 exit(EXIT_FAILURE);
             }
             break;
         case 's':
-            g_rpc_server = (char *)malloc(sizeof(optarg));
+            g_rpc_server = (char *)malloc(strlen(optarg) + 1);
             if (g_rpc_server != NULL)
             {
                 strncpy(g_rpc_server, optarg, strlen(optarg) + 1);
@@ -108,12 +108,12 @@ int main(int argc, char *argv[])
             else
             {
                 ACA_LOG_EMERG("Out of memory when allocating string with size: %lu.\n",
-                              sizeof(optarg));
+                              strlen(optarg) + 1);
                 exit(EXIT_FAILURE);
             }
             break;
         case 'p':
-            g_rpc_protocol = (char *)malloc(sizeof(optarg));
+            g_rpc_protocol = (char *)malloc(strlen(optarg) + 1);
             if (g_rpc_protocol != NULL)
             {
                 strncpy(g_rpc_protocol, optarg, strlen(optarg) + 1);
@@ -121,7 +121,7 @@ int main(int argc, char *argv[])
             else
             {
                 ACA_LOG_EMERG("Out of memory when allocating string with size: %lu.\n",
-                              sizeof(optarg));
+                              strlen(optarg) + 1);
                 exit(EXIT_FAILURE);
             }
             break;
