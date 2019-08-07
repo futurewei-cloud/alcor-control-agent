@@ -15,24 +15,20 @@ using namespace std;
 
 // Global variables
 cppkafka::ConsumerDispatcher *dispatcher = NULL;
-char *g_broker_list = NULL;
-char *g_kafka_topic = NULL;
-char *g_rpc_server = NULL;
-char *g_rpc_protocol = NULL;
-bool g_test_mode = false;
-char *g_test_message = NULL;
+string g_broker_list = EMPTY_STRING;
+string g_kafka_topic = EMPTY_STRING;
+string g_kafka_group_id = EMPTY_STRING;
+string g_rpc_server = EMPTY_STRING;
+string g_rpc_protocol = EMPTY_STRING;
 bool g_debug_mode = false;
 
 static void aca_cleanup()
 {
+    ACA_LOG_INFO("Program exiting, cleaning up...\n");
+
     // Optional: Delete all global objects allocated by libprotobuf.
     google::protobuf::ShutdownProtobufLibrary();
 
-    aca_free(g_broker_list);
-    aca_free(g_kafka_topic);
-    aca_free(g_rpc_server);
-    aca_free(g_rpc_protocol);
-    aca_free(g_test_message);
     // Stop sets a private variable running_ to False
     // The Dispatch checks the variable in a loop and stops when running is
     // no longer set to True.
@@ -40,9 +36,8 @@ static void aca_cleanup()
     {
         dispatcher->stop();
         delete dispatcher;
+        dispatcher = NULL;
     }
-
-    ACA_LOG_INFO("Program exiting, cleaning up...\n");
 
     ACA_LOG_CLOSE();
 }
@@ -69,61 +64,24 @@ int main(int argc, char *argv[])
     signal(SIGINT, aca_signal_handler);
     signal(SIGTERM, aca_signal_handler);
 
-    while ((option = getopt(argc, argv, "b:h:s:p:d")) != -1)
+    while ((option = getopt(argc, argv, "b:h:g:s:p:d")) != -1)
     {
         switch (option)
         {
         case 'b':
-            g_broker_list = (char *)malloc(strlen(optarg) + 1);
-            if (g_broker_list != NULL)
-            {
-                strncpy(g_broker_list, optarg, strlen(optarg) + 1);
-            }
-            else
-            {
-                ACA_LOG_EMERG("Out of memory when allocating string with size: %lu.\n",
-                              strlen(optarg) + 1);
-                exit(EXIT_FAILURE);
-            }
+            g_broker_list = optarg;
             break;
         case 'h':
-            g_kafka_topic = (char *)malloc(strlen(optarg) + 1);
-            if (g_kafka_topic != NULL)
-            {
-                strncpy(g_kafka_topic, optarg, strlen(optarg) + 1);
-            }
-            else
-            {
-                ACA_LOG_EMERG("Out of memory when allocating string with size: %lu.\n",
-                              strlen(optarg) + 1);
-                exit(EXIT_FAILURE);
-            }
+            g_kafka_topic = optarg;
+            break;
+        case 'g':
+            g_kafka_group_id = optarg;
             break;
         case 's':
-            g_rpc_server = (char *)malloc(strlen(optarg) + 1);
-            if (g_rpc_server != NULL)
-            {
-                strncpy(g_rpc_server, optarg, strlen(optarg) + 1);
-            }
-            else
-            {
-                ACA_LOG_EMERG("Out of memory when allocating string with size: %lu.\n",
-                              strlen(optarg) + 1);
-                exit(EXIT_FAILURE);
-            }
+            g_rpc_server = optarg;
             break;
         case 'p':
-            g_rpc_protocol = (char *)malloc(strlen(optarg) + 1);
-            if (g_rpc_protocol != NULL)
-            {
-                strncpy(g_rpc_protocol, optarg, strlen(optarg) + 1);
-            }
-            else
-            {
-                ACA_LOG_EMERG("Out of memory when allocating string with size: %lu.\n",
-                              strlen(optarg) + 1);
-                exit(EXIT_FAILURE);
-            }
+            g_rpc_protocol = optarg;
             break;
         case 'd':
             g_debug_mode = true;
@@ -133,6 +91,7 @@ int main(int argc, char *argv[])
                     "Usage: %s\n"
                     "\t\t[-b kafka broker list]\n"
                     "\t\t[-h kafka host topic to listen]\n"
+                    "\t\t[-g kafka group id]\n"
                     "\t\t[-s transitd RPC server]\n"
                     "\t\t[-p transitd RPC protocol]\n"
                     "\t\t[-d enable debug mode]\n",
@@ -142,61 +101,25 @@ int main(int argc, char *argv[])
     }
 
     // fill in the information if not provided in command line args
-    if (g_broker_list == NULL)
+    if (g_broker_list == EMPTY_STRING)
     {
-        g_broker_list = (char *)malloc(sizeof(BROKER_LIST));
-        if (g_broker_list != NULL)
-        {
-            strncpy(g_broker_list, BROKER_LIST, strlen(BROKER_LIST) + 1);
-        }
-        else
-        {
-            ACA_LOG_EMERG("Out of memory when allocating string with size: %lu.\n",
-                          sizeof(BROKER_LIST));
-            exit(EXIT_FAILURE);
-        }
+        g_broker_list = BROKER_LIST;
     }
-    if (g_kafka_topic == NULL)
+    if (g_kafka_topic == EMPTY_STRING)
     {
-        g_kafka_topic = (char *)malloc(sizeof(KAFKA_TOPIC));
-        if (g_kafka_topic != NULL)
-        {
-            strncpy(g_kafka_topic, KAFKA_TOPIC, strlen(KAFKA_TOPIC) + 1);
-        }
-        else
-        {
-            ACA_LOG_EMERG("Out of memory when allocating string with size: %lu.\n",
-                          sizeof(KAFKA_TOPIC));
-            exit(EXIT_FAILURE);
-        }
+        g_kafka_topic = KAFKA_TOPIC;
     }
-    if (g_rpc_server == NULL)
+    if (g_kafka_group_id == EMPTY_STRING)
     {
-        g_rpc_server = (char *)malloc(sizeof(LOCALHOST));
-        if (g_rpc_server != NULL)
-        {
-            strncpy(g_rpc_server, LOCALHOST, strlen(LOCALHOST) + 1);
-        }
-        else
-        {
-            ACA_LOG_EMERG("Out of memory when allocating string with size: %lu.\n",
-                          sizeof(LOCALHOST));
-            exit(EXIT_FAILURE);
-        }
+        g_kafka_group_id = KAFKA_GROUP_ID;
     }
-    if (g_rpc_protocol == NULL)
+    if (g_rpc_server == EMPTY_STRING)
     {
-        g_rpc_protocol = (char *)malloc(sizeof(UDP));
-        if (g_rpc_protocol != NULL)
-        {
-            strncpy(g_rpc_protocol, UDP, strlen(UDP) + 1);
-        }
-        else
-        {
-            ACA_LOG_EMERG("Out of memory when allocating string with size: %lu.\n",
-                          sizeof(UDP));
-            exit(EXIT_FAILURE);
-        }
+        g_rpc_server = LOCALHOST;
+    }
+    if (g_rpc_protocol == EMPTY_STRING)
+    {
+        g_rpc_protocol = UDP;
     }
 
     // Announce this host (agent) and register in every kafka cluster
@@ -220,12 +143,9 @@ int main(int argc, char *argv[])
     // host_spec_producer.publish(host_network_spec);
     // cout << "Publish completed" << endl;
 
-    string broker_list(g_broker_list);
-    string topic_host_spec(g_kafka_topic);
+    MessageConsumer network_config_consumer(g_broker_list, g_kafka_group_id);
 
-    MessageConsumer network_config_consumer(broker_list, "my-test");
-
-    network_config_consumer.cosumeDispatched(topic_host_spec);
+    network_config_consumer.cosumeDispatched(g_kafka_topic);
     /* never reached */
 
     aca_cleanup();

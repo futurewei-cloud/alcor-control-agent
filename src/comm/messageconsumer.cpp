@@ -107,25 +107,18 @@ bool MessageConsumer::cosumeDispatched(string topic)
 			rc = Aca_Comm_Manager::get_instance().deserialize(&(message.get_payload()), deserialized_GoalState);
 			if (rc == EXIT_SUCCESS)
 			{
-				// Call parse_goal_state
 				rc = Aca_Comm_Manager::get_instance().update_goal_state(deserialized_GoalState);
 				if (rc != EXIT_SUCCESS)
 				{
-					if (g_debug_mode)
-						cout << "Failed to update transitd with latest goal state, rc=" << rc << endl;
-					ACA_LOG_ERROR("Failed to update transitd with latest goal state %d.\n", rc);
+					ACA_LOG_ERROR("Failed to update transitd with latest goal state, rc=%d.\n", rc);
 				}
 				else
 				{
-					if (g_debug_mode)
-						cout << "Successfully updated transitd with latest goal state, rc=" << rc << endl;
 					ACA_LOG_ERROR("Successfully updated transitd with latest goal state %d.\n", rc);
 				}
 			}
 			else
 			{
-				if (g_debug_mode)
-					cout << "Deserialization failed with error code" << rc << endl;
 				ACA_LOG_ERROR("Deserialization failed with error code %d.\n", rc);
 			}
 

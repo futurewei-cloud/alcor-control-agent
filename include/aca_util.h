@@ -6,6 +6,7 @@
 // Defines
 static char BROKER_LIST[] = "10.213.43.158:9092";
 static char KAFKA_TOPIC[] = "Host-ts-1";
+static char KAFKA_GROUP_ID[] = "test-group-id";
 static char LOCALHOST[] = "localhost";
 static char UDP[] = "udp";
 
@@ -18,13 +19,5 @@ static char PEER_POSTFIX[] = "_peer";
 #define TRAN_SUBSTRT_EP 0
 #define TRAN_SIMPLE_EP 1
 
-static inline void aca_free(void *pointer)
-{
-    if (pointer != NULL)
-    {
-        free(pointer);
-        pointer = NULL;
-    }
-}
 
 #endif
