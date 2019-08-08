@@ -517,7 +517,7 @@ int Aca_Comm_Manager::update_goal_state(
 
             for (int j = 0; j < current_SubnetConfiguration.transit_switches_size(); j++)
             {
-                substrate_in.interface = EMPTY_STRING;
+                substrate_in.interface = PHYSICAL_IF;
 
                 struct sockaddr_in sa;
                 // TODO: need to check return value, it returns 1 for success 0 for failure
@@ -624,7 +624,7 @@ int Aca_Comm_Manager::update_goal_state(
 
             for (int j = 0; j < current_VpcConfiguration.transit_routers_size(); j++)
             {
-                substrate_in.interface = EMPTY_STRING;
+                substrate_in.interface = PHYSICAL_IF;
 
                 struct sockaddr_in sa;
                 // TODO: need to check return value, it returns 1 for success 0 for failure
