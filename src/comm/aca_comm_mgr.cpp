@@ -292,12 +292,13 @@ int Aca_Comm_Manager::update_goal_state(
 
             break;
         default:
+            transitd_command = 0;
             ACA_LOG_DEBUG("Invalid port state operation type %d/n",
                           parsed_struct.port_states(i).operation_type());
             break;
         }
 
-        if (rc == EXIT_SUCCESS)
+        if ((transitd_command != 0) && (rc == EXIT_SUCCESS))
         {
             exec_command_rc = this->execute_command(transitd_command, transitd_input);
             if (exec_command_rc == EXIT_SUCCESS)
@@ -444,9 +445,11 @@ int Aca_Comm_Manager::update_goal_state(
         {
         case aliothcontroller::OperationType::INFO:
             // information only, ignoring this.
+            transitd_command = 0;
             break;
         case aliothcontroller::OperationType::CREATE_UPDATE_ROUTER:
             // this is to update the router host, only need to update substrate later.
+            transitd_command = 0;
             break;
         case aliothcontroller::OperationType::CREATE:
         case aliothcontroller::OperationType::UPDATE:
@@ -491,11 +494,12 @@ int Aca_Comm_Manager::update_goal_state(
 
             break;
         default:
+            transitd_command = 0;
             ACA_LOG_DEBUG("Invalid subnet state operation type %d/n",
                           parsed_struct.subnet_states(i).operation_type());
             break;
         }
-        if (rc == EXIT_SUCCESS)
+        if ((transitd_command != 0) && (rc == EXIT_SUCCESS))
         {
             exec_command_rc = this->execute_command(transitd_command, transitd_input);
             if (exec_command_rc == EXIT_SUCCESS)
@@ -597,11 +601,12 @@ int Aca_Comm_Manager::update_goal_state(
 
             break;
         default:
+            transitd_command = 0;
             ACA_LOG_DEBUG("Invalid VPC state operation type %d\n",
                           parsed_struct.vpc_states(i).operation_type());
             break;
         }
-        if (rc == EXIT_SUCCESS)
+        if ((transitd_command != 0) && (rc == EXIT_SUCCESS))
         {
             exec_command_rc = this->execute_command(transitd_command, transitd_input);
             if (exec_command_rc == EXIT_SUCCESS)
