@@ -379,7 +379,8 @@ int Aca_Comm_Manager::update_goal_state(
                     {
                         for (int k = 0; k < current_SubnetConfiguration.transit_switches_size(); k++)
                         {
-                            substrate_in.interface = EMPTY_STRING;
+                            // substrate_in.interface = EMPTY_STRING;
+                            substrate_in.interface = (char *)"peer0";
 
                             struct sockaddr_in sa;
                             // TODO: need to check return value, it returns 1 for success 0 for failure
