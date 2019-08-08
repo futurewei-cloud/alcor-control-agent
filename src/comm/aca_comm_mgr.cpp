@@ -142,8 +142,8 @@ int Aca_Comm_Manager::update_goal_state(
             }
 
             // TODO: ensure the input name is 20 char or less
-            strncpy(veth_name, current_PortConfiguration.name().c_str(),
-                    strlen(current_PortConfiguration.name().c_str()) + 1);
+            strncpy(veth_name, current_PortConfiguration.veth_name().c_str(),
+                    strlen(current_PortConfiguration.veth_name().c_str()) + 1);
             endpoint_in.veth = veth_name;
 
             if (parsed_struct.port_states(i).operation_type() == aliothcontroller::OperationType::CREATE_UPDATE_SWITCH)
@@ -183,6 +183,8 @@ int Aca_Comm_Manager::update_goal_state(
                 // TODO: print out more information for troubleshooting
                 ACA_LOG_ERROR("Not able to find the tunnel ID information from subnet config.\n");
             }
+            ACA_LOG_DEBUG("Endpoint Operation: UPDATE_SWITCH: interface: %s, ep_ip: %s, mac: %s, veth_name:%s, tunid:%ld",
+                          PHYSICAL_IF, my_ep_ip_address.c_str(), current_PortConfiguration.mac_address().c_str(), endpoint_in.veth, endpoint_in.tunid);
             rc = EXIT_SUCCESS;
             break;
 
