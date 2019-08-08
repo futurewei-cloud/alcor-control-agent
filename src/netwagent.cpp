@@ -60,6 +60,8 @@ int main(int argc, char *argv[])
 
     ACA_LOG_INIT(ACALOGNAME);
 
+    ACA_LOG_INFO("Network Control Agent started...\n");
+
     // Register the signal handlers
     signal(SIGINT, aca_signal_handler);
     signal(SIGTERM, aca_signal_handler);

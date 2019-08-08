@@ -143,20 +143,21 @@ int Aca_Comm_Manager::update_goal_state(
 
             // TODO: ensure the input name is 20 char or less
             strncpy(veth_name, current_PortConfiguration.name().c_str(),
-                    strlen(current_PortConfiguration.name().c_str() + 1));
+                    strlen(current_PortConfiguration.name().c_str()) + 1);
             endpoint_in.veth = veth_name;
 
-            if (parsed_struct.port_states(i).operation_type() == aliothcontroller::OperationType::CREATE)
+            if (parsed_struct.port_states(i).operation_type() == aliothcontroller::OperationType::CREATE_UPDATE_SWITCH)
             {
                 endpoint_in.hosted_interface = EMPTY_STRING;
             }
-            else // it must be OperationType::CREATE_UPDATE_SWITCH
+            else // it must be OperationType::CREATE
             {
                 peer_name_string = current_PortConfiguration.name() + PEER_POSTFIX;
                 // TODO: ensure the input name is 20 char or less
                 strncpy(peer_name, peer_name_string.c_str(),
-                        strlen(peer_name_string.c_str() + 1));
-                endpoint_in.hosted_interface = peer_name;
+                        strlen(peer_name_string.c_str()) + 1);
+                // endpoint_in.hosted_interface = peer_name;
+                endpoint_in.hosted_interface = (char *)"peer0";
             }
 
             // Look up the subnet configuration to query for tunnel_id
@@ -192,7 +193,7 @@ int Aca_Comm_Manager::update_goal_state(
             peer_name_string = current_PortConfiguration.name() + PEER_POSTFIX;
             // TODO: ensure the input name is 20 char or less
             strncpy(peer_name, peer_name_string.c_str(),
-                    strlen(peer_name_string.c_str() + 1));
+                    strlen(peer_name_string.c_str()) + 1);
             agent_md_in.interface = (char *)"peer0";
 
             agent_md_in.eth.interface = PHYSICAL_IF;
@@ -226,7 +227,7 @@ int Aca_Comm_Manager::update_goal_state(
 
             // TODO: ensure the input name is 20 char or less
             strncpy(veth_name, current_PortConfiguration.name().c_str(),
-                    strlen(current_PortConfiguration.name().c_str() + 1));
+                    strlen(current_PortConfiguration.name().c_str()) + 1);
             agent_md_in.ep.veth = veth_name;
 
             agent_md_in.ep.hosted_interface = PHYSICAL_IF;
@@ -515,33 +516,33 @@ int Aca_Comm_Manager::update_goal_state(
 
             for (int j = 0; j < current_SubnetConfiguration.transit_switches_size(); j++)
             {
-                    substrate_in.interface = EMPTY_STRING;
+                substrate_in.interface = EMPTY_STRING;
 
-                    struct sockaddr_in sa;
-                    // TODO: need to check return value, it returns 1 for success 0 for failure
-                    inet_pton(AF_INET, current_SubnetConfiguration.transit_switches(j).ip_address().c_str(),
-                              &(sa.sin_addr));
-                    substrate_in.ip = sa.sin_addr.s_addr;
-                    substrate_in.eptype = TRAN_SUBSTRT_EP;
-                    uint32_t remote_ips[RPC_TRN_MAX_REMOTE_IPS];
-                    substrate_in.remote_ips.remote_ips_val = remote_ips;
-                    substrate_in.remote_ips.remote_ips_len = 0;
-                    if (sscanf(current_SubnetConfiguration.transit_switches(j).mac_address().c_str(),
-                               "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx",
-                               &substrate_in.mac[0],
-                               &substrate_in.mac[1],
-                               &substrate_in.mac[2],
-                               &substrate_in.mac[3],
-                               &substrate_in.mac[4],
-                               &substrate_in.mac[5]) != 6)
-                    {
-                        ACA_LOG_ERROR("Invalid mac input: %s.\n", current_SubnetConfiguration.transit_switches(j).mac_address().c_str());
-                    }
-                    substrate_in.hosted_interface = EMPTY_STRING;
-                    substrate_in.veth = EMPTY_STRING;
-                    substrate_in.tunid = TRAN_SUBSTRT_VNI;
+                struct sockaddr_in sa;
+                // TODO: need to check return value, it returns 1 for success 0 for failure
+                inet_pton(AF_INET, current_SubnetConfiguration.transit_switches(j).ip_address().c_str(),
+                          &(sa.sin_addr));
+                substrate_in.ip = sa.sin_addr.s_addr;
+                substrate_in.eptype = TRAN_SUBSTRT_EP;
+                uint32_t remote_ips[RPC_TRN_MAX_REMOTE_IPS];
+                substrate_in.remote_ips.remote_ips_val = remote_ips;
+                substrate_in.remote_ips.remote_ips_len = 0;
+                if (sscanf(current_SubnetConfiguration.transit_switches(j).mac_address().c_str(),
+                           "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx",
+                           &substrate_in.mac[0],
+                           &substrate_in.mac[1],
+                           &substrate_in.mac[2],
+                           &substrate_in.mac[3],
+                           &substrate_in.mac[4],
+                           &substrate_in.mac[5]) != 6)
+                {
+                    ACA_LOG_ERROR("Invalid mac input: %s.\n", current_SubnetConfiguration.transit_switches(j).mac_address().c_str());
+                }
+                substrate_in.hosted_interface = EMPTY_STRING;
+                substrate_in.veth = EMPTY_STRING;
+                substrate_in.tunid = TRAN_SUBSTRT_VNI;
 
-                    rc = EXIT_SUCCESS;
+                rc = EXIT_SUCCESS;
 
                 if (rc == EXIT_SUCCESS)
                 {
@@ -622,33 +623,33 @@ int Aca_Comm_Manager::update_goal_state(
 
             for (int j = 0; j < current_VpcConfiguration.transit_routers_size(); j++)
             {
-                    substrate_in.interface = EMPTY_STRING;
+                substrate_in.interface = EMPTY_STRING;
 
-                    struct sockaddr_in sa;
-                    // TODO: need to check return value, it returns 1 for success 0 for failure
-                    inet_pton(AF_INET, current_VpcConfiguration.transit_routers(j).ip_address().c_str(),
-                              &(sa.sin_addr));
-                    substrate_in.ip = sa.sin_addr.s_addr;
-                    substrate_in.eptype = TRAN_SUBSTRT_EP;
-                    uint32_t remote_ips[RPC_TRN_MAX_REMOTE_IPS];
-                    substrate_in.remote_ips.remote_ips_val = remote_ips;
-                    substrate_in.remote_ips.remote_ips_len = 0;
-                    if (sscanf(current_VpcConfiguration.transit_routers(j).mac_address().c_str(),
-                               "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx",
-                               &substrate_in.mac[0],
-                               &substrate_in.mac[1],
-                               &substrate_in.mac[2],
-                               &substrate_in.mac[3],
-                               &substrate_in.mac[4],
-                               &substrate_in.mac[5]) != 6)
-                    {
-                        ACA_LOG_ERROR("Invalid mac input: %s.\n", current_VpcConfiguration.transit_routers(j).mac_address().c_str());
-                    }
-                    substrate_in.hosted_interface = EMPTY_STRING;
-                    substrate_in.veth = EMPTY_STRING;
-                    substrate_in.tunid = TRAN_SUBSTRT_VNI;
+                struct sockaddr_in sa;
+                // TODO: need to check return value, it returns 1 for success 0 for failure
+                inet_pton(AF_INET, current_VpcConfiguration.transit_routers(j).ip_address().c_str(),
+                          &(sa.sin_addr));
+                substrate_in.ip = sa.sin_addr.s_addr;
+                substrate_in.eptype = TRAN_SUBSTRT_EP;
+                uint32_t remote_ips[RPC_TRN_MAX_REMOTE_IPS];
+                substrate_in.remote_ips.remote_ips_val = remote_ips;
+                substrate_in.remote_ips.remote_ips_len = 0;
+                if (sscanf(current_VpcConfiguration.transit_routers(j).mac_address().c_str(),
+                           "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx",
+                           &substrate_in.mac[0],
+                           &substrate_in.mac[1],
+                           &substrate_in.mac[2],
+                           &substrate_in.mac[3],
+                           &substrate_in.mac[4],
+                           &substrate_in.mac[5]) != 6)
+                {
+                    ACA_LOG_ERROR("Invalid mac input: %s.\n", current_VpcConfiguration.transit_routers(j).mac_address().c_str());
+                }
+                substrate_in.hosted_interface = EMPTY_STRING;
+                substrate_in.veth = EMPTY_STRING;
+                substrate_in.tunid = TRAN_SUBSTRT_VNI;
 
-                    rc = EXIT_SUCCESS;
+                rc = EXIT_SUCCESS;
 
                 if (rc == EXIT_SUCCESS)
                 {
