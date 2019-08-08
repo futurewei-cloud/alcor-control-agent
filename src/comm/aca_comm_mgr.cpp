@@ -458,14 +458,7 @@ int Aca_Comm_Manager::update_goal_state(
             transitd_command = 0;
             break;
         case aliothcontroller::OperationType::CREATE_UPDATE_ROUTER:
-            // this is to update the router host, only need to update substrate later.
-            transitd_command = 0;
-            break;
-        case aliothcontroller::OperationType::CREATE:
-        case aliothcontroller::OperationType::UPDATE:
-            // TODO: There might be slight difference between Create and Update.
-            // E.g. Create could require pre-check that if a subnet exists in this host etc.
-            // TODO: not used based on the current simple scenario contract with controller.
+            // this is to update the router host, need to update substrate later.
             transitd_command = UPDATE_NET;
             transitd_input = &network_in;
 
@@ -501,8 +494,8 @@ int Aca_Comm_Manager::update_goal_state(
             }
 
             rc = EXIT_SUCCESS;
-
             break;
+
         default:
             transitd_command = 0;
             ACA_LOG_DEBUG("Invalid subnet state operation type %d/n",
