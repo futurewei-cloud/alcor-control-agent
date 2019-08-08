@@ -316,6 +316,10 @@ int Aca_Comm_Manager::update_goal_state(
         // check if we need to call update substrate (MAC address)
         if (parsed_struct.port_states(i).operation_type() == aliothcontroller::OperationType::CREATE_UPDATE_SWITCH)
         {
+            ACA_LOG_DEBUG("port operation: CREATE_UPDATE_SWITCH, update substrate from host_info(), IP: %s, mac: %s\n",
+                          current_PortConfiguration.host_info().ip_address().c_str(),
+                          current_PortConfiguration.host_info().mac_address().c_str());
+
             transitd_command = UPDATE_EP;
             transitd_input = &substrate_in;
 
@@ -380,6 +384,10 @@ int Aca_Comm_Manager::update_goal_state(
                     {
                         for (int k = 0; k < current_SubnetConfiguration.transit_switches_size(); k++)
                         {
+                            ACA_LOG_DEBUG("port operation: FINALIZE, update substrate, IP: %s, mac: %s\n",
+                                          current_SubnetConfiguration.transit_switches(k).ip_address().c_str(),
+                                          current_SubnetConfiguration.transit_switches(k).mac_address().c_str());
+
                             // substrate_in.interface = EMPTY_STRING;
                             substrate_in.interface = (char *)"peer0";
 
@@ -521,6 +529,10 @@ int Aca_Comm_Manager::update_goal_state(
 
             for (int j = 0; j < current_SubnetConfiguration.transit_switches_size(); j++)
             {
+                ACA_LOG_DEBUG("Subnet operation: CREATE_UPDATE_ROUTER, update substrate, IP: %s, mac: %s\n",
+                              current_SubnetConfiguration.transit_switches(j).ip_address().c_str(),
+                              current_SubnetConfiguration.transit_switches(j).mac_address().c_str());
+
                 substrate_in.interface = PHYSICAL_IF;
 
                 struct sockaddr_in sa;
@@ -630,6 +642,10 @@ int Aca_Comm_Manager::update_goal_state(
             for (int j = 0; j < current_VpcConfiguration.transit_routers_size(); j++)
             {
                 substrate_in.interface = PHYSICAL_IF;
+
+                ACA_LOG_DEBUG("VPC operation: CREATE_UPDATE_SWITCH, update substrate, IP: %s, mac: %s\n",
+                              current_VpcConfiguration.transit_routers(j).ip_address().c_str(),
+                              current_VpcConfiguration.transit_routers(j).mac_address().c_str());
 
                 struct sockaddr_in sa;
                 // TODO: need to check return value, it returns 1 for success 0 for failure
