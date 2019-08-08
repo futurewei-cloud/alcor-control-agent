@@ -318,7 +318,7 @@ int Aca_Comm_Manager::update_goal_state(
             transitd_command = UPDATE_EP;
             transitd_input = &substrate_in;
 
-            substrate_in.interface = EMPTY_STRING;
+            substrate_in.interface = PHYSICAL_IF;
 
             struct sockaddr_in sa;
             // TODO: need to check return value, it returns 1 for success 0 for failure
