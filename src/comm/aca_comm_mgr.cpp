@@ -602,6 +602,9 @@ int Aca_Comm_Manager::update_goal_state(
 
             for (int j = 0; j < current_VpcConfiguration.transit_routers_size(); j++)
             {
+                ACA_LOG_DEBUG("VPC operation: UPDATE_VPC, update vpc, IP: %s, tunnel_id: %ld\n",
+                              current_VpcConfiguration.transit_routers(j).ip_address().c_str(),
+                              current_VpcConfiguration.tunnel_id());
                 struct sockaddr_in sa;
                 // TODO: need to check return value, it returns 1 for success 0 for failure
                 inet_pton(AF_INET, current_VpcConfiguration.transit_routers(j).ip_address().c_str(),
