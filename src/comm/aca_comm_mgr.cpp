@@ -18,6 +18,29 @@ using messagemanager::MessageConsumer;
 extern string g_rpc_server;
 extern string g_rpc_protocol;
 
+static inline const char *get_controller_operation_name(aliothcontroller::OperationType operation)
+{
+    switch (operation)
+    {
+    case aliothcontroller::OperationType::CREATE:
+        return "CREATE";
+    case aliothcontroller::OperationType::UPDATE:
+        return "UPDATE";
+    case aliothcontroller::OperationType::GET:
+        return "GET";
+    case aliothcontroller::OperationType::INFO:
+        return "INFO";
+    case aliothcontroller::OperationType::FINALIZE:
+        return "FINALIZE";
+    case aliothcontroller::OperationType::CREATE_UPDATE_SWITCH:
+        return "CREATE_UPDATE_SWITCH";
+    case aliothcontroller::OperationType::CREATE_UPDATE_ROUTER:
+        return "CREATE_UPDATE_ROUTER";
+    default:
+        return "ERROR: unknown operation type!";
+    }
+}
+
 namespace aca_comm_manager
 {
 
@@ -183,8 +206,14 @@ int Aca_Comm_Manager::update_goal_state(
                 // TODO: print out more information for troubleshooting
                 ACA_LOG_ERROR("Not able to find the tunnel ID information from subnet config.\n");
             }
-            ACA_LOG_DEBUG("Endpoint Operation: UPDATE_SWITCH: interface: %s, ep_ip: %s, mac: %s, veth_name:%s, tunid:%ld",
-                          PHYSICAL_IF, my_ep_ip_address.c_str(), current_PortConfiguration.mac_address().c_str(), endpoint_in.veth, endpoint_in.tunid);
+            ACA_LOG_DEBUG("Endpoint Operation: %s: interface: %s, ep_ip: %s, mac: %s, hosted_interface: %s, veth_name:%s, tunid:%ld\n",
+                          get_controller_operation_name(parsed_struct.port_states(i).operation_type()),
+                          endpoint_in.interface,
+                          my_ep_ip_address.c_str(),
+                          current_PortConfiguration.mac_address().c_str(),
+                          endpoint_in.hosted_interface,
+                          endpoint_in.veth,
+                          endpoint_in.tunid);
             rc = EXIT_SUCCESS;
             break;
 
@@ -597,15 +626,19 @@ int Aca_Comm_Manager::update_goal_state(
 
             for (int j = 0; j < current_VpcConfiguration.transit_routers_size(); j++)
             {
-                ACA_LOG_DEBUG("VPC operation: UPDATE_VPC, update vpc, IP: %s, tunnel_id: %ld\n",
-                              current_VpcConfiguration.transit_routers(j).ip_address().c_str(),
-                              current_VpcConfiguration.tunnel_id());
                 struct sockaddr_in sa;
                 // TODO: need to check return value, it returns 1 for success 0 for failure
                 inet_pton(AF_INET, current_VpcConfiguration.transit_routers(j).ip_address().c_str(),
                           &(sa.sin_addr));
                 vpc_in.routers_ips.routers_ips_val[j] =
                     sa.sin_addr.s_addr;
+
+                ACA_LOG_DEBUG("VPC operation: CREATE_UPDATE_SWITCH, update vpc, IP: %s, tunnel_id: %ld\n",
+                              current_VpcConfiguration.transit_routers(j).ip_address().c_str(),
+                              current_VpcConfiguration.tunnel_id());
+
+                ACA_LOG_DEBUG("[Before execute_command] routers_ips_val[%d]: routers_ips_val: %u .\n",
+                              j, vpc_in.routers_ips.routers_ips_val[j]);
             }
             rc = EXIT_SUCCESS;
 
@@ -701,6 +734,206 @@ int Aca_Comm_Manager::execute_command(int command, void *input_struct)
     ACA_LOG_INFO("Connecting to %s using %s protocol.\n", g_rpc_server.c_str(),
                  g_rpc_protocol.c_str());
 
+    if (g_debug_mode)
+    {
+        // This is for debugging only, to be removed after stabilization
+        switch (command)
+        {
+        case UPDATE_VPC:
+        {
+            rpc_trn_vpc_t *rpc_trn_vpc_t_in = (rpc_trn_vpc_t *)input_struct;
+            ACA_LOG_DEBUG("[execute_command] Calling UPDATE VPC with interface %s, tunid %lu, routers_ips_len %u .\n",
+                          rpc_trn_vpc_t_in->interface,
+                          rpc_trn_vpc_t_in->tunid,
+                          rpc_trn_vpc_t_in->routers_ips.routers_ips_len);
+            for (int i = 0; i < rpc_trn_vpc_t_in->routers_ips.routers_ips_len; i++)
+            {
+                ACA_LOG_DEBUG("[execute_command] routers_ips_val[%d]: %u .\n",
+                              i, rpc_trn_vpc_t_in->routers_ips.routers_ips_val[i]);
+            }
+            break;
+        }
+        case UPDATE_NET:
+        {
+            rpc_trn_network_t *rpc_trn_network_t_in = (rpc_trn_network_t *)input_struct;
+            ACA_LOG_DEBUG("[execute_command] Calling UPDATE NET with interface %s, prefixlen %u, tunid %lu, netip: %u, switches_ips_len %u .\n",
+                          rpc_trn_network_t_in->interface,
+                          rpc_trn_network_t_in->prefixlen,
+                          rpc_trn_network_t_in->tunid,
+                          rpc_trn_network_t_in->netip,
+                          rpc_trn_network_t_in->switches_ips.switches_ips_len);
+            for (int i = 0; i < rpc_trn_network_t_in->switches_ips.switches_ips_len; i++)
+            {
+                ACA_LOG_DEBUG("[execute_command] switches_ips_val[%d]: %u .\n",
+                              i, rpc_trn_network_t_in->switches_ips.switches_ips_val[i]);
+            }
+            break;
+        }
+        case UPDATE_EP:
+        {
+            rpc_trn_endpoint_t *rpc_trn_endpoint_t_in = (rpc_trn_endpoint_t *)input_struct;
+            ACA_LOG_DEBUG("[execute_command] Calling UPDATE EP with interface %s, ip %u, "
+                          "eptype %u, mac: %hhx:%hhx:%hhx:%hhx:%hhx:%hhx, hosted_interface: %s, "
+                          "veth: %s, tunid: %lu, remote_ips_len %u .\n",
+                          rpc_trn_endpoint_t_in->interface,
+                          rpc_trn_endpoint_t_in->ip,
+                          rpc_trn_endpoint_t_in->eptype,
+                          rpc_trn_endpoint_t_in->mac[0],
+                          rpc_trn_endpoint_t_in->mac[1],
+                          rpc_trn_endpoint_t_in->mac[2],
+                          rpc_trn_endpoint_t_in->mac[3],
+                          rpc_trn_endpoint_t_in->mac[4],
+                          rpc_trn_endpoint_t_in->mac[5],
+                          rpc_trn_endpoint_t_in->hosted_interface,
+                          rpc_trn_endpoint_t_in->veth,
+                          rpc_trn_endpoint_t_in->tunid,
+                          rpc_trn_endpoint_t_in->remote_ips.remote_ips_len);
+            for (int i = 0; i < rpc_trn_endpoint_t_in->remote_ips.remote_ips_len; i++)
+            {
+                ACA_LOG_DEBUG("[execute_command] remote_ips_val[%d]: %u .\n",
+                              i, rpc_trn_endpoint_t_in->remote_ips.remote_ips_val[i]);
+            }
+            break;
+        }
+        case UPDATE_AGENT_EP:
+        {
+            rpc_trn_endpoint_t *rpc_trn_endpoint_t_in = (rpc_trn_endpoint_t *)input_struct;
+            ACA_LOG_DEBUG("[execute_command] Calling UPDATE AGENT EP with interface %s, ip %u, "
+                          "eptype %u, mac: %hhx:%hhx:%hhx:%hhx:%hhx:%hhx, hosted_interface: %s, "
+                          "veth: %s, tunid: %lu, remote_ips_len %u .\n",
+                          rpc_trn_endpoint_t_in->interface,
+                          rpc_trn_endpoint_t_in->ip,
+                          rpc_trn_endpoint_t_in->eptype,
+                          rpc_trn_endpoint_t_in->mac[0],
+                          rpc_trn_endpoint_t_in->mac[1],
+                          rpc_trn_endpoint_t_in->mac[2],
+                          rpc_trn_endpoint_t_in->mac[3],
+                          rpc_trn_endpoint_t_in->mac[4],
+                          rpc_trn_endpoint_t_in->mac[5],
+                          rpc_trn_endpoint_t_in->hosted_interface,
+                          rpc_trn_endpoint_t_in->veth,
+                          rpc_trn_endpoint_t_in->tunid,
+                          rpc_trn_endpoint_t_in->remote_ips.remote_ips_len);
+            for (int i = 0; i < rpc_trn_endpoint_t_in->remote_ips.remote_ips_len; i++)
+            {
+                ACA_LOG_DEBUG("[execute_command] remote_ips_val[%d]: %u .\n",
+                              i, rpc_trn_endpoint_t_in->remote_ips.remote_ips_val[i]);
+            }
+            break;
+        }
+        case UPDATE_AGENT_MD:
+        {
+            rpc_trn_agent_metadata_t *rpc_trn_agent_metadata_t_in = (rpc_trn_agent_metadata_t *)input_struct;
+            rpc_trn_tun_intf_t *rpc_trn_tun_intf_t_in = &(rpc_trn_agent_metadata_t_in->eth);
+            rpc_trn_endpoint_t *rpc_trn_endpoint_t_in = &(rpc_trn_agent_metadata_t_in->ep);
+            rpc_trn_network_t *rpc_trn_network_t_in = &(rpc_trn_agent_metadata_t_in->net);
+
+            ACA_LOG_DEBUG("[execute_command] Calling UPDATE AGENT MD with top level interface %s, intf.interface %s, intf. ip %u, "
+                          "mac: %hhx:%hhx:%hhx:%hhx:%hhx:%hhx \n",
+                          rpc_trn_agent_metadata_t_in->interface,
+                          rpc_trn_tun_intf_t_in->interface,
+                          rpc_trn_tun_intf_t_in->ip,
+                          rpc_trn_tun_intf_t_in->mac[0],
+                          rpc_trn_tun_intf_t_in->mac[1],
+                          rpc_trn_tun_intf_t_in->mac[2],
+                          rpc_trn_tun_intf_t_in->mac[3],
+                          rpc_trn_tun_intf_t_in->mac[4],
+                          rpc_trn_tun_intf_t_in->mac[5]);
+
+            ACA_LOG_DEBUG("[execute_command] Calling UPDATE AGENT MD with interface %s, ip %u, "
+                          "eptype %u, mac: %hhx:%hhx:%hhx:%hhx:%hhx:%hhx, hosted_interface: %s, "
+                          "veth: %s, tunid: %lu, remote_ips_len %u .\n",
+                          rpc_trn_endpoint_t_in->interface,
+                          rpc_trn_endpoint_t_in->ip,
+                          rpc_trn_endpoint_t_in->eptype,
+                          rpc_trn_endpoint_t_in->mac[0],
+                          rpc_trn_endpoint_t_in->mac[1],
+                          rpc_trn_endpoint_t_in->mac[2],
+                          rpc_trn_endpoint_t_in->mac[3],
+                          rpc_trn_endpoint_t_in->mac[4],
+                          rpc_trn_endpoint_t_in->mac[5],
+                          rpc_trn_endpoint_t_in->hosted_interface,
+                          rpc_trn_endpoint_t_in->veth,
+                          rpc_trn_endpoint_t_in->tunid,
+                          rpc_trn_endpoint_t_in->remote_ips.remote_ips_len);
+            for (int i = 0; i < rpc_trn_endpoint_t_in->remote_ips.remote_ips_len; i++)
+            {
+                ACA_LOG_DEBUG("[execute_command] remote_ips_val[%d]: %u .\n",
+                              i, rpc_trn_endpoint_t_in->remote_ips.remote_ips_val[i]);
+            }
+
+            ACA_LOG_DEBUG("[execute_command] Calling UPDATE AGENT MD with interface %s, ip %u, "
+                          "eptype %u, mac: %hhx:%hhx:%hhx:%hhx:%hhx:%hhx, hosted_interface: %s, "
+                          "veth: %s, tunid: %lu, remote_ips_len %u .\n",
+                          rpc_trn_endpoint_t_in->interface,
+                          rpc_trn_endpoint_t_in->ip,
+                          rpc_trn_endpoint_t_in->eptype,
+                          rpc_trn_endpoint_t_in->mac[0],
+                          rpc_trn_endpoint_t_in->mac[1],
+                          rpc_trn_endpoint_t_in->mac[2],
+                          rpc_trn_endpoint_t_in->mac[3],
+                          rpc_trn_endpoint_t_in->mac[4],
+                          rpc_trn_endpoint_t_in->mac[5],
+                          rpc_trn_endpoint_t_in->hosted_interface,
+                          rpc_trn_endpoint_t_in->veth,
+                          rpc_trn_endpoint_t_in->tunid,
+                          rpc_trn_endpoint_t_in->remote_ips.remote_ips_len);
+            for (int i = 0; i < rpc_trn_endpoint_t_in->remote_ips.remote_ips_len; i++)
+            {
+                ACA_LOG_DEBUG("[execute_command] remote_ips_val[%d]: %u .\n",
+                              i, rpc_trn_endpoint_t_in->remote_ips.remote_ips_val[i]);
+            }
+
+            break;
+        }
+            /*
+        case DELETE_NET:
+            // rc = DELETE_NET ...
+            break;
+        case DELETE_EP:
+            // rc = DELETE_EP ...
+            break;
+        case DELETE_AGENT_EP:
+            // rc = DELETE_AGENT_EP ...
+            break;
+        case DELETE_AGENT_MD:
+            // rc = DELETE_AGENT_MD ...
+            break;
+        case GET_VPC:
+            // rpc_trn_vpc_t = GET_VPC ...
+            break;
+        case GET_NET:
+            // rpc_trn_vpc_t = GET_NET ...
+            break;
+        case GET_EP:
+            // rpc_trn_vpc_t = GET_EP ...
+            break;
+        case GET_AGENT_EP:
+            // rpc_trn_vpc_t = GET_AGENT_EP ...
+            break;
+        case GET_AGENT_MD:
+            // rpc_trn_vpc_t = GET_AGENT_MD ...
+            break;
+        case LOAD_TRANSIT_XDP:
+            // rc = LOAD_TRANSIT_XDP ...
+            break;
+        case LOAD_TRANSIT_AGENT_XDP:
+            // rc = LOAD_TRANSIT_AGENT_XDP ...
+            break;
+        case UNLOAD_TRANSIT_XDP:
+            // rc = UNLOAD_TRANSIT_XDP ...
+            break;
+        case UNLOAD_TRANSIT_AGENT_XDP:
+            // rc = UNLOAD_TRANSIT_AGENT_XDP ...
+            break;
+*/
+        default:
+            ACA_LOG_ERROR("Unknown controller command in debug print: %d\n", command);
+            rc = EXIT_FAILURE;
+            break;
+        }
+    }
+
     // TODO: We may change it to have a static client for health checking on
     // transit daemon in the future.
     client = clnt_create(g_rpc_server.c_str(), RPC_TRANSIT_REMOTE_PROTOCOL,
@@ -730,7 +963,6 @@ int Aca_Comm_Manager::execute_command(int command, void *input_struct)
             break;
         case UPDATE_AGENT_MD:
             transitd_return = update_agent_md_1((rpc_trn_agent_metadata_t *)input_struct, client);
-            // rc = UPDATE_AGENT_MD ...
             break;
         case DELETE_NET:
             // rc = DELETE_NET ...
