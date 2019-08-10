@@ -153,7 +153,7 @@ int Aca_Comm_Manager::update_goal_state(
             endpoint_in.remote_ips.remote_ips_val[0] = sa.sin_addr.s_addr;
 
             if (sscanf(current_PortConfiguration.mac_address().c_str(),
-                       "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx",
+                       "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx%*c",
                        &endpoint_in.mac[0],
                        &endpoint_in.mac[1],
                        &endpoint_in.mac[2],
@@ -245,7 +245,7 @@ int Aca_Comm_Manager::update_goal_state(
             agent_md_in.ep.remote_ips.remote_ips_val[0] = sa.sin_addr.s_addr;
 
             if (sscanf(current_PortConfiguration.mac_address().c_str(),
-                       "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx",
+                       "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx%*c",
                        &agent_md_in.ep.mac[0],
                        &agent_md_in.ep.mac[1],
                        &agent_md_in.ep.mac[2],
@@ -367,7 +367,7 @@ int Aca_Comm_Manager::update_goal_state(
             substrate_in.remote_ips.remote_ips_len = 0;
 
             if (sscanf(current_PortConfiguration.host_info().mac_address().c_str(),
-                       "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx",
+                       "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx%*c",
                        &substrate_in.mac[0],
                        &substrate_in.mac[1],
                        &substrate_in.mac[2],
@@ -432,7 +432,7 @@ int Aca_Comm_Manager::update_goal_state(
                             substrate_in.remote_ips.remote_ips_val = remote_ips;
                             substrate_in.remote_ips.remote_ips_len = 0;
                             if (sscanf(current_SubnetConfiguration.transit_switches(k).mac_address().c_str(),
-                                       "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx",
+                                       "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx%*c",
                                        &substrate_in.mac[0],
                                        &substrate_in.mac[1],
                                        &substrate_in.mac[2],
@@ -569,7 +569,7 @@ int Aca_Comm_Manager::update_goal_state(
                 substrate_in.remote_ips.remote_ips_val = remote_ips;
                 substrate_in.remote_ips.remote_ips_len = 0;
                 if (sscanf(current_SubnetConfiguration.transit_switches(j).mac_address().c_str(),
-                           "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx",
+                           "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx%*c",
                            &substrate_in.mac[0],
                            &substrate_in.mac[1],
                            &substrate_in.mac[2],
@@ -688,7 +688,7 @@ int Aca_Comm_Manager::update_goal_state(
                 substrate_in.remote_ips.remote_ips_val = remote_ips;
                 substrate_in.remote_ips.remote_ips_len = 0;
                 if (sscanf(current_VpcConfiguration.transit_routers(j).mac_address().c_str(),
-                           "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx",
+                           "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx%*c",
                            &substrate_in.mac[0],
                            &substrate_in.mac[1],
                            &substrate_in.mac[2],
@@ -773,7 +773,7 @@ int Aca_Comm_Manager::execute_command(int command, void *input_struct)
         {
             rpc_trn_endpoint_t *rpc_trn_endpoint_t_in = (rpc_trn_endpoint_t *)input_struct;
             ACA_LOG_DEBUG("[execute_command] Calling UPDATE EP with interface %s, ip %u, "
-                          "eptype %u, mac: %hhx:%hhx:%hhx:%hhx:%hhx:%hhx, hosted_interface: %s, "
+                          "eptype %u, mac: %02x:%02x:%02x:%02x:%02x:%02x, hosted_interface: %s, "
                           "veth: %s, tunid: %lu, remote_ips_len %u .\n",
                           rpc_trn_endpoint_t_in->interface,
                           rpc_trn_endpoint_t_in->ip,
@@ -799,7 +799,7 @@ int Aca_Comm_Manager::execute_command(int command, void *input_struct)
         {
             rpc_trn_endpoint_t *rpc_trn_endpoint_t_in = (rpc_trn_endpoint_t *)input_struct;
             ACA_LOG_DEBUG("[execute_command] Calling UPDATE AGENT EP with interface %s, ip %u, "
-                          "eptype %u, mac: %hhx:%hhx:%hhx:%hhx:%hhx:%hhx, hosted_interface: %s, "
+                          "eptype %u, mac: %02x:%02x:%02x:%02x:%02x:%02x, hosted_interface: %s, "
                           "veth: %s, tunid: %lu, remote_ips_len %u .\n",
                           rpc_trn_endpoint_t_in->interface,
                           rpc_trn_endpoint_t_in->ip,
@@ -829,7 +829,7 @@ int Aca_Comm_Manager::execute_command(int command, void *input_struct)
             rpc_trn_network_t *rpc_trn_network_t_in = &(rpc_trn_agent_metadata_t_in->net);
 
             ACA_LOG_DEBUG("[execute_command] Calling UPDATE AGENT MD with top level interface %s, intf.interface %s, intf. ip %u, "
-                          "mac: %hhx:%hhx:%hhx:%hhx:%hhx:%hhx \n",
+                          "mac: %02x:%02x:%02x:%02x:%02x:%02x \n",
                           rpc_trn_agent_metadata_t_in->interface,
                           rpc_trn_tun_intf_t_in->interface,
                           rpc_trn_tun_intf_t_in->ip,
@@ -841,7 +841,7 @@ int Aca_Comm_Manager::execute_command(int command, void *input_struct)
                           rpc_trn_tun_intf_t_in->mac[5]);
 
             ACA_LOG_DEBUG("[execute_command] Calling UPDATE AGENT MD with interface %s, ip %u, "
-                          "eptype %u, mac: %hhx:%hhx:%hhx:%hhx:%hhx:%hhx, hosted_interface: %s, "
+                          "eptype %u, mac: %02x:%02x:%02x:%02x:%02x:%02x, hosted_interface: %s, "
                           "veth: %s, tunid: %lu, remote_ips_len %u .\n",
                           rpc_trn_endpoint_t_in->interface,
                           rpc_trn_endpoint_t_in->ip,
@@ -863,7 +863,7 @@ int Aca_Comm_Manager::execute_command(int command, void *input_struct)
             }
 
             ACA_LOG_DEBUG("[execute_command] Calling UPDATE AGENT MD with interface %s, ip %u, "
-                          "eptype %u, mac: %hhx:%hhx:%hhx:%hhx:%hhx:%hhx, hosted_interface: %s, "
+                          "eptype %u, mac: %02x:%02x:%02x:%02x:%02x:%02x, hosted_interface: %s, "
                           "veth: %s, tunid: %lu, remote_ips_len %u .\n",
                           rpc_trn_endpoint_t_in->interface,
                           rpc_trn_endpoint_t_in->ip,
