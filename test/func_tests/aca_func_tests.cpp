@@ -3,33 +3,31 @@
 #include "aca_log.h"
 #include "aca_util.h"
 #include "goalstate.pb.h"
-#include "trn_rpc_protocol.h"
+#include "cppkafka/buffer.h"
 #include <unistd.h> /* for getopt */
 #include <chrono>
 #include <string.h>
 #include <thread>
 
-#define ACALOGNAME "AliothControlAgent"
+#define ACALOGNAME "AliothControlAgentTest"
 
 using namespace std;
 using aca_comm_manager::Aca_Comm_Manager;
 
 // Global variables
-char *g_rpc_server = NULL;
-char *g_rpc_protocol = NULL;
+string g_rpc_server = EMPTY_STRING;
+string g_rpc_protocol = EMPTY_STRING;
 bool g_debug_mode = false;
 
 using std::string;
 
 static void aca_cleanup()
 {
+    ACA_LOG_INFO("Program exiting, cleaning up...\n");
+
     // Optional:  Delete all global objects allocated by libprotobuf.
     google::protobuf::ShutdownProtobufLibrary();
 
-    aca_free(g_rpc_server);
-    aca_free(g_rpc_protocol);
-
-    ACA_LOG_INFO("Program exiting, cleaning up...\n");
     ACA_LOG_CLOSE();
 }
 
@@ -59,30 +57,10 @@ int main(int argc, char *argv[])
         switch (option)
         {
         case 's':
-            g_rpc_server = (char *)malloc(sizeof(optarg));
-            if (g_rpc_server != NULL)
-            {
-                strncpy(g_rpc_server, optarg, strlen(optarg) + 1);
-            }
-            else
-            {
-                ACA_LOG_EMERG("Out of memory when allocating string with size: %lu.\n",
-                              sizeof(optarg));
-                exit(EXIT_FAILURE);
-            }
+            g_rpc_server = optarg;
             break;
         case 'p':
-            g_rpc_protocol = (char *)malloc(sizeof(optarg));
-            if (g_rpc_protocol != NULL)
-            {
-                strncpy(g_rpc_protocol, optarg, strlen(optarg) + 1);
-            }
-            else
-            {
-                ACA_LOG_EMERG("Out of memory when allocating string with size: %lu.\n",
-                              sizeof(optarg));
-                exit(EXIT_FAILURE);
-            }
+            g_rpc_protocol = optarg;
             break;
         case 'd':
             g_debug_mode = true;
@@ -99,33 +77,13 @@ int main(int argc, char *argv[])
     }
 
     // fill in the RPC server and protocol if it is not provided in command line arg
-    if (g_rpc_server == NULL)
+    if (g_rpc_server == EMPTY_STRING)
     {
-        g_rpc_server = (char *)malloc(sizeof(LOCALHOST));
-        if (g_rpc_server != NULL)
-        {
-            strncpy(g_rpc_server, LOCALHOST, strlen(LOCALHOST) + 1);
-        }
-        else
-        {
-            ACA_LOG_EMERG("Out of memory when allocating string with size: %lu.\n",
-                          sizeof(LOCALHOST));
-            exit(EXIT_FAILURE);
-        }
+        g_rpc_server = LOCALHOST;
     }
-    if (g_rpc_protocol == NULL)
+    if (g_rpc_protocol == EMPTY_STRING)
     {
-        g_rpc_protocol = (char *)malloc(sizeof(UDP));
-        if (g_rpc_protocol != NULL)
-        {
-            strncpy(g_rpc_protocol, UDP, strlen(UDP) + 1);
-        }
-        else
-        {
-            ACA_LOG_EMERG("Out of memory when allocating string with size: %lu.\n",
-                          sizeof(UDP));
-            exit(EXIT_FAILURE);
-        }
+        g_rpc_protocol = UDP;
     }
 
     // Verify that the version of the library that we linked against is
@@ -156,23 +114,28 @@ int main(int argc, char *argv[])
     PortConfiguration_builder->set_admin_state_up(true);
     PortConfiguration_builder->set_mac_address("fa:16:3e:d7:f2:6c");
     PortConfiguration_builder->set_veth_name("veth0");
-    PortConfiguration_builder->set_host_ip("172.0.0.2");
-    // this will allocate new PortConfiguration_FixedIp will need to free later
+
+    aliothcontroller::PortConfiguration_HostInfo *portConfig_HostInfoBuilder(new aliothcontroller::PortConfiguration_HostInfo);
+    portConfig_HostInfoBuilder->set_ip_address("172.0.0.2");
+    portConfig_HostInfoBuilder->set_mac_address("aa-bb-cc-dd-ee-ff");
+    PortConfiguration_builder->set_allocated_host_info(portConfig_HostInfoBuilder);
+
+    // this will allocate new PortConfiguration_FixedIp may need to free later
     aliothcontroller::PortConfiguration_FixedIp *PortIp_builder =
         PortConfiguration_builder->add_fixed_ips();
     PortIp_builder->set_ip_address("10.0.0.2");
     PortIp_builder->set_subnet_id("2");
-    // this will allocate new PortConfiguration_SecurityGroupId will need to free later
+    // this will allocate new PortConfiguration_SecurityGroupId may need to free later
     aliothcontroller::PortConfiguration_SecurityGroupId *SecurityGroup_builder =
         PortConfiguration_builder->add_security_group_ids();
     SecurityGroup_builder->set_id("1");
-    // this will allocate new PortConfiguration_AllowAddressPair will need to free later
+    // this will allocate new PortConfiguration_AllowAddressPair may need to free later
     aliothcontroller::PortConfiguration_AllowAddressPair
         *AddressPair_builder =
             PortConfiguration_builder->add_allow_address_pairs();
     AddressPair_builder->set_ip_address("10.0.0.5");
     AddressPair_builder->set_mac_address("fa:16:3e:d7:f2:9f");
-    // this will allocate new PortConfiguration_ExtraDhcpOption will need to free later
+    // this will allocate new PortConfiguration_ExtraDhcpOption may need to free later
     aliothcontroller::PortConfiguration_ExtraDhcpOption *ExtraDhcp_builder =
         PortConfiguration_builder->add_extra_dhcp_options();
     ExtraDhcp_builder->set_name("opt_1");
@@ -182,7 +145,7 @@ int main(int argc, char *argv[])
 
     new_subnet_states->set_operation_type(aliothcontroller::OperationType::INFO);
 
-    // this will allocate new SubnetConfiguration, need to free it later
+    // this will allocate new SubnetConfiguration, will need to free it later
     aliothcontroller::SubnetConfiguration *SubnetConiguration_builder =
         new_subnet_states->mutable_configuration();
     SubnetConiguration_builder->set_version(1);
@@ -194,17 +157,19 @@ int main(int argc, char *argv[])
     SubnetConiguration_builder->set_name("SuperSubnet");
     SubnetConiguration_builder->set_cidr("10.0.0.1/16");
     SubnetConiguration_builder->set_tunnel_id(22222);
-    // this will allocate new SubnetConfiguration_TransitSwitchIp, may to free it later
-    aliothcontroller::SubnetConfiguration_TransitSwitchIp *TransitSwitchIp_builder =
-        SubnetConiguration_builder->add_transit_switch_ips();
-    TransitSwitchIp_builder->set_ip_address("172.0.0.1");
+    // this will allocate new SubnetConfiguration_TransitSwitch, may need to free it later
+    aliothcontroller::SubnetConfiguration_TransitSwitch *TransitSwitch_builder =
+        SubnetConiguration_builder->add_transit_switches();
+    TransitSwitch_builder->set_vpc_id("99d9d709-8478-4b46-9f3f-2206b1023fd3");
+    TransitSwitch_builder->set_subnet_id("superSubnet");
+    TransitSwitch_builder->set_ip_address("172.0.0.1");
+    TransitSwitch_builder->set_mac_address("cc:dd:ee:ff:gg:hh");
 
     // fill in the vpc state structs
 
-    // this will allocate new VpcConfiguration, need to free it later
-
     new_vpc_states->set_operation_type(aliothcontroller::OperationType::CREATE_UPDATE_SWITCH);
 
+    // this will allocate new VpcConfiguration, will need to free it later
     aliothcontroller::VpcConfiguration *VpcConiguration_builder =
         new_vpc_states->mutable_configuration();
     VpcConiguration_builder->set_version(1);
@@ -215,17 +180,18 @@ int main(int argc, char *argv[])
     VpcConiguration_builder->set_name("SuperVpc");
     VpcConiguration_builder->set_cidr("192.168.0.0/24");
     VpcConiguration_builder->set_tunnel_id(11111);
-    // this will allocate new VpcConfiguration_TransitRouterIp, may to free it later
-    aliothcontroller::VpcConfiguration_TransitRouterIp *TransitRouterIp_builder =
-        VpcConiguration_builder->add_transit_router_ips();
-    TransitRouterIp_builder->set_vpc_id("12345");
-    TransitRouterIp_builder->set_ip_address("10.0.0.2");
+    // this will allocate new VpcConfiguration_TransitRouter, may need to free it later
+    aliothcontroller::VpcConfiguration_TransitRouter *TransitRouter_builder =
+        VpcConiguration_builder->add_transit_routers();
+    TransitRouter_builder->set_vpc_id("12345");
+    TransitRouter_builder->set_ip_address("10.0.0.2");
+    TransitRouter_builder->set_mac_address("zz-zz-zz-zz-zz-zz");
 
     string string_message;
 
     // Serialize it to string
     GoalState_builder.SerializeToString(&string_message);
-    fprintf(stdout, "(NOTE USED) Serialized protobuf string: %s\n",
+    fprintf(stdout, "(NOT USED) Serialized protobuf string: %s\n",
             string_message.c_str());
 
     // Serialize it to binary array
@@ -233,19 +199,25 @@ int main(int argc, char *argv[])
     char *buffer = (char *)malloc(size);
     GoalState_builder.SerializeToArray(buffer, size);
     string binary_message(buffer, size);
-    fprintf(stdout, "Serialized protobuf binary array: %s\n",
+    fprintf(stdout, "(USING THIS) Serialized protobuf binary array: %s\n",
             binary_message.c_str());
 
     aliothcontroller::GoalState parsed_struct;
 
-    rc = Aca_Comm_Manager::get_instance().deserialize(binary_message, parsed_struct);
+    cppkafka::Buffer kafka_buffer(buffer, size);
 
-    aca_free(buffer);
+    rc = Aca_Comm_Manager::get_instance().deserialize(&kafka_buffer, parsed_struct);
+
+    if (buffer != NULL)
+    {
+        free(buffer);
+        buffer = NULL;
+    }
 
     if (rc == EXIT_SUCCESS)
     {
 
-        fprintf(stdout, "Deserialize succeed, comparing the content now...\n");
+        fprintf(stdout, "Deserialize succeeded, comparing the content now...\n");
 
         assert(parsed_struct.port_states_size() ==
                GoalState_builder.port_states_size());
@@ -281,8 +253,11 @@ int main(int argc, char *argv[])
             assert(parsed_struct.port_states(i).configuration().veth_name() ==
                    GoalState_builder.port_states(i).configuration().veth_name());
 
-            assert(parsed_struct.port_states(i).configuration().host_ip() ==
-                   GoalState_builder.port_states(i).configuration().host_ip());
+            assert(parsed_struct.port_states(i).configuration().host_info().ip_address() ==
+                   GoalState_builder.port_states(i).configuration().host_info().ip_address());
+
+            assert(parsed_struct.port_states(i).configuration().host_info().mac_address() ==
+                   GoalState_builder.port_states(i).configuration().host_info().mac_address());
 
             assert(parsed_struct.port_states(i).configuration().fixed_ips_size() ==
                    GoalState_builder.port_states(i).configuration().fixed_ips_size());
@@ -352,13 +327,22 @@ int main(int argc, char *argv[])
             assert(parsed_struct.subnet_states(i).configuration().cidr() ==
                    GoalState_builder.subnet_states(i).configuration().cidr());
 
-            assert(parsed_struct.subnet_states(i).configuration().transit_switch_ips_size() ==
-                   GoalState_builder.subnet_states(i).configuration().transit_switch_ips_size());
+            assert(parsed_struct.subnet_states(i).configuration().transit_switches_size() ==
+                   GoalState_builder.subnet_states(i).configuration().transit_switches_size());
 
-            for (int j = 0; j < parsed_struct.subnet_states(i).configuration().transit_switch_ips_size(); j++)
+            for (int j = 0; j < parsed_struct.subnet_states(i).configuration().transit_switches_size(); j++)
             {
-                assert(parsed_struct.subnet_states(i).configuration().transit_switch_ips(j).ip_address() ==
-                       GoalState_builder.subnet_states(i).configuration().transit_switch_ips(j).ip_address());
+                assert(parsed_struct.subnet_states(i).configuration().transit_switches(j).vpc_id() ==
+                       GoalState_builder.subnet_states(i).configuration().transit_switches(j).vpc_id());
+
+                assert(parsed_struct.subnet_states(i).configuration().transit_switches(j).subnet_id() ==
+                       GoalState_builder.subnet_states(i).configuration().transit_switches(j).subnet_id());
+
+                assert(parsed_struct.subnet_states(i).configuration().transit_switches(j).ip_address() ==
+                       GoalState_builder.subnet_states(i).configuration().transit_switches(j).ip_address());
+
+                assert(parsed_struct.subnet_states(i).configuration().transit_switches(j).mac_address() ==
+                       GoalState_builder.subnet_states(i).configuration().transit_switches(j).mac_address());
             }
         }
 
@@ -409,25 +393,28 @@ int main(int argc, char *argv[])
                        GoalState_builder.vpc_states(i).configuration().routes(k).next_hop());
             }
 
-            assert(parsed_struct.vpc_states(i).configuration().transit_router_ips_size() ==
-                   GoalState_builder.vpc_states(i).configuration().transit_router_ips_size());
+            assert(parsed_struct.vpc_states(i).configuration().transit_routers_size() ==
+                   GoalState_builder.vpc_states(i).configuration().transit_routers_size());
 
-            for (int l = 0; l < parsed_struct.vpc_states(i).configuration().transit_router_ips_size(); l++)
+            for (int l = 0; l < parsed_struct.vpc_states(i).configuration().transit_routers_size(); l++)
             {
-                assert(parsed_struct.vpc_states(i).configuration().transit_router_ips(l).vpc_id() ==
-                       GoalState_builder.vpc_states(i).configuration().transit_router_ips(l).vpc_id());
+                assert(parsed_struct.vpc_states(i).configuration().transit_routers(l).vpc_id() ==
+                       GoalState_builder.vpc_states(i).configuration().transit_routers(l).vpc_id());
 
-                assert(parsed_struct.vpc_states(i).configuration().transit_router_ips(l).ip_address() ==
-                       GoalState_builder.vpc_states(i).configuration().transit_router_ips(l).ip_address());
+                assert(parsed_struct.vpc_states(i).configuration().transit_routers(l).ip_address() ==
+                       GoalState_builder.vpc_states(i).configuration().transit_routers(l).ip_address());
+
+                assert(parsed_struct.vpc_states(i).configuration().transit_routers(l).mac_address() ==
+                       GoalState_builder.vpc_states(i).configuration().transit_routers(l).mac_address());
             }
         }
 
-        fprintf(stdout, "All content matched, send the parsed_struct to update_goal_state...\n");
+        fprintf(stdout, "All content matched, sending the parsed_struct to update_goal_state...\n");
 
         int rc = Aca_Comm_Manager::get_instance().update_goal_state(parsed_struct);
         if (rc == EXIT_SUCCESS)
         {
-            fprintf(stdout, "[Functional test] Successfully executed the network controller command");
+            fprintf(stdout, "[Functional test] Successfully executed the network controller command\n");
         }
         else
         {
