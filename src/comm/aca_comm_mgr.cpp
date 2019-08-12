@@ -228,9 +228,24 @@ int Aca_Comm_Manager::update_goal_state(
             agent_md_in.interface = (char *)"peer0";
 
             agent_md_in.eth.interface = PHYSICAL_IF;
+            assert(current_PortConfiguration.fixed_ips_size() == 1);
+            my_ep_ip_address = current_PortConfiguration.fixed_ips(0).ip_address();
+            // TODO: need to check return value, it returns 1 for success 0 for failure
+            inet_pton(AF_INET, my_ep_ip_address.c_str(), &(sa.sin_addr));
+            agent_md_in.eth.ip = sa.sin_addr.s_addr;
+            if (sscanf(current_PortConfiguration.mac_address().c_str(),
+                       "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx%*c",
+                       &agent_md_in.eth.mac[0],
+                       &agent_md_in.eth.mac[1],
+                       &agent_md_in.eth.mac[2],
+                       &agent_md_in.eth.mac[3],
+                       &agent_md_in.eth.mac[4],
+                       &agent_md_in.eth.mac[5]) != 6)
+            {
+                ACA_LOG_ERROR("Invalid ep mac input: %s.\n", current_PortConfiguration.mac_address().c_str());
+            }            
 
             agent_md_in.ep.interface = PHYSICAL_IF;
-            assert(current_PortConfiguration.fixed_ips_size() == 1);
             my_ep_host_ip_address = current_PortConfiguration.host_info().ip_address();
             // TODO: need to check return value, it returns 1 for success 0 for failure
             inet_pton(AF_INET, my_ep_host_ip_address.c_str(), &(sa.sin_addr));
@@ -244,7 +259,7 @@ int Aca_Comm_Manager::update_goal_state(
                       &(sa.sin_addr));
             agent_md_in.ep.remote_ips.remote_ips_val[0] = sa.sin_addr.s_addr;
 
-            if (sscanf(current_PortConfiguration.mac_address().c_str(),
+            if (sscanf(current_PortConfiguration.host_info().mac_address().c_str(),
                        "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx%*c",
                        &agent_md_in.ep.mac[0],
                        &agent_md_in.ep.mac[1],
@@ -253,7 +268,7 @@ int Aca_Comm_Manager::update_goal_state(
                        &agent_md_in.ep.mac[4],
                        &agent_md_in.ep.mac[5]) != 6)
             {
-                ACA_LOG_ERROR("Invalid mac input: %s.\n", current_PortConfiguration.mac_address().c_str());
+                ACA_LOG_ERROR("Invalid host mac input: %s.\n", current_PortConfiguration.host_info().mac_address().c_str());
             }
 
             // TODO: ensure the input name is 20 char or less
