@@ -151,7 +151,10 @@ int main(int argc, char *argv[])
 
     MessageConsumer network_config_consumer(g_broker_list, g_kafka_group_id);
 
-    ACA_LOG_DEBUG("All global variables filled...\n");
+    ACA_LOG_DEBUG("Before calling network_config_consumer.cosumeDispatched broker list: %s, topic: %s, group id: %s\n",
+                  g_broker_list.c_str(), 
+                  g_kafka_topic.c_str(), 
+                  g_kafka_group_id.c_str());
 
     network_config_consumer.cosumeDispatched(g_kafka_topic);
     /* never reached */
