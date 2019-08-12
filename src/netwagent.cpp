@@ -102,6 +102,8 @@ int main(int argc, char *argv[])
         }
     }
 
+    ACA_LOG_DEBUG("Commandline option parsing completed...\n");
+
     // fill in the information if not provided in command line args
     if (g_broker_list == EMPTY_STRING)
     {
@@ -123,6 +125,8 @@ int main(int argc, char *argv[])
     {
         g_rpc_protocol = UDP;
     }
+
+    ACA_LOG_DEBUG("All global variables filled...\n");
 
     // Announce this host (agent) and register in every kafka cluster
     // P0, tracked by issue#12
@@ -146,6 +150,8 @@ int main(int argc, char *argv[])
     // cout << "Publish completed" << endl;
 
     MessageConsumer network_config_consumer(g_broker_list, g_kafka_group_id);
+
+    ACA_LOG_DEBUG("All global variables filled...\n");
 
     network_config_consumer.cosumeDispatched(g_kafka_topic);
     /* never reached */

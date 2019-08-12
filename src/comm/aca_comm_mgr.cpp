@@ -1034,7 +1034,6 @@ int Aca_Comm_Manager::execute_command(int command, void *input_struct)
     return rc;
 }
 
-// TODO: only print it during debug mode
 void Aca_Comm_Manager::print_goal_state(aliothcontroller::GoalState parsed_struct)
 {
     if (g_debug_mode == false)
@@ -1045,7 +1044,7 @@ void Aca_Comm_Manager::print_goal_state(aliothcontroller::GoalState parsed_struc
     for (int i = 0; i < parsed_struct.port_states_size(); i++)
     {
         fprintf(stdout,
-                "parsed_struct.subnet_states(%d).operation_type(): %d\n", i,
+                "parsed_struct.port_states(%d).operation_type(): %d\n", i,
                 parsed_struct.port_states(i).operation_type());
 
         aliothcontroller::PortConfiguration current_PortConfiguration =
