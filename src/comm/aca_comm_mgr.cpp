@@ -143,6 +143,12 @@ int Aca_Comm_Manager::update_goal_state(
             inet_pton(AF_INET, my_ep_ip_address.c_str(), &(sa.sin_addr));
             endpoint_in.ip = sa.sin_addr.s_addr;
 
+            ACA_LOG_DEBUG("endpoint_in.ip in uint: %u\n", endpoint_in.ip);
+
+            char buffer[INET_ADDRSTRLEN];
+            inet_ntop(AF_INET, &(endpoint_in.ip), buffer, sizeof(buffer));
+            ACA_LOG_DEBUG("endpoint_in.ip in string: %s\n", buffer);
+
             endpoint_in.eptype = TRAN_SIMPLE_EP;
 
             uint32_t remote_ips[RPC_TRN_MAX_REMOTE_IPS];
@@ -151,6 +157,12 @@ int Aca_Comm_Manager::update_goal_state(
             inet_pton(AF_INET, current_PortConfiguration.host_info().ip_address().c_str(),
                       &(sa.sin_addr));
             endpoint_in.remote_ips.remote_ips_val[0] = sa.sin_addr.s_addr;
+
+            ACA_LOG_DEBUG("endpoint_in.remote_ips.remote_ips_val[0] in uint: %u\n", endpoint_in.remote_ips.remote_ips_val[0]);
+
+            char buffer2[INET_ADDRSTRLEN];
+            inet_ntop(AF_INET, &(endpoint_in.remote_ips.remote_ips_val[0]), buffer2, sizeof(buffer2));
+            ACA_LOG_DEBUG("endpoint_in.remote_ips.remote_ips_val[0] in string: %s\n", buffer2);
 
             if (sscanf(current_PortConfiguration.mac_address().c_str(),
                        "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx%*c",
@@ -243,7 +255,7 @@ int Aca_Comm_Manager::update_goal_state(
                        &agent_md_in.eth.mac[5]) != 6)
             {
                 ACA_LOG_ERROR("Invalid ep mac input: %s.\n", current_PortConfiguration.mac_address().c_str());
-            }            
+            }
 
             agent_md_in.ep.interface = PHYSICAL_IF;
             my_ep_host_ip_address = current_PortConfiguration.host_info().ip_address();
