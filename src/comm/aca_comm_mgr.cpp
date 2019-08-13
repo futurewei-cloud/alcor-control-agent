@@ -4,16 +4,17 @@
 #include "goalstate.pb.h"
 #include "messageconsumer.h"
 #include "trn_rpc_protocol.h"
+#include "cppkafka/utils/consumer_dispatcher.h"
 #include <chrono>
 #include <errno.h>
 #include <iostream>
 #include <thread>
 #include <arpa/inet.h>
-#include "cppkafka/utils/consumer_dispatcher.h"
 
 using std::string;
 using namespace std::chrono_literals;
 using messagemanager::MessageConsumer;
+using namespace std;
 
 extern string g_rpc_server;
 extern string g_rpc_protocol;
@@ -119,6 +120,8 @@ int Aca_Comm_Manager::update_goal_state(
     char hosted_interface[20];
 
     ACA_LOG_DEBUG("Starting to update goal state\n");
+
+    auto start = chrono::steady_clock::now();
 
     for (int i = 0; i < parsed_struct.port_states_size(); i++)
     {
@@ -749,6 +752,12 @@ int Aca_Comm_Manager::update_goal_state(
         }
     } // for (int i = 0; i < parsed_struct.vpc_states_size(); i++)
 
+    auto end = chrono::steady_clock::now();
+
+    ACA_LOG_INFO("Elapsed time for update goal state took: %ld nanoseconds or %ld milliseconds.\n",
+                 chrono::duration_cast<chrono::nanoseconds>(end - start).count(),
+                 chrono::duration_cast<chrono::milliseconds>(end - start).count());
+
     return rc;
 }
 
@@ -913,53 +922,15 @@ int Aca_Comm_Manager::execute_command(int command, void *input_struct)
 
             break;
         }
-            /*
-        case DELETE_NET:
-            // rc = DELETE_NET ...
-            break;
-        case DELETE_EP:
-            // rc = DELETE_EP ...
-            break;
-        case DELETE_AGENT_EP:
-            // rc = DELETE_AGENT_EP ...
-            break;
-        case DELETE_AGENT_MD:
-            // rc = DELETE_AGENT_MD ...
-            break;
-        case GET_VPC:
-            // rpc_trn_vpc_t = GET_VPC ...
-            break;
-        case GET_NET:
-            // rpc_trn_vpc_t = GET_NET ...
-            break;
-        case GET_EP:
-            // rpc_trn_vpc_t = GET_EP ...
-            break;
-        case GET_AGENT_EP:
-            // rpc_trn_vpc_t = GET_AGENT_EP ...
-            break;
-        case GET_AGENT_MD:
-            // rpc_trn_vpc_t = GET_AGENT_MD ...
-            break;
-        case LOAD_TRANSIT_XDP:
-            // rc = LOAD_TRANSIT_XDP ...
-            break;
-        case LOAD_TRANSIT_AGENT_XDP:
-            // rc = LOAD_TRANSIT_AGENT_XDP ...
-            break;
-        case UNLOAD_TRANSIT_XDP:
-            // rc = UNLOAD_TRANSIT_XDP ...
-            break;
-        case UNLOAD_TRANSIT_AGENT_XDP:
-            // rc = UNLOAD_TRANSIT_AGENT_XDP ...
-            break;
-*/
+
         default:
             ACA_LOG_ERROR("Unknown controller command in debug print: %d\n", command);
             rc = EXIT_FAILURE;
             break;
         }
     }
+
+    auto start = chrono::steady_clock::now();
 
     // TODO: We may change it to have a static client for health checking on
     // transit daemon in the future.
@@ -1053,10 +1024,16 @@ int Aca_Comm_Manager::execute_command(int command, void *input_struct)
             ACA_LOG_INFO("Successfully updated transitd with command %d.\n",
                          command);
         }
-        // TODO: can print out more command specific info
 
         clnt_destroy(client);
     }
+
+    auto end = chrono::steady_clock::now();
+
+    ACA_LOG_INFO("Elapsed time for transit daemon command %d took: %ld nanoseconds or %ld milliseconds.\n",
+                 command,
+                 chrono::duration_cast<chrono::nanoseconds>(end - start).count(),
+                 chrono::duration_cast<chrono::milliseconds>(end - start).count());
 
     return rc;
 }
