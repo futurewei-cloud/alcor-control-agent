@@ -102,8 +102,6 @@ int main(int argc, char *argv[])
         }
     }
 
-    ACA_LOG_DEBUG("Commandline option parsing completed...\n");
-
     // fill in the information if not provided in command line args
     if (g_broker_list == EMPTY_STRING)
     {
@@ -126,35 +124,7 @@ int main(int argc, char *argv[])
         g_rpc_protocol = UDP;
     }
 
-    ACA_LOG_DEBUG("All global variables filled...\n");
-
-    // Announce this host (agent) and register in every kafka cluster
-    // P0, tracked by issue#12
-
-    // Launch background threads to monitor and to emit network health status
-    //	for customer VMs, containers, as well as
-    //	infra host services including OVS, transit etc.
-    // P1, tracked by issue#13
-
-    // Upload or refresh the networking spec of this host
-    // (including DPDK, SR-IOV, bandwidth etc.)
-    // P1, tracked by issue#14
-    // MessageProducer host_spec_producer(broker_list, topic_host_spec,
-    // partition_value); cout << "broker list:" << host_spec_producer.getBrokers()
-    // << endl; cout << "topic:" << host_spec_producer.getTopicName() << endl;
-    // cout << "partition:" << host_spec_producer.getPartitionValue() << endl;
-
-    // string host_network_spec = "fake config";
-    // cout << "Prepare for publishing " << host_network_spec  <<endl;
-    // host_spec_producer.publish(host_network_spec);
-    // cout << "Publish completed" << endl;
-
     MessageConsumer network_config_consumer(g_broker_list, g_kafka_group_id);
-
-    ACA_LOG_DEBUG("Before calling network_config_consumer.cosumeDispatched broker list: %s, topic: %s, group id: %s\n",
-                  g_broker_list.c_str(), 
-                  g_kafka_topic.c_str(), 
-                  g_kafka_group_id.c_str());
 
     network_config_consumer.cosumeDispatched(g_kafka_topic);
     /* never reached */

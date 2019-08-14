@@ -185,7 +185,7 @@ int main(int argc, char *argv[])
         VpcConiguration_builder->add_transit_routers();
     TransitRouter_builder->set_vpc_id("12345");
     TransitRouter_builder->set_ip_address("10.0.0.2");
-    TransitRouter_builder->set_mac_address("zz-zz-zz-zz-zz-zz");
+    TransitRouter_builder->set_mac_address("aa-bb-cc-dd-ee-ff");
 
     string string_message;
 
