@@ -355,9 +355,6 @@ int Aca_Comm_Manager::update_goal_state(
                             my_cidr = current_SubnetConfiguration.cidr();
 
                             slash_pos = my_cidr.find('/');
-                            // to be removed...
-                            ACA_LOG_DEBUG("current_SubnetConfiguration cidr: %s, slash_pos: %lu\n",
-                                          my_cidr.c_str(), slash_pos);
                             if (slash_pos == string::npos)
                             {
                                 throw std::invalid_argument("'/' not found in cidr");
@@ -455,9 +452,9 @@ int Aca_Comm_Manager::update_goal_state(
             }
         }
 
-        // check if we need to call update substrate (MAC address)
         if (parsed_struct.port_states(i).operation_type() == aliothcontroller::OperationType::CREATE_UPDATE_SWITCH)
         {
+            // update substrate
             ACA_LOG_DEBUG("port operation: CREATE_UPDATE_SWITCH, update substrate from host_info(), IP: %s, mac: %s\n",
                           current_PortConfiguration.host_info().ip_address().c_str(),
                           current_PortConfiguration.host_info().mac_address().c_str());
@@ -1091,7 +1088,7 @@ int Aca_Comm_Manager::execute_command(int command, void *input_struct)
         }
     }
 
-    auto start = chrono::steady_clock::now();
+    auto rpc_client_start = chrono::steady_clock::now();
 
     // TODO: We may change it to have a static client for health checking on
     // transit daemon in the future.
@@ -1106,6 +1103,8 @@ int Aca_Comm_Manager::execute_command(int command, void *input_struct)
     }
     else
     {
+        auto rpc_call_start = chrono::steady_clock::now();
+
         switch (command)
         {
         case UPDATE_VPC:
@@ -1168,6 +1167,13 @@ int Aca_Comm_Manager::execute_command(int command, void *input_struct)
             break;
         }
 
+        auto rpc_call_end = chrono::steady_clock::now();
+
+        ACA_LOG_INFO("Elapsed time for transit daemon command %d took: %ld nanoseconds or %ld milliseconds.\n",
+                     command,
+                     chrono::duration_cast<chrono::nanoseconds>(rpc_call_end - rpc_call_start).count(),
+                     chrono::duration_cast<chrono::milliseconds>(rpc_call_end - rpc_call_start).count());
+
         if (transitd_return == (int *)NULL)
         {
             clnt_perror(client, "Call failed to program Transit daemon");
@@ -1177,7 +1183,8 @@ int Aca_Comm_Manager::execute_command(int command, void *input_struct)
         }
         else if (*transitd_return != EXIT_SUCCESS)
         {
-            // TODO: report the error back to network controller
+            ACA_LOG_EMERG("Call failed to program Transit daemon, command %d, transitd_return: %d.\n",
+                          command, *transitd_return);
             rc = EXIT_FAILURE;
         }
         if (rc == EXIT_SUCCESS)
@@ -1185,16 +1192,18 @@ int Aca_Comm_Manager::execute_command(int command, void *input_struct)
             ACA_LOG_INFO("Successfully updated transitd with command %d.\n",
                          command);
         }
+        // Else: TODO: report the error back to network controller
 
         clnt_destroy(client);
     }
 
-    auto end = chrono::steady_clock::now();
+    auto rpc_client_end = chrono::steady_clock::now();
 
-    ACA_LOG_INFO("Elapsed time for transit daemon command %d took: %ld nanoseconds or %ld milliseconds.\n",
+    ACA_LOG_INFO("Elapsed time for both RPC client create/destroy and transit "
+                 "daemon command %d took: %ld nanoseconds or %ld milliseconds.\n",
                  command,
-                 chrono::duration_cast<chrono::nanoseconds>(end - start).count(),
-                 chrono::duration_cast<chrono::milliseconds>(end - start).count());
+                 chrono::duration_cast<chrono::nanoseconds>(rpc_client_end - rpc_client_start).count(),
+                 chrono::duration_cast<chrono::milliseconds>(rpc_client_end - rpc_client_start).count());
 
     return rc;
 }
