@@ -100,7 +100,7 @@ int main(int argc, char *argv[])
 
     // fill in port state structs
 
-    new_port_states->set_operation_type(aliothcontroller::OperationType::CREATE);
+    new_port_states->set_operation_type(aliothcontroller::OperationType::FINALIZE);
 
     // this will allocate new PortConfiguration, will need to free it later
     aliothcontroller::PortConfiguration *PortConfiguration_builder =
@@ -108,7 +108,7 @@ int main(int argc, char *argv[])
     PortConfiguration_builder->set_version(1);
     PortConfiguration_builder->set_project_id(
         "dbf72700-5106-4a7a-918f-111111111111");
-    PortConfiguration_builder->set_network_id("2");
+    PortConfiguration_builder->set_network_id("superSubnetID");
     PortConfiguration_builder->set_id("dd12d1dadad2g4h");
     PortConfiguration_builder->set_name("Peer1");
     PortConfiguration_builder->set_admin_state_up(true);
@@ -153,7 +153,7 @@ int main(int argc, char *argv[])
         "dbf72700-5106-4a7a-918f-111111111111");
     // VpcConiguration_builder->set_id("99d9d709-8478-4b46-9f3f-2206b1023fd3");
     SubnetConiguration_builder->set_vpc_id("99d9d709-8478-4b46-9f3f-2206b1023fd3");
-    SubnetConiguration_builder->set_id("2");
+    SubnetConiguration_builder->set_id("superSubnetID");
     SubnetConiguration_builder->set_name("SuperSubnet");
     SubnetConiguration_builder->set_cidr("10.0.0.1/16");
     SubnetConiguration_builder->set_tunnel_id(22222);
@@ -163,7 +163,7 @@ int main(int argc, char *argv[])
     TransitSwitch_builder->set_vpc_id("99d9d709-8478-4b46-9f3f-2206b1023fd3");
     TransitSwitch_builder->set_subnet_id("superSubnet");
     TransitSwitch_builder->set_ip_address("172.0.0.1");
-    TransitSwitch_builder->set_mac_address("cc:dd:ee:ff:gg:hh");
+    TransitSwitch_builder->set_mac_address("cc:dd:ee:aa:bb:cc");
 
     // fill in the vpc state structs
 

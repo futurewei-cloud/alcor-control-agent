@@ -354,8 +354,11 @@ int Aca_Comm_Manager::update_goal_state(
 
                             my_cidr = current_SubnetConfiguration.cidr();
 
-                            slash_pos = my_cidr.find("/");
-                            if (slash_pos = string::npos)
+                            slash_pos = my_cidr.find('/');
+                            // to be removed...
+                            ACA_LOG_DEBUG("current_SubnetConfiguration cidr: %s, slash_pos: %lu\n",
+                                          my_cidr.c_str(), slash_pos);
+                            if (slash_pos == string::npos)
                             {
                                 throw std::invalid_argument("'/' not found in cidr");
                             }
@@ -622,8 +625,8 @@ int Aca_Comm_Manager::update_goal_state(
                 network_in.tunid = current_SubnetConfiguration.tunnel_id();
 
                 my_cidr = current_SubnetConfiguration.cidr();
-                slash_pos = my_cidr.find("/");
-                if (slash_pos = string::npos)
+                slash_pos = my_cidr.find('/');
+                if (slash_pos == string::npos)
                 {
                     throw std::invalid_argument("'/' not found in cidr");
                 }
