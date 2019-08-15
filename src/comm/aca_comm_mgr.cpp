@@ -11,6 +11,9 @@ using namespace std;
 
 extern string g_rpc_server;
 extern string g_rpc_protocol;
+extern long g_total_rpc_call_time;
+extern long g_total_rpc_client_time;
+extern long g_total_update_GS_time;
 
 static inline const char *aca_get_operation_name(aliothcontroller::OperationType operation)
 {
@@ -912,6 +915,8 @@ int Aca_Comm_Manager::update_goal_state(
 
     auto end = chrono::steady_clock::now();
 
+    g_total_update_GS_time += chrono::duration_cast<chrono::nanoseconds>(end - start).count();
+
     ACA_LOG_INFO("Elapsed time for update goal state took: %ld nanoseconds or %ld milliseconds.\n",
                  chrono::duration_cast<chrono::nanoseconds>(end - start).count(),
                  chrono::duration_cast<chrono::milliseconds>(end - start).count());
@@ -1169,6 +1174,8 @@ int Aca_Comm_Manager::execute_command(int command, void *input_struct)
 
         auto rpc_call_end = chrono::steady_clock::now();
 
+        g_total_rpc_call_time += chrono::duration_cast<chrono::nanoseconds>(rpc_call_end - rpc_call_start).count();
+
         ACA_LOG_INFO("Elapsed time for transit daemon command %d took: %ld nanoseconds or %ld milliseconds.\n",
                      command,
                      chrono::duration_cast<chrono::nanoseconds>(rpc_call_end - rpc_call_start).count(),
@@ -1198,6 +1205,8 @@ int Aca_Comm_Manager::execute_command(int command, void *input_struct)
     }
 
     auto rpc_client_end = chrono::steady_clock::now();
+
+    g_total_rpc_client_time += chrono::duration_cast<chrono::nanoseconds>(rpc_client_end - rpc_client_start).count();
 
     ACA_LOG_INFO("Elapsed time for both RPC client create/destroy and transit "
                  "daemon command %d took: %ld nanoseconds or %ld milliseconds.\n",

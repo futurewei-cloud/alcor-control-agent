@@ -17,12 +17,24 @@ using aca_comm_manager::Aca_Comm_Manager;
 // Global variables
 string g_rpc_server = EMPTY_STRING;
 string g_rpc_protocol = EMPTY_STRING;
+long g_total_rpc_call_time = 0;
+long g_total_rpc_client_time = 0;
+long g_total_update_GS_time = 0;
 bool g_debug_mode = false;
 
 using std::string;
 
 static void aca_cleanup()
 {
+    ACA_LOG_DEBUG("g_total_rpc_call_time = %ld nanoseconds or %ld milliseconds\n",
+                  g_total_rpc_call_time, g_total_rpc_call_time / 1000000);
+
+    ACA_LOG_DEBUG("g_total_rpc_client_time = %ld nanoseconds or %ld milliseconds\n",
+                  g_total_rpc_client_time, g_total_rpc_client_time / 1000000);
+
+    ACA_LOG_DEBUG("g_total_update_GS_time = %ld nanoseconds or %ld milliseconds\n",
+                  g_total_update_GS_time, g_total_update_GS_time / 1000000);
+
     ACA_LOG_INFO("Program exiting, cleaning up...\n");
 
     // Optional:  Delete all global objects allocated by libprotobuf.
