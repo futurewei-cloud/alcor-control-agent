@@ -219,6 +219,9 @@ int Aca_Comm_Manager::update_goal_state(
                     endpoint_in.hosted_interface = (char *)"peer0";
                 }
 
+                // TODO: cache the subnet information to a dictionary to provide
+                // a faster look up for the next run, only use the below loop for
+                // cache miss.
                 // Look up the subnet configuration to query for tunnel_id
                 for (int j = 0; j < parsed_struct.subnet_states_size(); j++)
                 {
