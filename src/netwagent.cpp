@@ -20,10 +20,22 @@ string g_kafka_topic = EMPTY_STRING;
 string g_kafka_group_id = EMPTY_STRING;
 string g_rpc_server = EMPTY_STRING;
 string g_rpc_protocol = EMPTY_STRING;
+long g_total_rpc_call_time = 0;
+long g_total_rpc_client_time = 0;
+long g_total_update_GS_time = 0;
 bool g_debug_mode = false;
 
 static void aca_cleanup()
 {
+    ACA_LOG_DEBUG("g_total_rpc_call_time = %ld nanoseconds or %ld milliseconds\n",
+                  g_total_rpc_call_time, g_total_rpc_call_time / 1000000);
+
+    ACA_LOG_DEBUG("g_total_rpc_client_time = %ld nanoseconds or %ld milliseconds\n",
+                  g_total_rpc_client_time, g_total_rpc_client_time / 1000000);
+
+    ACA_LOG_DEBUG("g_total_update_GS_time = %ld nanoseconds or %ld milliseconds\n",
+                  g_total_update_GS_time, g_total_update_GS_time / 1000000);
+
     ACA_LOG_INFO("Program exiting, cleaning up...\n");
 
     // Optional: Delete all global objects allocated by libprotobuf.
@@ -123,27 +135,6 @@ int main(int argc, char *argv[])
     {
         g_rpc_protocol = UDP;
     }
-
-    // Announce this host (agent) and register in every kafka cluster
-    // P0, tracked by issue#12
-
-    // Launch background threads to monitor and to emit network health status
-    //	for customer VMs, containers, as well as
-    //	infra host services including OVS, transit etc.
-    // P1, tracked by issue#13
-
-    // Upload or refresh the networking spec of this host
-    // (including DPDK, SR-IOV, bandwidth etc.)
-    // P1, tracked by issue#14
-    // MessageProducer host_spec_producer(broker_list, topic_host_spec,
-    // partition_value); cout << "broker list:" << host_spec_producer.getBrokers()
-    // << endl; cout << "topic:" << host_spec_producer.getTopicName() << endl;
-    // cout << "partition:" << host_spec_producer.getPartitionValue() << endl;
-
-    // string host_network_spec = "fake config";
-    // cout << "Prepare for publishing " << host_network_spec  <<endl;
-    // host_spec_producer.publish(host_network_spec);
-    // cout << "Publish completed" << endl;
 
     MessageConsumer network_config_consumer(g_broker_list, g_kafka_group_id);
 

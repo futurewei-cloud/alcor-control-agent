@@ -17,12 +17,24 @@ using aca_comm_manager::Aca_Comm_Manager;
 // Global variables
 string g_rpc_server = EMPTY_STRING;
 string g_rpc_protocol = EMPTY_STRING;
+long g_total_rpc_call_time = 0;
+long g_total_rpc_client_time = 0;
+long g_total_update_GS_time = 0;
 bool g_debug_mode = false;
 
 using std::string;
 
 static void aca_cleanup()
 {
+    ACA_LOG_DEBUG("g_total_rpc_call_time = %ld nanoseconds or %ld milliseconds\n",
+                  g_total_rpc_call_time, g_total_rpc_call_time / 1000000);
+
+    ACA_LOG_DEBUG("g_total_rpc_client_time = %ld nanoseconds or %ld milliseconds\n",
+                  g_total_rpc_client_time, g_total_rpc_client_time / 1000000);
+
+    ACA_LOG_DEBUG("g_total_update_GS_time = %ld nanoseconds or %ld milliseconds\n",
+                  g_total_update_GS_time, g_total_update_GS_time / 1000000);
+
     ACA_LOG_INFO("Program exiting, cleaning up...\n");
 
     // Optional:  Delete all global objects allocated by libprotobuf.
@@ -91,16 +103,16 @@ int main(int argc, char *argv[])
     GOOGLE_PROTOBUF_VERIFY_VERSION;
 
     aliothcontroller::GoalState GoalState_builder;
-    aliothcontroller::PortState *new_port_states =
-        GoalState_builder.add_port_states();
-    aliothcontroller::SubnetState *new_subnet_states =
-        GoalState_builder.add_subnet_states();
-    aliothcontroller::VpcState *new_vpc_states =
-        GoalState_builder.add_vpc_states();
+    // aliothcontroller::PortState *new_port_states =
+    //     GoalState_builder.add_port_states();
+    // aliothcontroller::SubnetState *new_subnet_states =
+    //     GoalState_builder.add_subnet_states();
+    // aliothcontroller::VpcState *new_vpc_states =
+    //     GoalState_builder.add_vpc_states();
 
     // fill in port state structs
-
-    new_port_states->set_operation_type(aliothcontroller::OperationType::CREATE);
+    /*
+    new_port_states->set_operation_type(aliothcontroller::OperationType::FINALIZE);
 
     // this will allocate new PortConfiguration, will need to free it later
     aliothcontroller::PortConfiguration *PortConfiguration_builder =
@@ -108,7 +120,7 @@ int main(int argc, char *argv[])
     PortConfiguration_builder->set_version(1);
     PortConfiguration_builder->set_project_id(
         "dbf72700-5106-4a7a-918f-111111111111");
-    PortConfiguration_builder->set_network_id("2");
+    PortConfiguration_builder->set_network_id("superSubnetID");
     PortConfiguration_builder->set_id("dd12d1dadad2g4h");
     PortConfiguration_builder->set_name("Peer1");
     PortConfiguration_builder->set_admin_state_up(true);
@@ -153,7 +165,7 @@ int main(int argc, char *argv[])
         "dbf72700-5106-4a7a-918f-111111111111");
     // VpcConiguration_builder->set_id("99d9d709-8478-4b46-9f3f-2206b1023fd3");
     SubnetConiguration_builder->set_vpc_id("99d9d709-8478-4b46-9f3f-2206b1023fd3");
-    SubnetConiguration_builder->set_id("2");
+    SubnetConiguration_builder->set_id("superSubnetID");
     SubnetConiguration_builder->set_name("SuperSubnet");
     SubnetConiguration_builder->set_cidr("10.0.0.1/16");
     SubnetConiguration_builder->set_tunnel_id(22222);
@@ -163,29 +175,36 @@ int main(int argc, char *argv[])
     TransitSwitch_builder->set_vpc_id("99d9d709-8478-4b46-9f3f-2206b1023fd3");
     TransitSwitch_builder->set_subnet_id("superSubnet");
     TransitSwitch_builder->set_ip_address("172.0.0.1");
-    TransitSwitch_builder->set_mac_address("cc:dd:ee:ff:gg:hh");
-
+    TransitSwitch_builder->set_mac_address("cc:dd:ee:aa:bb:cc");
+*/
     // fill in the vpc state structs
 
-    new_vpc_states->set_operation_type(aliothcontroller::OperationType::CREATE_UPDATE_SWITCH);
+    aliothcontroller::VpcState *new_vpc_states;
 
-    // this will allocate new VpcConfiguration, will need to free it later
-    aliothcontroller::VpcConfiguration *VpcConiguration_builder =
-        new_vpc_states->mutable_configuration();
-    VpcConiguration_builder->set_version(1);
-    VpcConiguration_builder->set_project_id(
-        "dbf72700-5106-4a7a-918f-a016853911f8");
-    // VpcConiguration_builder->set_id("99d9d709-8478-4b46-9f3f-2206b1023fd3");
-    VpcConiguration_builder->set_id("1");
-    VpcConiguration_builder->set_name("SuperVpc");
-    VpcConiguration_builder->set_cidr("192.168.0.0/24");
-    VpcConiguration_builder->set_tunnel_id(11111);
-    // this will allocate new VpcConfiguration_TransitRouter, may need to free it later
-    aliothcontroller::VpcConfiguration_TransitRouter *TransitRouter_builder =
-        VpcConiguration_builder->add_transit_routers();
-    TransitRouter_builder->set_vpc_id("12345");
-    TransitRouter_builder->set_ip_address("10.0.0.2");
-    TransitRouter_builder->set_mac_address("zz-zz-zz-zz-zz-zz");
+    for (int i = 0; i < 1000; i++)
+    {
+        new_vpc_states = GoalState_builder.add_vpc_states();
+
+        new_vpc_states->set_operation_type(aliothcontroller::OperationType::CREATE_UPDATE_SWITCH);
+
+        // this will allocate new VpcConfiguration, will need to free it later
+        aliothcontroller::VpcConfiguration *VpcConiguration_builder =
+            new_vpc_states->mutable_configuration();
+        VpcConiguration_builder->set_version(1);
+        VpcConiguration_builder->set_project_id(
+            "dbf72700-5106-4a7a-918f-a016853911f8");
+        // VpcConiguration_builder->set_id("99d9d709-8478-4b46-9f3f-2206b1023fd3");
+        VpcConiguration_builder->set_id("1");
+        VpcConiguration_builder->set_name("SuperVpc");
+        VpcConiguration_builder->set_cidr("192.168.0.0/24");
+        VpcConiguration_builder->set_tunnel_id(11111);
+        // this will allocate new VpcConfiguration_TransitRouter, may need to free it later
+        aliothcontroller::VpcConfiguration_TransitRouter *TransitRouter_builder =
+            VpcConiguration_builder->add_transit_routers();
+        TransitRouter_builder->set_vpc_id("12345");
+        TransitRouter_builder->set_ip_address("10.0.0.2");
+        TransitRouter_builder->set_mac_address("aa-bb-cc-dd-ee-ff");
+    }
 
     string string_message;
 
@@ -427,8 +446,8 @@ int main(int argc, char *argv[])
         fprintf(stdout, "Deserialize failed with error code: %u\n", rc);
     }
     // free the allocated VpcConfiguration since we are done with it now
-    new_port_states->clear_configuration();
-    new_subnet_states->clear_configuration();
+    // new_port_states->clear_configuration();
+    // new_subnet_states->clear_configuration();
     new_vpc_states->clear_configuration();
 
     aca_cleanup();
