@@ -35,7 +35,7 @@ bool g_debug_mode = false;
 bool g_fastpath_mode = false;
 
 // Logic and data behind the server's behavior.
-class GreeterServiceImpl final : public aliothcontroller::GoalStateProvisioner::Service
+class GoalStateProvisionerServiceImpl final : public aliothcontroller::GoalStateProvisioner::Service
 {
     Status PushNetworkResourceStates(ServerContext *context, const aliothcontroller::GoalState *requestedGoalState,
                                      aliothcontroller::GoalStateOperationReply *OperationReply) override
@@ -60,7 +60,7 @@ class GreeterServiceImpl final : public aliothcontroller::GoalStateProvisioner::
 void RunServer()
 {
     std::string server_address("0.0.0.0:50001");
-    GreeterServiceImpl service;
+    GoalStateProvisionerServiceImpl service;
 
     ServerBuilder builder;
     // Listen on the given address without any authentication mechanism.
