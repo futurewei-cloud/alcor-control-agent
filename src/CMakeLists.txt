@@ -20,6 +20,14 @@ set(protobuf_MODULE_COMPATIBLE TRUE)
 find_package(Protobuf CONFIG REQUIRED)
 message(STATUS "Using protobuf ${protobuf_VERSION}")
 
+# Find gRPC installation
+# Looks for gRPCConfig.cmake file installed by gRPC's cmake installation.
+find_package(gRPC CONFIG REQUIRED)
+message(STATUS "Using gRPC ${gRPC_VERSION}")
+
+set(_GRPC_GRPCPP_UNSECURE gRPC::grpc++_unsecure)
+set(_GRPC_CPP_PLUGIN_EXECUTABLE $<TARGET_FILE:gRPC::grpc_cpp_plugin>)
+
 add_library(networkControlAgentLib STATIC ${SOURCES})
 
 add_executable(networkControlAgent netwagent.cpp)
@@ -30,6 +38,7 @@ target_link_libraries(networkControlAgent proto)
 target_link_libraries(networkControlAgent grpc)
 target_link_libraries(networkControlAgent transitRPCLib)
 target_link_libraries(networkControlAgent ${PROTOBUF_LIBRARY})
+target_link_libraries(networkControlAgent ${_GRPC_GRPCPP_UNSECURE})
 
 add_dependencies(networkControlAgentLib proto grpc transitRPCLib)
 add_subdirectory(proto3)
