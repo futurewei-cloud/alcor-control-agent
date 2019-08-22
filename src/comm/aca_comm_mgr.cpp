@@ -122,7 +122,7 @@ int Aca_Comm_Manager::deserialize(const cppkafka::Buffer *kafka_buffer,
 
 // Calls execute_command
 int Aca_Comm_Manager::update_goal_state(
-    aliothcontroller::GoalState &parsed_struct)
+    const aliothcontroller::GoalState &parsed_struct)
 {
     int transitd_command = 0;
     void *transitd_input = NULL;

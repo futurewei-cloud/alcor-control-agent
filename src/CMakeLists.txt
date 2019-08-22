@@ -14,7 +14,19 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/transit_rpc)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../Transit/src/rpcgen)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../Transit/src/include)
 
-FIND_PACKAGE(Protobuf REQUIRED)
+# Find Protobuf installation
+# Looks for protobuf-config.cmake file installed by Protobuf's cmake installation.
+set(protobuf_MODULE_COMPATIBLE TRUE)
+find_package(Protobuf CONFIG REQUIRED)
+message(STATUS "Using protobuf ${protobuf_VERSION}")
+
+# Find gRPC installation
+# Looks for gRPCConfig.cmake file installed by gRPC's cmake installation.
+find_package(gRPC CONFIG REQUIRED)
+message(STATUS "Using gRPC ${gRPC_VERSION}")
+
+set(_GRPC_GRPCPP_UNSECURE gRPC::grpc++_unsecure)
+set(_GRPC_CPP_PLUGIN_EXECUTABLE $<TARGET_FILE:gRPC::grpc_cpp_plugin>)
 
 add_library(networkControlAgentLib STATIC ${SOURCES})
 
@@ -23,9 +35,12 @@ target_link_libraries(networkControlAgent cppkafka)
 target_link_libraries(networkControlAgent rdkafka)
 target_link_libraries(networkControlAgent networkControlAgentLib)
 target_link_libraries(networkControlAgent proto)
+target_link_libraries(networkControlAgent grpc)
 target_link_libraries(networkControlAgent transitRPCLib)
 target_link_libraries(networkControlAgent ${PROTOBUF_LIBRARY})
+target_link_libraries(networkControlAgent ${_GRPC_GRPCPP_UNSECURE})
 
-add_dependencies(networkControlAgentLib proto transitRPCLib)
+add_dependencies(networkControlAgentLib proto grpc transitRPCLib)
 add_subdirectory(proto3)
+add_subdirectory(grpc)
 add_subdirectory(transit_rpc)

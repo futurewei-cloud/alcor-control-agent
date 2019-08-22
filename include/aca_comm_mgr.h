@@ -21,7 +21,7 @@ public:
   int deserialize(const cppkafka::Buffer *kafka_buffer,
                   aliothcontroller::GoalState &parsed_struct);
 
-  int update_goal_state(aliothcontroller::GoalState &parsed_struct);
+  int update_goal_state(const aliothcontroller::GoalState &parsed_struct);
 
   int execute_command(int command, void *input_struct);
 

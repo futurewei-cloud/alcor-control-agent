@@ -114,7 +114,7 @@ bool MessageConsumer::cosumeDispatched(string topic)
 				}
 				else
 				{
-					ACA_LOG_ERROR("Successfully updated transitd with latest goal state %d.\n", rc);
+					ACA_LOG_INFO("Successfully updated transitd with latest goal state %d.\n", rc);
 				}
 			}
 			else
