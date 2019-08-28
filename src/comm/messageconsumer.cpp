@@ -73,7 +73,7 @@ void MessageConsumer::setGroupId(string group_id)
 	this->group_id = group_id;
 }
 
-bool MessageConsumer::cosumeDispatched(string topic)
+bool MessageConsumer::consumeDispatched(string topic)
 {
 	aliothcontroller::GoalState deserialized_GoalState;
 	int rc = EXIT_FAILURE;
