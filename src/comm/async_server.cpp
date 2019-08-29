@@ -18,10 +18,10 @@ using grpc::ServerCompletionQueue;
 using grpc::Status;
 using aliothcontroller::GoalStateProvisioner;
 using aliothcontroller::GoalStateRequest;
-//using aliothcontroller::GoalStateOperationReply;
+using aliothcontroller::GoalStateOperationReply;
 using aca_comm_manager::Aca_Comm_Manager;
 
-class ServerImpl {
+class ServerImpl final {
  public:
   ~ServerImpl() {
     server_->Shutdown();
