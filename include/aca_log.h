@@ -9,13 +9,13 @@ extern bool g_debug_mode;
 	do                        \
 	{                         \
 		TRN_LOG_INIT(entity); \
-	} while (0);
+	} while (0)
 
 #define ACA_LOG_CLOSE()  \
 	do                   \
 	{                    \
 		TRN_LOG_CLOSE(); \
-	} while (0);
+	} while (0)
 
 /* debug-level message */
 #define ACA_LOG_DEBUG(f_, ...)                  \
@@ -26,7 +26,7 @@ extern bool g_debug_mode;
 		{                                       \
 			fprintf(stdout, f_, ##__VA_ARGS__); \
 		}                                       \
-	} while (0);
+	} while (0)
 
 /* informational message */
 #define ACA_LOG_INFO(f_, ...)                   \
@@ -37,10 +37,10 @@ extern bool g_debug_mode;
 		{                                       \
 			fprintf(stdout, f_, ##__VA_ARGS__); \
 		}                                       \
-	} while (0);
+	} while (0)
 
 /* normal, but significant, condition */
-#define ACA_LOG_NOICE(f_, ...)                  \
+#define ACA_LOG_NOTICE(f_, ...)                  \
 	do                                          \
 	{                                           \
 		TRN_LOG_NOTICE(f_, ##__VA_ARGS__);      \
@@ -48,7 +48,7 @@ extern bool g_debug_mode;
 		{                                       \
 			fprintf(stdout, f_, ##__VA_ARGS__); \
 		}                                       \
-	} while (0);
+	} while (0)
 
 /* warning conditions */
 #define ACA_LOG_WARN(f_, ...)                   \
@@ -59,7 +59,7 @@ extern bool g_debug_mode;
 		{                                       \
 			fprintf(stdout, f_, ##__VA_ARGS__); \
 		}                                       \
-	} while (0);
+	} while (0)
 
 /* error conditions */
 #define ACA_LOG_ERROR(f_, ...)                  \
@@ -70,7 +70,7 @@ extern bool g_debug_mode;
 		{                                       \
 			fprintf(stdout, f_, ##__VA_ARGS__); \
 		}                                       \
-	} while (0);
+	} while (0)
 
 /* critical conditions */
 #define ACA_LOG_CRIT(f_, ...)                   \
@@ -81,7 +81,7 @@ extern bool g_debug_mode;
 		{                                       \
 			fprintf(stdout, f_, ##__VA_ARGS__); \
 		}                                       \
-	} while (0);
+	} while (0)
 
 /* action must be taken immediately */
 #define ACA_LOG_ALERT(f_, ...)                  \
@@ -92,7 +92,7 @@ extern bool g_debug_mode;
 		{                                       \
 			fprintf(stdout, f_, ##__VA_ARGS__); \
 		}                                       \
-	} while (0);
+	} while (0)
 
 /* system is unusable */
 #define ACA_LOG_EMERG(f_, ...)                  \
@@ -103,4 +103,4 @@ extern bool g_debug_mode;
 		{                                       \
 			fprintf(stdout, f_, ##__VA_ARGS__); \
 		}                                       \
-	} while (0);
+	} while (0)
