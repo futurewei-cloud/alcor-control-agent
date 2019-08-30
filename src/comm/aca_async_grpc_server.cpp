@@ -34,7 +34,7 @@ using aca_comm_manager::Aca_Comm_Manager;
     builder.RegisterService(&service_);
     cq_ = builder.AddCompletionQueue();
     server_ = builder.BuildAndStart();
-    std::cout << "Server listening on " << server_address << std::endl;
+    ACA_LOG_INFO("Server listening on %s\n", server_address);
     HandleRpcs();
   }
 
@@ -45,7 +45,6 @@ using aca_comm_manager::Aca_Comm_Manager;
 
   void Aca_Async_GRPC_Server::CallData::Proceed() {
       if (status_ == CREATE) {
-
         status_ = PROCESS;
         service_->RequestPushNetworkResourceStates(&ctx_, &request_, &responder_, cq_, cq_,
                                   this);
@@ -64,6 +63,7 @@ using aca_comm_manager::Aca_Comm_Manager;
         responder_.Finish(reply_, Status::OK, this);
       } else {
         GPR_ASSERT(status_ == FINISH);
+        //TODO: Write status of GRPC process to syslog when it fails.
         delete this;
       }
   }

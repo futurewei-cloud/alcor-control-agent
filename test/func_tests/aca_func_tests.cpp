@@ -107,8 +107,6 @@ static void aca_signal_handler(int sig_num)
     exit(sig_num);
 }
 
-
-
 int parse_goalstate (aliothcontroller::GoalState parsed_struct, aliothcontroller::GoalState GoalState_builder) {
         assert(parsed_struct.port_states_size() ==
               GoalState_builder.port_states_size());
