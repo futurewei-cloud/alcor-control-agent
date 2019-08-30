@@ -8,7 +8,7 @@
 #include "aca_comm_mgr.h"
 #include "cppkafka/utils/consumer_dispatcher.h"
 #include <grpcpp/grpcpp.h>
-#include <async_server.h>
+#include "aca_async_grpc_server.h"
 
 using messagemanager::MessageConsumer;
 using std::string;
@@ -148,7 +148,7 @@ int main(int argc, char *argv[])
 
     if (g_fastpath_mode)
     {
-        ServerImpl *server = new ServerImpl();
+        Aca_Async_GRPC_Server *server = new Aca_Async_GRPC_Server();
         server->Run();
     }
     else
