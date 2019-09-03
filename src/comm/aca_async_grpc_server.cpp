@@ -34,7 +34,7 @@ using aca_comm_manager::Aca_Comm_Manager;
     builder.RegisterService(&service_);
     cq_ = builder.AddCompletionQueue();
     server_ = builder.BuildAndStart();
-    ACA_LOG_INFO("Server listening on %s\n", server_address);
+    ACA_LOG_INFO("Server listening on %s\n", server_address.c_str());
     HandleRpcs();
   }
 
