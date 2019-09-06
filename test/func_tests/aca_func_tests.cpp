@@ -84,10 +84,8 @@ class GoalStateProvisionerClient {
     GPR_ASSERT(ok);
 
     if (status.ok()) {
-      fprintf(stdout, "RPC Sucess\n");
       return EXIT_SUCCESS;
     } else {
-      fprintf(stdout, "RPC Failure\n");
       return EXIT_FAILURE;
     }
   }
@@ -506,10 +504,17 @@ int main(int argc, char *argv[])
     GoalStateProvisionerClient async_client(grpc::CreateChannel(
         "localhost:50001", grpc::InsecureChannelCredentials()));
 
-    async_client.send_goalstate(GoalState_builder);
+    rc = async_client.send_goalstate(GoalState_builder);
+    if (rc == EXIT_SUCCESS)
+    {
+        fprintf(stdout, "RPC Sucess\n");
+    }
+    else
+    {
+        fprintf(stdout, "RPC Failure\n");
+    }
 
     aca_cleanup();
-
 
     return rc;
 }
