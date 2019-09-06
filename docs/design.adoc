@@ -1,14 +1,13 @@
-= Cloud Fabric Network Control Agent
+= Cloud Fabric Alcor Control Agent
 
 == Summary
 
-The Cloud Fabric Network Control Agent runs on each host machine. It serves as a simple stateless proxy between network controller and host machine networking components for control plane operations.
+The Cloud Fabric Alcor Control Agent (ACA) runs on each host machine. It serves as a stateless proxy between network controller and host machine networking components for control plane operations.
 
 
 == Requirements
 
-. Network Control Agent will reside on each host machine to interface between network controller and host networking components. The main responsibility is to create and configure network to
-enable connectivity (VPC IP < - > Physical IP mapping) between VMs/Containers within the datacenter and the outside world through EIP.
+. ACA will reside on each host machine to interface between network controller and host networking components. The main responsibility is to configure compute and transit hosts based on message from Alcor Controllers. Which will enable connectivity (VPC IP < - > Physical IP mapping) between VMs/Containers within the datacenter and outside world through EIP for the new Cloud Fabric networking control/data plane.
 
 . It will update networking configuration on the host:
 	.. Create vPort for VM/Container (unless this is done by Compute agent)
@@ -20,18 +19,18 @@ enable connectivity (VPC IP < - > Physical IP mapping) between VMs/Containers wi
 
 == Roles
 
-The network control agent will have the following roles, the code will live in one binary.
+ACA will have the following responsibilities, the code will live in one binary.
 
 . Local Host Networking configuration
-. Network Control Agent Health management, transit daemon and agents health, VM/Container networking health monitoring
+. ACA Health management, transit daemon and agents health, VM/Container networking health monitoring
 .. TODO: need to expand this, will likely live in a seperate doc, post 9/30
 . Transit (dataplane) user mode programming proxy
 . Network Component upgrade manager
 
-== Communication between Network Control Agent and kernel mode Transit Agent
+== Communication between ACA and kernel mode Transit Agent
 
                     +--------------------+
-                    |  Network Control   |
+                    |  Alcor Control     |
                     |     Agent          |
                     +--------------------+
                     |  Transit Daemon    |
@@ -86,7 +85,7 @@ The network control agent will have the following roles, the code will live in o
 
 === Communication Manager
 
-This will interface with Kafka to process messages from Network Controller. It will subscribe to topics published by Network Controller. Network Control Agent can also publish (health/error) information to Network Controller through Kafka.
+This will interface with Kafka or gRPC (for controller fast path) to process goal state updates from Alcor Controllers. It will subscribe to topics published by Alcor VPC Controller in Kafka. ACA can also publish (health/error) information back to Alcor Controllers through gRPC.
 
 === Network Configurator
 
@@ -95,7 +94,7 @@ This will interface with Kafka to process messages from Network Controller. It w
 . DPDK support
 . Bandwidth (10G/25G/40G)
 . IP of the host machine (is it DHCP or assigned?)
-2. Network Controller will decide what network configuration to be applied on the host machine, and send it to network control agent through Kafka.
+2. Network Controller will decide what network configuration to be applied on the host machine, and send it to ACA through Kafka.
 3. Connect vNICs to the vPorts once the VM/Container is running.
 
 === Security policy Manager
@@ -106,54 +105,103 @@ Responsible to configure and update the security policies on vNICs/vPorts.
 
 This will interface with user mode Transit daemon to program the transit router/switch/endpoint. Using the below APIs:
 
-                int UPDATE_VPC(rpc_trn_vpc_t) = 1;
-                int UPDATE_NET(rpc_trn_network_t) = 2;
-                int UPDATE_EP(rpc_trn_endpoint_t) = 3;
+*Transit/src/rpcgen/trn_rpc_protocol.x*
 
-                int DELETE_VPC(rpc_trn_vpc_key_t) = 4;
-                int DELETE_NET(rpc_trn_network_key_t) = 5;
-                int DELETE_EP(rpc_trn_endpoint_key_t) = 6;
+[source,c]
+------------------------------------------------------------
+int UPDATE_VPC(rpc_trn_vpc_t) = 1;
+int UPDATE_NET(rpc_trn_network_t) = 2;
+int UPDATE_EP(rpc_trn_endpoint_t) = 3;
+int UPDATE_AGENT_EP(rpc_trn_endpoint_t) = 4;
+int UPDATE_AGENT_MD(rpc_trn_agent_metadata_t) = 5;
 
-                rpc_trn_vpc_t      GET_VPC(rpc_trn_vpc_key_t) = 7;
-                rpc_trn_network_t  GET_NET(rpc_trn_network_key_t) = 8;
-                rpc_trn_endpoint_t GET_EP(rpc_trn_endpoint_key_t) = 9;
+int DELETE_VPC(rpc_trn_vpc_key_t) = 6;
+int DELETE_NET(rpc_trn_network_key_t) = 7;
+int DELETE_EP(rpc_trn_endpoint_key_t) = 8;
+int DELETE_AGENT_EP(rpc_trn_endpoint_key_t) = 9;
+int DELETE_AGENT_MD(void) = 10;
 
-                int LOAD_TRANSIT_XDP(rpc_trn_xdp_intf) = 11;
-                int LOAD_TRANSIT_AGENT_XDP(rpc_trn_xdp_intf) = 12;
+rpc_trn_vpc_t      GET_VPC(rpc_trn_vpc_key_t) = 11;
+rpc_trn_network_t  GET_NET(rpc_trn_network_key_t) = 12;
+rpc_trn_endpoint_t GET_EP(rpc_trn_endpoint_key_t) = 13;
+rpc_trn_endpoint_t GET_AGENT_EP(rpc_trn_endpoint_key_t) = 14;
+rpc_trn_agent_metadata_t GET_AGENT_MD(void) = 15;
 
-Note: XDP programs are preloaded on both physical NIC and vNIC as created by the VM. P0 for 9/30.
+int LOAD_TRANSIT_XDP(rpc_trn_xdp_intf_t) = 16;
+int LOAD_TRANSIT_AGENT_XDP(rpc_trn_xdp_intf_t) = 17;
+
+int UNLOAD_TRANSIT_XDP(rpc_intf_t) = 18;
+int UNLOAD_TRANSIT_AGENT_XDP(rpc_intf_t) = 19;
+------------------------------------------------------------
+
+Note: XDP programs are preloaded on physical NIC during system bring up. With new VMs/Containers, Virtual interface for new VMs/Containers will have XDP program loaded by ACA during their creation tracked by issue #50.
 
 === Log Manager
 
-It will create the log file, manage the log configuration and maintain the Network control agent logs. Need to decide on how many days to keep the logs, e.g. 7 days.
+It will create the log file, manage the log configuration and maintain the ACA logs. Need to decide on how many days to keep the logs, e.g. 7 days.
 
-The log should at least contain a timestamp, source file name and line number, message. The network control agent code should be able to specify the log level and can configure the targetted log level at runtime.
+The log should at least contain a timestamp, source file name and line number, message. The ACA code should be able to specify the log level and can configure the targetted log level at runtime.
 Syslog is a good target framework, it is a proven mechanism in linux and it is https://askubuntu.com/questions/184949/how-do-i-limit-the-size-of-my-syslog[configurable for our needs]. See reference session for more information.
 
 
-== Interface with Network Controller
-Working in progress...
+== Interface with Alcor VPC Controller
+. Goal State object: +
+Alcor VPC Controller sends down goal state object to ACA in the format of protobuf 3 messages to support cross language and cross machine model. The goal state object contains 0 to n vpc_states/subnet_states/port_state/security_group_states configurations. When ACA receives the goal state object, it will loop through each configuration to determine the intent update by looking at the OperationType. ACA will then parse the configuration and execute the needed change on the host machine, including XDP programming using transit daemon. Below is the highlevel GoalState definition:
+
+*AliothController/src/schema/proto3/goalstate.proto*
+
+[source,java]
+------------------------------------------------------------
+syntax = "proto3";
+
+package aliothcontroller;
+
+option java_package = "com.futurewei.alioth.controller.schema";
+
+import "vpc.proto";
+import "subnet.proto";
+import "port.proto";
+import "securitygroup.proto";
+
+message GoalState {
+   repeated VpcState vpc_states = 1;
+   repeated SubnetState subnet_states = 2;
+   repeated PortState port_states = 3;
+   repeated SecurityGroupState security_group_states = 4;
+}
+------------------------------------------------------------
+
+. Kafka messaging path: +
+In order to have a scalable, high performance and highly reliable communication channel between Alcor VPC Controller and 100s of thousands of compute hosts, Kafka was used because of its features and proven performance. For most of host network configurations, Alcor VPC Controller will publish the goal state object as a Kafka message in proto3 format into a Kafka topic specific to a compute/transit host. The ACA running on the targetted host will consume that message and apply network configuration accordingly.
+
+. gRPC fast path: +
+We need an ultra low latency Alcor control path to support customer scenarios like serverless where it has very low latency budget (<100ms) for end to end. An async gRPC server was added into ACA in conjunction with the Kakfa cosumer to process goal state updates faster. See the "Thread modeling" session below for more information the threading implementation.
 
 . Security Group API: +
 https://github.com/openstack/neutron/blob/master/neutron/agent/securitygroups_rpc.py
 
-. Communication Method (Kafka) and message format
-
 . Authentication and Authorization: +
-Huawei Cloud allow either using tokens (valid for 24 hours) or AK/SK when calling ECS APIs. +
-https://support-intl.huaweicloud.com/en-us/api-ecs/en-us_topic_0124306062.html +
-Openstack only talks about using authentication token: +
+Openstack documentation on using authentication token: +
 https://docs.openstack.org/ocata/config-reference/common-configurations/auth.html
 
+== Thread modeling
+There will be one thread for Kafka consumer to receive Alcor VPC controller goal state update. Another thread should be used to post the respond on the goal state update result to Kakfa so that the controller can process it.
 
-== API Versioning of Network Control Agent and Network Controller
+There will be another thread for async gRPC server to handle goal state update request for control fast path (currently targetting serverless scenario for fast provisioning). The gRPC async library will handle the client call from Alcor VPC controller, put the work item into its own completion queue, and reponds to the client call quickly. It will transparently create new threads to process the work items in its completion queue. Once a work item is completed, it will create a gRPC response to the original client call with the goal state update result.
+
+
+== Interface with Alkaid
+TBD, Alkaid is our new Cloud Fabric Compute infrastructure...
+
+
+== API Versioning of Alcor Control Agent and Alcor VPC Controller
 
 ==== Motivation
 When making major changes to code, the components need to be versioned in such a way so that old clients have time to upgrade, and new clients can use the new features without issues.
 
 ==== Strategy
 The strategy is to have the two components, agent and controller, explicitly state the API version in their messages.
-Thus, every message/call between the Controller and the Network Control Agent will have an API version tagged. +
+Thus, every message/call between the Controller and the ACA will have an API version tagged. +
 
 The components will support a range of different API versions by defining the max API version and min API version supported. +
 These fields will then be incremented respectively as features are +
@@ -161,7 +209,7 @@ upgraded, and deprecated.
 
 For major version upgrades, the strategy will be to
 
-. Deploy changes to all Network Control Agents first
+. Deploy changes to all ACA first
 . Deploy changes to Network Controller once all Agents have been upgraded
 
 ==== Example
@@ -174,9 +222,8 @@ For example, say there is a new update to support SR-IOV.
 |V2 Agent and V1 Controller|Controller sends a V1 Config|Agent sees V1 version in message and executes V1 calls
 |====================
 
-== TODO
-. need to define the milestones for 7/30, 8/30 and 9/30
-. need to define the responsiblity and boundry for different networking agent and maybe compute agent
+== Testing strategy
+TBD, We are planning to use CMocka for unit/functional testing and gcov+lcov for code coverage analysis.
 
 == Reference
 
@@ -184,7 +231,7 @@ For example, say there is a new update to support SR-IOV.
 . https://github.com/kubernetes/community/blob/master/contributors/design-proposals/release/versioning.md
 . https://dzone.com/articles/backward-compatibility-check-for-rest-apis
 . https://stackoverflow.com/questions/29871744/how-do-you-manage-the-underlying-codebase-for-a-versioned-api
-. https://github.com/futurewei-cloud/Transit/blob/master/docs/modules/ROOT/pages/design/monitoring.adoc[Network Control Agent and SN Agent will work independently]
+. https://github.com/futurewei-cloud/Transit/blob/master/docs/modules/ROOT/pages/design/monitoring.adoc[Alcor Control Agent and SN Agent will work independently]
 . https://stackoverflow.com/questions/158457/daemon-logging-in-linux[Logging in Linux]
 . https://support.huaweicloud.com/en-us/usermanual-ecs/en-us_topic_0030878383.html[Security Group Rule format in Huawei Cloud]
 
