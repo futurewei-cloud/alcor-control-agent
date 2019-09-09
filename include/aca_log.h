@@ -37,10 +37,10 @@ extern bool g_debug_mode;
 		{                                       \
 			fprintf(stdout, f_, ##__VA_ARGS__); \
 		}                                       \
-	} while (0);
+	} while (0)
 
 /* normal, but significant, condition */
-#define ACA_LOG_NOICE(f_, ...)                  \
+#define ACA_LOG_NOTICE(f_, ...)                  \
 	do                                          \
 	{                                           \
 		TRN_LOG_NOTICE(f_, ##__VA_ARGS__);      \
