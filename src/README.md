@@ -41,7 +41,7 @@ Download cppkafka from GitHub [here](https://github.com/mfontanini/cppkafka/blob
  $ ldconfig
 ```
 
-## Cloning AlcorControlAgent Repro
+## Cloning AlcorControlAgent Repo
 
 The Alcor Control Agent includes the network controller and transit submodules to consume the needed proto3 schema and RPC definitions. Therefore, the below command is needed when cloning:
 
@@ -57,6 +57,15 @@ You will also need to install the protobuf compiler and development environment:
 ```Shell
 sudo apt-get install libprotobuf-dev protobuf-compiler
 ```
+
+Compile and install gtest:
+```Shell
+https://github.com/google/googletest/blob/master/googletest/README.md
+cmake -Dgtest_build_samples=ON -DBUILD_SHARED_LIBS=ON .
+make
+make install
+```
+
 If compiling using linux containers, the below line in /src/CmakeLists.txt needs to change:
 ```Shell
 From - FIND_LIBRARY(CPPKAFKA cppkafka /usr/local/lib64 NO_DEFAULT_PATH)
