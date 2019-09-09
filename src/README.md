@@ -8,7 +8,7 @@ Comm: Lib for communication with network controllers and transit daemon
 grpc: Generate source and library for gRPC interface with Alcor Controllers
 proto3: Generate source and library for proto3 scheme for communication with Alcor Controllers
 transit_rpc: Generate library for RPC interface with transit daemon
-test: unit and functional test code
+test: Unit and functional test code
 
 # Installation
 
@@ -43,7 +43,7 @@ Download cppkafka from GitHub [here](https://github.com/mfontanini/cppkafka/blob
 
 ## Cloning AlcorControlAgent Repro
 
-The Alcor Control Agent includes the network controller and transit submodules to consume the needed proto3 schema and RPC definitions. therefore, the below command is needed when cloning:
+The Alcor Control Agent includes the network controller and transit submodules to consume the needed proto3 schema and RPC definitions. Therefore, the below command is needed when cloning:
 
 ```Shell
 git clone --recurse-submodules https://github.com/futurewei-cloud/AlcorControlAgent.git
@@ -51,7 +51,7 @@ git clone --recurse-submodules https://github.com/futurewei-cloud/AlcorControlAg
 
 ## Compiling AlcorControlAgent
 
-Note that _AlcorControlAgent_ depends on transit daemon interface to invoke it (through RPC) to program XDP. Therefore, it expects to have a transit submodule code in under the root "AlcorControlAgent" directory and compile to generate the needed "trn_rpc_protocol.h" header file.
+Note that the _AlcorControlAgent_ depends on the transit daemon interface to program XDP (through RPC). Therefore, it expects to have the transit submodule code under the root "AlcorControlAgent" directory. This is needed in order to compile and generate the needed "trn_rpc_protocol.h" header file.
 
 You will also need to install the protobuf compiler and development environment:
 ```Shell
