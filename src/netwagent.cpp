@@ -1,5 +1,6 @@
 
 #include <unistd.h> /* for getopt */
+#include <thread>
 #include "aca_log.h"
 #include "aca_util.h"
 #include "goalstate.pb.h"
@@ -9,6 +10,7 @@
 #include "cppkafka/utils/consumer_dispatcher.h"
 #include <grpcpp/grpcpp.h>
 #include "aca_async_grpc_server.h"
+
 
 using messagemanager::MessageConsumer;
 using std::string;
@@ -20,6 +22,8 @@ using namespace std;
 
 // Global variables
 cppkafka::ConsumerDispatcher *dispatcher = NULL;
+std::thread *async_grpc_server_thread = NULL;
+Aca_Async_GRPC_Server *async_grpc_server = NULL;
 string g_broker_list = EMPTY_STRING;
 string g_kafka_topic = EMPTY_STRING;
 string g_kafka_group_id = EMPTY_STRING;
@@ -56,7 +60,26 @@ static void aca_cleanup()
         delete dispatcher;
         dispatcher = NULL;
     }
+    if(async_grpc_server_thread->joinable())
+    {
+        async_grpc_server_thread->join();
+        if (async_grpc_server != NULL)
+        {
+            delete async_grpc_server;
+            async_grpc_server = NULL;
+        }
+        else
+        {
+            ACA_LOG_ERROR("Unable to call delete, a sync grpc server pointer is null.\n");
+        }
 
+        delete async_grpc_server_thread;
+        async_grpc_server_thread = NULL;
+    }
+    else
+    {
+        ACA_LOG_ERROR("Async grpc server thread is not joinable.\n");
+    }
     ACA_LOG_CLOSE();
 }
 
@@ -148,8 +171,8 @@ int main(int argc, char *argv[])
 
     if (g_fastpath_mode)
     {
-        Aca_Async_GRPC_Server *server = new Aca_Async_GRPC_Server();
-        server->Run();
+        async_grpc_server = new Aca_Async_GRPC_Server();
+        async_grpc_server_thread = new std::thread( std::bind( &Aca_Async_GRPC_Server::Run, async_grpc_server ) );
     }
     else
     {
