@@ -10,6 +10,8 @@
 #include "aca_log.h"
 #include "aca_async_grpc_server.h"
 
+static char GRPC_SERVER_ADDRESS[] = "0.0.0.0:50001";
+
 using grpc::Server;
 using grpc::ServerAsyncResponseWriter;
 using grpc::ServerBuilder;
@@ -36,13 +38,12 @@ using aca_comm_manager::Aca_Comm_Manager;
   }
 
   void Aca_Async_GRPC_Server::Run() {
-    std::string server_address("0.0.0.0:50001");
     ServerBuilder builder;
-    builder.AddListeningPort(server_address, grpc::InsecureServerCredentials());
+    builder.AddListeningPort(GRPC_SERVER_ADDRESS, grpc::InsecureServerCredentials());
     builder.RegisterService(&service_);
     cq_ = builder.AddCompletionQueue();
     server_ = builder.BuildAndStart();
-    ACA_LOG_INFO("Server listening on %s\n", server_address.c_str());
+    ACA_LOG_INFO("Server listening on %s\n", GRPC_SERVER_ADDRESS);
     HandleRpcs();
   }
 

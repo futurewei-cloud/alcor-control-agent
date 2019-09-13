@@ -53,42 +53,48 @@ static void aca_cleanup()
     // Stop sets a private variable running_ to False
     // The Dispatch checks the variable in a loop and stops when running is
     // no longer set to True.
-    if (dispatcher != NULL)
+    if (dispatcher != NULL) //Currently is always NULL
     {
         dispatcher->stop();
         delete dispatcher;
         dispatcher = NULL;
+        ACA_LOG_INFO("Cleaned up Kafka dispatched consumer.\n");
+    }
+    else
+    {
+        ACA_LOG_ERROR("Unable to call delete, dispatcher pointer is null");
     }
 
-        if (async_grpc_server != NULL)
-        {
+    if (async_grpc_server != NULL)
+    {
             async_grpc_server->StopServer();
             delete async_grpc_server;
             async_grpc_server = NULL;
             ACA_LOG_INFO("Cleaned up async grpc server.\n");
+    }
+    else
+    {
+        ACA_LOG_ERROR("Unable to call delete, async grpc server pointer is null.\n");
+    }
+
+    if(async_grpc_server_thread != NULL) {
+        if(async_grpc_server_thread->joinable())
+        {
+            async_grpc_server_thread->join();
+            ACA_LOG_INFO("Joined GRPC server thread.\n");
         }
         else
         {
-            ACA_LOG_ERROR("Unable to call delete, async grpc server pointer is null.\n");
+            ACA_LOG_ERROR("Async grpc server thread is not joinable.\n");
         }
-        if(async_grpc_server_thread != NULL) {
-            if(async_grpc_server_thread->joinable())
-            {
-                async_grpc_server_thread->join();
-                ACA_LOG_INFO("Joined GRPC server thread.\n");
-            }
-            else
-            {
-                ACA_LOG_ERROR("Async grpc server thread is not joinable.\n");
-            }
-            delete async_grpc_server_thread;
-            async_grpc_server_thread = NULL;
-            ACA_LOG_INFO("Cleaned up async grpc server thread.\n");
-        }
-        else
-        {
-            ACA_LOG_ERROR("Unable to call delete, async grpc server thread pointer is null.\n");
-        }
+        delete async_grpc_server_thread;
+        async_grpc_server_thread = NULL;
+        ACA_LOG_INFO("Cleaned up async grpc server thread.\n");
+    }
+    else
+    {
+        ACA_LOG_ERROR("Unable to call delete, async grpc server thread pointer is null.\n");
+    }
     ACA_LOG_CLOSE();
 }
 

@@ -949,17 +949,20 @@ int Aca_Comm_Manager::update_goal_state(
 
     rc = update_port_state(parsed_struct, transitd_command, transitd_input,
                            exec_command_rc);
-    if(rc == -EXIT_FAILURE) {
+    if(rc == -EXIT_FAILURE)
+    {
         ACA_LOG_ERROR("Failed to update port state. Failed with error code %d\n", rc);
     }
     rc = update_subnet_state(parsed_struct, transitd_command, transitd_input,
                            exec_command_rc);
-    if(rc == -EXIT_FAILURE) {
+    if(rc == -EXIT_FAILURE)
+    {
         ACA_LOG_ERROR("Failed to update subnet state. Failed with error code %d\n", rc);
     }
     rc = update_vpc_state(parsed_struct, transitd_command, transitd_input,
                            exec_command_rc);
-    if(rc == -EXIT_FAILURE) {
+    if(rc == -EXIT_FAILURE)
+    {
         ACA_LOG_ERROR("Failed to update vpc state. Failed with error code %d\n", rc);
     }
 
