@@ -11,7 +11,6 @@
 #include <grpcpp/grpcpp.h>
 #include "aca_async_grpc_server.h"
 
-
 using messagemanager::MessageConsumer;
 using std::string;
 
@@ -72,16 +71,23 @@ static void aca_cleanup()
         {
             ACA_LOG_ERROR("Unable to call delete, async grpc server pointer is null.\n");
         }
-        if(async_grpc_server_thread->joinable())
-        {
-            async_grpc_server_thread->join();
+        if(async_grpc_server_thread != NULL) {
+            if(async_grpc_server_thread->joinable())
+            {
+                async_grpc_server_thread->join();
+                ACA_LOG_INFO("Joined GRPC server thread.\n");
+            }
+            else
+            {
+                ACA_LOG_ERROR("Async grpc server thread is not joinable.\n");
+            }
             delete async_grpc_server_thread;
             async_grpc_server_thread = NULL;
             ACA_LOG_INFO("Cleaned up async grpc server thread.\n");
         }
         else
         {
-            ACA_LOG_ERROR("Async grpc server thread is not joinable.\n");
+            ACA_LOG_ERROR("Unable to call delete, async grpc server thread pointer is null.\n");
         }
     ACA_LOG_CLOSE();
 }
@@ -93,7 +99,6 @@ static void aca_signal_handler(int sig_num)
 
     // perform all the necessary cleanup here
     aca_cleanup();
-
     exit(sig_num);
 }
 
