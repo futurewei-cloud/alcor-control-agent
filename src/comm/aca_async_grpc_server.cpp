@@ -10,6 +10,8 @@
 #include "aca_log.h"
 #include "aca_async_grpc_server.h"
 
+static char GRPC_SERVER_ADDRESS[] = "0.0.0.0:50001";
+
 using grpc::Server;
 using grpc::ServerAsyncResponseWriter;
 using grpc::ServerBuilder;
@@ -22,21 +24,32 @@ using aliothcontroller::GoalStateOperationReply;
 using aca_comm_manager::Aca_Comm_Manager;
 
 
+  static std::atomic<bool> running;
   Aca_Async_GRPC_Server::~Aca_Async_GRPC_Server() {
     server_->Shutdown();
     cq_->Shutdown();
+    void *tag;
+    bool ok;
+    while(cq_->Next(&tag, &ok)) {} //Drain the completion queue.
+  }
+
+    Aca_Async_GRPC_Server::Aca_Async_GRPC_Server() {
+    running = true;
   }
 
   void Aca_Async_GRPC_Server::Run() {
-    std::string server_address("0.0.0.0:50001");
     ServerBuilder builder;
-    builder.AddListeningPort(server_address, grpc::InsecureServerCredentials());
+    builder.AddListeningPort(GRPC_SERVER_ADDRESS, grpc::InsecureServerCredentials());
     builder.RegisterService(&service_);
     cq_ = builder.AddCompletionQueue();
     server_ = builder.BuildAndStart();
-    ACA_LOG_INFO("Server listening on %s\n", server_address.c_str());
+    ACA_LOG_INFO("Server listening on %s\n", GRPC_SERVER_ADDRESS);
     HandleRpcs();
   }
+
+  void Aca_Async_GRPC_Server::StopServer() {
+      running = false;
+    }
 
   Aca_Async_GRPC_Server::CallData::CallData(GoalStateProvisioner::AsyncService* service, ServerCompletionQueue* cq)
         : service_(service), cq_(cq), responder_(&ctx_), status_(CREATE) {
@@ -63,7 +76,6 @@ using aca_comm_manager::Aca_Comm_Manager;
         responder_.Finish(reply_, Status::OK, this);
       } else {
         GPR_ASSERT(status_ == FINISH);
-        //TODO: Write status of GRPC process to syslog when it fails.
         delete this;
       }
   }
@@ -72,9 +84,13 @@ using aca_comm_manager::Aca_Comm_Manager;
     new CallData(&service_, cq_.get());
     void* tag;
     bool ok;
-    while (true) {
-      GPR_ASSERT(cq_->Next(&tag, &ok));
-      GPR_ASSERT(ok);
-      static_cast<CallData*>(tag)->Proceed();
+    bool cq_has_next;
+    while (running) {
+      cq_has_next = cq_->Next(&tag, &ok);
+      if(running && cq_has_next) {
+        GPR_ASSERT(ok);
+        static_cast<CallData*>(tag)->Proceed();
+      }
+      else if (running && !cq_has_next) GPR_ASSERT(cq_has_next);
     }
   }

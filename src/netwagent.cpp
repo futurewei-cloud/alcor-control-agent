@@ -1,5 +1,6 @@
 
 #include <unistd.h> /* for getopt */
+#include <thread>
 #include "aca_log.h"
 #include "aca_util.h"
 #include "goalstate.pb.h"
@@ -20,6 +21,8 @@ using namespace std;
 
 // Global variables
 cppkafka::ConsumerDispatcher *dispatcher = NULL;
+std::thread *async_grpc_server_thread = NULL;
+Aca_Async_GRPC_Server *async_grpc_server = NULL;
 string g_broker_list = EMPTY_STRING;
 string g_kafka_topic = EMPTY_STRING;
 string g_kafka_group_id = EMPTY_STRING;
@@ -50,13 +53,48 @@ static void aca_cleanup()
     // Stop sets a private variable running_ to False
     // The Dispatch checks the variable in a loop and stops when running is
     // no longer set to True.
-    if (dispatcher != NULL)
+    if (dispatcher != NULL) //Currently is always NULL
     {
         dispatcher->stop();
         delete dispatcher;
         dispatcher = NULL;
+        ACA_LOG_INFO("Cleaned up Kafka dispatched consumer.\n");
+    }
+    else
+    {
+        ACA_LOG_ERROR("Unable to call delete, dispatcher pointer is null");
     }
 
+    if (async_grpc_server != NULL)
+    {
+            async_grpc_server->StopServer();
+            delete async_grpc_server;
+            async_grpc_server = NULL;
+            ACA_LOG_INFO("Cleaned up async grpc server.\n");
+    }
+    else
+    {
+        ACA_LOG_ERROR("Unable to call delete, async grpc server pointer is null.\n");
+    }
+
+    if(async_grpc_server_thread != NULL) {
+        if(async_grpc_server_thread->joinable())
+        {
+            async_grpc_server_thread->join();
+            ACA_LOG_INFO("Joined GRPC server thread.\n");
+        }
+        else
+        {
+            ACA_LOG_ERROR("Async grpc server thread is not joinable.\n");
+        }
+        delete async_grpc_server_thread;
+        async_grpc_server_thread = NULL;
+        ACA_LOG_INFO("Cleaned up async grpc server thread.\n");
+    }
+    else
+    {
+        ACA_LOG_ERROR("Unable to call delete, async grpc server thread pointer is null.\n");
+    }
     ACA_LOG_CLOSE();
 }
 
@@ -67,7 +105,6 @@ static void aca_signal_handler(int sig_num)
 
     // perform all the necessary cleanup here
     aca_cleanup();
-
     exit(sig_num);
 }
 
@@ -106,9 +143,6 @@ int main(int argc, char *argv[])
         case 'd':
             g_debug_mode = true;
             break;
-        case 'f':
-            g_fastpath_mode = true;
-            break;
         default: /* the '?' case when the option is not recognized */
             fprintf(stderr,
                     "Usage: %s\n"
@@ -117,8 +151,7 @@ int main(int argc, char *argv[])
                     "\t\t[-g kafka group id]\n"
                     "\t\t[-s transitd RPC server]\n"
                     "\t\t[-p transitd RPC protocol]\n"
-                    "\t\t[-d enable debug mode]\n"
-                    "\t\t[-f enable controller fastpath mode]\n",
+                    "\t\t[-d enable debug mode]\n",
                     argv[0]);
             exit(EXIT_FAILURE);
         }
@@ -146,20 +179,12 @@ int main(int argc, char *argv[])
         g_rpc_protocol = UDP;
     }
 
-    if (g_fastpath_mode)
-    {
-        Aca_Async_GRPC_Server *server = new Aca_Async_GRPC_Server();
-        server->Run();
-    }
-    else
-    {
-        MessageConsumer network_config_consumer(g_broker_list, g_kafka_group_id);
+    async_grpc_server = new Aca_Async_GRPC_Server();
+    async_grpc_server_thread = new std::thread( std::bind( &Aca_Async_GRPC_Server::Run, async_grpc_server ) );
 
-        network_config_consumer.consumeDispatched(g_kafka_topic);
-        /* never reached */
-    }
+    MessageConsumer network_config_consumer(g_broker_list, g_kafka_group_id);
+    network_config_consumer.consumeDispatched(g_kafka_topic);
 
     aca_cleanup();
-
     return rc;
 }

@@ -120,19 +120,17 @@ int Aca_Comm_Manager::deserialize(const cppkafka::Buffer *kafka_buffer,
     }
 }
 
-// Calls execute_command
-int Aca_Comm_Manager::update_goal_state(
-    const aliothcontroller::GoalState &parsed_struct)
+int Aca_Comm_Manager::update_port_state(
+    const aliothcontroller::GoalState &parsed_struct,
+    int transitd_command,
+    void *transitd_input,
+    int exec_command_rc
+)
 {
-    int transitd_command = 0;
-    void *transitd_input = NULL;
     int rc = -EXIT_FAILURE;
-    int exec_command_rc = -EXIT_FAILURE;
 
     rpc_trn_endpoint_t endpoint_in;
     rpc_trn_agent_metadata_t agent_md_in;
-    rpc_trn_network_t network_in;
-    rpc_trn_vpc_t vpc_in;
     rpc_trn_endpoint_t substrate_in;
 
     bool tunnel_id_found = false;
@@ -149,17 +147,11 @@ int Aca_Comm_Manager::update_goal_state(
     char peer_name[20];
     char hosted_interface[20];
 
-    ACA_LOG_DEBUG("Starting to update goal state\n");
-
-    auto start = chrono::steady_clock::now();
-
     for (int i = 0; i < parsed_struct.port_states_size(); i++)
     {
         ACA_LOG_DEBUG("=====>parsing port state #%d\n", i);
-
         aliothcontroller::PortConfiguration current_PortConfiguration =
             parsed_struct.port_states(i).configuration();
-
         switch (parsed_struct.port_states(i).operation_type())
         {
         case aliothcontroller::OperationType::CREATE:
@@ -173,7 +165,6 @@ int Aca_Comm_Manager::update_goal_state(
 
                 assert(current_PortConfiguration.fixed_ips_size() == 1);
                 my_ep_ip_address = current_PortConfiguration.fixed_ips(0).ip_address();
-                struct sockaddr_in sa;
                 // inet_pton returns 1 for success 0 for failure
                 if (inet_pton(AF_INET, my_ep_ip_address.c_str(), &(sa.sin_addr)) != 1)
                 {
@@ -369,7 +360,6 @@ int Aca_Comm_Manager::update_goal_state(
                             // substr can throw out_of_range and bad_alloc exceptions
                             my_ip_address = my_cidr.substr(0, slash_pos);
 
-                            struct sockaddr_in sa;
                             // inet_pton returns 1 for success 0 for failure
                             if (inet_pton(AF_INET, my_ip_address.c_str(), &(sa.sin_addr)) != 1)
                             {
@@ -388,7 +378,6 @@ int Aca_Comm_Manager::update_goal_state(
 
                             for (int k = 0; k < current_SubnetConfiguration.transit_switches_size(); k++)
                             {
-                                struct sockaddr_in sa;
                                 // inet_pton returns 1 for success 0 for failure
                                 if (inet_pton(AF_INET, current_SubnetConfiguration.transit_switches(k).ip_address().c_str(),
                                               &(sa.sin_addr)) != 1)
@@ -471,7 +460,6 @@ int Aca_Comm_Manager::update_goal_state(
             {
                 substrate_in.interface = PHYSICAL_IF;
 
-                struct sockaddr_in sa;
                 // inet_pton returns 1 for success 0 for failure
                 if (inet_pton(AF_INET, current_PortConfiguration.host_info().ip_address().c_str(),
                               &(sa.sin_addr)) != 1)
@@ -543,7 +531,6 @@ int Aca_Comm_Manager::update_goal_state(
 
                                 substrate_in.interface = (char *)"peer0";
 
-                                struct sockaddr_in sa;
                                 // inet_pton returns 1 for success 0 for failure
                                 if (inet_pton(AF_INET, current_SubnetConfiguration.transit_switches(k).ip_address().c_str(),
                                               &(sa.sin_addr)) != 1)
@@ -603,6 +590,26 @@ int Aca_Comm_Manager::update_goal_state(
         }
 
     } // for (int i = 0; i < parsed_struct.port_states_size(); i++)
+    return rc;
+}
+
+int Aca_Comm_Manager::update_subnet_state(
+    const aliothcontroller::GoalState &parsed_struct,
+    int transitd_command,
+    void *transitd_input,
+    int exec_command_rc
+)
+{
+    int rc = -EXIT_FAILURE;
+    rpc_trn_network_t network_in;
+    rpc_trn_endpoint_t substrate_in;
+
+    string my_cidr;
+    string my_ip_address;
+    string my_prefixlen;
+    size_t slash_pos = 0;
+    struct sockaddr_in sa;
+    char hosted_interface[20];
 
     for (int i = 0; i < parsed_struct.subnet_states_size(); i++)
     {
@@ -654,7 +661,6 @@ int Aca_Comm_Manager::update_goal_state(
 
                 for (int j = 0; j < current_SubnetConfiguration.transit_switches_size(); j++)
                 {
-                    struct sockaddr_in sa;
                     // inet_pton returns 1 for success 0 for failure
                     if (inet_pton(AF_INET, current_SubnetConfiguration.transit_switches(j).ip_address().c_str(),
                                   &(sa.sin_addr)) != 1)
@@ -724,7 +730,6 @@ int Aca_Comm_Manager::update_goal_state(
 
                     substrate_in.interface = PHYSICAL_IF;
 
-                    struct sockaddr_in sa;
                     // inet_pton returns 1 for success 0 for failure
                     if (inet_pton(AF_INET, current_SubnetConfiguration.transit_switches(j).ip_address().c_str(),
                                   &(sa.sin_addr)) != 1)
@@ -772,6 +777,20 @@ int Aca_Comm_Manager::update_goal_state(
         }
 
     } // for (int i = 0; i < parsed_struct.subnet_states_size(); i++)
+}
+
+int Aca_Comm_Manager::update_vpc_state(
+    const aliothcontroller::GoalState &parsed_struct,
+    int transitd_command,
+    void *transitd_input,
+    int exec_command_rc
+)
+{
+    int rc = -EXIT_FAILURE;
+
+    rpc_trn_vpc_t vpc_in;
+    rpc_trn_endpoint_t substrate_in;
+    struct sockaddr_in sa;
 
     for (int i = 0; i < parsed_struct.vpc_states_size(); i++)
     {
@@ -797,7 +816,6 @@ int Aca_Comm_Manager::update_goal_state(
 
                 for (int j = 0; j < current_VpcConfiguration.transit_routers_size(); j++)
                 {
-                    struct sockaddr_in sa;
                     // inet_pton returns 1 for success 0 for failure
                     if (inet_pton(AF_INET, current_VpcConfiguration.transit_routers(j).ip_address().c_str(),
                                   &(sa.sin_addr)) != 1)
@@ -868,7 +886,6 @@ int Aca_Comm_Manager::update_goal_state(
                                   current_VpcConfiguration.transit_routers(j).ip_address().c_str(),
                                   current_VpcConfiguration.transit_routers(j).mac_address().c_str());
 
-                    struct sockaddr_in sa;
                     // inet_pton returns 1 for success 0 for failure
                     if (inet_pton(AF_INET, current_VpcConfiguration.transit_routers(j).ip_address().c_str(),
                                   &(sa.sin_addr)) != 1)
@@ -915,6 +932,39 @@ int Aca_Comm_Manager::update_goal_state(
             }
         }
     } // for (int i = 0; i < parsed_struct.vpc_states_size(); i++)
+}
+
+// Calls execute_command
+int Aca_Comm_Manager::update_goal_state(
+    const aliothcontroller::GoalState &parsed_struct)
+{
+    ACA_LOG_DEBUG("Starting to update goal state\n");
+
+    auto start = chrono::steady_clock::now();
+
+    int rc = -EXIT_FAILURE;
+    int transitd_command = 0;
+    void *transitd_input = NULL;
+    int exec_command_rc = -EXIT_FAILURE;
+
+    rc = update_port_state(parsed_struct, transitd_command, transitd_input,
+                           exec_command_rc);
+    if(rc == -EXIT_FAILURE)
+    {
+        ACA_LOG_ERROR("Failed to update port state. Failed with error code %d\n", rc);
+    }
+    rc = update_subnet_state(parsed_struct, transitd_command, transitd_input,
+                           exec_command_rc);
+    if(rc == -EXIT_FAILURE)
+    {
+        ACA_LOG_ERROR("Failed to update subnet state. Failed with error code %d\n", rc);
+    }
+    rc = update_vpc_state(parsed_struct, transitd_command, transitd_input,
+                           exec_command_rc);
+    if(rc == -EXIT_FAILURE)
+    {
+        ACA_LOG_ERROR("Failed to update vpc state. Failed with error code %d\n", rc);
+    }
 
     auto end = chrono::steady_clock::now();
 

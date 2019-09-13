@@ -24,7 +24,9 @@ using aca_comm_manager::Aca_Comm_Manager;
 class Aca_Async_GRPC_Server final {
  public:
   ~Aca_Async_GRPC_Server();
+  Aca_Async_GRPC_Server();
   void Run();
+  void StopServer();
 
  private:
   class CallData {
@@ -37,7 +39,6 @@ class Aca_Async_GRPC_Server final {
     ServerContext ctx_;
     aliothcontroller::GoalState request_;
     aliothcontroller::GoalStateOperationReply reply_;
-
     ServerAsyncResponseWriter<aliothcontroller::GoalStateOperationReply> responder_;
 
     enum CallStatus { CREATE, PROCESS, FINISH };
