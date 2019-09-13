@@ -19,7 +19,7 @@ MessageProducer::MessageProducer(string brokers, string topic, int partition){
 
     	// Create the producer
 	this->ptr_producer = new Producer(this->config);
-} 
+}
 
 MessageProducer::~MessageProducer(){
 	delete ptr_producer;
@@ -48,7 +48,7 @@ void MessageProducer::setPartitionValue(int partition){
 
 	this->partition_value = partition;
 }
- 
+
 void MessageProducer::publish(string message){
 
 	 // Create a message builder for this topic
@@ -57,7 +57,7 @@ void MessageProducer::publish(string message){
          // Get the partition. If no partition is provided, this will be an unassigned one
         if (partition_value != -1) {
            builder.partition(this->partition_value);
-        }  
+        }
 
 	// Set the payload on this builder
         builder.payload(message);

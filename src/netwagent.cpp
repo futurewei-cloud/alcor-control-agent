@@ -60,26 +60,29 @@ static void aca_cleanup()
         delete dispatcher;
         dispatcher = NULL;
     }
-    if(async_grpc_server_thread->joinable())
-    {
-        async_grpc_server_thread->join();
+
         if (async_grpc_server != NULL)
         {
+            async_grpc_server->StopServer();
             delete async_grpc_server;
             async_grpc_server = NULL;
+            ACA_LOG_INFO("Cleaned up async grpc server.\n");
         }
         else
         {
-            ACA_LOG_ERROR("Unable to call delete, a sync grpc server pointer is null.\n");
+            ACA_LOG_ERROR("Unable to call delete, async grpc server pointer is null.\n");
         }
-
-        delete async_grpc_server_thread;
-        async_grpc_server_thread = NULL;
-    }
-    else
-    {
-        ACA_LOG_ERROR("Async grpc server thread is not joinable.\n");
-    }
+        if(async_grpc_server_thread->joinable())
+        {
+            async_grpc_server_thread->join();
+            delete async_grpc_server_thread;
+            async_grpc_server_thread = NULL;
+            ACA_LOG_INFO("Cleaned up async grpc server thread.\n");
+        }
+        else
+        {
+            ACA_LOG_ERROR("Async grpc server thread is not joinable.\n");
+        }
     ACA_LOG_CLOSE();
 }
 
@@ -129,9 +132,6 @@ int main(int argc, char *argv[])
         case 'd':
             g_debug_mode = true;
             break;
-        case 'f':
-            g_fastpath_mode = true;
-            break;
         default: /* the '?' case when the option is not recognized */
             fprintf(stderr,
                     "Usage: %s\n"
@@ -140,8 +140,7 @@ int main(int argc, char *argv[])
                     "\t\t[-g kafka group id]\n"
                     "\t\t[-s transitd RPC server]\n"
                     "\t\t[-p transitd RPC protocol]\n"
-                    "\t\t[-d enable debug mode]\n"
-                    "\t\t[-f enable controller fastpath mode]\n",
+                    "\t\t[-d enable debug mode]\n",
                     argv[0]);
             exit(EXIT_FAILURE);
         }
@@ -169,20 +168,12 @@ int main(int argc, char *argv[])
         g_rpc_protocol = UDP;
     }
 
-    if (g_fastpath_mode)
-    {
-        async_grpc_server = new Aca_Async_GRPC_Server();
-        async_grpc_server_thread = new std::thread( std::bind( &Aca_Async_GRPC_Server::Run, async_grpc_server ) );
-    }
-    else
-    {
-        MessageConsumer network_config_consumer(g_broker_list, g_kafka_group_id);
+    async_grpc_server = new Aca_Async_GRPC_Server();
+    async_grpc_server_thread = new std::thread( std::bind( &Aca_Async_GRPC_Server::Run, async_grpc_server ) );
 
-        network_config_consumer.consumeDispatched(g_kafka_topic);
-        /* never reached */
-    }
+    MessageConsumer network_config_consumer(g_broker_list, g_kafka_group_id);
+    network_config_consumer.consumeDispatched(g_kafka_topic);
 
     aca_cleanup();
-
     return rc;
 }
