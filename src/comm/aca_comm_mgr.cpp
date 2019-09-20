@@ -1,4 +1,5 @@
 #include "aca_comm_mgr.h"
+#include "aca_net_config.h"
 #include "aca_util.h"
 #include "aca_log.h"
 #include "goalstate.pb.h"
@@ -8,12 +9,20 @@
 #include <arpa/inet.h>
 
 using namespace std;
+using aca_net_config::Aca_Net_Config;
+
+static char VPC_NS_PREFIX[] = "vpc-ns-";
+static uint PORT_ID_TRUNCATION_LEN = 11;
+static char TEMP_PREFIX[] = "temp";
+static char VETH_PREFIX[] = "veth";
+static char PEER_PREFIX[] = "peer";
 
 extern string g_rpc_server;
 extern string g_rpc_protocol;
 extern long g_total_rpc_call_time;
 extern long g_total_rpc_client_time;
 extern long g_total_update_GS_time;
+extern bool g_demo_mode;
 
 static inline const char *aca_get_operation_name(aliothcontroller::OperationType operation)
 {
@@ -133,14 +142,18 @@ int Aca_Comm_Manager::update_port_state(
     rpc_trn_agent_metadata_t agent_md_in;
     rpc_trn_endpoint_t substrate_in;
 
-    bool tunnel_id_found = false;
     bool subnet_info_found = false;
     string my_ep_ip_address;
+    string my_ep_mac_address;
     string my_ep_host_ip_address;
     string my_cidr;
+    string temp_name_string;
+    string veth_name_string;
     string peer_name_string;
-    string my_ip_address;
-    string my_prefixlen;
+    string namespace_name;
+    string vpc_id;
+    string my_ip_address; // TODO
+    string my_prefixlen; // TODO
     size_t slash_pos = 0;
     struct sockaddr_in sa;
     char veth_name[20];
@@ -152,6 +165,14 @@ int Aca_Comm_Manager::update_port_state(
         ACA_LOG_DEBUG("=====>parsing port state #%d\n", i);
         aliothcontroller::PortConfiguration current_PortConfiguration =
             parsed_struct.port_states(i).configuration();
+
+        string port_id = current_PortConfiguration.id();
+        string truncated_port_id = port_id.substr(0,PORT_ID_TRUNCATION_LEN);
+
+        temp_name_string = TEMP_PREFIX + truncated_port_id;
+        veth_name_string = VETH_PREFIX + truncated_port_id;
+        peer_name_string = PEER_PREFIX + truncated_port_id;
+
         switch (parsed_struct.port_states(i).operation_type())
         {
         case aliothcontroller::OperationType::CREATE:
@@ -184,6 +205,7 @@ int Aca_Comm_Manager::update_port_state(
                 }
                 endpoint_in.remote_ips.remote_ips_val[0] = sa.sin_addr.s_addr;
 
+                my_ep_mac_address = current_PortConfiguration.mac_address();
                 // the below will throw invalid_argument exceptions when it cannot convert the mac string
                 aca_convert_to_mac_array(current_PortConfiguration.mac_address().c_str(),
                                          endpoint_in.mac);
@@ -228,15 +250,34 @@ int Aca_Comm_Manager::update_port_state(
                         if (current_SubnetConfiguration.id() ==
                             current_PortConfiguration.network_id())
                         {
+                            if (parsed_struct.port_states(i).operation_type() == aliothcontroller::OperationType::CREATE)
+                            {
+                                vpc_id = current_SubnetConfiguration.vpc_id();
+
+                                my_cidr = current_SubnetConfiguration.cidr();
+
+                                slash_pos = my_cidr.find('/');
+                                if (slash_pos == string::npos)
+                                {
+                                    throw std::invalid_argument("'/' not found in cidr");
+                                }
+
+                                // substr can throw out_of_range and bad_alloc exceptions
+                                my_ip_address = my_cidr.substr(0, slash_pos);
+
+                                my_prefixlen = my_cidr.substr(slash_pos + 1);
+                            }
+
                             endpoint_in.tunid = current_SubnetConfiguration.tunnel_id();
-                            tunnel_id_found = true;
+
+                            subnet_info_found = true;
                             break;
                         }
                     }
                 }
-                if (!tunnel_id_found)
+                if (!subnet_info_found)
                 {
-                    ACA_LOG_ERROR("Not able to find the tunnel ID for port with subnet ID: %s.\n",
+                    ACA_LOG_ERROR("Not able to find the info for port with subnet ID: %s.\n",
                                   current_PortConfiguration.network_id().c_str());
                     rc = -EXIT_FAILURE;
                 }
@@ -261,6 +302,12 @@ int Aca_Comm_Manager::update_port_state(
                 rc = -EXIT_FAILURE;
                 // TODO: Notify the Network Controller the goal state configuration has invalid data
             }
+            catch (const std::exception &e)
+            {
+                ACA_LOG_ERROR("Exception caught while parsing port configuration, message: %s.\n",
+                              e.what());
+                rc = -EXIT_FAILURE;
+            }            
             catch (...)
             {
                 ACA_LOG_ERROR("Unknown exception caught while parsing port configuration, rethrowing.\n");
@@ -432,6 +479,107 @@ int Aca_Comm_Manager::update_port_state(
             break;
         }
 
+        if ((rc == EXIT_SUCCESS) && (parsed_struct.port_states(i).operation_type() == 
+            aliothcontroller::OperationType::CREATE))
+        {
+            if (g_demo_mode)
+            {
+                namespace_name = VPC_NS_PREFIX + vpc_id;
+                rc = Aca_Net_Config::get_instance().create_namespace(namespace_name);
+                if (rc == EXIT_SUCCESS)
+                {
+                    ACA_LOG_INFO("Successfully created namespace: %s in demo mode\n", namespace_name.c_str());
+                }
+                else
+                {
+                    ACA_LOG_ERROR("Unable to create namespace: %s in demo mode\n", namespace_name.c_str());
+                }
+            }
+
+            rc = Aca_Net_Config::get_instance().create_veth_pair(temp_name_string, peer_name_string);
+            if (rc == EXIT_SUCCESS)
+            {            
+                ACA_LOG_INFO("Successfully created temp veth pair, veth: %s, peer: %s\n",
+                                temp_name_string.c_str(),
+                                peer_name_string.c_str());
+            }
+            else
+            {
+                ACA_LOG_ERROR("Unable to create temp veth pair, veth: %s, peer: %s\n",
+                                temp_name_string.c_str(),
+                                peer_name_string.c_str());
+            }
+            
+            rc = Aca_Net_Config::get_instance().setup_peer_device(peer_name_string);
+            if (rc == EXIT_SUCCESS)
+            {            
+                ACA_LOG_INFO("Successfully setup the peer device: %s\n",
+                                peer_name_string.c_str());
+            }
+            else
+            {
+                ACA_LOG_ERROR("Unable to setup the peer device: %s\n",
+                                peer_name_string.c_str());
+            }
+
+            // load transit agent XDP on the peer device
+            rc = load_agent_xdp(peer_name_string);
+            if (rc == EXIT_SUCCESS)
+            {            
+                ACA_LOG_INFO("Successfully loaded transit agent xdp on the peer device: %s\n",
+                                peer_name_string.c_str());
+            }
+            else
+            {
+                ACA_LOG_ERROR("Unable to load transit agent xdp on the peer device: %s\n",
+                                peer_name_string.c_str());
+            }
+
+            rc = Aca_Net_Config::get_instance().move_to_namespace(temp_name_string,
+                                    namespace_name);
+            if (rc == EXIT_SUCCESS)
+            {            
+                ACA_LOG_INFO("Successfully created move veth: %s, to namespace: %s\n",
+                                temp_name_string.c_str(),
+                                namespace_name.c_str());
+            }
+            else
+            {
+                ACA_LOG_ERROR("Unable to create move veth: %s, to namespace: %s\n",
+                                temp_name_string.c_str(),
+                                namespace_name.c_str());
+            }
+
+            rc = Aca_Net_Config::get_instance().setup_veth_device(
+                                        namespace_name,
+                                        temp_name_string,
+                                        my_ep_ip_address,
+                                        my_prefixlen,
+                                        my_ep_mac_address,
+                                        my_ip_address);
+            if (rc == EXIT_SUCCESS)
+            {            
+                ACA_LOG_INFO("Successfully setup ns: %s, veth: %s, ip: %s, prefix: %s, mac: %s, gw: %s\n",
+                                namespace_name.c_str(),
+                                temp_name_string.c_str(),
+                                my_ep_ip_address.c_str(),
+                                my_prefixlen.c_str(), 
+                                my_ep_mac_address.c_str(),
+                                my_ip_address.c_str());
+            }
+            else
+            {
+                ACA_LOG_ERROR("Unable to setup ns: %s, veth: %s, ip: %s, prefix: %s, mac: %s, gw: %s\n",
+                                namespace_name.c_str(),
+                                temp_name_string.c_str(),
+                                my_ep_ip_address.c_str(),
+                                my_prefixlen.c_str(), 
+                                my_ep_mac_address.c_str(),
+                                my_ip_address.c_str());
+            }
+
+        }
+
         if ((transitd_command != 0) && (rc == EXIT_SUCCESS))
         {
             exec_command_rc = this->execute_command(transitd_command, transitd_input);
@@ -559,6 +707,25 @@ int Aca_Comm_Manager::update_port_state(
                                     ACA_LOG_ERROR("Unable to update substrate in transit daemon: %d\n",
                                                   exec_command_rc);
                                     // TODO: Notify the Network Controller if the command is not successful.
+                                }
+
+                                rc = Aca_Net_Config::get_instance().rename_veth_device(
+                                    namespace_name,
+                                    temp_name_string,
+                                    veth_name_string);
+                                if (rc == EXIT_SUCCESS)
+                                {            
+                                    ACA_LOG_INFO("Successfully renamed in ns: %s, old_veth: %s, new_veth: %s\n",
+                                                    namespace_name.c_str(),
+                                                    temp_name_string.c_str(),
+                                                    veth_name_string.c_str());
+                                }
+                                else
+                                {
+                                    ACA_LOG_ERROR("Unable to renamed in ns: %s, old_veth: %s, new_veth: %s\n",
+                                                    namespace_name.c_str(),
+                                                    temp_name_string.c_str(),
+                                                    veth_name_string.c_str());
                                 }
 
                             } // for (int k = 0; k < current_SubnetConfiguration.transit_switches_size(); k++)
@@ -977,6 +1144,36 @@ int Aca_Comm_Manager::update_goal_state(
     return rc;
 }
 
+int Aca_Comm_Manager::load_agent_xdp(string interface)
+{
+    int rc = EXIT_SUCCESS;
+    rpc_trn_xdp_intf_t xdp_inf_in;
+    char inf[20];
+    char agent_xdp_path[] = "./trn_xdp/trn_agent_xdp_ebpf_debug.o";
+    char agent_pcap_file[] = "/bpffs/agent_xdp.pcap";
+
+    int transitd_command = LOAD_TRANSIT_AGENT_XDP;
+
+    strncpy(inf, interface.c_str(), strlen(interface.c_str()) + 1);
+    xdp_inf_in.interface = inf;
+    xdp_inf_in.xdp_path = agent_xdp_path;
+    xdp_inf_in.pcapfile = agent_pcap_file;
+
+    rc = this->execute_command(transitd_command, &xdp_inf_in);
+    if (rc == EXIT_SUCCESS)
+    {
+        ACA_LOG_INFO("Successfully loaded transit agent on interface: %s\n",
+                    interface.c_str());
+    }
+    else
+    {
+        ACA_LOG_ERROR("Unable to loaded transit agent on interface: %s, rc: %d\n",
+                     interface.c_str(), rc);
+    }
+
+    return rc;
+}
+
 int Aca_Comm_Manager::execute_command(int command, void *input_struct)
 {
     static CLIENT *client;
@@ -1211,7 +1408,7 @@ int Aca_Comm_Manager::execute_command(int command, void *input_struct)
             // rc = LOAD_TRANSIT_XDP ...
             break;
         case LOAD_TRANSIT_AGENT_XDP:
-            // rc = LOAD_TRANSIT_AGENT_XDP ...
+            transitd_return = load_transit_agent_xdp_1((rpc_trn_xdp_intf_t *)input_struct, client);
             break;
         case UNLOAD_TRANSIT_XDP:
             // rc = UNLOAD_TRANSIT_XDP ...
