@@ -16,6 +16,8 @@ static uint PORT_ID_TRUNCATION_LEN = 11;
 static char TEMP_PREFIX[] = "temp";
 static char VETH_PREFIX[] = "veth";
 static char PEER_PREFIX[] = "peer";
+static char agent_xdp_path[] = "/trn_xdp/trn_agent_xdp_ebpf_debug.o";
+static char agent_pcap_file[] = "/bpffs/agent_xdp.pcap";
 
 extern string g_rpc_server;
 extern string g_rpc_protocol;
@@ -427,16 +429,14 @@ int Aca_Comm_Manager::update_port_state(const aliothcontroller::GoalState &parse
 
     if ((rc == EXIT_SUCCESS) && (parsed_struct.port_states(i).operation_type() ==
                                  aliothcontroller::OperationType::CREATE)) {
-      if (g_demo_mode) {
-        namespace_name = VPC_NS_PREFIX + vpc_id;
-        rc = Aca_Net_Config::get_instance().create_namespace(namespace_name);
-        if (rc == EXIT_SUCCESS) {
-          ACA_LOG_INFO("Successfully created namespace: %s in demo mode\n",
-                       namespace_name.c_str());
-        } else {
-          ACA_LOG_ERROR("Unable to create namespace: %s in demo mode\n",
-                        namespace_name.c_str());
-        }
+      namespace_name = VPC_NS_PREFIX + vpc_id;
+      rc = Aca_Net_Config::get_instance().create_namespace(namespace_name);
+      if (rc == EXIT_SUCCESS) {
+        ACA_LOG_INFO("Successfully created namespace: %s in demo mode\n",
+                     namespace_name.c_str());
+      } else {
+        ACA_LOG_ERROR("Unable to create namespace: %s in demo mode\n",
+                      namespace_name.c_str());
       }
 
       rc = Aca_Net_Config::get_instance().create_veth_pair(temp_name_string, peer_name_string);
@@ -475,9 +475,14 @@ int Aca_Comm_Manager::update_port_state(const aliothcontroller::GoalState &parse
                       temp_name_string.c_str(), namespace_name.c_str());
       }
 
-      rc = Aca_Net_Config::get_instance().setup_veth_device(
-              namespace_name, temp_name_string, my_ep_ip_address, my_prefixlen,
-              my_ep_mac_address, my_gw_address);
+      veth_config new_veth_config;
+      new_veth_config.veth_name = temp_name_string;
+      new_veth_config.ip = my_ep_ip_address;
+      new_veth_config.prefix_len = my_prefixlen;
+      new_veth_config.mac = my_ep_mac_address;
+      new_veth_config.gateway_ip = my_gw_address;
+
+      rc = Aca_Net_Config::get_instance().setup_veth_device(namespace_name, new_veth_config);
       if (rc == EXIT_SUCCESS) {
         ACA_LOG_INFO("Successfully setup ns: %s, veth: %s, ip: %s, prefix: %s, mac: %s, gw: %s\n",
                      namespace_name.c_str(), temp_name_string.c_str(),
@@ -983,8 +988,6 @@ int Aca_Comm_Manager::load_agent_xdp(string interface)
   int rc = EXIT_SUCCESS;
   rpc_trn_xdp_intf_t xdp_inf_in;
   char inf[20];
-  char agent_xdp_path[] = "./trn_xdp/trn_agent_xdp_ebpf_debug.o";
-  char agent_pcap_file[] = "/bpffs/agent_xdp.pcap";
 
   int transitd_command = LOAD_TRANSIT_AGENT_XDP;
 

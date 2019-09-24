@@ -2,6 +2,7 @@
 #include "aca_net_config.h"
 #include <errno.h>
 #include <stdlib.h>
+#include <string>
 
 using namespace std;
 
@@ -29,7 +30,7 @@ int Aca_Net_Config::create_namespace(string ns_name)
     return rc;
   }
 
-  string cmd_string = "ip netns add " + ns_name;
+  string cmd_string = IP_NETNS_PREFIX + "add " + ns_name;
 
   return execute_system_command(cmd_string);
 }
@@ -93,8 +94,7 @@ int Aca_Net_Config::move_to_namespace(string veth_name, string ns_name)
   return execute_system_command(cmd_string);
 }
 
-int Aca_Net_Config::setup_veth_device(string ns_name, string veth_name, string ip,
-                                      string prefixlen, string mac, string gw_ip)
+int Aca_Net_Config::setup_veth_device(string ns_name, veth_config new_veth_config)
 {
   int overall_rc = EXIT_SUCCESS;
   int command_rc;
@@ -106,74 +106,80 @@ int Aca_Net_Config::setup_veth_device(string ns_name, string veth_name, string i
     return overall_rc;
   }
 
-  if (veth_name.empty()) {
+  if (new_veth_config.veth_name.empty()) {
     overall_rc = -EINVAL;
-    ACA_LOG_ERROR("Invalid argument: Empty veth_name, rc: %d\n", overall_rc);
+    ACA_LOG_ERROR("Invalid argument: Empty new_veth_config.veth_name, rc: %d\n", overall_rc);
     return overall_rc;
   }
 
-  if (ip.empty()) {
+  if (new_veth_config.ip.empty()) {
     overall_rc = -EINVAL;
-    ACA_LOG_ERROR("Invalid argument: Empty ip, rc: %d\n", overall_rc);
+    ACA_LOG_ERROR("Invalid argument: Empty new_veth_config.ip, rc: %d\n", overall_rc);
     return overall_rc;
   }
 
-  if (prefixlen.empty()) {
+  if (new_veth_config.prefix_len.empty()) {
     overall_rc = -EINVAL;
-    ACA_LOG_ERROR("Invalid argument: Empty prefixlen, rc: %d\n", overall_rc);
+    ACA_LOG_ERROR("Invalid argument: Empty new_veth_config.prefix_len, rc: %d\n", overall_rc);
     return overall_rc;
   }
 
-  if (mac.empty()) {
+  if (new_veth_config.mac.empty()) {
     overall_rc = -EINVAL;
-    ACA_LOG_ERROR("Invalid argument: Empty mac, rc: %d\n", overall_rc);
+    ACA_LOG_ERROR("Invalid argument: Empty new_veth_config.mac, rc: %d\n", overall_rc);
     return overall_rc;
   }
 
-  if (gw_ip.empty()) {
+  if (new_veth_config.gateway_ip.empty()) {
     overall_rc = -EINVAL;
-    ACA_LOG_ERROR("Invalid argument: Empty gw_ip, rc: %d\n", overall_rc);
+    ACA_LOG_ERROR("Invalid argument: Empty new_veth_config.gateway_ip, rc: %d\n", overall_rc);
     return overall_rc;
   }
 
-  cmd_string = "ip netns exec " + ns_name + " ip addr add " + ip + "/" +
-               prefixlen + " dev " + veth_name;
+  cmd_string = IP_NETNS_PREFIX + "exec " + ns_name + " ip addr add " +
+               new_veth_config.ip + "/" + new_veth_config.prefix_len + " dev " +
+               new_veth_config.veth_name;
   command_rc = execute_system_command(cmd_string);
   if (command_rc != EXIT_SUCCESS)
     overall_rc = command_rc;
 
-  cmd_string = "ip netns exec " + ns_name + " ip link set dev " + veth_name + " up";
+  cmd_string = IP_NETNS_PREFIX + "exec " + ns_name + " ip link set dev " +
+               new_veth_config.veth_name + " up";
   command_rc = execute_system_command(cmd_string);
   if (command_rc != EXIT_SUCCESS)
     overall_rc = command_rc;
 
-  cmd_string = "ip netns exec " + ns_name + " route add default gw " + gw_ip;
+  cmd_string = IP_NETNS_PREFIX + "exec " + ns_name + " route add default gw " +
+               new_veth_config.gateway_ip;
   command_rc = execute_system_command(cmd_string);
   if (command_rc != EXIT_SUCCESS)
     overall_rc = command_rc;
 
-  cmd_string = "ip netns exec " + ns_name + " ifconfig " + veth_name + " hw ether " + mac;
+  cmd_string = IP_NETNS_PREFIX + "exec " + ns_name + " ifconfig " +
+               new_veth_config.veth_name + " hw ether " + new_veth_config.mac;
   command_rc = execute_system_command(cmd_string);
   if (command_rc != EXIT_SUCCESS)
     overall_rc = command_rc;
 
   if (g_demo_mode) {
-    cmd_string = "ip netns exec " + ns_name + " sysctl -w net.ipv4.tcp_mtu_probing=2";
+    cmd_string = IP_NETNS_PREFIX + "exec " + ns_name + " sysctl -w net.ipv4.tcp_mtu_probing=2";
     command_rc = execute_system_command(cmd_string);
     if (command_rc != EXIT_SUCCESS)
       overall_rc = command_rc;
 
-    cmd_string = "ip netns exec " + ns_name + " ethtool -K " + veth_name + " tso off gso off ufo off";
+    cmd_string = IP_NETNS_PREFIX + "exec " + ns_name + " ethtool -K " +
+                 new_veth_config.veth_name + " tso off gso off ufo off";
     command_rc = execute_system_command(cmd_string);
     if (command_rc != EXIT_SUCCESS)
       overall_rc = command_rc;
 
-    cmd_string = "ip netns exec " + ns_name + " ethtool --offload " + veth_name + " rx off tx off";
+    cmd_string = IP_NETNS_PREFIX + "exec " + ns_name + " ethtool --offload " +
+                 new_veth_config.veth_name + " rx off tx off";
     command_rc = execute_system_command(cmd_string);
     if (command_rc != EXIT_SUCCESS)
       overall_rc = command_rc;
 
-    cmd_string = "ip netns exec " + ns_name + " ifconfig lo up";
+    cmd_string = IP_NETNS_PREFIX + "exec " + ns_name + " ifconfig lo up";
     command_rc = execute_system_command(cmd_string);
     if (command_rc != EXIT_SUCCESS)
       overall_rc = command_rc;
@@ -209,19 +215,21 @@ int Aca_Net_Config::rename_veth_device(string ns_name, string org_veth_name, str
   }
 
   // bring the link down
-  cmd_string = "ip netns exec " + ns_name + " ip link set dev " + org_veth_name + " down";
+  cmd_string = IP_NETNS_PREFIX + "exec " + ns_name + " ip link set dev " +
+               org_veth_name + " down";
   command_rc = execute_system_command(cmd_string);
   if (command_rc != EXIT_SUCCESS)
     overall_rc = command_rc;
 
-  cmd_string = "ip netns exec " + ns_name + " ip link set " + org_veth_name +
-               " name " + new_veth_name;
+  cmd_string = IP_NETNS_PREFIX + "exec " + ns_name + " ip link set " +
+               org_veth_name + " name " + new_veth_name;
   command_rc = execute_system_command(cmd_string);
   if (command_rc != EXIT_SUCCESS)
     overall_rc = command_rc;
 
   // bring the device back up
-  cmd_string = "ip netns exec " + ns_name + " ip link set dev " + new_veth_name + " up";
+  cmd_string = IP_NETNS_PREFIX + "exec " + ns_name + " ip link set dev " +
+               new_veth_name + " up";
   command_rc = execute_system_command(cmd_string);
   if (command_rc != EXIT_SUCCESS)
     overall_rc = command_rc;

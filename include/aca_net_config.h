@@ -5,6 +5,16 @@
 
 using std::string;
 
+const string IP_NETNS_PREFIX = "ip netns ";
+
+struct veth_config {
+  string veth_name;
+  string ip;
+  string prefix_len;
+  string mac;
+  string gateway_ip;
+};
+
 namespace aca_net_config
 {
 class Aca_Net_Config {
@@ -24,8 +34,7 @@ class Aca_Net_Config {
 
   int move_to_namespace(string veth_name, string ns_name);
 
-  int setup_veth_device(string ns_name, string veth_name, string ip,
-                        string prefixlen, string mac, string gw_ip);
+  int setup_veth_device(string ns_name, veth_config new_veth_config);
 
   int rename_veth_device(string ns_name, string org_veth_name, string new_veth_name);
 
