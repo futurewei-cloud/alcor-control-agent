@@ -8,9 +8,8 @@ using std::string;
 
 namespace aca_comm_manager
 {
-class Aca_Comm_Manager
-{
-public:
+class Aca_Comm_Manager {
+  public:
   // constructor and destructor purposely omitted to use the default one
   // provided by the compiler
   // Aca_Comm_Manager();
@@ -22,19 +21,13 @@ public:
                   aliothcontroller::GoalState &parsed_struct);
 
   int update_port_state(const aliothcontroller::GoalState &parsed_struct,
-                        int transitd_command,
-                        void *transitd_input,
-                        int exec_command_rc);
+                        int transitd_command, void *transitd_input, int exec_command_rc);
 
   int update_subnet_state(const aliothcontroller::GoalState &parsed_struct,
-                        int transitd_command,
-                        void *transitd_input,
-                        int exec_command_rc);
+                          int transitd_command, void *transitd_input, int exec_command_rc);
 
   int update_vpc_state(const aliothcontroller::GoalState &parsed_struct,
-                        int transitd_command,
-                        void *transitd_input,
-                        int exec_command_rc);
+                       int transitd_command, void *transitd_input, int exec_command_rc);
 
   int update_goal_state(const aliothcontroller::GoalState &parsed_struct);
 
@@ -46,9 +39,11 @@ public:
   Aca_Comm_Manager(Aca_Comm_Manager const &) = delete;
   void operator=(Aca_Comm_Manager const &) = delete;
 
-private:
-  Aca_Comm_Manager() {};
-  ~Aca_Comm_Manager() {};
+  private:
+  Aca_Comm_Manager(){};
+  ~Aca_Comm_Manager(){};
+
+  int load_agent_xdp(string interface);
 };
 } // namespace aca_comm_manager
 #endif

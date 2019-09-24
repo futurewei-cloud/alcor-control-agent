@@ -3,6 +3,7 @@ set(SOURCES
     ./comm/messageconsumer.cpp
     ./comm/aca_comm_mgr.cpp
     ./comm/aca_async_grpc_server.cpp
+    ./net_config/aca_net_config.cpp
 )
 FIND_LIBRARY(RDKAFKA rdkafka /usr/lib/x86_64-linux-gnu NO_DEFAULT_PATH)
 FIND_LIBRARY(CPPKAFKA cppkafka /usr/local/lib NO_DEFAULT_PATH)
