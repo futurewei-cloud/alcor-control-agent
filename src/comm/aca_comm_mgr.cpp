@@ -9,6 +9,7 @@
 #include <arpa/inet.h>
 
 using namespace std;
+using namespace alcorcontroller;
 using aca_net_config::Aca_Net_Config;
 
 static char VPC_NS_PREFIX[] = "vpc-ns-";
@@ -26,22 +27,22 @@ extern long g_total_rpc_client_time;
 extern long g_total_update_GS_time;
 extern bool g_demo_mode;
 
-static inline const char *aca_get_operation_name(aliothcontroller::OperationType operation)
+static inline const char *aca_get_operation_name(OperationType operation)
 {
   switch (operation) {
-  case aliothcontroller::OperationType::CREATE:
+  case OperationType::CREATE:
     return "CREATE";
-  case aliothcontroller::OperationType::UPDATE:
+  case OperationType::UPDATE:
     return "UPDATE";
-  case aliothcontroller::OperationType::GET:
+  case OperationType::GET:
     return "GET";
-  case aliothcontroller::OperationType::INFO:
+  case OperationType::INFO:
     return "INFO";
-  case aliothcontroller::OperationType::FINALIZE:
+  case OperationType::FINALIZE:
     return "FINALIZE";
-  case aliothcontroller::OperationType::CREATE_UPDATE_SWITCH:
+  case OperationType::CREATE_UPDATE_SWITCH:
     return "CREATE_UPDATE_SWITCH";
-  case aliothcontroller::OperationType::CREATE_UPDATE_ROUTER:
+  case OperationType::CREATE_UPDATE_ROUTER:
     return "CREATE_UPDATE_ROUTER";
   default:
     return "ERROR: unknown operation type!";
@@ -85,8 +86,7 @@ Aca_Comm_Manager &Aca_Comm_Manager::get_instance()
   return instance;
 }
 
-int Aca_Comm_Manager::deserialize(const cppkafka::Buffer *kafka_buffer,
-                                  aliothcontroller::GoalState &parsed_struct)
+int Aca_Comm_Manager::deserialize(const cppkafka::Buffer *kafka_buffer, GoalState &parsed_struct)
 {
   int rc;
 
@@ -119,8 +119,7 @@ int Aca_Comm_Manager::deserialize(const cppkafka::Buffer *kafka_buffer,
   }
 }
 
-int Aca_Comm_Manager::update_port_state(const aliothcontroller::GoalState &parsed_struct,
-                                        int transitd_command,
+int Aca_Comm_Manager::update_port_state(const GoalState &parsed_struct, int transitd_command,
                                         void *transitd_input, int exec_command_rc)
 {
   int rc = -EXIT_FAILURE;
@@ -150,7 +149,7 @@ int Aca_Comm_Manager::update_port_state(const aliothcontroller::GoalState &parse
 
   for (int i = 0; i < parsed_struct.port_states_size(); i++) {
     ACA_LOG_DEBUG("=====>parsing port state #%d\n", i);
-    aliothcontroller::PortConfiguration current_PortConfiguration =
+    PortConfiguration current_PortConfiguration =
             parsed_struct.port_states(i).configuration();
 
     string port_id = current_PortConfiguration.id();
@@ -161,8 +160,8 @@ int Aca_Comm_Manager::update_port_state(const aliothcontroller::GoalState &parse
     peer_name_string = PEER_PREFIX + truncated_port_id;
 
     switch (parsed_struct.port_states(i).operation_type()) {
-    case aliothcontroller::OperationType::CREATE:
-    case aliothcontroller::OperationType::CREATE_UPDATE_SWITCH:
+    case OperationType::CREATE:
+    case OperationType::CREATE_UPDATE_SWITCH:
       transitd_command = UPDATE_EP;
       transitd_input = &endpoint_in;
 
@@ -198,8 +197,7 @@ int Aca_Comm_Manager::update_port_state(const aliothcontroller::GoalState &parse
         strncpy(veth_name, veth_name_string.c_str(), strlen(veth_name_string.c_str()) + 1);
         endpoint_in.veth = veth_name;
 
-        if (parsed_struct.port_states(i).operation_type() ==
-            aliothcontroller::OperationType::CREATE_UPDATE_SWITCH) {
+        if (parsed_struct.port_states(i).operation_type() == OperationType::CREATE_UPDATE_SWITCH) {
           endpoint_in.hosted_interface = EMPTY_STRING;
         } else // it must be OperationType::CREATE
         {
@@ -213,17 +211,15 @@ int Aca_Comm_Manager::update_port_state(const aliothcontroller::GoalState &parse
         // cache miss.
         // Look up the subnet configuration to query for tunnel_id
         for (int j = 0; j < parsed_struct.subnet_states_size(); j++) {
-          aliothcontroller::SubnetConfiguration current_SubnetConfiguration =
+          SubnetConfiguration current_SubnetConfiguration =
                   parsed_struct.subnet_states(j).configuration();
 
           ACA_LOG_DEBUG("current_SubnetConfiguration subnet ID: %s.\n",
                         current_SubnetConfiguration.id().c_str());
 
-          if (parsed_struct.subnet_states(j).operation_type() ==
-              aliothcontroller::OperationType::INFO) {
+          if (parsed_struct.subnet_states(j).operation_type() == OperationType::INFO) {
             if (current_SubnetConfiguration.id() == current_PortConfiguration.network_id()) {
-              if (parsed_struct.port_states(i).operation_type() ==
-                  aliothcontroller::OperationType::CREATE) {
+              if (parsed_struct.port_states(i).operation_type() == OperationType::CREATE) {
                 vpc_id = current_SubnetConfiguration.vpc_id();
 
                 my_gw_address = current_SubnetConfiguration.gateway_ip();
@@ -275,7 +271,7 @@ int Aca_Comm_Manager::update_port_state(const aliothcontroller::GoalState &parse
       }
       break;
 
-    case aliothcontroller::OperationType::FINALIZE:
+    case OperationType::FINALIZE:
       transitd_command = UPDATE_AGENT_MD;
       transitd_input = &agent_md_in;
 
@@ -330,7 +326,7 @@ int Aca_Comm_Manager::update_port_state(const aliothcontroller::GoalState &parse
 
         // Look up the subnet configuration
         for (int j = 0; j < parsed_struct.subnet_states_size(); j++) {
-          aliothcontroller::SubnetConfiguration current_SubnetConfiguration =
+          SubnetConfiguration current_SubnetConfiguration =
                   parsed_struct.subnet_states(j).configuration();
 
           ACA_LOG_DEBUG("current_SubnetConfiguration subnet ID: %s.\n",
@@ -338,8 +334,7 @@ int Aca_Comm_Manager::update_port_state(const aliothcontroller::GoalState &parse
 
           vpc_id = current_SubnetConfiguration.vpc_id();
 
-          if (parsed_struct.subnet_states(j).operation_type() ==
-              aliothcontroller::OperationType::INFO) {
+          if (parsed_struct.subnet_states(j).operation_type() == OperationType::INFO) {
             if (current_SubnetConfiguration.id() == current_PortConfiguration.network_id()) {
               agent_md_in.ep.tunid = current_SubnetConfiguration.tunnel_id();
 
@@ -427,8 +422,8 @@ int Aca_Comm_Manager::update_port_state(const aliothcontroller::GoalState &parse
       break;
     }
 
-    if ((rc == EXIT_SUCCESS) && (parsed_struct.port_states(i).operation_type() ==
-                                 aliothcontroller::OperationType::CREATE)) {
+    if ((rc == EXIT_SUCCESS) &&
+        (parsed_struct.port_states(i).operation_type() == OperationType::CREATE)) {
       namespace_name = VPC_NS_PREFIX + vpc_id;
       rc = Aca_Net_Config::get_instance().create_namespace(namespace_name);
       if (rc == EXIT_SUCCESS) {
@@ -506,8 +501,7 @@ int Aca_Comm_Manager::update_port_state(const aliothcontroller::GoalState &parse
       }
     }
 
-    if (parsed_struct.port_states(i).operation_type() ==
-        aliothcontroller::OperationType::CREATE_UPDATE_SWITCH) {
+    if (parsed_struct.port_states(i).operation_type() == OperationType::CREATE_UPDATE_SWITCH) {
       // update substrate
       ACA_LOG_DEBUG("port operation: CREATE_UPDATE_SWITCH, update substrate from host_info(), IP: %s, mac: %s\n",
                     current_PortConfiguration.host_info().ip_address().c_str(),
@@ -553,21 +547,19 @@ int Aca_Comm_Manager::update_port_state(const aliothcontroller::GoalState &parse
         ACA_LOG_ERROR("Unknown exception caught while parsing CREATE_UPDATE_SWITCH substrate port configuration, rethrowing.\n");
         throw; // rethrowing
       }
-    } else if (parsed_struct.port_states(i).operation_type() ==
-               aliothcontroller::OperationType::FINALIZE) {
+    } else if (parsed_struct.port_states(i).operation_type() == OperationType::FINALIZE) {
       transitd_command = UPDATE_AGENT_EP;
 
       try {
         // Look up the subnet info
         for (int j = 0; j < parsed_struct.subnet_states_size(); j++) {
-          aliothcontroller::SubnetConfiguration current_SubnetConfiguration =
+          SubnetConfiguration current_SubnetConfiguration =
                   parsed_struct.subnet_states(j).configuration();
 
           ACA_LOG_DEBUG("current_SubnetConfiguration subnet ID: %s.\n",
                         current_SubnetConfiguration.id().c_str());
 
-          if (parsed_struct.subnet_states(j).operation_type() ==
-              aliothcontroller::OperationType::INFO) {
+          if (parsed_struct.subnet_states(j).operation_type() == OperationType::INFO) {
             if (current_SubnetConfiguration.id() == current_PortConfiguration.network_id()) {
               for (int k = 0;
                    k < current_SubnetConfiguration.transit_switches_size(); k++) {
@@ -655,8 +647,7 @@ int Aca_Comm_Manager::update_port_state(const aliothcontroller::GoalState &parse
   return rc;
 }
 
-int Aca_Comm_Manager::update_subnet_state(const aliothcontroller::GoalState &parsed_struct,
-                                          int transitd_command,
+int Aca_Comm_Manager::update_subnet_state(const GoalState &parsed_struct, int transitd_command,
                                           void *transitd_input, int exec_command_rc)
 {
   int rc = -EXIT_FAILURE;
@@ -673,15 +664,15 @@ int Aca_Comm_Manager::update_subnet_state(const aliothcontroller::GoalState &par
   for (int i = 0; i < parsed_struct.subnet_states_size(); i++) {
     ACA_LOG_DEBUG("=====>parsing subnet state #%d\n", i);
 
-    aliothcontroller::SubnetConfiguration current_SubnetConfiguration =
+    SubnetConfiguration current_SubnetConfiguration =
             parsed_struct.subnet_states(i).configuration();
 
     switch (parsed_struct.subnet_states(i).operation_type()) {
-    case aliothcontroller::OperationType::INFO:
+    case OperationType::INFO:
       // information only, ignoring this.
       transitd_command = 0;
       break;
-    case aliothcontroller::OperationType::CREATE_UPDATE_ROUTER:
+    case OperationType::CREATE_UPDATE_ROUTER:
       // this is to update the router host, need to update substrate later.
       transitd_command = UPDATE_NET;
       transitd_input = &network_in;
@@ -758,8 +749,7 @@ int Aca_Comm_Manager::update_subnet_state(const aliothcontroller::GoalState &par
       }
     }
 
-    if (parsed_struct.subnet_states(i).operation_type() ==
-        aliothcontroller::OperationType::CREATE_UPDATE_ROUTER) {
+    if (parsed_struct.subnet_states(i).operation_type() == OperationType::CREATE_UPDATE_ROUTER) {
       // update substrate
       transitd_command = UPDATE_EP;
 
@@ -816,8 +806,7 @@ int Aca_Comm_Manager::update_subnet_state(const aliothcontroller::GoalState &par
   } // for (int i = 0; i < parsed_struct.subnet_states_size(); i++)
 }
 
-int Aca_Comm_Manager::update_vpc_state(const aliothcontroller::GoalState &parsed_struct,
-                                       int transitd_command,
+int Aca_Comm_Manager::update_vpc_state(const GoalState &parsed_struct, int transitd_command,
                                        void *transitd_input, int exec_command_rc)
 {
   int rc = -EXIT_FAILURE;
@@ -829,11 +818,11 @@ int Aca_Comm_Manager::update_vpc_state(const aliothcontroller::GoalState &parsed
   for (int i = 0; i < parsed_struct.vpc_states_size(); i++) {
     ACA_LOG_DEBUG("=====>parsing VPC state #%d\n", i);
 
-    aliothcontroller::VpcConfiguration current_VpcConfiguration =
+    VpcConfiguration current_VpcConfiguration =
             parsed_struct.vpc_states(i).configuration();
 
     switch (parsed_struct.vpc_states(i).operation_type()) {
-    case aliothcontroller::OperationType::CREATE_UPDATE_SWITCH:
+    case OperationType::CREATE_UPDATE_SWITCH:
       transitd_command = UPDATE_VPC;
       transitd_input = &vpc_in;
 
@@ -891,8 +880,7 @@ int Aca_Comm_Manager::update_vpc_state(const aliothcontroller::GoalState &parsed
       }
     }
 
-    if (parsed_struct.vpc_states(i).operation_type() ==
-        aliothcontroller::OperationType::CREATE_UPDATE_SWITCH) {
+    if (parsed_struct.vpc_states(i).operation_type() == OperationType::CREATE_UPDATE_SWITCH) {
       // update substrate
       transitd_command = UPDATE_EP;
 
@@ -947,7 +935,7 @@ int Aca_Comm_Manager::update_vpc_state(const aliothcontroller::GoalState &parsed
 }
 
 // Calls execute_command
-int Aca_Comm_Manager::update_goal_state(const aliothcontroller::GoalState &parsed_struct)
+int Aca_Comm_Manager::update_goal_state(const GoalState &parsed_struct)
 {
   ACA_LOG_DEBUG("Starting to update goal state\n");
 
@@ -1256,7 +1244,7 @@ int Aca_Comm_Manager::execute_command(int command, void *input_struct)
   return rc;
 }
 
-void Aca_Comm_Manager::print_goal_state(aliothcontroller::GoalState parsed_struct)
+void Aca_Comm_Manager::print_goal_state(GoalState parsed_struct)
 {
   if (g_debug_mode == false) {
     return;
@@ -1266,7 +1254,7 @@ void Aca_Comm_Manager::print_goal_state(aliothcontroller::GoalState parsed_struc
     fprintf(stdout, "parsed_struct.port_states(%d).operation_type(): %d\n", i,
             parsed_struct.port_states(i).operation_type());
 
-    aliothcontroller::PortConfiguration current_PortConfiguration =
+    PortConfiguration current_PortConfiguration =
             parsed_struct.port_states(i).configuration();
 
     fprintf(stdout, "current_PortConfiguration.version(): %d\n",
@@ -1331,7 +1319,7 @@ void Aca_Comm_Manager::print_goal_state(aliothcontroller::GoalState parsed_struc
     fprintf(stdout, "parsed_struct.subnet_states(%d).operation_type(): %d\n", i,
             parsed_struct.subnet_states(i).operation_type());
 
-    aliothcontroller::SubnetConfiguration current_SubnetConfiguration =
+    SubnetConfiguration current_SubnetConfiguration =
             parsed_struct.subnet_states(i).configuration();
 
     fprintf(stdout, "current_SubnetConfiguration.version(): %d\n",
@@ -1375,7 +1363,7 @@ void Aca_Comm_Manager::print_goal_state(aliothcontroller::GoalState parsed_struc
     fprintf(stdout, "parsed_struct.vpc_states(%d).operation_type(): %d\n", i,
             parsed_struct.vpc_states(i).operation_type());
 
-    aliothcontroller::VpcConfiguration current_VpcConfiguration =
+    VpcConfiguration current_VpcConfiguration =
             parsed_struct.vpc_states(i).configuration();
 
     fprintf(stdout, "current_VpcConfiguration.version(): %d\n",

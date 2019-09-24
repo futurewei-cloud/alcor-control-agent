@@ -67,7 +67,7 @@ dkms.conf
 .vscode/
 cppkafka/
 .DS_Store
-networkControlAgent
+AlcorControlAgent
 aca_func_tests
 aca_tests
 *.pb.h

@@ -2,6 +2,7 @@
 #include "aca_comm_mgr.h"
 #include "aca_log.h"
 #include "aca_util.h"
+#include "goalstateprovisioner.grpc.pb.h"
 #include "goalstate.pb.h"
 #include "cppkafka/buffer.h"
 #include <unistd.h> /* for getopt */
@@ -11,14 +12,13 @@
 #include <iostream>
 #include <memory>
 #include <string>
-
 #include <grpcpp/grpcpp.h>
 #include <grpc/support/log.h>
-#include "goalstateprovisioner.grpc.pb.h"
 
 #define ACALOGNAME "AlcorControlAgentTest"
 
 using namespace std;
+using namespace alcorcontroller;
 using aca_comm_manager::Aca_Comm_Manager;
 
 // Global variables
@@ -30,16 +30,12 @@ long g_total_update_GS_time = 0;
 bool g_demo_mode = false;
 bool g_debug_mode = false;
 
-using std::string;
-
-using aliothcontroller::GoalStateOperationReply;
-using aliothcontroller::GoalStateProvisioner;
-using aliothcontroller::GoalStateRequest;
 using grpc::Channel;
 using grpc::ClientAsyncResponseReader;
 using grpc::ClientContext;
 using grpc::CompletionQueue;
 using grpc::Status;
+using std::string;
 
 static void aca_cleanup()
 {
@@ -67,7 +63,7 @@ class GoalStateProvisionerClient {
   {
   }
 
-  int send_goalstate(aliothcontroller::GoalState &GoalState)
+  int send_goalstate(GoalState &GoalState)
   {
     GoalStateOperationReply reply;
     ClientContext context;
@@ -108,8 +104,7 @@ static void aca_signal_handler(int sig_num)
   exit(sig_num);
 }
 
-int parse_goalstate(aliothcontroller::GoalState parsed_struct,
-                    aliothcontroller::GoalState GoalState_builder)
+int parse_goalstate(GoalState parsed_struct, GoalState GoalState_builder)
 {
   assert(parsed_struct.port_states_size() == GoalState_builder.port_states_size());
   for (int i = 0; i < parsed_struct.port_states_size(); i++) {
@@ -370,18 +365,16 @@ int main(int argc, char *argv[])
   // compatible with the version of the headers we compiled against.
   GOOGLE_PROTOBUF_VERIFY_VERSION;
 
-  aliothcontroller::GoalState GoalState_builder;
-  aliothcontroller::PortState *new_port_states = GoalState_builder.add_port_states();
-  aliothcontroller::SubnetState *new_subnet_states =
-          GoalState_builder.add_subnet_states();
-  aliothcontroller::VpcState *new_vpc_states = GoalState_builder.add_vpc_states();
+  GoalState GoalState_builder;
+  PortState *new_port_states = GoalState_builder.add_port_states();
+  SubnetState *new_subnet_states = GoalState_builder.add_subnet_states();
+  VpcState *new_vpc_states = GoalState_builder.add_vpc_states();
 
   // fill in port state structs
-  new_port_states->set_operation_type(aliothcontroller::OperationType::FINALIZE);
+  new_port_states->set_operation_type(OperationType::FINALIZE);
 
   // this will allocate new PortConfiguration, will need to free it later
-  aliothcontroller::PortConfiguration *PortConfiguration_builder =
-          new_port_states->mutable_configuration();
+  PortConfiguration *PortConfiguration_builder = new_port_states->mutable_configuration();
   PortConfiguration_builder->set_version(1);
   PortConfiguration_builder->set_project_id("dbf72700-5106-4a7a-918f-111111111111");
   PortConfiguration_builder->set_network_id("superSubnetID");
@@ -391,37 +384,35 @@ int main(int argc, char *argv[])
   PortConfiguration_builder->set_mac_address("fa:16:3e:d7:f2:6c");
   PortConfiguration_builder->set_veth_name("veth0");
 
-  aliothcontroller::PortConfiguration_HostInfo *portConfig_HostInfoBuilder(
-          new aliothcontroller::PortConfiguration_HostInfo);
+  PortConfiguration_HostInfo *portConfig_HostInfoBuilder(new PortConfiguration_HostInfo);
   portConfig_HostInfoBuilder->set_ip_address("172.0.0.2");
   portConfig_HostInfoBuilder->set_mac_address("aa-bb-cc-dd-ee-ff");
   PortConfiguration_builder->set_allocated_host_info(portConfig_HostInfoBuilder);
 
   // this will allocate new PortConfiguration_FixedIp may need to free later
-  aliothcontroller::PortConfiguration_FixedIp *PortIp_builder =
-          PortConfiguration_builder->add_fixed_ips();
+  PortConfiguration_FixedIp *PortIp_builder = PortConfiguration_builder->add_fixed_ips();
   PortIp_builder->set_ip_address("10.0.0.2");
   PortIp_builder->set_subnet_id("2");
   // this will allocate new PortConfiguration_SecurityGroupId may need to free later
-  aliothcontroller::PortConfiguration_SecurityGroupId *SecurityGroup_builder =
+  PortConfiguration_SecurityGroupId *SecurityGroup_builder =
           PortConfiguration_builder->add_security_group_ids();
   SecurityGroup_builder->set_id("1");
   // this will allocate new PortConfiguration_AllowAddressPair may need to free later
-  aliothcontroller::PortConfiguration_AllowAddressPair *AddressPair_builder =
+  PortConfiguration_AllowAddressPair *AddressPair_builder =
           PortConfiguration_builder->add_allow_address_pairs();
   AddressPair_builder->set_ip_address("10.0.0.5");
   AddressPair_builder->set_mac_address("fa:16:3e:d7:f2:9f");
   // this will allocate new PortConfiguration_ExtraDhcpOption may need to free later
-  aliothcontroller::PortConfiguration_ExtraDhcpOption *ExtraDhcp_builder =
+  PortConfiguration_ExtraDhcpOption *ExtraDhcp_builder =
           PortConfiguration_builder->add_extra_dhcp_options();
   ExtraDhcp_builder->set_name("opt_1");
   ExtraDhcp_builder->set_value("12");
 
   // fill in the subnet state structs
-  new_subnet_states->set_operation_type(aliothcontroller::OperationType::INFO);
+  new_subnet_states->set_operation_type(OperationType::INFO);
 
   // this will allocate new SubnetConfiguration, will need to free it later
-  aliothcontroller::SubnetConfiguration *SubnetConiguration_builder =
+  SubnetConfiguration *SubnetConiguration_builder =
           new_subnet_states->mutable_configuration();
   SubnetConiguration_builder->set_version(1);
   SubnetConiguration_builder->set_project_id("dbf72700-5106-4a7a-918f-111111111111");
@@ -432,7 +423,7 @@ int main(int argc, char *argv[])
   SubnetConiguration_builder->set_cidr("10.0.0.1/16");
   SubnetConiguration_builder->set_tunnel_id(22222);
   // this will allocate new SubnetConfiguration_TransitSwitch, may need to free it later
-  aliothcontroller::SubnetConfiguration_TransitSwitch *TransitSwitch_builder =
+  SubnetConfiguration_TransitSwitch *TransitSwitch_builder =
           SubnetConiguration_builder->add_transit_switches();
   TransitSwitch_builder->set_vpc_id("99d9d709-8478-4b46-9f3f-2206b1023fd3");
   TransitSwitch_builder->set_subnet_id("superSubnet");
@@ -442,11 +433,10 @@ int main(int argc, char *argv[])
   // fill in the vpc state structs
   new_vpc_states = GoalState_builder.add_vpc_states();
 
-  new_vpc_states->set_operation_type(aliothcontroller::OperationType::CREATE_UPDATE_SWITCH);
+  new_vpc_states->set_operation_type(OperationType::CREATE_UPDATE_SWITCH);
 
   // this will allocate new VpcConfiguration, will need to free it later
-  aliothcontroller::VpcConfiguration *VpcConiguration_builder =
-          new_vpc_states->mutable_configuration();
+  VpcConfiguration *VpcConiguration_builder = new_vpc_states->mutable_configuration();
   VpcConiguration_builder->set_version(1);
   VpcConiguration_builder->set_project_id("dbf72700-5106-4a7a-918f-a016853911f8");
   // VpcConiguration_builder->set_id("99d9d709-8478-4b46-9f3f-2206b1023fd3");
@@ -455,7 +445,7 @@ int main(int argc, char *argv[])
   VpcConiguration_builder->set_cidr("192.168.0.0/24");
   VpcConiguration_builder->set_tunnel_id(11111);
   // this will allocate new VpcConfiguration_TransitRouter, may need to free it later
-  aliothcontroller::VpcConfiguration_TransitRouter *TransitRouter_builder =
+  VpcConfiguration_TransitRouter *TransitRouter_builder =
           VpcConiguration_builder->add_transit_routers();
   TransitRouter_builder->set_vpc_id("12345");
   TransitRouter_builder->set_ip_address("10.0.0.2");
@@ -475,7 +465,7 @@ int main(int argc, char *argv[])
   fprintf(stdout, "(USING THIS) Serialized protobuf binary array: %s\n",
           binary_message.c_str());
 
-  aliothcontroller::GoalState parsed_struct;
+  GoalState parsed_struct;
 
   cppkafka::Buffer kafka_buffer(buffer, size);
 
