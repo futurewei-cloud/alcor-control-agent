@@ -1,3 +1,5 @@
+set(EXECUTABLE_OUTPUT_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../build/bin)
+
 set(SOURCES
     ./comm/messageproducer.cpp
     ./comm/messageconsumer.cpp
@@ -31,19 +33,19 @@ message(STATUS "Using gRPC ${gRPC_VERSION}")
 set(_GRPC_GRPCPP_UNSECURE gRPC::grpc++_unsecure)
 set(_GRPC_CPP_PLUGIN_EXECUTABLE $<TARGET_FILE:gRPC::grpc_cpp_plugin>)
 
-add_library(networkControlAgentLib STATIC ${SOURCES})
+add_library(AlcorControlAgentLib STATIC ${SOURCES})
 
-add_executable(networkControlAgent netwagent.cpp)
-target_link_libraries(networkControlAgent cppkafka)
-target_link_libraries(networkControlAgent rdkafka)
-target_link_libraries(networkControlAgent networkControlAgentLib)
-target_link_libraries(networkControlAgent proto)
-target_link_libraries(networkControlAgent grpc)
-target_link_libraries(networkControlAgent transitRPCLib)
-target_link_libraries(networkControlAgent ${PROTOBUF_LIBRARY})
-target_link_libraries(networkControlAgent ${_GRPC_GRPCPP_UNSECURE})
+add_executable(AlcorControlAgent aca_main.cpp)
+target_link_libraries(AlcorControlAgent cppkafka)
+target_link_libraries(AlcorControlAgent rdkafka)
+target_link_libraries(AlcorControlAgent AlcorControlAgentLib)
+target_link_libraries(AlcorControlAgent proto)
+target_link_libraries(AlcorControlAgent grpc)
+target_link_libraries(AlcorControlAgent transitRPCLib)
+target_link_libraries(AlcorControlAgent ${PROTOBUF_LIBRARY})
+target_link_libraries(AlcorControlAgent ${_GRPC_GRPCPP_UNSECURE})
 
-add_dependencies(networkControlAgentLib proto grpc transitRPCLib)
+add_dependencies(AlcorControlAgentLib proto grpc transitRPCLib)
 add_subdirectory(proto3)
 add_subdirectory(grpc)
 add_subdirectory(transit_rpc)

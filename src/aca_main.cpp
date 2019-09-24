@@ -163,7 +163,7 @@ int main(int argc, char *argv[])
     g_rpc_server = LOCALHOST;
   }
   if (g_rpc_protocol == EMPTY_STRING) {
-    g_rpc_protocol = UDP;
+    g_rpc_protocol = UDP_PROTOCOL;
   }
 
   async_grpc_server = new Aca_Async_GRPC_Server();

@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 2.6)
 
+set(EXECUTABLE_OUTPUT_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../build/tests)
+
 FIND_LIBRARY(RDKAFKA rdkafka /usr/lib/x86_64-linux-gnu NO_DEFAULT_PATH)
 FIND_LIBRARY(CPPKAFKA cppkafka /usr/local/lib NO_DEFAULT_PATH)
 FIND_LIBRARY(MESSAGEMANAGER messagemanager ${CMAKE_CURRENT_SOURCE_DIR}/../include NO_DEFAULT_PATH)
@@ -33,7 +35,7 @@ add_executable(aca_tests gtest/aca_tests.cpp)
 
 # Link test executable against gtest & gtest_main
 target_link_libraries(aca_tests gtest gtest_main)
-target_link_libraries(aca_tests networkControlAgentLib)
+target_link_libraries(aca_tests AlcorControlAgentLib)
 target_link_libraries(aca_tests proto)
 target_link_libraries(aca_tests transitRPCLib)
 target_link_libraries(aca_tests ${PROTOBUF_LIBRARY})
@@ -46,7 +48,7 @@ add_test(
 # old function test to be removed once it has ported to gtest
 add_executable(aca_func_tests func_tests/aca_func_tests.cpp)
 
-target_link_libraries(aca_func_tests networkControlAgentLib)
+target_link_libraries(aca_func_tests AlcorControlAgentLib)
 target_link_libraries(aca_func_tests proto)
 target_link_libraries(aca_func_tests transitRPCLib)
 target_link_libraries(aca_func_tests ${PROTOBUF_LIBRARY})

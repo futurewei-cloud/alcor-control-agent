@@ -18,22 +18,22 @@ class Aca_Comm_Manager {
   static Aca_Comm_Manager &get_instance();
 
   int deserialize(const cppkafka::Buffer *kafka_buffer,
-                  aliothcontroller::GoalState &parsed_struct);
+                  alcorcontroller::GoalState &parsed_struct);
 
-  int update_port_state(const aliothcontroller::GoalState &parsed_struct,
+  int update_port_state(const alcorcontroller::GoalState &parsed_struct,
                         int transitd_command, void *transitd_input, int exec_command_rc);
 
-  int update_subnet_state(const aliothcontroller::GoalState &parsed_struct,
+  int update_subnet_state(const alcorcontroller::GoalState &parsed_struct,
                           int transitd_command, void *transitd_input, int exec_command_rc);
 
-  int update_vpc_state(const aliothcontroller::GoalState &parsed_struct,
+  int update_vpc_state(const alcorcontroller::GoalState &parsed_struct,
                        int transitd_command, void *transitd_input, int exec_command_rc);
 
-  int update_goal_state(const aliothcontroller::GoalState &parsed_struct);
+  int update_goal_state(const alcorcontroller::GoalState &parsed_struct);
 
   int execute_command(int command, void *input_struct);
 
-  void print_goal_state(aliothcontroller::GoalState parsed_struct);
+  void print_goal_state(alcorcontroller::GoalState parsed_struct);
 
   // compiler will flag the error when below is called.
   Aca_Comm_Manager(Aca_Comm_Manager const &) = delete;
