@@ -46,11 +46,11 @@ add_test(
 )
 
 # old function test to be removed once it has ported to gtest
-add_executable(aca_func_tests func_tests/aca_func_tests.cpp)
+add_executable(old_aca_tests func_tests/aca_func_tests.cpp)
 
-target_link_libraries(aca_func_tests AlcorControlAgentLib)
-target_link_libraries(aca_func_tests proto)
-target_link_libraries(aca_func_tests transitRPCLib)
-target_link_libraries(aca_func_tests ${PROTOBUF_LIBRARY})
-target_link_libraries(aca_func_tests grpc)
-target_link_libraries(aca_func_tests ${_GRPC_GRPCPP_UNSECURE})
+target_link_libraries(old_aca_tests AlcorControlAgentLib)
+target_link_libraries(old_aca_tests proto)
+target_link_libraries(old_aca_tests transitRPCLib)
+target_link_libraries(old_aca_tests ${PROTOBUF_LIBRARY})
+target_link_libraries(old_aca_tests grpc)
+target_link_libraries(old_aca_tests ${_GRPC_GRPCPP_UNSECURE})

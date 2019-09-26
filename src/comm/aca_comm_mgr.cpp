@@ -36,6 +36,8 @@ static inline const char *aca_get_operation_name(OperationType operation)
     return "UPDATE";
   case OperationType::GET:
     return "GET";
+  case OperationType::DELETE:
+    return "DELETE";
   case OperationType::INFO:
     return "INFO";
   case OperationType::FINALIZE:
@@ -44,6 +46,8 @@ static inline const char *aca_get_operation_name(OperationType operation)
     return "CREATE_UPDATE_SWITCH";
   case OperationType::CREATE_UPDATE_ROUTER:
     return "CREATE_UPDATE_ROUTER";
+  case OperationType::CREATE_UPDATE_GATEWAY:
+    return "CREATE_UPDATE_GATEWAY";
   default:
     return "ERROR: unknown operation type!";
   }
@@ -119,9 +123,375 @@ int Aca_Comm_Manager::deserialize(const cppkafka::Buffer *kafka_buffer, GoalStat
   }
 }
 
-int Aca_Comm_Manager::update_port_state(const GoalState &parsed_struct, int transitd_command,
-                                        void *transitd_input, int exec_command_rc)
+int Aca_Comm_Manager::update_vpc_state(const GoalState &parsed_struct)
 {
+  int transitd_command = 0;
+  void *transitd_input = NULL;
+  int exec_command_rc = -EXIT_FAILURE;
+  int rc = -EXIT_FAILURE;
+
+  rpc_trn_vpc_t vpc_in;
+  rpc_trn_endpoint_t substrate_in;
+  struct sockaddr_in sa;
+
+  if (parsed_struct.vpc_states_size() == 0) {
+    rc = EXIT_SUCCESS;
+  }
+
+  for (int i = 0; i < parsed_struct.vpc_states_size(); i++) {
+    ACA_LOG_DEBUG("=====>parsing VPC state #%d\n", i);
+
+    VpcConfiguration current_VpcConfiguration =
+            parsed_struct.vpc_states(i).configuration();
+
+    switch (parsed_struct.vpc_states(i).operation_type()) {
+    case OperationType::CREATE_UPDATE_SWITCH:
+      transitd_command = UPDATE_VPC;
+      transitd_input = &vpc_in;
+
+      try {
+        vpc_in.interface = PHYSICAL_IF;
+        vpc_in.tunid = current_VpcConfiguration.tunnel_id();
+        vpc_in.routers_ips.routers_ips_len =
+                current_VpcConfiguration.transit_routers_size();
+        uint32_t routers[RPC_TRN_MAX_VPC_ROUTERS];
+        vpc_in.routers_ips.routers_ips_val = routers;
+
+        for (int j = 0; j < current_VpcConfiguration.transit_routers_size(); j++) {
+          // inet_pton returns 1 for success 0 for failure
+          if (inet_pton(AF_INET,
+                        current_VpcConfiguration.transit_routers(j).ip_address().c_str(),
+                        &(sa.sin_addr)) != 1) {
+            throw std::invalid_argument("Transit switch ip address is not in the expect format");
+          }
+          vpc_in.routers_ips.routers_ips_val[j] = sa.sin_addr.s_addr;
+
+          ACA_LOG_DEBUG("VPC operation: CREATE_UPDATE_SWITCH, update vpc, IP: %s, tunnel_id: %ld\n",
+                        current_VpcConfiguration.transit_routers(j).ip_address().c_str(),
+                        current_VpcConfiguration.tunnel_id());
+
+          ACA_LOG_DEBUG("[Before execute_command] routers_ips_val[%d]: routers_ips_val: %u .\n",
+                        j, vpc_in.routers_ips.routers_ips_val[j]);
+        }
+        rc = EXIT_SUCCESS;
+
+        ACA_LOG_DEBUG("VPC Operation: %s: interface: %s, transit_routers_size: %d, tunid:%ld\n",
+                      aca_get_operation_name(parsed_struct.subnet_states(i).operation_type()),
+                      vpc_in.interface,
+                      current_VpcConfiguration.transit_routers_size(), vpc_in.tunid);
+      } catch (const std::invalid_argument &e) {
+        ACA_LOG_ERROR("Invalid argument exception caught while parsing CREATE_UPDATE_SWITCH VPC configuration, message: %s.\n",
+                      e.what());
+        rc = -EXIT_FAILURE;
+        // TODO: Notify the Network Controller the goal state configuration has invalid data
+      } catch (...) {
+        ACA_LOG_ERROR("Unknown exception caught while parsing CREATE_UPDATE_SWITCH VPC configuration, rethrowing.\n");
+        throw; // rethrowing
+      }
+
+      break;
+    default:
+      transitd_command = 0;
+      ACA_LOG_DEBUG("Invalid VPC state operation type %d\n",
+                    parsed_struct.vpc_states(i).operation_type());
+      break;
+    }
+
+    if ((transitd_command != 0) && (rc == EXIT_SUCCESS)) {
+      exec_command_rc = this->execute_command(transitd_command, transitd_input);
+      if (exec_command_rc == EXIT_SUCCESS) {
+        ACA_LOG_INFO("Successfully executed the network controller command\n");
+      } else {
+        ACA_LOG_ERROR("[update_goal_state] Unable to execute the network controller command: %d\n",
+                      exec_command_rc);
+        // TODO: Notify the Network Controller if the command is not successful.
+      }
+    }
+
+    if (parsed_struct.vpc_states(i).operation_type() == OperationType::CREATE_UPDATE_SWITCH) {
+      // update substrate
+      transitd_command = UPDATE_EP;
+
+      try {
+        for (int j = 0; j < current_VpcConfiguration.transit_routers_size(); j++) {
+          substrate_in.interface = PHYSICAL_IF;
+
+          ACA_LOG_DEBUG(
+                  "VPC operation: CREATE_UPDATE_SWITCH, update substrate, IP: %s, mac: %s\n",
+                  current_VpcConfiguration.transit_routers(j).ip_address().c_str(),
+                  current_VpcConfiguration.transit_routers(j).mac_address().c_str());
+
+          // inet_pton returns 1 for success 0 for failure
+          if (inet_pton(AF_INET,
+                        current_VpcConfiguration.transit_routers(j).ip_address().c_str(),
+                        &(sa.sin_addr)) != 1) {
+            throw std::invalid_argument("Transit router ip address is not in the expect format");
+          }
+          substrate_in.ip = sa.sin_addr.s_addr;
+          substrate_in.eptype = TRAN_SUBSTRT_EP;
+          uint32_t remote_ips[RPC_TRN_MAX_REMOTE_IPS];
+          substrate_in.remote_ips.remote_ips_val = remote_ips;
+          substrate_in.remote_ips.remote_ips_len = 0;
+          // the below will throw invalid_argument exceptions when it cannot convert the mac string
+          aca_convert_to_mac_array(
+                  current_VpcConfiguration.transit_routers(j).mac_address().c_str(),
+                  substrate_in.mac);
+          substrate_in.hosted_interface = EMPTY_STRING;
+          substrate_in.veth = EMPTY_STRING;
+          substrate_in.tunid = TRAN_SUBSTRT_VNI;
+
+          exec_command_rc = this->execute_command(transitd_command, &substrate_in);
+          if (exec_command_rc == EXIT_SUCCESS) {
+            ACA_LOG_INFO("Successfully updated substrate in transit daemon\n");
+          } else {
+            ACA_LOG_ERROR("Unable to update substrate in transit daemon: %d\n", exec_command_rc);
+            // TODO: Notify the Network Controller if the command is not successful.
+          }
+
+        } // for (int j = 0; j < current_VpcConfiguration.transit_routers_size(); j++)
+      } catch (const std::invalid_argument &e) {
+        ACA_LOG_ERROR("Invalid argument exception caught while parsing substrate VPC configuration, message: %s.\n",
+                      e.what());
+        rc = -EXIT_FAILURE;
+        // TODO: Notify the Network Controller the goal state configuration has invalid data
+      } catch (...) {
+        ACA_LOG_ERROR("Unknown exception caught while parsing substrate VPC configuration, rethrowing.\n");
+        throw; // rethrowing
+      }
+    }
+  } // for (int i = 0; i < parsed_struct.vpc_states_size(); i++)
+}
+
+int Aca_Comm_Manager::update_subnet_state(const GoalState &parsed_struct)
+{
+  int transitd_command = 0;
+  void *transitd_input = NULL;
+  int exec_command_rc = -EXIT_FAILURE;
+  int rc = -EXIT_FAILURE;
+  rpc_trn_network_t network_in;
+  rpc_trn_endpoint_t endpoint_in;
+  rpc_trn_endpoint_t substrate_in;
+
+  string my_cidr;
+  string my_ip_address;
+  string my_prefixlen;
+  size_t slash_pos = 0;
+  struct sockaddr_in sa;
+  char hosted_interface[20];
+
+  if (parsed_struct.subnet_states_size() == 0) {
+    rc = EXIT_SUCCESS;
+  }
+
+  for (int i = 0; i < parsed_struct.subnet_states_size(); i++) {
+    ACA_LOG_DEBUG("=====>parsing subnet state #%d\n", i);
+
+    SubnetConfiguration current_SubnetConfiguration =
+            parsed_struct.subnet_states(i).configuration();
+
+    switch (parsed_struct.subnet_states(i).operation_type()) {
+    case OperationType::INFO:
+      // information only, ignoring this.
+      transitd_command = 0;
+      break;
+    case OperationType::CREATE_UPDATE_ROUTER:
+      // this is to update the router host, need to update substrate later.
+      transitd_command = UPDATE_NET;
+      transitd_input = &network_in;
+
+      try {
+        network_in.interface = PHYSICAL_IF;
+        network_in.tunid = current_SubnetConfiguration.tunnel_id();
+
+        my_cidr = current_SubnetConfiguration.cidr();
+        slash_pos = my_cidr.find('/');
+        if (slash_pos == string::npos) {
+          throw std::invalid_argument("'/' not found in cidr");
+        }
+        // substr can throw out_of_range and bad_alloc exceptions
+        my_ip_address = my_cidr.substr(0, slash_pos);
+
+        // inet_pton returns 1 for success 0 for failure
+        if (inet_pton(AF_INET, my_ip_address.c_str(), &(sa.sin_addr)) != 1) {
+          throw std::invalid_argument("Ip address is not in the expect format");
+        }
+        network_in.netip = sa.sin_addr.s_addr;
+
+        my_prefixlen = my_cidr.substr(slash_pos + 1);
+        // stoi can throw invalid argument exception when it cannot covert
+        network_in.prefixlen = std::stoi(my_prefixlen);
+
+        network_in.switches_ips.switches_ips_len =
+                current_SubnetConfiguration.transit_switches_size();
+        uint32_t switches[RPC_TRN_MAX_NET_SWITCHES];
+        network_in.switches_ips.switches_ips_val = switches;
+
+        for (int j = 0; j < current_SubnetConfiguration.transit_switches_size(); j++) {
+          // inet_pton returns 1 for success 0 for failure
+          if (inet_pton(AF_INET,
+                        current_SubnetConfiguration.transit_switches(j)
+                                .ip_address()
+                                .c_str(),
+                        &(sa.sin_addr)) != 1) {
+            throw std::invalid_argument("Transit switch ip address is not in the expect format");
+          }
+          network_in.switches_ips.switches_ips_val[j] = sa.sin_addr.s_addr;
+        }
+        rc = EXIT_SUCCESS;
+
+        ACA_LOG_DEBUG(
+                "Subnet Operation: %s: interface: %s, cidr: %s, transit switch size: %d, tunid:%ld\n",
+                aca_get_operation_name(parsed_struct.subnet_states(i).operation_type()),
+                network_in.interface, current_SubnetConfiguration.cidr().c_str(),
+                current_SubnetConfiguration.transit_switches_size(), network_in.tunid);
+      } catch (const std::invalid_argument &e) {
+        ACA_LOG_ERROR("Invalid argument exception caught while parsing CREATE_UPDATE_ROUTER subnet configuration, message: %s.\n",
+                      e.what());
+        rc = -EXIT_FAILURE;
+        // TODO: Notify the Network Controller the goal state configuration has invalid data
+      } catch (const std::exception &e) {
+        ACA_LOG_ERROR("Exception caught while parsing CREATE_UPDATE_ROUTER subnet configuration, message: %s.\n",
+                      e.what());
+        rc = -EXIT_FAILURE;
+      } catch (...) {
+        ACA_LOG_ERROR("Unknown exception caught while parsing CREATE_UPDATE_ROUTER subnet configuration, rethrowing.\n");
+        throw; // rethrowing
+      }
+      break;
+
+    case OperationType::CREATE_UPDATE_GATEWAY:
+      // this is to update the phantom gateway, no need to update substrate later.
+      transitd_command = UPDATE_EP;
+      transitd_input = &endpoint_in;
+
+      try {
+        endpoint_in.interface = PHYSICAL_IF;
+
+        // inet_pton returns 1 for success 0 for failure
+        if (inet_pton(AF_INET,
+                      current_SubnetConfiguration.gateway().ip_address().c_str(),
+                      &(sa.sin_addr)) != 1) {
+          throw std::invalid_argument("Ip address is not in the expect format");
+        }
+        endpoint_in.ip = sa.sin_addr.s_addr;
+        endpoint_in.eptype = TRAN_SIMPLE_EP;
+
+        uint32_t remote_ips[RPC_TRN_MAX_REMOTE_IPS];
+        endpoint_in.remote_ips.remote_ips_val = remote_ips;
+        endpoint_in.remote_ips.remote_ips_len = 1;
+
+        // the below will throw invalid_argument exceptions when it cannot convert the mac string
+        aca_convert_to_mac_array(
+                current_SubnetConfiguration.gateway().mac_address().c_str(),
+                endpoint_in.mac);
+
+        endpoint_in.hosted_interface = EMPTY_STRING;
+        endpoint_in.tunid = current_SubnetConfiguration.tunnel_id();
+        rc = EXIT_SUCCESS;
+
+        ACA_LOG_DEBUG(
+                "Subnet Operation: %s: interface: %s, gw_ip: %s, gw_mac: %s, hosted_interface: %s, veth_name:%s, tunid:%ld\n",
+                aca_get_operation_name(parsed_struct.subnet_states(i).operation_type()),
+                endpoint_in.interface,
+                current_SubnetConfiguration.gateway().ip_address().c_str(),
+                current_SubnetConfiguration.gateway().mac_address().c_str(),
+                endpoint_in.hosted_interface, endpoint_in.veth, endpoint_in.tunid);
+      } catch (const std::invalid_argument &e) {
+        ACA_LOG_ERROR("Invalid argument exception caught while parsing CREATE_UPDATE_GATEWAY subnet configuration, message: %s.\n",
+                      e.what());
+        rc = -EXIT_FAILURE;
+        // TODO: Notify the Network Controller the goal state configuration has invalid data
+      } catch (const std::exception &e) {
+        ACA_LOG_ERROR("Exception caught while parsing CREATE_UPDATE_GATEWAY subnet configuration, message: %s.\n",
+                      e.what());
+        rc = -EXIT_FAILURE;
+      } catch (...) {
+        ACA_LOG_ERROR("Unknown exception caught while parsing CREATE_UPDATE_ROUTER subnet configuration, rethrowing.\n");
+        throw; // rethrowing
+      }
+      break;
+
+    default:
+      transitd_command = 0;
+      ACA_LOG_DEBUG("Invalid subnet state operation type %d/n",
+                    parsed_struct.subnet_states(i).operation_type());
+      break;
+    }
+    if ((transitd_command != 0) && (rc == EXIT_SUCCESS)) {
+      exec_command_rc = this->execute_command(transitd_command, transitd_input);
+      if (exec_command_rc == EXIT_SUCCESS) {
+        ACA_LOG_INFO("Successfully executed the network controller command\n");
+      } else {
+        ACA_LOG_ERROR("Unable to execute the network controller command: %d\n", exec_command_rc);
+        rc = exec_command_rc;
+        // TODO: Notify the Network Controller if the command is not successful.
+      }
+    }
+
+    if (parsed_struct.subnet_states(i).operation_type() == OperationType::CREATE_UPDATE_ROUTER) {
+      // update substrate
+      transitd_command = UPDATE_EP;
+
+      try {
+        for (int j = 0; j < current_SubnetConfiguration.transit_switches_size(); j++) {
+          ACA_LOG_DEBUG(
+                  "Subnet operation: CREATE_UPDATE_ROUTER, update substrate, IP: %s, mac: %s\n",
+                  current_SubnetConfiguration.transit_switches(j).ip_address().c_str(),
+                  current_SubnetConfiguration.transit_switches(j).mac_address().c_str());
+
+          substrate_in.interface = PHYSICAL_IF;
+
+          // inet_pton returns 1 for success 0 for failure
+          if (inet_pton(AF_INET,
+                        current_SubnetConfiguration.transit_switches(j)
+                                .ip_address()
+                                .c_str(),
+                        &(sa.sin_addr)) != 1) {
+            throw std::invalid_argument("Transit switch ip address is not in the expect format");
+          }
+          substrate_in.ip = sa.sin_addr.s_addr;
+          substrate_in.eptype = TRAN_SUBSTRT_EP;
+          uint32_t remote_ips[RPC_TRN_MAX_REMOTE_IPS];
+          substrate_in.remote_ips.remote_ips_val = remote_ips;
+          substrate_in.remote_ips.remote_ips_len = 0;
+          // the below will throw invalid_argument exceptions when it cannot convert the mac string
+          aca_convert_to_mac_array(
+                  current_SubnetConfiguration.transit_switches(j).mac_address().c_str(),
+                  substrate_in.mac);
+          substrate_in.hosted_interface = EMPTY_STRING;
+          substrate_in.veth = EMPTY_STRING;
+          substrate_in.tunid = TRAN_SUBSTRT_VNI;
+
+          exec_command_rc = this->execute_command(transitd_command, &substrate_in);
+          if (exec_command_rc == EXIT_SUCCESS) {
+            ACA_LOG_INFO("Successfully updated substrate in transit daemon\n");
+          } else {
+            ACA_LOG_ERROR("Unable to update substrate in transit daemon: %d\n", exec_command_rc);
+            rc = exec_command_rc;
+            // TODO: Notify the Network Controller if the command is not successful.
+          }
+
+        } // for (int j = 0; j < current_SubnetConfiguration.transit_switches_size(); j++)
+      } catch (const std::invalid_argument &e) {
+        ACA_LOG_ERROR("Invalid argument exception caught while parsing substrate subnet configuration, message: %s.\n",
+                      e.what());
+        rc = -EXIT_FAILURE;
+        // TODO: Notify the Network Controller the goal state configuration has invalid data
+      } catch (...) {
+        ACA_LOG_ERROR("Unknown exception caught while parsing substrate subnet configuration, rethrowing.\n");
+        throw; // rethrowing
+      }
+    }
+  } // for (int i = 0; i < parsed_struct.subnet_states_size(); i++)
+
+  return rc;
+}
+
+int Aca_Comm_Manager::update_port_state(const GoalState &parsed_struct)
+{
+  int transitd_command = 0;
+  void *transitd_input = NULL;
+  int exec_command_rc = -EXIT_FAILURE;
   int rc = -EXIT_FAILURE;
 
   rpc_trn_endpoint_t endpoint_in;
@@ -146,6 +516,10 @@ int Aca_Comm_Manager::update_port_state(const GoalState &parsed_struct, int tran
   char veth_name[20];
   char peer_name[20];
   char hosted_interface[20];
+
+  if (parsed_struct.port_states_size() == 0) {
+    rc = EXIT_SUCCESS;
+  }
 
   for (int i = 0; i < parsed_struct.port_states_size(); i++) {
     ACA_LOG_DEBUG("=====>parsing port state #%d\n", i);
@@ -222,7 +596,7 @@ int Aca_Comm_Manager::update_port_state(const GoalState &parsed_struct, int tran
               if (parsed_struct.port_states(i).operation_type() == OperationType::CREATE) {
                 vpc_id = current_SubnetConfiguration.vpc_id();
 
-                my_gw_address = current_SubnetConfiguration.gateway_ip();
+                my_gw_address = current_SubnetConfiguration.gateway().ip_address();
 
                 my_cidr = current_SubnetConfiguration.cidr();
 
@@ -647,316 +1021,31 @@ int Aca_Comm_Manager::update_port_state(const GoalState &parsed_struct, int tran
   return rc;
 }
 
-int Aca_Comm_Manager::update_subnet_state(const GoalState &parsed_struct, int transitd_command,
-                                          void *transitd_input, int exec_command_rc)
-{
-  int rc = -EXIT_FAILURE;
-  rpc_trn_network_t network_in;
-  rpc_trn_endpoint_t substrate_in;
-
-  string my_cidr;
-  string my_ip_address;
-  string my_prefixlen;
-  size_t slash_pos = 0;
-  struct sockaddr_in sa;
-  char hosted_interface[20];
-
-  for (int i = 0; i < parsed_struct.subnet_states_size(); i++) {
-    ACA_LOG_DEBUG("=====>parsing subnet state #%d\n", i);
-
-    SubnetConfiguration current_SubnetConfiguration =
-            parsed_struct.subnet_states(i).configuration();
-
-    switch (parsed_struct.subnet_states(i).operation_type()) {
-    case OperationType::INFO:
-      // information only, ignoring this.
-      transitd_command = 0;
-      break;
-    case OperationType::CREATE_UPDATE_ROUTER:
-      // this is to update the router host, need to update substrate later.
-      transitd_command = UPDATE_NET;
-      transitd_input = &network_in;
-
-      try {
-        network_in.interface = PHYSICAL_IF;
-        network_in.tunid = current_SubnetConfiguration.tunnel_id();
-
-        my_cidr = current_SubnetConfiguration.cidr();
-        slash_pos = my_cidr.find('/');
-        if (slash_pos == string::npos) {
-          throw std::invalid_argument("'/' not found in cidr");
-        }
-        // substr can throw out_of_range and bad_alloc exceptions
-        my_ip_address = my_cidr.substr(0, slash_pos);
-
-        // inet_pton returns 1 for success 0 for failure
-        if (inet_pton(AF_INET, my_ip_address.c_str(), &(sa.sin_addr)) != 1) {
-          throw std::invalid_argument("Ip address is not in the expect format");
-        }
-        network_in.netip = sa.sin_addr.s_addr;
-
-        my_prefixlen = my_cidr.substr(slash_pos + 1);
-        // stoi can throw invalid argument exception when it cannot covert
-        network_in.prefixlen = std::stoi(my_prefixlen);
-
-        network_in.switches_ips.switches_ips_len =
-                current_SubnetConfiguration.transit_switches_size();
-        uint32_t switches[RPC_TRN_MAX_NET_SWITCHES];
-        network_in.switches_ips.switches_ips_val = switches;
-
-        for (int j = 0; j < current_SubnetConfiguration.transit_switches_size(); j++) {
-          // inet_pton returns 1 for success 0 for failure
-          if (inet_pton(AF_INET,
-                        current_SubnetConfiguration.transit_switches(j)
-                                .ip_address()
-                                .c_str(),
-                        &(sa.sin_addr)) != 1) {
-            throw std::invalid_argument("Transit switch ip address is not in the expect format");
-          }
-          network_in.switches_ips.switches_ips_val[j] = sa.sin_addr.s_addr;
-        }
-
-        rc = EXIT_SUCCESS;
-      } catch (const std::invalid_argument &e) {
-        ACA_LOG_ERROR("Invalid argument exception caught while parsing CREATE_UPDATE_ROUTER subnet configuration, message: %s.\n",
-                      e.what());
-        rc = -EXIT_FAILURE;
-        // TODO: Notify the Network Controller the goal state configuration has invalid data
-      } catch (const std::exception &e) {
-        ACA_LOG_ERROR("Exception caught while parsing CREATE_UPDATE_ROUTER subnet configuration, message: %s.\n",
-                      e.what());
-        rc = -EXIT_FAILURE;
-      } catch (...) {
-        ACA_LOG_ERROR("Unknown exception caught while parsing CREATE_UPDATE_ROUTER subnet configuration, rethrowing.\n");
-        throw; // rethrowing
-      }
-
-      break;
-
-    default:
-      transitd_command = 0;
-      ACA_LOG_DEBUG("Invalid subnet state operation type %d/n",
-                    parsed_struct.subnet_states(i).operation_type());
-      break;
-    }
-    if ((transitd_command != 0) && (rc == EXIT_SUCCESS)) {
-      exec_command_rc = this->execute_command(transitd_command, transitd_input);
-      if (exec_command_rc == EXIT_SUCCESS) {
-        ACA_LOG_INFO("Successfully executed the network controller command\n");
-      } else {
-        ACA_LOG_ERROR("Unable to execute the network controller command: %d\n", exec_command_rc);
-        // TODO: Notify the Network Controller if the command is not successful.
-      }
-    }
-
-    if (parsed_struct.subnet_states(i).operation_type() == OperationType::CREATE_UPDATE_ROUTER) {
-      // update substrate
-      transitd_command = UPDATE_EP;
-
-      try {
-        for (int j = 0; j < current_SubnetConfiguration.transit_switches_size(); j++) {
-          ACA_LOG_DEBUG(
-                  "Subnet operation: CREATE_UPDATE_ROUTER, update substrate, IP: %s, mac: %s\n",
-                  current_SubnetConfiguration.transit_switches(j).ip_address().c_str(),
-                  current_SubnetConfiguration.transit_switches(j).mac_address().c_str());
-
-          substrate_in.interface = PHYSICAL_IF;
-
-          // inet_pton returns 1 for success 0 for failure
-          if (inet_pton(AF_INET,
-                        current_SubnetConfiguration.transit_switches(j)
-                                .ip_address()
-                                .c_str(),
-                        &(sa.sin_addr)) != 1) {
-            throw std::invalid_argument("Transit switch ip address is not in the expect format");
-          }
-          substrate_in.ip = sa.sin_addr.s_addr;
-          substrate_in.eptype = TRAN_SUBSTRT_EP;
-          uint32_t remote_ips[RPC_TRN_MAX_REMOTE_IPS];
-          substrate_in.remote_ips.remote_ips_val = remote_ips;
-          substrate_in.remote_ips.remote_ips_len = 0;
-          // the below will throw invalid_argument exceptions when it cannot convert the mac string
-          aca_convert_to_mac_array(
-                  current_SubnetConfiguration.transit_switches(j).mac_address().c_str(),
-                  substrate_in.mac);
-          substrate_in.hosted_interface = EMPTY_STRING;
-          substrate_in.veth = EMPTY_STRING;
-          substrate_in.tunid = TRAN_SUBSTRT_VNI;
-
-          exec_command_rc = this->execute_command(transitd_command, &substrate_in);
-          if (exec_command_rc == EXIT_SUCCESS) {
-            ACA_LOG_INFO("Successfully updated substrate in transit daemon\n");
-          } else {
-            ACA_LOG_ERROR("Unable to update substrate in transit daemon: %d\n", exec_command_rc);
-            // TODO: Notify the Network Controller if the command is not successful.
-          }
-
-        } // for (int j = 0; j < current_SubnetConfiguration.transit_switches_size(); j++)
-      } catch (const std::invalid_argument &e) {
-        ACA_LOG_ERROR("Invalid argument exception caught while parsing substrate subnet configuration, message: %s.\n",
-                      e.what());
-        rc = -EXIT_FAILURE;
-        // TODO: Notify the Network Controller the goal state configuration has invalid data
-      } catch (...) {
-        ACA_LOG_ERROR("Unknown exception caught while parsing substrate subnet configuration, rethrowing.\n");
-        throw; // rethrowing
-      }
-    }
-
-  } // for (int i = 0; i < parsed_struct.subnet_states_size(); i++)
-}
-
-int Aca_Comm_Manager::update_vpc_state(const GoalState &parsed_struct, int transitd_command,
-                                       void *transitd_input, int exec_command_rc)
-{
-  int rc = -EXIT_FAILURE;
-
-  rpc_trn_vpc_t vpc_in;
-  rpc_trn_endpoint_t substrate_in;
-  struct sockaddr_in sa;
-
-  for (int i = 0; i < parsed_struct.vpc_states_size(); i++) {
-    ACA_LOG_DEBUG("=====>parsing VPC state #%d\n", i);
-
-    VpcConfiguration current_VpcConfiguration =
-            parsed_struct.vpc_states(i).configuration();
-
-    switch (parsed_struct.vpc_states(i).operation_type()) {
-    case OperationType::CREATE_UPDATE_SWITCH:
-      transitd_command = UPDATE_VPC;
-      transitd_input = &vpc_in;
-
-      try {
-        vpc_in.interface = PHYSICAL_IF;
-        vpc_in.tunid = current_VpcConfiguration.tunnel_id();
-        vpc_in.routers_ips.routers_ips_len =
-                current_VpcConfiguration.transit_routers_size();
-        uint32_t routers[RPC_TRN_MAX_VPC_ROUTERS];
-        vpc_in.routers_ips.routers_ips_val = routers;
-
-        for (int j = 0; j < current_VpcConfiguration.transit_routers_size(); j++) {
-          // inet_pton returns 1 for success 0 for failure
-          if (inet_pton(AF_INET,
-                        current_VpcConfiguration.transit_routers(j).ip_address().c_str(),
-                        &(sa.sin_addr)) != 1) {
-            throw std::invalid_argument("Transit switch ip address is not in the expect format");
-          }
-          vpc_in.routers_ips.routers_ips_val[j] = sa.sin_addr.s_addr;
-
-          ACA_LOG_DEBUG("VPC operation: CREATE_UPDATE_SWITCH, update vpc, IP: %s, tunnel_id: %ld\n",
-                        current_VpcConfiguration.transit_routers(j).ip_address().c_str(),
-                        current_VpcConfiguration.tunnel_id());
-
-          ACA_LOG_DEBUG("[Before execute_command] routers_ips_val[%d]: routers_ips_val: %u .\n",
-                        j, vpc_in.routers_ips.routers_ips_val[j]);
-        }
-        rc = EXIT_SUCCESS;
-      } catch (const std::invalid_argument &e) {
-        ACA_LOG_ERROR("Invalid argument exception caught while parsing CREATE_UPDATE_SWITCH VPC configuration, message: %s.\n",
-                      e.what());
-        rc = -EXIT_FAILURE;
-        // TODO: Notify the Network Controller the goal state configuration has invalid data
-      } catch (...) {
-        ACA_LOG_ERROR("Unknown exception caught while parsing CREATE_UPDATE_SWITCH VPC configuration, rethrowing.\n");
-        throw; // rethrowing
-      }
-
-      break;
-    default:
-      transitd_command = 0;
-      ACA_LOG_DEBUG("Invalid VPC state operation type %d\n",
-                    parsed_struct.vpc_states(i).operation_type());
-      break;
-    }
-
-    if ((transitd_command != 0) && (rc == EXIT_SUCCESS)) {
-      exec_command_rc = this->execute_command(transitd_command, transitd_input);
-      if (exec_command_rc == EXIT_SUCCESS) {
-        ACA_LOG_INFO("Successfully executed the network controller command\n");
-      } else {
-        ACA_LOG_ERROR("[update_goal_state] Unable to execute the network controller command: %d\n",
-                      exec_command_rc);
-        // TODO: Notify the Network Controller if the command is not successful.
-      }
-    }
-
-    if (parsed_struct.vpc_states(i).operation_type() == OperationType::CREATE_UPDATE_SWITCH) {
-      // update substrate
-      transitd_command = UPDATE_EP;
-
-      try {
-        for (int j = 0; j < current_VpcConfiguration.transit_routers_size(); j++) {
-          substrate_in.interface = PHYSICAL_IF;
-
-          ACA_LOG_DEBUG(
-                  "VPC operation: CREATE_UPDATE_SWITCH, update substrate, IP: %s, mac: %s\n",
-                  current_VpcConfiguration.transit_routers(j).ip_address().c_str(),
-                  current_VpcConfiguration.transit_routers(j).mac_address().c_str());
-
-          // inet_pton returns 1 for success 0 for failure
-          if (inet_pton(AF_INET,
-                        current_VpcConfiguration.transit_routers(j).ip_address().c_str(),
-                        &(sa.sin_addr)) != 1) {
-            throw std::invalid_argument("Transit router ip address is not in the expect format");
-          }
-          substrate_in.ip = sa.sin_addr.s_addr;
-          substrate_in.eptype = TRAN_SUBSTRT_EP;
-          uint32_t remote_ips[RPC_TRN_MAX_REMOTE_IPS];
-          substrate_in.remote_ips.remote_ips_val = remote_ips;
-          substrate_in.remote_ips.remote_ips_len = 0;
-          // the below will throw invalid_argument exceptions when it cannot convert the mac string
-          aca_convert_to_mac_array(
-                  current_VpcConfiguration.transit_routers(j).mac_address().c_str(),
-                  substrate_in.mac);
-          substrate_in.hosted_interface = EMPTY_STRING;
-          substrate_in.veth = EMPTY_STRING;
-          substrate_in.tunid = TRAN_SUBSTRT_VNI;
-
-          exec_command_rc = this->execute_command(transitd_command, &substrate_in);
-          if (exec_command_rc == EXIT_SUCCESS) {
-            ACA_LOG_INFO("Successfully updated substrate in transit daemon\n");
-          } else {
-            ACA_LOG_ERROR("Unable to update substrate in transit daemon: %d\n", exec_command_rc);
-            // TODO: Notify the Network Controller if the command is not successful.
-          }
-
-        } // for (int j = 0; j < current_VpcConfiguration.transit_routers_size(); j++)
-      } catch (const std::invalid_argument &e) {
-        ACA_LOG_ERROR("Invalid argument exception caught while parsing substrate VPC configuration, message: %s.\n",
-                      e.what());
-        rc = -EXIT_FAILURE;
-        // TODO: Notify the Network Controller the goal state configuration has invalid data
-      } catch (...) {
-        ACA_LOG_ERROR("Unknown exception caught while parsing substrate VPC configuration, rethrowing.\n");
-        throw; // rethrowing
-      }
-    }
-  } // for (int i = 0; i < parsed_struct.vpc_states_size(); i++)
-}
-
 // Calls execute_command
 int Aca_Comm_Manager::update_goal_state(const GoalState &parsed_struct)
 {
-  ACA_LOG_DEBUG("Starting to update goal state\n");
-
+  int exec_command_rc = -EXIT_FAILURE;
+  int rc = EXIT_SUCCESS;
   auto start = chrono::steady_clock::now();
 
-  int rc = -EXIT_FAILURE;
-  int transitd_command = 0;
-  void *transitd_input = NULL;
-  int exec_command_rc = -EXIT_FAILURE;
+  ACA_LOG_DEBUG("Starting to update goal state\n");
 
-  rc = update_port_state(parsed_struct, transitd_command, transitd_input, exec_command_rc);
-  if (rc == -EXIT_FAILURE) {
-    ACA_LOG_ERROR("Failed to update port state. Failed with error code %d\n", rc);
+  exec_command_rc = update_vpc_state(parsed_struct);
+  if (exec_command_rc != EXIT_SUCCESS) {
+    ACA_LOG_ERROR("Failed to update vpc state. Failed with error code %d\n", exec_command_rc);
+    rc = exec_command_rc;
   }
-  rc = update_subnet_state(parsed_struct, transitd_command, transitd_input, exec_command_rc);
-  if (rc == -EXIT_FAILURE) {
-    ACA_LOG_ERROR("Failed to update subnet state. Failed with error code %d\n", rc);
+
+  exec_command_rc = update_subnet_state(parsed_struct);
+  if (exec_command_rc != EXIT_SUCCESS) {
+    ACA_LOG_ERROR("Failed to update subnet state. Failed with error code %d\n", exec_command_rc);
+    rc = exec_command_rc;
   }
-  rc = update_vpc_state(parsed_struct, transitd_command, transitd_input, exec_command_rc);
-  if (rc == -EXIT_FAILURE) {
-    ACA_LOG_ERROR("Failed to update vpc state. Failed with error code %d\n", rc);
+
+  exec_command_rc = update_port_state(parsed_struct);
+  if (exec_command_rc != EXIT_SUCCESS) {
+    ACA_LOG_ERROR("Failed to update port state. Failed with error code %d\n", exec_command_rc);
+    rc = exec_command_rc;
   }
 
   auto end = chrono::steady_clock::now();
@@ -1126,11 +1215,11 @@ int Aca_Comm_Manager::execute_command(int command, void *input_struct)
 
   // TODO: We may change it to have a static client for health checking on
   // transit daemon in the future.
-  client = clnt_create(g_rpc_server.c_str(), RPC_TRANSIT_REMOTE_PROTOCOL,
-                       RPC_TRANSIT_ALFAZERO, g_rpc_protocol.c_str());
+  client = clnt_create((char *)g_rpc_server.c_str(), RPC_TRANSIT_REMOTE_PROTOCOL,
+                       RPC_TRANSIT_ALFAZERO, (char *)g_rpc_protocol.c_str());
 
   if (client == NULL) {
-    clnt_pcreateerror(g_rpc_server.c_str());
+    clnt_pcreateerror((char *)g_rpc_server.c_str());
     ACA_LOG_EMERG("Not able to create the RPC connection to Transit daemon.\n");
     rc = EXIT_FAILURE;
   } else {
