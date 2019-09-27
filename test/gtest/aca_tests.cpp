@@ -25,6 +25,7 @@ static char DEFAULT_MTU[] = "9000";
 // Global variables
 string g_rpc_server = EMPTY_STRING;
 string g_rpc_protocol = EMPTY_STRING;
+bool g_transitd_loaded = false;
 long g_total_rpc_call_time = 0;
 long g_total_rpc_client_time = 0;
 long g_total_update_GS_time = 0;
@@ -395,24 +396,109 @@ TEST(net_config_test_cases, rename_veth_device_valid)
   EXPECT_EQ(rc, EXIT_SUCCESS);
 }
 
-TEST(net_config_test_cases, create_endpoint_integrated)
+TEST(net_config_test_cases, subnet_CREATE_UPDATE_ROUTER)
+{
+  string vpc_id = "99d9d709-8478-4b46-9f3f-2206b1023fd3";
+  string gateway_ip = "10.0.0.1";
+  string gateway_mac = "fa:16:3e:d7:f2:00";
+  int rc;
+
+  GoalState GoalState_builder;
+  SubnetState *new_subnet_states = GoalState_builder.add_subnet_states();
+
+  // fill in the subnet state structs
+  new_subnet_states->set_operation_type(OperationType::CREATE_UPDATE_ROUTER);
+
+  // this will allocate new SubnetConfiguration, will need to free it later
+  SubnetConfiguration *SubnetConiguration_builder =
+          new_subnet_states->mutable_configuration();
+  SubnetConiguration_builder->set_version(1);
+  SubnetConiguration_builder->set_project_id("dbf72700-5106-4a7a-918f-111111111111");
+  SubnetConiguration_builder->set_vpc_id(vpc_id);
+  SubnetConiguration_builder->set_id("superSubnetID");
+  SubnetConiguration_builder->set_name("SuperSubnet");
+  SubnetConiguration_builder->set_cidr("10.0.0.0/16");
+  SubnetConiguration_builder->set_tunnel_id(22222);
+  SubnetConfiguration_Gateway *SubnetConiguration_Gateway_builder =
+          SubnetConiguration_builder->mutable_gateway();
+  SubnetConiguration_Gateway_builder->set_ip_address(gateway_ip);
+  SubnetConiguration_Gateway_builder->set_mac_address(gateway_mac);
+  // this will allocate new SubnetConfiguration_TransitSwitch, may need to free it later
+  SubnetConfiguration_TransitSwitch *TransitSwitch_builder =
+          SubnetConiguration_builder->add_transit_switches();
+  TransitSwitch_builder->set_vpc_id(vpc_id);
+  TransitSwitch_builder->set_subnet_id("superSubnet");
+  TransitSwitch_builder->set_ip_address("172.0.0.1");
+  TransitSwitch_builder->set_mac_address("cc:dd:ee:aa:bb:cc");
+
+  rc = Aca_Comm_Manager::get_instance().update_goal_state(GoalState_builder);
+  // rc can be error if transitd is not loaded
+  if (g_transitd_loaded) {
+    ASSERT_EQ(rc, EXIT_SUCCESS);
+  }
+
+  new_subnet_states->clear_configuration();
+}
+
+TEST(net_config_test_cases, subnet_CREATE_UPDATE_GATEWAY)
+{
+  string vpc_id = "99d9d709-8478-4b46-9f3f-2206b1023fd3";
+  string gateway_ip = "10.0.0.1";
+  string gateway_mac = "fa:16:3e:d7:f2:00";
+  int rc;
+
+  GoalState GoalState_builder;
+  SubnetState *new_subnet_states = GoalState_builder.add_subnet_states();
+
+  // fill in the subnet state structs
+  new_subnet_states->set_operation_type(OperationType::CREATE_UPDATE_GATEWAY);
+
+  // this will allocate new SubnetConfiguration, will need to free it later
+  SubnetConfiguration *SubnetConiguration_builder =
+          new_subnet_states->mutable_configuration();
+  SubnetConiguration_builder->set_version(1);
+  SubnetConiguration_builder->set_project_id("dbf72700-5106-4a7a-918f-111111111111");
+  SubnetConiguration_builder->set_vpc_id(vpc_id);
+  SubnetConiguration_builder->set_id("superSubnetID");
+  SubnetConiguration_builder->set_name("SuperSubnet");
+  SubnetConiguration_builder->set_cidr("10.0.0.0/16");
+  SubnetConiguration_builder->set_tunnel_id(22222);
+  SubnetConfiguration_Gateway *SubnetConiguration_Gateway_builder =
+          SubnetConiguration_builder->mutable_gateway();
+  SubnetConiguration_Gateway_builder->set_ip_address(gateway_ip);
+  SubnetConiguration_Gateway_builder->set_mac_address(gateway_mac);
+  // this will allocate new SubnetConfiguration_TransitSwitch, may need to free it later
+  SubnetConfiguration_TransitSwitch *TransitSwitch_builder =
+          SubnetConiguration_builder->add_transit_switches();
+  TransitSwitch_builder->set_vpc_id(vpc_id);
+  TransitSwitch_builder->set_subnet_id("superSubnet");
+  TransitSwitch_builder->set_ip_address("172.0.0.1");
+  TransitSwitch_builder->set_mac_address("cc:dd:ee:aa:bb:cc");
+
+  rc = Aca_Comm_Manager::get_instance().update_goal_state(GoalState_builder);
+  // rc can be error if transitd is not loaded
+  if (g_transitd_loaded) {
+    ASSERT_EQ(rc, EXIT_SUCCESS);
+  }
+
+  new_subnet_states->clear_configuration();
+}
+
+TEST(net_config_test_cases, endpoint_create_integrated)
 {
   string port_name = "11111111-2222-3333-4444-555555555555";
   string vpc_id = "99d9d709-8478-4b46-9f3f-2206b1023fd3";
   string vpc_ns = "vpc-ns-" + vpc_id;
   string ip_address = "10.0.0.2";
   string mac_address = "fa:16:3e:d7:f2:6c";
-  string gw_ip = "10.0.0.1";
+  string gateway_ip = "10.0.0.1";
+  string gateway_mac = "fa:16:3e:d7:f2:00";
   string cmd_string;
   int rc;
 
   string truncated_port_id = port_name.substr(0, 11);
   string temp_name_string = "temp" + truncated_port_id;
   string veth_name_string = "veth" + truncated_port_id;
-
-  // Verify that the version of the library that we linked against is
-  // compatible with the version of the headers we compiled against.
-  GOOGLE_PROTOBUF_VERIFY_VERSION;
 
   GoalState GoalState_builder;
   PortState *new_port_states = GoalState_builder.add_port_states();
@@ -464,13 +550,15 @@ TEST(net_config_test_cases, create_endpoint_integrated)
           new_subnet_states->mutable_configuration();
   SubnetConiguration_builder->set_version(1);
   SubnetConiguration_builder->set_project_id("dbf72700-5106-4a7a-918f-111111111111");
-  // VpcConiguration_builder->set_id("99d9d709-8478-4b46-9f3f-2206b1023fd3");
   SubnetConiguration_builder->set_vpc_id(vpc_id);
   SubnetConiguration_builder->set_id("superSubnetID");
   SubnetConiguration_builder->set_name("SuperSubnet");
   SubnetConiguration_builder->set_cidr("10.0.0.0/16");
   SubnetConiguration_builder->set_tunnel_id(22222);
-  SubnetConiguration_builder->set_gateway_ip(gw_ip);
+  SubnetConfiguration_Gateway *SubnetConiguration_Gateway_builder =
+          SubnetConiguration_builder->mutable_gateway();
+  SubnetConiguration_Gateway_builder->set_ip_address(gateway_ip);
+  SubnetConiguration_Gateway_builder->set_mac_address(gateway_mac);
   // this will allocate new SubnetConfiguration_TransitSwitch, may need to free it later
   SubnetConfiguration_TransitSwitch *TransitSwitch_builder =
           SubnetConiguration_builder->add_transit_switches();
@@ -483,7 +571,10 @@ TEST(net_config_test_cases, create_endpoint_integrated)
   g_demo_mode = true;
 
   rc = Aca_Comm_Manager::get_instance().update_goal_state(GoalState_builder);
-  ASSERT_EQ(rc, EXIT_SUCCESS);
+  // rc can be error if transitd is not loaded
+  if (g_transitd_loaded) {
+    ASSERT_EQ(rc, EXIT_SUCCESS);
+  }
 
   g_demo_mode = previous_demo_mode;
 
@@ -501,7 +592,7 @@ TEST(net_config_test_cases, create_endpoint_integrated)
   EXPECT_EQ(rc, EXIT_SUCCESS);
 
   // was the default gw set correctly?
-  cmd_string = IP_NETNS_PREFIX + "exec " + vpc_ns + " ip route" + " | grep " + gw_ip;
+  cmd_string = IP_NETNS_PREFIX + "exec " + vpc_ns + " ip route" + " | grep " + gateway_ip;
   rc = Aca_Net_Config::get_instance().execute_system_command(cmd_string);
   EXPECT_EQ(rc, EXIT_SUCCESS);
 
@@ -512,12 +603,14 @@ TEST(net_config_test_cases, create_endpoint_integrated)
   EXPECT_EQ(rc, EXIT_SUCCESS);
 
   // finalize the endpoint, which will rename the veth to the final name
-  // ***TODO: why did would still go in as CREATE?
   PortState *final_port_states = GoalState_builder.mutable_port_states(0);
   final_port_states->set_operation_type(OperationType::FINALIZE);
 
   rc = Aca_Comm_Manager::get_instance().update_goal_state(GoalState_builder);
-  EXPECT_EQ(rc, EXIT_SUCCESS);
+  // rc can be error if transitd is not loaded
+  if (g_transitd_loaded) {
+    EXPECT_EQ(rc, EXIT_SUCCESS);
+  }
 
   // free the allocated configurations since we are done with it now
   new_port_states->clear_configuration();
@@ -549,9 +642,13 @@ int main(int argc, char **argv)
 
   ACA_LOG_INIT(ACALOGNAME);
 
+  // Verify that the version of the library that we linked against is
+  // compatible with the version of the headers we compiled against.
+  GOOGLE_PROTOBUF_VERIFY_VERSION;
+
   testing::InitGoogleTest(&argc, argv);
 
-  while ((option = getopt(argc, argv, "s:p:")) != -1) {
+  while ((option = getopt(argc, argv, "s:p:t")) != -1) {
     switch (option) {
     case 's':
       g_rpc_server = optarg;
@@ -559,11 +656,15 @@ int main(int argc, char **argv)
     case 'p':
       g_rpc_protocol = optarg;
       break;
+    case 't':
+      g_transitd_loaded = true;
+      break;
     default: /* the '?' case when the option is not recognized */
       fprintf(stderr,
               "Usage: %s\n"
               "\t\t[-s transitd RPC server]\n"
-              "\t\t[-p transitd RPC protocol]\n",
+              "\t\t[-p transitd RPC protocol]\n"
+              "\t\t[-p transitd is loaded]\n",
               argv[0]);
       exit(EXIT_FAILURE);
     }

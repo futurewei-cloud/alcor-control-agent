@@ -68,7 +68,7 @@ dkms.conf
 cppkafka/
 .DS_Store
 AlcorControlAgent
-aca_func_tests
+old_aca_tests
 aca_tests
 *.pb.h
 *.pb.cc
