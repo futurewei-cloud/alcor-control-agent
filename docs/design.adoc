@@ -27,7 +27,6 @@ ACA will have the following responsibilities, the code will live in one binary.
 . Dataplane adaptors to program various dataplane implementations, including:
 .. Mizar (dataplane)
 .. Openstack/OVS 
-.. etc
 . Network Component upgrade manager
 
 == Communication between ACA and kernel mode Transit Agent
