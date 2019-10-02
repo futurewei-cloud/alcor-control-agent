@@ -9,7 +9,7 @@ The Cloud Fabric Alcor Control Agent (ACA) runs on each host machine. It serves 
 
 . ACA will reside on each host machine to interface between network controller and host networking components. The main responsibility is to configure compute and transit hosts based on message from Alcor Controllers. Which will enable connectivity (VPC IP < - > Physical IP mapping) between VMs/Containers within the datacenter and outside world through EIP for the new Cloud Fabric networking control/data plane.
 
-. It will update networking configuration on the host:
+. It will update networking configuration on the host (to be updated with latest design):
 	.. Create vPort for VM/Container (unless this is done by Compute agent)
 	.. Configure vNIC and vPort, connect them for the VM/Container
 	.. Attach Security group to a vNIC TODO: add more detail after dataplane performance analysis without it
@@ -24,7 +24,10 @@ ACA will have the following responsibilities, the code will live in one binary.
 . Local Host Networking configuration
 . ACA Health management, transit daemon and agents health, VM/Container networking health monitoring
 .. TODO: need to expand this, will likely live in a seperate doc
-. Transit (dataplane) user mode programming proxy
+. Dataplane adaptors to program various dataplane implementations, including:
+.. Mizar (dataplane)
+.. Openstack/OVS 
+.. etc
 . Network Component upgrade manager
 
 == Communication between ACA and kernel mode Transit Agent
@@ -41,7 +44,7 @@ ACA will have the following responsibilities, the code will live in one binary.
                     |     xdp program    |
                     +--------------------+
 
-== Workflow
+== Workflow with Mizar
 
 . Customer creates a new VPC
 	.. Allocate transit router
@@ -134,7 +137,7 @@ int UNLOAD_TRANSIT_XDP(rpc_intf_t) = 18;
 int UNLOAD_TRANSIT_AGENT_XDP(rpc_intf_t) = 19;
 ------------------------------------------------------------
 
-Note: XDP programs are preloaded on physical NIC during system bring up. With new VMs/Containers, Virtual interface for new VMs/Containers will have XDP program loaded by ACA during their creation.
+Note: XDP programs are preloaded on physical NIC when system is booted up. For XDP programs attached to virtual interfaces, they will be loaded on demand by ACA when new ports are created on VMs or containers.
 
 === Log Manager
 
@@ -148,28 +151,28 @@ Syslog is a good target framework, it is a proven mechanism in linux and it is h
 . Goal State object: +
 Alcor VPC Controller sends down goal state object to ACA in the format of protobuf 3 messages to support cross language and cross machine model. The goal state object contains 0 to n vpc_states/subnet_states/port_state/security_group_states configurations. When ACA receives the goal state object, it will loop through each configuration to determine the intent update by looking at the OperationType. ACA will then parse the configuration and execute the needed change on the host machine, including XDP programming using transit daemon. Below is the highlevel GoalState definition:
 
-	*AliothController/src/schema/proto3/goalstate.proto*
+*AliothController/src/schema/proto3/goalstate.proto*
 
-	[source,java]
-	------------------------------------------------------------
-	syntax = "proto3";
+[source,java]
+------------------------------------------------------------
+syntax = "proto3";
 
-	package aliothcontroller;
+package aliothcontroller;
 
-	option java_package = "com.futurewei.alioth.controller.schema";
+option java_package = "com.futurewei.alioth.controller.schema";
 
-	import "vpc.proto";
-	import "subnet.proto";
-	import "port.proto";
-	import "securitygroup.proto";
+import "vpc.proto";
+import "subnet.proto";
+import "port.proto";
+import "securitygroup.proto";
 
-	message GoalState {
-	   repeated VpcState vpc_states = 1;
-	   repeated SubnetState subnet_states = 2;
-	   repeated PortState port_states = 3;
-	   repeated SecurityGroupState security_group_states = 4;
-	}
-	------------------------------------------------------------
+message GoalState {
+   repeated VpcState vpc_states = 1;
+   repeated SubnetState subnet_states = 2;
+   repeated PortState port_states = 3;
+   repeated SecurityGroupState security_group_states = 4;
+}
+------------------------------------------------------------
 
 . Kafka messaging path: +
 In order to have a scalable, high performance and highly reliable communication channel between Alcor VPC Controller and 100s of thousands of compute hosts, Kafka was used because of its features and proven performance. For most of host network configurations, Alcor VPC Controller will publish the goal state object as a Kafka message in proto3 format into a Kafka topic specific to a compute/transit host. The ACA running on the targetted host will consume that message and apply network configuration accordingly.
@@ -192,11 +195,11 @@ There will be another thread for async gRPC server to handle goal state update r
 == Interface with Alkaid
 The below diagrams shows the interaction between component and the work flow between Alkaid, Alcor and Mizar.
 
-image::images/Agent_diagram.JPG["Component diagram", width=1024, link="images/Agent_diagram.JPG"]
+image::images/Agent_diagram.JPG["Component diagram", width=800, link="images/Agent_diagram.JPG"]
 
-image::images/Agent_flow1.JPG["Agent flow 1", width=1024, link="images/Agent_flow1.JPG"]
+image::images/Agent_flow1.JPG["Agent flow 1", width=800, link="images/Agent_flow1.JPG"]
 
-image::images/Agent_flow2.JPG["Agent flow 2", width=1024, link="images/Agent_flow2.JPG"]
+image::images/Agent_flow2.JPG["Agent flow 2", width=800, link="images/Agent_flow2.JPG"]
 
 == API Versioning of Alcor Control Agent and Alcor VPC Controller
 
@@ -227,7 +230,7 @@ For example, say there is a new update to support SR-IOV.
 |====================
 
 == Testing strategy
-gtest framework is used for unit testing and partial functional testing. We are planning to gcov+lcov for code coverage analysis.
+Gtest framework is used for unit testing and some functional testing. Completed end to end and functional testing will be developed by plugging in controller, agent and Mizar together under Jenkins CI/CD framework. We are planning to leverage gcov+lcov for code coverage analysis.
 
 == Reference
 
