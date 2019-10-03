@@ -4,13 +4,17 @@ Next Generation Cloud Network Control Agent
 # Summary
 Source code folder
 
-Comm: Lib for communication with network controllers and transit daemon
-grpc: Generate source and library for gRPC interface with Alcor Controllers
-proto3: Generate source and library for proto3 scheme for communication with Alcor Controllers
-transit_rpc: Generate library for RPC interface with transit daemon
-test: Unit and functional test code
+- Comm: Library for communication with network controllers and transit daemon
+- grpc: Generate source and library for gRPC interface with Alcor Controllers
+- net_config: Library for configurating host networking components
+- proto3: Generate source and library for proto3 scheme for communication with Alcor Controllers
+- transit_rpc: Generate library for RPC interface with transit daemon
+- test: Unit and functional test code
 
-# Installation
+# Build Instructions (the easy way using Dockerfile: TBD)
+
+
+# Build Instructions (the manual way)
 
 ## Installing prebuilt packages
 
@@ -64,12 +68,6 @@ https://github.com/google/googletest/blob/master/googletest/README.md
 cmake -Dgtest_build_samples=ON -DBUILD_SHARED_LIBS=ON .
 make
 make install
-```
-
-If compiling using linux containers, the below line in /src/CmakeLists.txt needs to change:
-```Shell
-From - FIND_LIBRARY(CPPKAFKA cppkafka /usr/local/lib64 NO_DEFAULT_PATH)
-To   - FIND_LIBRARY(CPPKAFKA cppkafka /usr/local/lib NO_DEFAULT_PATH)
 ```
 
 In order to compile _networkcontrolagent_ you need to run,
