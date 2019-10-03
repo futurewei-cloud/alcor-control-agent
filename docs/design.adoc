@@ -9,7 +9,7 @@ The Cloud Fabric Alcor Control Agent (ACA) runs on each host machine. It serves 
 
 . ACA will reside on each host machine to interface between network controller and host networking components. The main responsibility is to configure compute and transit hosts based on message from Alcor Controllers. Which will enable connectivity (VPC IP < - > Physical IP mapping) between VMs/Containers within the datacenter and outside world through EIP for the new Cloud Fabric networking control/data plane.
 
-. It will update networking configuration on the host:
+. It will update networking configuration on the host (to be updated with latest design):
 	.. Create vPort for VM/Container (unless this is done by Compute agent)
 	.. Configure vNIC and vPort, connect them for the VM/Container
 	.. Attach Security group to a vNIC TODO: add more detail after dataplane performance analysis without it
@@ -23,8 +23,10 @@ ACA will have the following responsibilities, the code will live in one binary.
 
 . Local Host Networking configuration
 . ACA Health management, transit daemon and agents health, VM/Container networking health monitoring
-.. TODO: need to expand this, will likely live in a seperate doc, post 9/30
-. Transit (dataplane) user mode programming proxy
+.. TODO: need to expand this, will likely live in a seperate doc
+. Dataplane adaptors to program various dataplane implementations, including:
+.. Mizar (dataplane)
+.. Openstack/OVS 
 . Network Component upgrade manager
 
 == Communication between ACA and kernel mode Transit Agent
@@ -41,7 +43,7 @@ ACA will have the following responsibilities, the code will live in one binary.
                     |     xdp program    |
                     +--------------------+
 
-== Workflow
+== Workflow with Mizar
 
 . Customer creates a new VPC
 	.. Allocate transit router
@@ -99,7 +101,7 @@ This will interface with Kafka or gRPC (for controller fast path) to process goa
 
 === Security policy Manager
 
-Responsible to configure and update the security policies on vNICs/vPorts.
+Responsible to configure and update the security policies on veths/vPorts.
 
 === Transit Agent Manager
 
@@ -134,7 +136,7 @@ int UNLOAD_TRANSIT_XDP(rpc_intf_t) = 18;
 int UNLOAD_TRANSIT_AGENT_XDP(rpc_intf_t) = 19;
 ------------------------------------------------------------
 
-Note: XDP programs are preloaded on physical NIC during system bring up. With new VMs/Containers, Virtual interface for new VMs/Containers will have XDP program loaded by ACA during their creation tracked by issue #50.
+Note: XDP programs are preloaded on physical NIC when system is booted up. For XDP programs attached to virtual interfaces, they will be loaded on demand by ACA when new ports are created on VMs or containers.
 
 === Log Manager
 
@@ -189,10 +191,14 @@ There will be one thread for Kafka consumer to receive Alcor VPC controller goal
 
 There will be another thread for async gRPC server to handle goal state update request for control fast path (currently targetting serverless scenario for fast provisioning). The gRPC async library will handle the client call from Alcor VPC controller, put the work item into its own completion queue, and reponds to the client call quickly. It will transparently create new threads to process the work items in its completion queue. Once a work item is completed, it will create a gRPC response to the original client call with the goal state update result.
 
-
 == Interface with Alkaid
-TBD, Alkaid is our new Cloud Fabric Compute infrastructure...
+The below diagrams shows the interaction between component and the work flow between Alkaid, Alcor and Mizar.
 
+image::images/Agent_diagram.JPG["Component diagram", width=800, link="images/Agent_diagram.JPG"]
+
+image::images/Agent_flow1.JPG["Agent flow 1", width=800, link="images/Agent_flow1.JPG"]
+
+image::images/Agent_flow2.JPG["Agent flow 2", width=800, link="images/Agent_flow2.JPG"]
 
 == API Versioning of Alcor Control Agent and Alcor VPC Controller
 
@@ -223,7 +229,7 @@ For example, say there is a new update to support SR-IOV.
 |====================
 
 == Testing strategy
-TBD, We are planning to use CMocka for unit/functional testing and gcov+lcov for code coverage analysis.
+Gtest framework is used for unit testing and some functional testing. Completed end to end and functional testing will be developed by plugging in controller, agent and Mizar together under Jenkins CI/CD framework. We are planning to leverage gcov+lcov for code coverage analysis.
 
 == Reference
 
@@ -233,7 +239,6 @@ TBD, We are planning to use CMocka for unit/functional testing and gcov+lcov for
 . https://stackoverflow.com/questions/29871744/how-do-you-manage-the-underlying-codebase-for-a-versioned-api
 . https://github.com/futurewei-cloud/Transit/blob/master/docs/modules/ROOT/pages/design/monitoring.adoc[Alcor Control Agent and SN Agent will work independently]
 . https://stackoverflow.com/questions/158457/daemon-logging-in-linux[Logging in Linux]
-. https://support.huaweicloud.com/en-us/usermanual-ecs/en-us_topic_0030878383.html[Security Group Rule format in Huawei Cloud]
 
 [width="100%",options="header"]
 |====================
