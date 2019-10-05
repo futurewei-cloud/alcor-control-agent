@@ -293,6 +293,7 @@ int Aca_Comm_Manager::update_subnet_state(const GoalState &parsed_struct)
     case OperationType::INFO:
       // information only, ignoring this.
       transitd_command = 0;
+      rc = EXIT_SUCCESS;
       break;
     case OperationType::CREATE_UPDATE_ROUTER:
       // this is to update the router host, need to update substrate later.
@@ -706,10 +707,12 @@ int Aca_Comm_Manager::update_port_state(const GoalState &parsed_struct)
           ACA_LOG_DEBUG("current_SubnetConfiguration subnet ID: %s.\n",
                         current_SubnetConfiguration.id().c_str());
 
-          vpc_id = current_SubnetConfiguration.vpc_id();
-
           if (parsed_struct.subnet_states(j).operation_type() == OperationType::INFO) {
             if (current_SubnetConfiguration.id() == current_PortConfiguration.network_id()) {
+              vpc_id = current_SubnetConfiguration.vpc_id();
+
+              my_gw_address = current_SubnetConfiguration.gateway().ip_address();
+
               agent_md_in.ep.tunid = current_SubnetConfiguration.tunnel_id();
 
               agent_md_in.net.interface = PHYSICAL_IF;
@@ -801,11 +804,9 @@ int Aca_Comm_Manager::update_port_state(const GoalState &parsed_struct)
       namespace_name = VPC_NS_PREFIX + vpc_id;
       rc = Aca_Net_Config::get_instance().create_namespace(namespace_name);
       if (rc == EXIT_SUCCESS) {
-        ACA_LOG_INFO("Successfully created namespace: %s in demo mode\n",
-                     namespace_name.c_str());
+        ACA_LOG_INFO("Successfully created namespace: %s\n", namespace_name.c_str());
       } else {
-        ACA_LOG_ERROR("Unable to create namespace: %s in demo mode\n",
-                      namespace_name.c_str());
+        ACA_LOG_ERROR("Unable to create namespace: %s\n", namespace_name.c_str());
       }
 
       rc = Aca_Net_Config::get_instance().create_veth_pair(temp_name_string, peer_name_string);
@@ -993,6 +994,15 @@ int Aca_Comm_Manager::update_port_state(const GoalState &parsed_struct)
                   ACA_LOG_ERROR("Unable to renamed in ns: %s, old_veth: %s, new_veth: %s\n",
                                 namespace_name.c_str(), temp_name_string.c_str(),
                                 veth_name_string.c_str());
+                }
+
+                rc = Aca_Net_Config::get_instance().add_gw(namespace_name, my_gw_address);
+                if (rc == EXIT_SUCCESS) {
+                  ACA_LOG_INFO("Successfully added gw in ns: %s, gateway: %s\n",
+                               namespace_name.c_str(), my_gw_address.c_str());
+                } else {
+                  ACA_LOG_ERROR("Unable to added gw in ns: %s, gateway: %s\n",
+                                namespace_name.c_str(), my_gw_address.c_str());
                 }
 
               } // for (int k = 0; k < current_SubnetConfiguration.transit_switches_size(); k++)
