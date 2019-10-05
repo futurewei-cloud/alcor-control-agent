@@ -996,6 +996,7 @@ int Aca_Comm_Manager::update_port_state(const GoalState &parsed_struct)
                                 veth_name_string.c_str());
                 }
 
+                // workaround for the current contract with CNI
                 rc = Aca_Net_Config::get_instance().add_gw(namespace_name, my_gw_address);
                 if (rc == EXIT_SUCCESS) {
                   ACA_LOG_INFO("Successfully added gw in ns: %s, gateway: %s\n",
