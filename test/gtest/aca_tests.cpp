@@ -484,6 +484,104 @@ TEST(net_config_test_cases, subnet_CREATE_UPDATE_GATEWAY)
   new_subnet_states->clear_configuration();
 }
 
+TEST(net_config_test_cases, port_CREATE_UPDATE_SWITCH)
+{
+  string port_name = "11111111-2222-3333-4444-555555555555";
+  string vpc_id = "99d9d709-8478-4b46-9f3f-2206b1023fd3";
+  string vpc_ns = "vpc-ns-" + vpc_id;
+  string ip_address = "10.0.0.2";
+  string mac_address = "fa:16:3e:d7:f2:6c";
+  string gateway_ip = "10.0.0.1";
+  string gateway_mac = "fa:16:3e:d7:f2:00";
+  string cmd_string;
+  int rc;
+
+  string truncated_port_id = port_name.substr(0, 11);
+  string temp_name_string = "temp" + truncated_port_id;
+  string veth_name_string = "veth" + truncated_port_id;
+
+  GoalState GoalState_builder;
+  PortState *new_port_states;
+  SubnetState *new_subnet_states = GoalState_builder.add_subnet_states();
+
+  for (int i = 0; i < 1000; i++) {
+    new_port_states = GoalState_builder.add_port_states();
+    new_port_states->set_operation_type(OperationType::CREATE_UPDATE_SWITCH);
+
+    // this will allocate new PortConfiguration, will need to free it later
+    PortConfiguration *PortConfiguration_builder =
+            new_port_states->mutable_configuration();
+    PortConfiguration_builder->set_version(1);
+    PortConfiguration_builder->set_project_id("dbf72700-5106-4a7a-918f-111111111111");
+    PortConfiguration_builder->set_network_id("superSubnetID");
+    PortConfiguration_builder->set_id(port_name);
+    PortConfiguration_builder->set_name("FriendlyPortName");
+    PortConfiguration_builder->set_admin_state_up(true);
+    PortConfiguration_builder->set_mac_address(mac_address);
+    PortConfiguration_builder->set_veth_name("veth0");
+
+    PortConfiguration_HostInfo *portConfig_HostInfoBuilder(new PortConfiguration_HostInfo);
+    portConfig_HostInfoBuilder->set_ip_address("172.0.0.2");
+    portConfig_HostInfoBuilder->set_mac_address("aa-bb-cc-dd-ee-ff");
+    PortConfiguration_builder->set_allocated_host_info(portConfig_HostInfoBuilder);
+
+    // this will allocate new PortConfiguration_FixedIp may need to free later
+    PortConfiguration_FixedIp *PortIp_builder =
+            PortConfiguration_builder->add_fixed_ips();
+    PortIp_builder->set_ip_address(ip_address);
+    PortIp_builder->set_subnet_id("2");
+    // this will allocate new PortConfiguration_SecurityGroupId may need to free later
+    PortConfiguration_SecurityGroupId *SecurityGroup_builder =
+            PortConfiguration_builder->add_security_group_ids();
+    SecurityGroup_builder->set_id("1");
+    // this will allocate new PortConfiguration_AllowAddressPair may need to free later
+    PortConfiguration_AllowAddressPair *AddressPair_builder =
+            PortConfiguration_builder->add_allow_address_pairs();
+    AddressPair_builder->set_ip_address("10.0.0.5");
+    AddressPair_builder->set_mac_address("fa:16:3e:d7:f2:9f");
+    // this will allocate new PortConfiguration_ExtraDhcpOption may need to free later
+    PortConfiguration_ExtraDhcpOption *ExtraDhcp_builder =
+            PortConfiguration_builder->add_extra_dhcp_options();
+    ExtraDhcp_builder->set_name("opt_1");
+    ExtraDhcp_builder->set_value("12");
+  }
+
+  // fill in the subnet state structs
+  new_subnet_states->set_operation_type(OperationType::INFO);
+
+  // this will allocate new SubnetConfiguration, will need to free it later
+  SubnetConfiguration *SubnetConiguration_builder =
+          new_subnet_states->mutable_configuration();
+  SubnetConiguration_builder->set_version(1);
+  SubnetConiguration_builder->set_project_id("dbf72700-5106-4a7a-918f-111111111111");
+  SubnetConiguration_builder->set_vpc_id(vpc_id);
+  SubnetConiguration_builder->set_id("superSubnetID");
+  SubnetConiguration_builder->set_name("SuperSubnet");
+  SubnetConiguration_builder->set_cidr("10.0.0.0/16");
+  SubnetConiguration_builder->set_tunnel_id(22222);
+  SubnetConfiguration_Gateway *SubnetConiguration_Gateway_builder =
+          SubnetConiguration_builder->mutable_gateway();
+  SubnetConiguration_Gateway_builder->set_ip_address(gateway_ip);
+  SubnetConiguration_Gateway_builder->set_mac_address(gateway_mac);
+  // this will allocate new SubnetConfiguration_TransitSwitch, may need to free it later
+  SubnetConfiguration_TransitSwitch *TransitSwitch_builder =
+          SubnetConiguration_builder->add_transit_switches();
+  TransitSwitch_builder->set_vpc_id(vpc_id);
+  TransitSwitch_builder->set_subnet_id("superSubnet");
+  TransitSwitch_builder->set_ip_address("172.0.0.1");
+  TransitSwitch_builder->set_mac_address("cc:dd:ee:aa:bb:cc");
+
+  rc = Aca_Comm_Manager::get_instance().update_goal_state(GoalState_builder);
+  // rc can be error if transitd is not loaded
+  if (g_transitd_loaded) {
+    ASSERT_EQ(rc, EXIT_SUCCESS);
+  }
+
+  // free the allocated configurations since we are done with it now
+  new_port_states->clear_configuration();
+  new_subnet_states->clear_configuration();
+}
+
 TEST(net_config_test_cases, endpoint_create_integrated)
 {
   string port_name = "11111111-2222-3333-4444-555555555555";

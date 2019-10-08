@@ -38,6 +38,8 @@ class Aca_Net_Config {
 
   int rename_veth_device(string ns_name, string org_veth_name, string new_veth_name);
 
+  int add_gw(string ns_name, string gateway_ip);
+
   int execute_system_command(string cmd_string);
 
   // compiler will flag the error when below is called.

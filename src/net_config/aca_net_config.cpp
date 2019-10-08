@@ -3,6 +3,7 @@
 #include <errno.h>
 #include <stdlib.h>
 #include <string>
+#include <chrono>
 
 using namespace std;
 
@@ -237,6 +238,31 @@ int Aca_Net_Config::rename_veth_device(string ns_name, string org_veth_name, str
   return overall_rc;
 }
 
+// workaround to add the gateway information based on the current CNI contract
+// to be removed with the final contract/design
+int Aca_Net_Config::add_gw(string ns_name, string gateway_ip)
+{
+  int rc;
+  string cmd_string;
+
+  if (ns_name.empty()) {
+    rc = -EINVAL;
+    ACA_LOG_ERROR("Invalid argument: Empty ns_name, rc: %d\n", rc);
+    return rc;
+  }
+
+  if (gateway_ip.empty()) {
+    rc = -EINVAL;
+    ACA_LOG_ERROR("Invalid argument: Empty gateway_ip, rc: %d\n", rc);
+    return rc;
+  }
+
+  cmd_string = IP_NETNS_PREFIX + "exec " + ns_name + " route add default gw " + gateway_ip;
+  rc = execute_system_command(cmd_string);
+
+  return rc;
+}
+
 int Aca_Net_Config::execute_system_command(string cmd_string)
 {
   int rc;
@@ -247,7 +273,16 @@ int Aca_Net_Config::execute_system_command(string cmd_string)
     return rc;
   }
 
+  auto start = chrono::steady_clock::now();
+
   rc = system(cmd_string.c_str());
+
+  auto end = chrono::steady_clock::now();
+
+  ACA_LOG_DEBUG("Elapsed time for system command took: %ld nanoseconds or %ld milliseconds.\n",
+                chrono::duration_cast<chrono::nanoseconds>(end - start).count(),
+                chrono::duration_cast<chrono::milliseconds>(end - start).count());
+
   if (rc == EXIT_SUCCESS) {
     ACA_LOG_INFO("Command succeeded: %s\n", cmd_string.c_str());
   } else {
