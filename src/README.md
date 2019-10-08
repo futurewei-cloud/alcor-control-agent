@@ -2,86 +2,54 @@
 Next Generation Cloud Network Control Agent
 
 # Summary
-Source code folder
+Source code folder:
 
-Comm: Lib for communication with network controllers and transit daemon
-grpc: Generate source and library for gRPC interface with Alcor Controllers
-proto3: Generate source and library for proto3 scheme for communication with Alcor Controllers
-transit_rpc: Generate library for RPC interface with transit daemon
-test: Unit and functional test code
+- Comm: Library for communication with network controllers and transit daemon
+- grpc: Auto generated source codes and library for gRPC interface with Alcor Controllers
+- net_config: Library for configurating host networking components
+- proto3: Auto generated source codes and library for proto3 scheme for communication with Alcor Controllers
+- transit_rpc: Library for RPC interface with transit daemon
+- test: Unit and intergration test code
 
-# Installation
+# Build and Execution Instructions using Dockerfile
+Since the Alcor Control Agent relies on a few external dependencies, Dockerfile was used for fast build and test environment setup.
 
-## Installing prebuilt packages
-
-On Ubuntu, install librdkafka from the Confluent APT repositories,
-see instructions [here](https://docs.confluent.io/current/installation/installing_cp/deb-ubuntu.html#get-the-software) and then install librdkafka:
-
- ```bash
- $ apt install librdkafka-dev
- $ apt install doxygen
- $ apt-get install libssl-dev
- $ apt-get install zlib1g-dev
- $ apt-get install libboost-program-options-dev
- $ apt-get install libboost-all-dev
- 
- # for Transit:
- $ apt install libcmocka-dev
- ```
-
-Download cppkafka from GitHub [here](https://github.com/mfontanini/cppkafka/blob/master/README.md) and install cppkafka using the following commands: 
+## Cloning alcor-control-agent Repo
+The Alcor Control Agent includes the Alcor controller and Transit submodules to consume the needed proto3 schemas and RPC definitions. Therefore, the below commands are needed when cloning:
 
 ```Shell
- $ cd <cppkafka_folder>
- $ mkdir build
- $ cd build
- $ cmake <OPTIONS> ..
- $ make
- $ make install
- $ ldconfig
+git clone --recurse-submodules https://github.com/futurewei-cloud/alcor-control-agent.git
+git submodule update --init --recursive
 ```
 
-## Cloning AlcorControlAgent Repo
-
-The Alcor Control Agent includes the network controller and transit submodules to consume the needed proto3 schema and RPC definitions. Therefore, the below command is needed when cloning:
-
+## Setting up the build container
+Assuming alcor-control-agent was cloned into ~/dev directory:
 ```Shell
-git clone --recurse-submodules https://github.com/futurewei-cloud/AlcorControlAgent.git
+cd build
+docker build -t aca_build0 .
+docker create -v ~/dev:/mnt/host/code -it --privileged --cap-add=NET_ADMIN --cap-add=SYS_PTRACE --security-opt seccomp=unconfined --name a1 aca_build0:latest /bin/bash
+docker network connect net0 a1
+docker network connect net1 a1
+docker start a1
+docker exec -it a1 /bin/bash
 ```
 
-## Compiling AlcorControlAgent
-
-Note that the _AlcorControlAgent_ depends on the transit daemon interface to program XDP (through RPC). Therefore, it expects to have the transit submodule code under the root "AlcorControlAgent" directory. This is needed in order to compile and generate the needed "trn_rpc_protocol.h" header file.
-
-You will also need to install the protobuf compiler and development environment:
+## Compiling alcor-control-agent
+In order to compile alcor-control-agent you need to run:
 ```Shell
-sudo apt-get install libprotobuf-dev protobuf-compiler
+docker exec -it a1 /bin/bash
+root@ca62b6feec63:# cd /mnt/host/code/alcor-control-agent/
+root@ca62b6feec63:/mnt/host/code/alcor-control-agent# cmake .
+root@ca62b6feec63:/mnt/host/code/alcor-control-agent# make
 ```
 
-Compile and install gtest:
+## Running alcor-control-agent and tests
+You can run the test (optional):
 ```Shell
-https://github.com/google/googletest/blob/master/googletest/README.md
-cmake -Dgtest_build_samples=ON -DBUILD_SHARED_LIBS=ON .
-make
-make install
+root@ca62b6feec63:/mnt/host/code/alcor-control-agent# ./build/tests/aca_tests
 ```
 
-If compiling using linux containers, the below line in /src/CmakeLists.txt needs to change:
+You should be ready to run the executable:
 ```Shell
-From - FIND_LIBRARY(CPPKAFKA cppkafka /usr/local/lib64 NO_DEFAULT_PATH)
-To   - FIND_LIBRARY(CPPKAFKA cppkafka /usr/local/lib NO_DEFAULT_PATH)
-```
-
-In order to compile _networkcontrolagent_ you need to run,
-
-```Shell
- $ cd ..  (go up to project folder)
- $ cmake .
- $ make
-```
-
-You should be ready to run the executable
-
-```Shell
- $ ./src/networkControlAgent
+root@ca62b6feec63:/mnt/host/code/alcor-control-agent# ./build/bin/AlcorControlAgent
 ```
