@@ -47,10 +47,10 @@ root@ca62b6feec63:/mnt/host/code/alcor-control-agent# make
 ## Running alcor-control-agent and tests
 You can run the test (optional):
 ```Shell
- $ ./build/tests/aca_tests
+root@ca62b6feec63:/mnt/host/code/alcor-control-agent# ./build/tests/aca_tests
 ```
 
 You should be ready to run the executable:
 ```Shell
- $ ./build/bin/AlcorControlAgent
+root@ca62b6feec63:/mnt/host/code/alcor-control-agent# ./build/bin/AlcorControlAgent
 ```
