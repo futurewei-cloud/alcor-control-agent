@@ -595,9 +595,20 @@ int Aca_Comm_Manager::update_port_state(const GoalState &parsed_struct)
           if (parsed_struct.subnet_states(j).operation_type() == OperationType::INFO) {
             if (current_SubnetConfiguration.id() == current_PortConfiguration.network_id()) {
               if (parsed_struct.port_states(i).operation_type() == OperationType::CREATE) {
+                if (current_SubnetConfiguration.vpc_id().empty()) {
+                  throw std::invalid_argument("vpc_id is empty");
+                }
                 vpc_id = current_SubnetConfiguration.vpc_id();
 
+                if (current_SubnetConfiguration.gateway().ip_address().empty()) {
+                  throw std::invalid_argument("gateway ip address is empty");
+                }
                 my_gw_address = current_SubnetConfiguration.gateway().ip_address();
+
+                if (current_SubnetConfiguration.tunnel_id() == 0) {
+                  throw std::invalid_argument("tunnel id is 0");
+                }
+                endpoint_in.tunid = current_SubnetConfiguration.tunnel_id();
 
                 my_cidr = current_SubnetConfiguration.cidr();
 
@@ -609,8 +620,6 @@ int Aca_Comm_Manager::update_port_state(const GoalState &parsed_struct)
                 // substr can throw out_of_range and bad_alloc exceptions
                 my_prefixlen = my_cidr.substr(slash_pos + 1);
               }
-
-              endpoint_in.tunid = current_SubnetConfiguration.tunnel_id();
 
               subnet_info_found = true;
               break;
@@ -709,10 +718,19 @@ int Aca_Comm_Manager::update_port_state(const GoalState &parsed_struct)
 
           if (parsed_struct.subnet_states(j).operation_type() == OperationType::INFO) {
             if (current_SubnetConfiguration.id() == current_PortConfiguration.network_id()) {
+              if (current_SubnetConfiguration.vpc_id().empty()) {
+                throw std::invalid_argument("vpc_id is empty");
+              }
               vpc_id = current_SubnetConfiguration.vpc_id();
 
+              if (current_SubnetConfiguration.gateway().ip_address().empty()) {
+                throw std::invalid_argument("gateway ip address is empty");
+              }
               my_gw_address = current_SubnetConfiguration.gateway().ip_address();
 
+              if (current_SubnetConfiguration.tunnel_id() == 0) {
+                throw std::invalid_argument("tunnel id is 0");
+              }
               agent_md_in.ep.tunid = current_SubnetConfiguration.tunnel_id();
 
               agent_md_in.net.interface = PHYSICAL_IF;
