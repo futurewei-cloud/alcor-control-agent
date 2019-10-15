@@ -24,9 +24,10 @@ using aca_comm_manager::Aca_Comm_Manager;
 // Global variables
 string g_rpc_server = EMPTY_STRING;
 string g_rpc_protocol = EMPTY_STRING;
-long g_total_rpc_call_time = 0;
-long g_total_rpc_client_time = 0;
-long g_total_update_GS_time = 0;
+std::atomic_ulong g_total_rpc_call_time(0);
+std::atomic_ulong g_total_rpc_client_time(0);
+std::atomic_ulong g_total_network_configuration_time(0);
+std::atomic_ulong g_total_update_GS_time(0);
 bool g_demo_mode = false;
 bool g_debug_mode = false;
 
@@ -39,14 +40,18 @@ using std::string;
 
 static void aca_cleanup()
 {
-  ACA_LOG_DEBUG("g_total_rpc_call_time = %ld nanoseconds or %ld milliseconds\n",
-                g_total_rpc_call_time, g_total_rpc_call_time / 1000000);
+  ACA_LOG_DEBUG("g_total_rpc_call_time = %lu nanoseconds or %lu milliseconds\n",
+                g_total_rpc_call_time.load(), g_total_rpc_call_time.load() / 1000000);
 
-  ACA_LOG_DEBUG("g_total_rpc_client_time = %ld nanoseconds or %ld milliseconds\n",
-                g_total_rpc_client_time, g_total_rpc_client_time / 1000000);
+  ACA_LOG_DEBUG("g_total_rpc_client_time = %lu nanoseconds or %lu milliseconds\n",
+                g_total_rpc_client_time.load(), g_total_rpc_client_time.load() / 1000000);
 
-  ACA_LOG_DEBUG("g_total_update_GS_time = %ld nanoseconds or %ld milliseconds\n",
-                g_total_update_GS_time, g_total_update_GS_time / 1000000);
+  ACA_LOG_DEBUG("g_total_network_configuration_time = %lu nanoseconds or %lu milliseconds\n",
+                g_total_network_configuration_time.load(),
+                g_total_network_configuration_time.load() / 1000000);
+
+  ACA_LOG_DEBUG("g_total_update_GS_time = %lu nanoseconds or %lu milliseconds\n",
+                g_total_update_GS_time.load(), g_total_update_GS_time.load() / 1000000);
 
   ACA_LOG_INFO("Program exiting, cleaning up...\n");
 
@@ -317,7 +322,8 @@ int parse_goalstate(GoalState parsed_struct, GoalState GoalState_builder)
 
   fprintf(stdout, "All content matched, sending the parsed_struct to update_goal_state...\n");
 
-  int rc = Aca_Comm_Manager::get_instance().update_goal_state(parsed_struct);
+  alcorcontroller::GoalStateOperationReply gsOperationalReply;
+  int rc = Aca_Comm_Manager::get_instance().update_goal_state(parsed_struct, gsOperationalReply);
   return rc;
 }
 int main(int argc, char *argv[])

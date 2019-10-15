@@ -73,6 +73,7 @@ void MessageConsumer::setGroupId(string group_id)
 bool MessageConsumer::consumeDispatched(string topic)
 {
   alcorcontroller::GoalState deserialized_GoalState;
+  alcorcontroller::GoalStateOperationReply gsOperationalReply;
   int rc = EXIT_FAILURE;
 
   this->ptr_consumer->subscribe({ topic });
@@ -102,11 +103,15 @@ bool MessageConsumer::consumeDispatched(string topic)
             rc = Aca_Comm_Manager::get_instance().deserialize(
                     &(message.get_payload()), deserialized_GoalState);
             if (rc == EXIT_SUCCESS) {
-              rc = Aca_Comm_Manager::get_instance().update_goal_state(deserialized_GoalState);
+              rc = Aca_Comm_Manager::get_instance().update_goal_state(
+                      deserialized_GoalState, gsOperationalReply);
+
+              // TODO: send gsOperationalReply back to controller through Kafka
+
               if (rc != EXIT_SUCCESS) {
-                ACA_LOG_ERROR("Failed to update transitd with latest goal state, rc=%d.\n", rc);
+                ACA_LOG_ERROR("Failed to update host with latest goal state, rc=%d.\n", rc);
               } else {
-                ACA_LOG_INFO("Successfully updated transitd with latest goal state %d.\n", rc);
+                ACA_LOG_INFO("Successfully updated host with latest goal state %d.\n", rc);
               }
             } else {
               ACA_LOG_ERROR("Deserialization failed with error code %d.\n", rc);

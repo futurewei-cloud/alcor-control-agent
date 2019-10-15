@@ -2,7 +2,7 @@
 #include "aca_net_config.h"
 #include "aca_util.h"
 #include "aca_log.h"
-#include "goalstate.pb.h"
+#include "goalstateprovisioner.grpc.pb.h"
 #include "trn_rpc_protocol.h"
 #include <chrono>
 #include <errno.h>
@@ -22,9 +22,10 @@ static char agent_pcap_file[] = "/bpffs/agent_xdp.pcap";
 
 extern string g_rpc_server;
 extern string g_rpc_protocol;
-extern long g_total_rpc_call_time;
-extern long g_total_rpc_client_time;
-extern long g_total_update_GS_time;
+extern std::atomic_ulong g_total_rpc_call_time;
+extern std::atomic_ulong g_total_rpc_client_time;
+// extern std::atomic_ulong g_total_network_configuration_time;
+extern std::atomic_ulong g_total_update_GS_time;
 extern bool g_demo_mode;
 
 static inline const char *aca_get_operation_name(OperationType operation)
@@ -123,12 +124,15 @@ int Aca_Comm_Manager::deserialize(const cppkafka::Buffer *kafka_buffer, GoalStat
   }
 }
 
-int Aca_Comm_Manager::update_vpc_state(const GoalState &parsed_struct)
+int Aca_Comm_Manager::update_vpc_states(const GoalState &parsed_struct,
+                                        GoalStateOperationReply &gsOperationReply)
 {
   int transitd_command = 0;
   void *transitd_input = NULL;
   int exec_command_rc = -EXIT_FAILURE;
   int rc = -EXIT_FAILURE;
+  ulong culminative_dataplane_programming_time = 0;
+  ulong culminative_network_configuration_time = 0;
 
   rpc_trn_vpc_t vpc_in;
   rpc_trn_endpoint_t substrate_in;
@@ -198,11 +202,12 @@ int Aca_Comm_Manager::update_vpc_state(const GoalState &parsed_struct)
     }
 
     if ((transitd_command != 0) && (rc == EXIT_SUCCESS)) {
-      exec_command_rc = this->execute_command(transitd_command, transitd_input);
+      exec_command_rc = this->execute_command(transitd_command, transitd_input,
+                                              culminative_dataplane_programming_time);
       if (exec_command_rc == EXIT_SUCCESS) {
         ACA_LOG_INFO("Successfully executed the network controller command\n");
       } else {
-        ACA_LOG_ERROR("[update_goal_state] Unable to execute the network controller command: %d\n",
+        ACA_LOG_ERROR("[update_vpc_states] Unable to execute the network controller command: %d\n",
                       exec_command_rc);
         // TODO: Notify the Network Controller if the command is not successful.
       }
@@ -240,7 +245,8 @@ int Aca_Comm_Manager::update_vpc_state(const GoalState &parsed_struct)
           substrate_in.veth = EMPTY_STRING;
           substrate_in.tunid = TRAN_SUBSTRT_VNI;
 
-          exec_command_rc = this->execute_command(transitd_command, &substrate_in);
+          exec_command_rc = this->execute_command(
+                  transitd_command, &substrate_in, culminative_dataplane_programming_time);
           if (exec_command_rc == EXIT_SUCCESS) {
             ACA_LOG_INFO("Successfully updated substrate in transit daemon\n");
           } else {
@@ -262,22 +268,25 @@ int Aca_Comm_Manager::update_vpc_state(const GoalState &parsed_struct)
   } // for (int i = 0; i < parsed_struct.vpc_states_size(); i++)
 }
 
-int Aca_Comm_Manager::update_subnet_state(const GoalState &parsed_struct)
+int Aca_Comm_Manager::update_subnet_states(const GoalState &parsed_struct,
+                                           GoalStateOperationReply &gsOperationReply)
 {
   int transitd_command = 0;
   void *transitd_input = NULL;
   int exec_command_rc = -EXIT_FAILURE;
   int rc = -EXIT_FAILURE;
-  rpc_trn_network_t network_in;
-  rpc_trn_endpoint_t endpoint_in;
-  rpc_trn_endpoint_t substrate_in;
-
   string my_cidr;
   string my_ip_address;
   string my_prefixlen;
   size_t slash_pos = 0;
   struct sockaddr_in sa;
   char hosted_interface[20];
+  ulong culminative_dataplane_programming_time = 0;
+  ulong culminative_network_configuration_time = 0;
+
+  rpc_trn_network_t network_in;
+  rpc_trn_endpoint_t endpoint_in;
+  rpc_trn_endpoint_t substrate_in;
 
   if (parsed_struct.subnet_states_size() == 0) {
     rc = EXIT_SUCCESS;
@@ -419,11 +428,13 @@ int Aca_Comm_Manager::update_subnet_state(const GoalState &parsed_struct)
       break;
     }
     if ((transitd_command != 0) && (rc == EXIT_SUCCESS)) {
-      exec_command_rc = this->execute_command(transitd_command, transitd_input);
+      exec_command_rc = this->execute_command(transitd_command, transitd_input,
+                                              culminative_dataplane_programming_time);
       if (exec_command_rc == EXIT_SUCCESS) {
         ACA_LOG_INFO("Successfully executed the network controller command\n");
       } else {
-        ACA_LOG_ERROR("Unable to execute the network controller command: %d\n", exec_command_rc);
+        ACA_LOG_ERROR("[update_subnet_states] Unable to execute the network controller command: %d\n",
+                      exec_command_rc);
         rc = exec_command_rc;
         // TODO: Notify the Network Controller if the command is not successful.
       }
@@ -463,7 +474,8 @@ int Aca_Comm_Manager::update_subnet_state(const GoalState &parsed_struct)
           substrate_in.veth = EMPTY_STRING;
           substrate_in.tunid = TRAN_SUBSTRT_VNI;
 
-          exec_command_rc = this->execute_command(transitd_command, &substrate_in);
+          exec_command_rc = this->execute_command(
+                  transitd_command, &substrate_in, culminative_dataplane_programming_time);
           if (exec_command_rc == EXIT_SUCCESS) {
             ACA_LOG_INFO("Successfully updated substrate in transit daemon\n");
           } else {
@@ -488,16 +500,14 @@ int Aca_Comm_Manager::update_subnet_state(const GoalState &parsed_struct)
   return rc;
 }
 
-int Aca_Comm_Manager::update_port_state(const GoalState &parsed_struct)
+int Aca_Comm_Manager::update_port_state_workitem(const PortState &current_PortState,
+                                                 const alcorcontroller::GoalState &parsed_struct,
+                                                 GoalStateOperationReply &gsOperationReply)
 {
   int transitd_command = 0;
   void *transitd_input = NULL;
   int exec_command_rc = -EXIT_FAILURE;
   int rc = -EXIT_FAILURE;
-
-  rpc_trn_endpoint_t endpoint_in;
-  rpc_trn_agent_metadata_t agent_md_in;
-  rpc_trn_endpoint_t substrate_in;
 
   bool subnet_info_found = false;
   string my_ep_ip_address;
@@ -517,207 +527,83 @@ int Aca_Comm_Manager::update_port_state(const GoalState &parsed_struct)
   char veth_name[20];
   char peer_name[20];
   char hosted_interface[20];
+  ulong culminative_dataplane_programming_time = 0;
+  ulong culminative_network_configuration_time = 0;
 
-  if (parsed_struct.port_states_size() == 0) {
-    rc = EXIT_SUCCESS;
-  }
+  rpc_trn_endpoint_t endpoint_in;
+  rpc_trn_agent_metadata_t agent_md_in;
+  rpc_trn_endpoint_t substrate_in;
 
-  for (int i = 0; i < parsed_struct.port_states_size(); i++) {
-    ACA_LOG_DEBUG("=====>parsing port state #%d\n", i);
-    PortConfiguration current_PortConfiguration =
-            parsed_struct.port_states(i).configuration();
+  auto operation_start = chrono::steady_clock::now();
 
-    string port_id = current_PortConfiguration.id();
-    string truncated_port_id = port_id.substr(0, PORT_ID_TRUNCATION_LEN);
+  PortConfiguration current_PortConfiguration = current_PortState.configuration();
 
-    temp_name_string = TEMP_PREFIX + truncated_port_id;
-    veth_name_string = VETH_PREFIX + truncated_port_id;
-    peer_name_string = PEER_PREFIX + truncated_port_id;
+  string port_id = current_PortConfiguration.id();
+  string truncated_port_id = port_id.substr(0, PORT_ID_TRUNCATION_LEN);
 
-    switch (parsed_struct.port_states(i).operation_type()) {
-    case OperationType::CREATE:
-    case OperationType::CREATE_UPDATE_SWITCH:
-      transitd_command = UPDATE_EP;
-      transitd_input = &endpoint_in;
+  temp_name_string = TEMP_PREFIX + truncated_port_id;
+  veth_name_string = VETH_PREFIX + truncated_port_id;
+  peer_name_string = PEER_PREFIX + truncated_port_id;
 
-      try {
-        endpoint_in.interface = PHYSICAL_IF;
+  switch (current_PortState.operation_type()) {
+  case OperationType::CREATE:
+  case OperationType::CREATE_UPDATE_SWITCH:
+    transitd_command = UPDATE_EP;
+    transitd_input = &endpoint_in;
 
-        assert(current_PortConfiguration.fixed_ips_size() == 1);
-        my_ep_ip_address = current_PortConfiguration.fixed_ips(0).ip_address();
-        // inet_pton returns 1 for success 0 for failure
-        if (inet_pton(AF_INET, my_ep_ip_address.c_str(), &(sa.sin_addr)) != 1) {
-          throw std::invalid_argument("EP ip address is not in the expect format");
-        }
-        endpoint_in.ip = sa.sin_addr.s_addr;
+    try {
+      endpoint_in.interface = PHYSICAL_IF;
 
-        endpoint_in.eptype = TRAN_SIMPLE_EP;
-
-        uint32_t remote_ips[RPC_TRN_MAX_REMOTE_IPS];
-        endpoint_in.remote_ips.remote_ips_val = remote_ips;
-        endpoint_in.remote_ips.remote_ips_len = 1;
-        // inet_pton returns 1 for success 0 for failure
-        if (inet_pton(AF_INET,
-                      current_PortConfiguration.host_info().ip_address().c_str(),
-                      &(sa.sin_addr)) != 1) {
-          throw std::invalid_argument("EP host ip address is not in the expect format");
-        }
-        endpoint_in.remote_ips.remote_ips_val[0] = sa.sin_addr.s_addr;
-
-        my_ep_mac_address = current_PortConfiguration.mac_address();
-        // the below will throw invalid_argument exceptions when it cannot convert the mac string
-        aca_convert_to_mac_array(current_PortConfiguration.mac_address().c_str(),
-                                 endpoint_in.mac);
-
-        strncpy(veth_name, veth_name_string.c_str(), strlen(veth_name_string.c_str()) + 1);
-        endpoint_in.veth = veth_name;
-
-        if (parsed_struct.port_states(i).operation_type() == OperationType::CREATE_UPDATE_SWITCH) {
-          endpoint_in.hosted_interface = EMPTY_STRING;
-        } else // it must be OperationType::CREATE
-        {
-          strncpy(peer_name, peer_name_string.c_str(),
-                  strlen(peer_name_string.c_str()) + 1);
-          endpoint_in.hosted_interface = peer_name;
-        }
-
-        // TODO: cache the subnet information to a dictionary to provide
-        // a faster look up for the next run, only use the below loop for
-        // cache miss.
-        // Look up the subnet configuration to query for tunnel_id
-        for (int j = 0; j < parsed_struct.subnet_states_size(); j++) {
-          SubnetConfiguration current_SubnetConfiguration =
-                  parsed_struct.subnet_states(j).configuration();
-
-          ACA_LOG_DEBUG("current_SubnetConfiguration subnet ID: %s.\n",
-                        current_SubnetConfiguration.id().c_str());
-
-          if (parsed_struct.subnet_states(j).operation_type() == OperationType::INFO) {
-            if (current_SubnetConfiguration.id() == current_PortConfiguration.network_id()) {
-              if (parsed_struct.port_states(i).operation_type() == OperationType::CREATE) {
-                if (current_SubnetConfiguration.vpc_id().empty()) {
-                  throw std::invalid_argument("vpc_id is empty");
-                }
-                vpc_id = current_SubnetConfiguration.vpc_id();
-
-                if (current_SubnetConfiguration.gateway().ip_address().empty()) {
-                  throw std::invalid_argument("gateway ip address is empty");
-                }
-                my_gw_address = current_SubnetConfiguration.gateway().ip_address();
-
-                if (current_SubnetConfiguration.tunnel_id() == 0) {
-                  throw std::invalid_argument("tunnel id is 0");
-                }
-                endpoint_in.tunid = current_SubnetConfiguration.tunnel_id();
-
-                my_cidr = current_SubnetConfiguration.cidr();
-
-                slash_pos = my_cidr.find('/');
-                if (slash_pos == string::npos) {
-                  throw std::invalid_argument("'/' not found in cidr");
-                }
-
-                // substr can throw out_of_range and bad_alloc exceptions
-                my_prefixlen = my_cidr.substr(slash_pos + 1);
-              }
-
-              subnet_info_found = true;
-              break;
-            }
-          }
-        }
-        if (!subnet_info_found) {
-          ACA_LOG_ERROR("Not able to find the info for port with subnet ID: %s.\n",
-                        current_PortConfiguration.network_id().c_str());
-          rc = -EXIT_FAILURE;
-        } else {
-          rc = EXIT_SUCCESS;
-        }
-
-        ACA_LOG_DEBUG(
-                "Endpoint Operation: %s: interface: %s, ep_ip: %s, mac: %s, hosted_interface: %s, veth_name:%s, tunid:%ld\n",
-                aca_get_operation_name(parsed_struct.port_states(i).operation_type()),
-                endpoint_in.interface, my_ep_ip_address.c_str(),
-                current_PortConfiguration.mac_address().c_str(),
-                endpoint_in.hosted_interface, endpoint_in.veth, endpoint_in.tunid);
-      } catch (const std::invalid_argument &e) {
-        ACA_LOG_ERROR("Invalid argument exception caught while parsing port configuration, message: %s.\n",
-                      e.what());
-        rc = -EXIT_FAILURE;
-        // TODO: Notify the Network Controller the goal state configuration has invalid data
-      } catch (const std::exception &e) {
-        ACA_LOG_ERROR("Exception caught while parsing port configuration, message: %s.\n",
-                      e.what());
-        rc = -EXIT_FAILURE;
-      } catch (...) {
-        ACA_LOG_ERROR("Unknown exception caught while parsing port configuration, rethrowing.\n");
-        throw; // rethrowing
+      assert(current_PortConfiguration.fixed_ips_size() == 1);
+      my_ep_ip_address = current_PortConfiguration.fixed_ips(0).ip_address();
+      // inet_pton returns 1 for success 0 for failure
+      if (inet_pton(AF_INET, my_ep_ip_address.c_str(), &(sa.sin_addr)) != 1) {
+        throw std::invalid_argument("EP ip address is not in the expect format");
       }
-      break;
+      endpoint_in.ip = sa.sin_addr.s_addr;
 
-    case OperationType::FINALIZE:
-      transitd_command = UPDATE_AGENT_MD;
-      transitd_input = &agent_md_in;
+      endpoint_in.eptype = TRAN_SIMPLE_EP;
 
-      try {
+      uint32_t remote_ips[RPC_TRN_MAX_REMOTE_IPS];
+      endpoint_in.remote_ips.remote_ips_val = remote_ips;
+      endpoint_in.remote_ips.remote_ips_len = 1;
+      // inet_pton returns 1 for success 0 for failure
+      if (inet_pton(AF_INET, current_PortConfiguration.host_info().ip_address().c_str(),
+                    &(sa.sin_addr)) != 1) {
+        throw std::invalid_argument("EP host ip address is not in the expect format");
+      }
+      endpoint_in.remote_ips.remote_ips_val[0] = sa.sin_addr.s_addr;
+
+      my_ep_mac_address = current_PortConfiguration.mac_address();
+      // the below will throw invalid_argument exceptions when it cannot convert the mac string
+      aca_convert_to_mac_array(current_PortConfiguration.mac_address().c_str(),
+                               endpoint_in.mac);
+
+      strncpy(veth_name, veth_name_string.c_str(), strlen(veth_name_string.c_str()) + 1);
+      endpoint_in.veth = veth_name;
+
+      if (current_PortState.operation_type() == OperationType::CREATE_UPDATE_SWITCH) {
+        endpoint_in.hosted_interface = EMPTY_STRING;
+      } else // it must be OperationType::CREATE
+      {
         strncpy(peer_name, peer_name_string.c_str(), strlen(peer_name_string.c_str()) + 1);
-        agent_md_in.interface = peer_name;
+        endpoint_in.hosted_interface = peer_name;
+      }
 
-        agent_md_in.eth.interface = PHYSICAL_IF;
-        assert(current_PortConfiguration.fixed_ips_size() == 1);
-        my_ep_ip_address = current_PortConfiguration.fixed_ips(0).ip_address();
-        // inet_pton returns 1 for success 0 for failure
-        if (inet_pton(AF_INET, my_ep_ip_address.c_str(), &(sa.sin_addr)) != 1) {
-          throw std::invalid_argument("EP ip address is not in the expect format");
-        }
+      // TODO: cache the subnet information to a dictionary to provide
+      // a faster look up for the next run, only use the below loop for
+      // cache miss.
+      // Look up the subnet configuration to query for tunnel_id
+      for (int j = 0; j < parsed_struct.subnet_states_size(); j++) {
+        SubnetConfiguration current_SubnetConfiguration =
+                parsed_struct.subnet_states(j).configuration();
 
-        // the below will throw exceptions when it cannot convert the mac string
-        aca_convert_to_mac_array(current_PortConfiguration.mac_address().c_str(),
-                                 agent_md_in.eth.mac);
+        ACA_LOG_DEBUG("current_SubnetConfiguration subnet ID: %s.\n",
+                      current_SubnetConfiguration.id().c_str());
 
-        agent_md_in.ep.interface = PHYSICAL_IF;
-        my_ep_host_ip_address = current_PortConfiguration.host_info().ip_address();
-        // inet_pton returns 1 for success 0 for failure
-        if (inet_pton(AF_INET, my_ep_host_ip_address.c_str(), &(sa.sin_addr)) != 1) {
-          throw std::invalid_argument("EP host ip address is not in the expect format");
-        }
-
-        agent_md_in.ep.ip = sa.sin_addr.s_addr;
-        agent_md_in.ep.eptype = TRAN_SIMPLE_EP;
-
-        uint32_t md_remote_ips[RPC_TRN_MAX_REMOTE_IPS];
-        agent_md_in.ep.remote_ips.remote_ips_val = md_remote_ips;
-        agent_md_in.ep.remote_ips.remote_ips_len = 1;
-        if (inet_pton(AF_INET,
-                      current_PortConfiguration.host_info().ip_address().c_str(),
-                      &(sa.sin_addr)) != 1) {
-          throw std::invalid_argument("EP host ip address is not in the expect format");
-        }
-        agent_md_in.ep.remote_ips.remote_ips_val[0] = sa.sin_addr.s_addr;
-
-        // the below will throw invalid_argument exceptions when it cannot convert the mac string
-        aca_convert_to_mac_array(
-                current_PortConfiguration.host_info().mac_address().c_str(),
-                agent_md_in.ep.mac);
-
-        if (strlen(current_PortConfiguration.name().c_str()) >= 20) {
-          throw std::invalid_argument("Input port name is >=20");
-        }
-        strncpy(veth_name, veth_name_string.c_str(), strlen(veth_name_string.c_str()) + 1);
-        agent_md_in.ep.veth = veth_name;
-
-        agent_md_in.ep.hosted_interface = PHYSICAL_IF;
-
-        // Look up the subnet configuration
-        for (int j = 0; j < parsed_struct.subnet_states_size(); j++) {
-          SubnetConfiguration current_SubnetConfiguration =
-                  parsed_struct.subnet_states(j).configuration();
-
-          ACA_LOG_DEBUG("current_SubnetConfiguration subnet ID: %s.\n",
-                        current_SubnetConfiguration.id().c_str());
-
-          if (parsed_struct.subnet_states(j).operation_type() == OperationType::INFO) {
-            if (current_SubnetConfiguration.id() == current_PortConfiguration.network_id()) {
+        if (parsed_struct.subnet_states(j).operation_type() == OperationType::INFO) {
+          if (current_SubnetConfiguration.id() == current_PortConfiguration.network_id()) {
+            if (current_PortState.operation_type() == OperationType::CREATE) {
               if (current_SubnetConfiguration.vpc_id().empty()) {
                 throw std::invalid_argument("vpc_id is empty");
               }
@@ -731,10 +617,7 @@ int Aca_Comm_Manager::update_port_state(const GoalState &parsed_struct)
               if (current_SubnetConfiguration.tunnel_id() == 0) {
                 throw std::invalid_argument("tunnel id is 0");
               }
-              agent_md_in.ep.tunid = current_SubnetConfiguration.tunnel_id();
-
-              agent_md_in.net.interface = PHYSICAL_IF;
-              agent_md_in.net.tunid = current_SubnetConfiguration.tunnel_id();
+              endpoint_in.tunid = current_SubnetConfiguration.tunnel_id();
 
               my_cidr = current_SubnetConfiguration.cidr();
 
@@ -744,314 +627,504 @@ int Aca_Comm_Manager::update_port_state(const GoalState &parsed_struct)
               }
 
               // substr can throw out_of_range and bad_alloc exceptions
-              my_ip_address = my_cidr.substr(0, slash_pos);
-
-              // inet_pton returns 1 for success 0 for failure
-              if (inet_pton(AF_INET, my_ip_address.c_str(), &(sa.sin_addr)) != 1) {
-                throw std::invalid_argument("Ip address is not in the expect format");
-              }
-              agent_md_in.net.netip = sa.sin_addr.s_addr;
-
               my_prefixlen = my_cidr.substr(slash_pos + 1);
-              // stoi throw invalid argument exception when it cannot covert
-              agent_md_in.net.prefixlen = std::stoi(my_prefixlen);
-
-              agent_md_in.net.switches_ips.switches_ips_len =
-                      current_SubnetConfiguration.transit_switches_size();
-              uint32_t switches[RPC_TRN_MAX_NET_SWITCHES];
-              agent_md_in.net.switches_ips.switches_ips_val = switches;
-
-              for (int k = 0;
-                   k < current_SubnetConfiguration.transit_switches_size(); k++) {
-                // inet_pton returns 1 for success 0 for failure
-                if (inet_pton(AF_INET,
-                              current_SubnetConfiguration.transit_switches(k)
-                                      .ip_address()
-                                      .c_str(),
-                              &(sa.sin_addr)) != 1) {
-                  throw std::invalid_argument("Transit switch ip address is not in the expect format");
-                }
-                agent_md_in.net.switches_ips.switches_ips_val[k] = sa.sin_addr.s_addr;
-              }
-
-              subnet_info_found = true;
-              break;
             }
+
+            subnet_info_found = true;
+            break;
           }
         }
-        if (!subnet_info_found) {
-          ACA_LOG_ERROR("Not able to find the tunnel ID for port subnet ID: %s.\n",
-                        current_PortConfiguration.network_id().c_str());
-          rc = -EXIT_FAILURE;
-          // TODO: Notify the Network Controller the goal state configuration
-          //       has invalid data
-        } else {
-          rc = EXIT_SUCCESS;
+      }
+      if (!subnet_info_found) {
+        ACA_LOG_ERROR("Not able to find the info for port with subnet ID: %s.\n",
+                      current_PortConfiguration.network_id().c_str());
+        rc = -EXIT_FAILURE;
+      } else {
+        rc = EXIT_SUCCESS;
+      }
+
+      ACA_LOG_DEBUG("Endpoint Operation: %s: interface: %s, ep_ip: %s, mac: %s, hosted_interface: %s, veth_name:%s, tunid:%ld\n",
+                    aca_get_operation_name(current_PortState.operation_type()),
+                    endpoint_in.interface, my_ep_ip_address.c_str(),
+                    current_PortConfiguration.mac_address().c_str(),
+                    endpoint_in.hosted_interface, endpoint_in.veth, endpoint_in.tunid);
+    } catch (const std::invalid_argument &e) {
+      ACA_LOG_ERROR("Invalid argument exception caught while parsing port configuration, message: %s.\n",
+                    e.what());
+      rc = -EINVAL;
+      // TODO: Notify the Network Controller the goal state configuration has invalid data
+    } catch (const std::exception &e) {
+      ACA_LOG_ERROR("Exception caught while parsing port configuration, message: %s.\n",
+                    e.what());
+      rc = -EXIT_FAILURE;
+    } catch (...) {
+      ACA_LOG_ERROR("Unknown exception caught while parsing port configuration, rethrowing.\n");
+      throw; // rethrowing
+    }
+    break;
+
+  case OperationType::FINALIZE:
+    transitd_command = UPDATE_AGENT_MD;
+    transitd_input = &agent_md_in;
+
+    try {
+      strncpy(peer_name, peer_name_string.c_str(), strlen(peer_name_string.c_str()) + 1);
+      agent_md_in.interface = peer_name;
+
+      agent_md_in.eth.interface = PHYSICAL_IF;
+      assert(current_PortConfiguration.fixed_ips_size() == 1);
+      my_ep_ip_address = current_PortConfiguration.fixed_ips(0).ip_address();
+      // inet_pton returns 1 for success 0 for failure
+      if (inet_pton(AF_INET, my_ep_ip_address.c_str(), &(sa.sin_addr)) != 1) {
+        throw std::invalid_argument("EP ip address is not in the expect format");
+      }
+
+      // the below will throw exceptions when it cannot convert the mac string
+      aca_convert_to_mac_array(current_PortConfiguration.mac_address().c_str(),
+                               agent_md_in.eth.mac);
+
+      agent_md_in.ep.interface = PHYSICAL_IF;
+      my_ep_host_ip_address = current_PortConfiguration.host_info().ip_address();
+      // inet_pton returns 1 for success 0 for failure
+      if (inet_pton(AF_INET, my_ep_host_ip_address.c_str(), &(sa.sin_addr)) != 1) {
+        throw std::invalid_argument("EP host ip address is not in the expect format");
+      }
+
+      agent_md_in.ep.ip = sa.sin_addr.s_addr;
+      agent_md_in.ep.eptype = TRAN_SIMPLE_EP;
+
+      uint32_t md_remote_ips[RPC_TRN_MAX_REMOTE_IPS];
+      agent_md_in.ep.remote_ips.remote_ips_val = md_remote_ips;
+      agent_md_in.ep.remote_ips.remote_ips_len = 1;
+      if (inet_pton(AF_INET, current_PortConfiguration.host_info().ip_address().c_str(),
+                    &(sa.sin_addr)) != 1) {
+        throw std::invalid_argument("EP host ip address is not in the expect format");
+      }
+      agent_md_in.ep.remote_ips.remote_ips_val[0] = sa.sin_addr.s_addr;
+
+      // the below will throw invalid_argument exceptions when it cannot convert the mac string
+      aca_convert_to_mac_array(
+              current_PortConfiguration.host_info().mac_address().c_str(),
+              agent_md_in.ep.mac);
+
+      if (strlen(current_PortConfiguration.name().c_str()) >= 20) {
+        throw std::invalid_argument("Input port name is >=20");
+      }
+      strncpy(veth_name, veth_name_string.c_str(), strlen(veth_name_string.c_str()) + 1);
+      agent_md_in.ep.veth = veth_name;
+
+      agent_md_in.ep.hosted_interface = PHYSICAL_IF;
+
+      // Look up the subnet configuration
+      for (int j = 0; j < parsed_struct.subnet_states_size(); j++) {
+        SubnetConfiguration current_SubnetConfiguration =
+                parsed_struct.subnet_states(j).configuration();
+
+        ACA_LOG_DEBUG("current_SubnetConfiguration subnet ID: %s.\n",
+                      current_SubnetConfiguration.id().c_str());
+
+        if (parsed_struct.subnet_states(j).operation_type() == OperationType::INFO) {
+          if (current_SubnetConfiguration.id() == current_PortConfiguration.network_id()) {
+            if (current_SubnetConfiguration.vpc_id().empty()) {
+              throw std::invalid_argument("vpc_id is empty");
+            }
+            vpc_id = current_SubnetConfiguration.vpc_id();
+
+            if (current_SubnetConfiguration.gateway().ip_address().empty()) {
+              throw std::invalid_argument("gateway ip address is empty");
+            }
+            my_gw_address = current_SubnetConfiguration.gateway().ip_address();
+
+            if (current_SubnetConfiguration.tunnel_id() == 0) {
+              throw std::invalid_argument("tunnel id is 0");
+            }
+            agent_md_in.ep.tunid = current_SubnetConfiguration.tunnel_id();
+
+            agent_md_in.net.interface = PHYSICAL_IF;
+            agent_md_in.net.tunid = current_SubnetConfiguration.tunnel_id();
+
+            my_cidr = current_SubnetConfiguration.cidr();
+
+            slash_pos = my_cidr.find('/');
+            if (slash_pos == string::npos) {
+              throw std::invalid_argument("'/' not found in cidr");
+            }
+
+            // substr can throw out_of_range and bad_alloc exceptions
+            my_ip_address = my_cidr.substr(0, slash_pos);
+
+            // inet_pton returns 1 for success 0 for failure
+            if (inet_pton(AF_INET, my_ip_address.c_str(), &(sa.sin_addr)) != 1) {
+              throw std::invalid_argument("Ip address is not in the expect format");
+            }
+            agent_md_in.net.netip = sa.sin_addr.s_addr;
+
+            my_prefixlen = my_cidr.substr(slash_pos + 1);
+            // stoi throw invalid argument exception when it cannot covert
+            agent_md_in.net.prefixlen = std::stoi(my_prefixlen);
+
+            agent_md_in.net.switches_ips.switches_ips_len =
+                    current_SubnetConfiguration.transit_switches_size();
+            uint32_t switches[RPC_TRN_MAX_NET_SWITCHES];
+            agent_md_in.net.switches_ips.switches_ips_val = switches;
+
+            for (int k = 0; k < current_SubnetConfiguration.transit_switches_size(); k++) {
+              // inet_pton returns 1 for success 0 for failure
+              if (inet_pton(AF_INET,
+                            current_SubnetConfiguration.transit_switches(k)
+                                    .ip_address()
+                                    .c_str(),
+                            &(sa.sin_addr)) != 1) {
+                throw std::invalid_argument("Transit switch ip address is not in the expect format");
+              }
+              agent_md_in.net.switches_ips.switches_ips_val[k] = sa.sin_addr.s_addr;
+            }
+
+            subnet_info_found = true;
+            break;
+          }
         }
-        ACA_LOG_DEBUG("Endpoint Operation: %s: interface: %s, ep_ip: %s, mac: %s, hosted_interface: %s, veth_name:%s, tunid:%ld\n",
-                      aca_get_operation_name(parsed_struct.port_states(i).operation_type()),
-                      agent_md_in.ep.interface, my_ep_ip_address.c_str(),
-                      current_PortConfiguration.mac_address().c_str(),
-                      agent_md_in.ep.hosted_interface, agent_md_in.ep.veth,
-                      agent_md_in.ep.tunid);
-      } catch (const std::invalid_argument &e) {
-        ACA_LOG_ERROR("Invalid argument exception caught while parsing FINALIZE port configuration, message: %s.\n",
-                      e.what());
+      }
+      if (!subnet_info_found) {
+        ACA_LOG_ERROR("Not able to find the tunnel ID for port subnet ID: %s.\n",
+                      current_PortConfiguration.network_id().c_str());
         rc = -EXIT_FAILURE;
         // TODO: Notify the Network Controller the goal state configuration
         //       has invalid data
-      } catch (const std::exception &e) {
-        ACA_LOG_ERROR("Exception caught while parsing FINALIZE port configuration, message: %s.\n",
-                      e.what());
-        rc = -EXIT_FAILURE;
-      } catch (...) {
-        ACA_LOG_ERROR("Unknown exception caught while parsing FINALIZE port configuration, rethrowing.\n");
-        throw; // rethrowing
+      } else {
+        rc = EXIT_SUCCESS;
       }
-
-      break;
-    default:
-      transitd_command = 0;
-      ACA_LOG_DEBUG("Invalid port state operation type %d/n",
-                    parsed_struct.port_states(i).operation_type());
-      break;
+      ACA_LOG_DEBUG("Endpoint Operation: %s: interface: %s, ep_ip: %s, mac: %s, hosted_interface: %s, veth_name:%s, tunid:%ld\n",
+                    aca_get_operation_name(current_PortState.operation_type()),
+                    agent_md_in.ep.interface, my_ep_ip_address.c_str(),
+                    current_PortConfiguration.mac_address().c_str(),
+                    agent_md_in.ep.hosted_interface, agent_md_in.ep.veth,
+                    agent_md_in.ep.tunid);
+    } catch (const std::invalid_argument &e) {
+      ACA_LOG_ERROR("Invalid argument exception caught while parsing FINALIZE port configuration, message: %s.\n",
+                    e.what());
+      rc = -EINVAL;
+      // TODO: Notify the Network Controller the goal state configuration
+      //       has invalid data
+    } catch (const std::exception &e) {
+      ACA_LOG_ERROR("Exception caught while parsing FINALIZE port configuration, message: %s.\n",
+                    e.what());
+      rc = -EXIT_FAILURE;
+    } catch (...) {
+      ACA_LOG_ERROR("Unknown exception caught while parsing FINALIZE port configuration, rethrowing.\n");
+      throw; // rethrowing
     }
 
-    if ((rc == EXIT_SUCCESS) &&
-        (parsed_struct.port_states(i).operation_type() == OperationType::CREATE)) {
-      namespace_name = VPC_NS_PREFIX + vpc_id;
-      rc = Aca_Net_Config::get_instance().create_namespace(namespace_name);
-      if (rc == EXIT_SUCCESS) {
-        ACA_LOG_INFO("Successfully created namespace: %s\n", namespace_name.c_str());
-      } else {
-        ACA_LOG_ERROR("Unable to create namespace: %s\n", namespace_name.c_str());
-      }
+    break;
+  default:
+    transitd_command = 0;
+    ACA_LOG_DEBUG("Invalid port state operation type %d/n",
+                  current_PortState.operation_type());
+    break;
+  }
 
-      rc = Aca_Net_Config::get_instance().create_veth_pair(temp_name_string, peer_name_string);
-      if (rc == EXIT_SUCCESS) {
-        ACA_LOG_INFO("Successfully created temp veth pair, veth: %s, peer: %s\n",
-                     temp_name_string.c_str(), peer_name_string.c_str());
-      } else {
-        ACA_LOG_ERROR("Unable to create temp veth pair, veth: %s, peer: %s\n",
-                      temp_name_string.c_str(), peer_name_string.c_str());
-      }
-
-      rc = Aca_Net_Config::get_instance().setup_peer_device(peer_name_string);
-      if (rc == EXIT_SUCCESS) {
-        ACA_LOG_INFO("Successfully setup the peer device: %s\n",
-                     peer_name_string.c_str());
-      } else {
-        ACA_LOG_ERROR("Unable to setup the peer device: %s\n", peer_name_string.c_str());
-      }
-
-      // load transit agent XDP on the peer device
-      rc = load_agent_xdp(peer_name_string);
-      if (rc == EXIT_SUCCESS) {
-        ACA_LOG_INFO("Successfully loaded transit agent xdp on the peer device: %s\n",
-                     peer_name_string.c_str());
-      } else {
-        ACA_LOG_ERROR("Unable to load transit agent xdp on the peer device: %s\n",
-                      peer_name_string.c_str());
-      }
-
-      rc = Aca_Net_Config::get_instance().move_to_namespace(temp_name_string, namespace_name);
-      if (rc == EXIT_SUCCESS) {
-        ACA_LOG_INFO("Successfully created move veth: %s, to namespace: %s\n",
-                     temp_name_string.c_str(), namespace_name.c_str());
-      } else {
-        ACA_LOG_ERROR("Unable to create move veth: %s, to namespace: %s\n",
-                      temp_name_string.c_str(), namespace_name.c_str());
-      }
-
-      veth_config new_veth_config;
-      new_veth_config.veth_name = temp_name_string;
-      new_veth_config.ip = my_ep_ip_address;
-      new_veth_config.prefix_len = my_prefixlen;
-      new_veth_config.mac = my_ep_mac_address;
-      new_veth_config.gateway_ip = my_gw_address;
-
-      rc = Aca_Net_Config::get_instance().setup_veth_device(namespace_name, new_veth_config);
-      if (rc == EXIT_SUCCESS) {
-        ACA_LOG_INFO("Successfully setup ns: %s, veth: %s, ip: %s, prefix: %s, mac: %s, gw: %s\n",
-                     namespace_name.c_str(), temp_name_string.c_str(),
-                     my_ep_ip_address.c_str(), my_prefixlen.c_str(),
-                     my_ep_mac_address.c_str(), my_gw_address.c_str());
-      } else {
-        ACA_LOG_ERROR("Unable to setup ns: %s, veth: %s, ip: %s, prefix: %s, mac: %s, gw: %s\n",
-                      namespace_name.c_str(), temp_name_string.c_str(),
-                      my_ep_ip_address.c_str(), my_prefixlen.c_str(),
-                      my_ep_mac_address.c_str(), my_gw_address.c_str());
-      }
+  if ((rc == EXIT_SUCCESS) && (current_PortState.operation_type() == OperationType::CREATE)) {
+    namespace_name = VPC_NS_PREFIX + vpc_id;
+    rc = Aca_Net_Config::get_instance().create_namespace(
+            namespace_name, culminative_network_configuration_time);
+    if (rc == EXIT_SUCCESS) {
+      ACA_LOG_INFO("Successfully created namespace: %s\n", namespace_name.c_str());
+    } else {
+      ACA_LOG_ERROR("Unable to create namespace: %s\n", namespace_name.c_str());
     }
 
-    if ((transitd_command != 0) && (rc == EXIT_SUCCESS)) {
-      exec_command_rc = this->execute_command(transitd_command, transitd_input);
+    rc = Aca_Net_Config::get_instance().create_veth_pair(
+            temp_name_string, peer_name_string, culminative_network_configuration_time);
+    if (rc == EXIT_SUCCESS) {
+      ACA_LOG_INFO("Successfully created temp veth pair, veth: %s, peer: %s\n",
+                   temp_name_string.c_str(), peer_name_string.c_str());
+    } else {
+      ACA_LOG_ERROR("Unable to create temp veth pair, veth: %s, peer: %s\n",
+                    temp_name_string.c_str(), peer_name_string.c_str());
+    }
+
+    rc = Aca_Net_Config::get_instance().setup_peer_device(
+            peer_name_string, culminative_network_configuration_time);
+    if (rc == EXIT_SUCCESS) {
+      ACA_LOG_INFO("Successfully setup the peer device: %s\n", peer_name_string.c_str());
+    } else {
+      ACA_LOG_ERROR("Unable to setup the peer device: %s\n", peer_name_string.c_str());
+    }
+
+    // load transit agent XDP on the peer device
+    rc = load_agent_xdp(peer_name_string, culminative_dataplane_programming_time);
+    if (rc == EXIT_SUCCESS) {
+      ACA_LOG_INFO("Successfully loaded transit agent xdp on the peer device: %s\n",
+                   peer_name_string.c_str());
+    } else {
+      ACA_LOG_ERROR("Unable to load transit agent xdp on the peer device: %s\n",
+                    peer_name_string.c_str());
+    }
+
+    rc = Aca_Net_Config::get_instance().move_to_namespace(
+            temp_name_string, namespace_name, culminative_network_configuration_time);
+    if (rc == EXIT_SUCCESS) {
+      ACA_LOG_INFO("Successfully created move veth: %s, to namespace: %s\n",
+                   temp_name_string.c_str(), namespace_name.c_str());
+    } else {
+      ACA_LOG_ERROR("Unable to create move veth: %s, to namespace: %s\n",
+                    temp_name_string.c_str(), namespace_name.c_str());
+    }
+
+    veth_config new_veth_config;
+    new_veth_config.veth_name = temp_name_string;
+    new_veth_config.ip = my_ep_ip_address;
+    new_veth_config.prefix_len = my_prefixlen;
+    new_veth_config.mac = my_ep_mac_address;
+    new_veth_config.gateway_ip = my_gw_address;
+
+    rc = Aca_Net_Config::get_instance().setup_veth_device(
+            namespace_name, new_veth_config, culminative_network_configuration_time);
+    if (rc == EXIT_SUCCESS) {
+      ACA_LOG_INFO("Successfully setup ns: %s, veth: %s, ip: %s, prefix: %s, mac: %s, gw: %s\n",
+                   namespace_name.c_str(), temp_name_string.c_str(),
+                   my_ep_ip_address.c_str(), my_prefixlen.c_str(),
+                   my_ep_mac_address.c_str(), my_gw_address.c_str());
+    } else {
+      ACA_LOG_ERROR("Unable to setup ns: %s, veth: %s, ip: %s, prefix: %s, mac: %s, gw: %s\n",
+                    namespace_name.c_str(), temp_name_string.c_str(),
+                    my_ep_ip_address.c_str(), my_prefixlen.c_str(),
+                    my_ep_mac_address.c_str(), my_gw_address.c_str());
+    }
+  }
+
+  if ((transitd_command != 0) && (rc == EXIT_SUCCESS)) {
+    exec_command_rc = this->execute_command(transitd_command, transitd_input,
+                                            culminative_dataplane_programming_time);
+    if (exec_command_rc == EXIT_SUCCESS) {
+      ACA_LOG_INFO("Successfully executed the network controller command\n");
+    } else {
+      ACA_LOG_ERROR("[update_port_state_workitem] Unable to execute the network controller command: %d\n",
+                    exec_command_rc);
+      // TODO: Notify the Network Controller if the command is not successful.
+    }
+  }
+
+  if (current_PortState.operation_type() == OperationType::CREATE_UPDATE_SWITCH) {
+    // update substrate
+    ACA_LOG_DEBUG("port operation: CREATE_UPDATE_SWITCH, update substrate from host_info(), IP: %s, mac: %s\n",
+                  current_PortConfiguration.host_info().ip_address().c_str(),
+                  current_PortConfiguration.host_info().mac_address().c_str());
+
+    transitd_command = UPDATE_EP;
+
+    try {
+      substrate_in.interface = PHYSICAL_IF;
+
+      // inet_pton returns 1 for success 0 for failure
+      if (inet_pton(AF_INET, current_PortConfiguration.host_info().ip_address().c_str(),
+                    &(sa.sin_addr)) != 1) {
+        throw std::invalid_argument("Host ip address is not in the expect format");
+      }
+      substrate_in.ip = sa.sin_addr.s_addr;
+      substrate_in.eptype = TRAN_SUBSTRT_EP;
+      uint32_t remote_ips[RPC_TRN_MAX_REMOTE_IPS];
+      substrate_in.remote_ips.remote_ips_val = remote_ips;
+      substrate_in.remote_ips.remote_ips_len = 0;
+      // the below will throw invalid_argument exceptions when it cannot convert the mac string
+      aca_convert_to_mac_array(
+              current_PortConfiguration.host_info().mac_address().c_str(),
+              substrate_in.mac);
+      substrate_in.hosted_interface = EMPTY_STRING;
+      substrate_in.veth = EMPTY_STRING;
+      substrate_in.tunid = TRAN_SUBSTRT_VNI;
+
+      exec_command_rc = this->execute_command(transitd_command, &substrate_in,
+                                              culminative_dataplane_programming_time);
       if (exec_command_rc == EXIT_SUCCESS) {
-        ACA_LOG_INFO("Successfully executed the network controller command\n");
+        ACA_LOG_INFO("Successfully updated substrate in transit daemon\n");
       } else {
-        ACA_LOG_ERROR("Unable to execute the network controller command: %d\n", exec_command_rc);
+        ACA_LOG_ERROR("Unable to update substrate in transit daemon: %d\n", exec_command_rc);
         // TODO: Notify the Network Controller if the command is not successful.
       }
+    } catch (const std::invalid_argument &e) {
+      ACA_LOG_ERROR("Invalid argument exception caught while parsing CREATE_UPDATE_SWITCH substrate port configuration, message: %s.\n",
+                    e.what());
+      rc = -EINVAL;
+      // TODO: Notify the Network Controller the goal state configuration has invalid data
+    } catch (...) {
+      ACA_LOG_ERROR("Unknown exception caught while parsing CREATE_UPDATE_SWITCH substrate port configuration, rethrowing.\n");
+      throw; // rethrowing
     }
+  } else if (current_PortState.operation_type() == OperationType::FINALIZE) {
+    transitd_command = UPDATE_AGENT_EP;
 
-    if (parsed_struct.port_states(i).operation_type() == OperationType::CREATE_UPDATE_SWITCH) {
-      // update substrate
-      ACA_LOG_DEBUG("port operation: CREATE_UPDATE_SWITCH, update substrate from host_info(), IP: %s, mac: %s\n",
-                    current_PortConfiguration.host_info().ip_address().c_str(),
-                    current_PortConfiguration.host_info().mac_address().c_str());
+    try {
+      // Look up the subnet info
+      for (int j = 0; j < parsed_struct.subnet_states_size(); j++) {
+        SubnetConfiguration current_SubnetConfiguration =
+                parsed_struct.subnet_states(j).configuration();
 
-      transitd_command = UPDATE_EP;
+        ACA_LOG_DEBUG("current_SubnetConfiguration subnet ID: %s.\n",
+                      current_SubnetConfiguration.id().c_str());
 
-      try {
-        substrate_in.interface = PHYSICAL_IF;
+        if (parsed_struct.subnet_states(j).operation_type() == OperationType::INFO) {
+          if (current_SubnetConfiguration.id() == current_PortConfiguration.network_id()) {
+            for (int k = 0; k < current_SubnetConfiguration.transit_switches_size(); k++) {
+              ACA_LOG_DEBUG("port operation: FINALIZE, update substrate, IP: %s, mac: %s\n",
+                            current_SubnetConfiguration.transit_switches(k)
+                                    .ip_address()
+                                    .c_str(),
+                            current_SubnetConfiguration.transit_switches(k)
+                                    .mac_address()
+                                    .c_str());
 
-        // inet_pton returns 1 for success 0 for failure
-        if (inet_pton(AF_INET,
-                      current_PortConfiguration.host_info().ip_address().c_str(),
-                      &(sa.sin_addr)) != 1) {
-          throw std::invalid_argument("Host ip address is not in the expect format");
-        }
-        substrate_in.ip = sa.sin_addr.s_addr;
-        substrate_in.eptype = TRAN_SUBSTRT_EP;
-        uint32_t remote_ips[RPC_TRN_MAX_REMOTE_IPS];
-        substrate_in.remote_ips.remote_ips_val = remote_ips;
-        substrate_in.remote_ips.remote_ips_len = 0;
-        // the below will throw invalid_argument exceptions when it cannot convert the mac string
-        aca_convert_to_mac_array(
-                current_PortConfiguration.host_info().mac_address().c_str(),
-                substrate_in.mac);
-        substrate_in.hosted_interface = EMPTY_STRING;
-        substrate_in.veth = EMPTY_STRING;
-        substrate_in.tunid = TRAN_SUBSTRT_VNI;
+              strncpy(peer_name, peer_name_string.c_str(),
+                      strlen(peer_name_string.c_str()) + 1);
+              substrate_in.interface = peer_name;
 
-        exec_command_rc = this->execute_command(transitd_command, &substrate_in);
-        if (exec_command_rc == EXIT_SUCCESS) {
-          ACA_LOG_INFO("Successfully updated substrate in transit daemon\n");
-        } else {
-          ACA_LOG_ERROR("Unable to update substrate in transit daemon: %d\n", exec_command_rc);
-          // TODO: Notify the Network Controller if the command is not successful.
-        }
-      } catch (const std::invalid_argument &e) {
-        ACA_LOG_ERROR("Invalid argument exception caught while parsing CREATE_UPDATE_SWITCH substrate port configuration, message: %s.\n",
-                      e.what());
-        rc = -EXIT_FAILURE;
-        // TODO: Notify the Network Controller the goal state configuration has invalid data
-      } catch (...) {
-        ACA_LOG_ERROR("Unknown exception caught while parsing CREATE_UPDATE_SWITCH substrate port configuration, rethrowing.\n");
-        throw; // rethrowing
-      }
-    } else if (parsed_struct.port_states(i).operation_type() == OperationType::FINALIZE) {
-      transitd_command = UPDATE_AGENT_EP;
+              // inet_pton returns 1 for success 0 for failure
+              if (inet_pton(AF_INET,
+                            current_SubnetConfiguration.transit_switches(k)
+                                    .ip_address()
+                                    .c_str(),
+                            &(sa.sin_addr)) != 1) {
+                throw std::invalid_argument("Transit switch ip address is not in the expect format");
+              }
+              substrate_in.ip = sa.sin_addr.s_addr;
+              substrate_in.eptype = TRAN_SUBSTRT_EP;
+              uint32_t remote_ips[RPC_TRN_MAX_REMOTE_IPS];
+              substrate_in.remote_ips.remote_ips_val = remote_ips;
+              substrate_in.remote_ips.remote_ips_len = 0;
+              // the below will throw invalid_argument exceptions when it cannot convert the mac string
+              aca_convert_to_mac_array(
+                      current_SubnetConfiguration.transit_switches(k)
+                              .mac_address()
+                              .c_str(),
+                      substrate_in.mac);
+              substrate_in.hosted_interface = EMPTY_STRING;
+              substrate_in.veth = EMPTY_STRING;
+              substrate_in.tunid = TRAN_SUBSTRT_VNI;
 
-      try {
-        // Look up the subnet info
-        for (int j = 0; j < parsed_struct.subnet_states_size(); j++) {
-          SubnetConfiguration current_SubnetConfiguration =
-                  parsed_struct.subnet_states(j).configuration();
+              exec_command_rc = this->execute_command(
+                      transitd_command, &substrate_in, culminative_dataplane_programming_time);
+              if (exec_command_rc == EXIT_SUCCESS) {
+                ACA_LOG_INFO("Successfully updated substrate in transit daemon\n");
+              } else {
+                ACA_LOG_ERROR("Unable to update substrate in transit daemon: %d\n",
+                              exec_command_rc);
+                // TODO: Notify the Network Controller if the command is not successful.
+              }
 
-          ACA_LOG_DEBUG("current_SubnetConfiguration subnet ID: %s.\n",
-                        current_SubnetConfiguration.id().c_str());
+              namespace_name = VPC_NS_PREFIX + vpc_id;
 
-          if (parsed_struct.subnet_states(j).operation_type() == OperationType::INFO) {
-            if (current_SubnetConfiguration.id() == current_PortConfiguration.network_id()) {
-              for (int k = 0;
-                   k < current_SubnetConfiguration.transit_switches_size(); k++) {
-                ACA_LOG_DEBUG("port operation: FINALIZE, update substrate, IP: %s, mac: %s\n",
-                              current_SubnetConfiguration.transit_switches(k)
-                                      .ip_address()
-                                      .c_str(),
-                              current_SubnetConfiguration.transit_switches(k)
-                                      .mac_address()
-                                      .c_str());
+              rc = Aca_Net_Config::get_instance().rename_veth_device(
+                      namespace_name, temp_name_string, veth_name_string,
+                      culminative_network_configuration_time);
+              if (rc == EXIT_SUCCESS) {
+                ACA_LOG_INFO("Successfully renamed in ns: %s, old_veth: %s, new_veth: %s\n",
+                             namespace_name.c_str(), temp_name_string.c_str(),
+                             veth_name_string.c_str());
+              } else {
+                ACA_LOG_ERROR("Unable to renamed in ns: %s, old_veth: %s, new_veth: %s\n",
+                              namespace_name.c_str(), temp_name_string.c_str(),
+                              veth_name_string.c_str());
+              }
 
-                strncpy(peer_name, peer_name_string.c_str(),
-                        strlen(peer_name_string.c_str()) + 1);
-                substrate_in.interface = peer_name;
+              // workaround for the current contract with CNI
+              rc = Aca_Net_Config::get_instance().add_gw(
+                      namespace_name, my_gw_address, culminative_network_configuration_time);
+              if (rc == EXIT_SUCCESS) {
+                ACA_LOG_INFO("Successfully added gw in ns: %s, gateway: %s\n",
+                             namespace_name.c_str(), my_gw_address.c_str());
+              } else {
+                ACA_LOG_ERROR("Unable to added gw in ns: %s, gateway: %s\n",
+                              namespace_name.c_str(), my_gw_address.c_str());
+              }
 
-                // inet_pton returns 1 for success 0 for failure
-                if (inet_pton(AF_INET,
-                              current_SubnetConfiguration.transit_switches(k)
-                                      .ip_address()
-                                      .c_str(),
-                              &(sa.sin_addr)) != 1) {
-                  throw std::invalid_argument("Transit switch ip address is not in the expect format");
-                }
-                substrate_in.ip = sa.sin_addr.s_addr;
-                substrate_in.eptype = TRAN_SUBSTRT_EP;
-                uint32_t remote_ips[RPC_TRN_MAX_REMOTE_IPS];
-                substrate_in.remote_ips.remote_ips_val = remote_ips;
-                substrate_in.remote_ips.remote_ips_len = 0;
-                // the below will throw invalid_argument exceptions when it cannot convert the mac string
-                aca_convert_to_mac_array(
-                        current_SubnetConfiguration.transit_switches(k)
-                                .mac_address()
-                                .c_str(),
-                        substrate_in.mac);
-                substrate_in.hosted_interface = EMPTY_STRING;
-                substrate_in.veth = EMPTY_STRING;
-                substrate_in.tunid = TRAN_SUBSTRT_VNI;
+            } // for (int k = 0; k < current_SubnetConfiguration.transit_switches_size(); k++)
 
-                exec_command_rc = this->execute_command(transitd_command, &substrate_in);
-                if (exec_command_rc == EXIT_SUCCESS) {
-                  ACA_LOG_INFO("Successfully updated substrate in transit daemon\n");
-                } else {
-                  ACA_LOG_ERROR("Unable to update substrate in transit daemon: %d\n",
-                                exec_command_rc);
-                  // TODO: Notify the Network Controller if the command is not successful.
-                }
-
-                namespace_name = VPC_NS_PREFIX + vpc_id;
-
-                rc = Aca_Net_Config::get_instance().rename_veth_device(
-                        namespace_name, temp_name_string, veth_name_string);
-                if (rc == EXIT_SUCCESS) {
-                  ACA_LOG_INFO("Successfully renamed in ns: %s, old_veth: %s, new_veth: %s\n",
-                               namespace_name.c_str(), temp_name_string.c_str(),
-                               veth_name_string.c_str());
-                } else {
-                  ACA_LOG_ERROR("Unable to renamed in ns: %s, old_veth: %s, new_veth: %s\n",
-                                namespace_name.c_str(), temp_name_string.c_str(),
-                                veth_name_string.c_str());
-                }
-
-                // workaround for the current contract with CNI
-                rc = Aca_Net_Config::get_instance().add_gw(namespace_name, my_gw_address);
-                if (rc == EXIT_SUCCESS) {
-                  ACA_LOG_INFO("Successfully added gw in ns: %s, gateway: %s\n",
-                               namespace_name.c_str(), my_gw_address.c_str());
-                } else {
-                  ACA_LOG_ERROR("Unable to added gw in ns: %s, gateway: %s\n",
-                                namespace_name.c_str(), my_gw_address.c_str());
-                }
-
-              } // for (int k = 0; k < current_SubnetConfiguration.transit_switches_size(); k++)
-
-              // found subnet information and completed the work, breaking out of the if condition
-              break;
-            }
+            // found subnet information and completed the work, breaking out of the if condition
+            break;
           }
-        } // for (int j = 0; j < parsed_struct.subnet_states_size(); j++)
-      } catch (const std::invalid_argument &e) {
-        ACA_LOG_ERROR("Invalid argument exception caught while parsing FINALIZE substrate port configuration, message: %s.\n",
-                      e.what());
-        rc = -EXIT_FAILURE;
-        // TODO: Notify the Network Controller the goal state configuration has invalid data
-      } catch (const std::exception &e) {
-        ACA_LOG_ERROR("Exception caught while parsing FINALIZE substrate port configuration, message: %s.\n",
-                      e.what());
-        rc = -EXIT_FAILURE;
-      } catch (...) {
-        ACA_LOG_ERROR("Unknown exception caught while parsing FINALIZE substrate port configuration, rethrowing.\n");
-        throw; // rethrowing
-      }
+        }
+      } // for (int j = 0; j < parsed_struct.subnet_states_size(); j++)
+    } catch (const std::invalid_argument &e) {
+      ACA_LOG_ERROR("Invalid argument exception caught while parsing FINALIZE substrate port configuration, message: %s.\n",
+                    e.what());
+      rc = -EINVAL;
+    } catch (const std::exception &e) {
+      ACA_LOG_ERROR("Exception caught while parsing FINALIZE substrate port configuration, message: %s.\n",
+                    e.what());
+      rc = -EXIT_FAILURE;
+    } catch (...) {
+      ACA_LOG_ERROR("Unknown exception caught while parsing FINALIZE substrate port configuration, rethrowing.\n");
+      throw; // rethrowing
     }
+  }
+
+  auto operation_end = chrono::steady_clock::now();
+
+  auto operation_total_time =
+          chrono::duration_cast<chrono::nanoseconds>(operation_end - operation_start)
+                  .count();
+
+  // TODO: put the below into a function
+  OperationStatus overall_operation_status;
+  if (rc == EXIT_SUCCESS)
+    overall_operation_status = OperationStatus::SUCCESS;
+  else if (rc == -EINVAL)
+    overall_operation_status = OperationStatus::INVALID_ARG;
+  else
+    overall_operation_status = OperationStatus::FAILURE;
+
+  // print out the operation reply in debug mode only
+  if (g_debug_mode) {
+    ACA_LOG_DEBUG("gsOperationReply - resource_id: %s\n", port_id.c_str());
+    ACA_LOG_DEBUG("gsOperationReply - resource_type: %d\n", PORT);
+    ACA_LOG_DEBUG("gsOperationReply - operation_type: %d\n",
+                  current_PortState.operation_type());
+    ACA_LOG_DEBUG("gsOperationReply - operation_status: %d\n", overall_operation_status);
+    ACA_LOG_DEBUG("gsOperationReply - dataplane_programming_time: %lu\n",
+                  culminative_dataplane_programming_time);
+    ACA_LOG_DEBUG("gsOperationReply - network_configuration_time: %lu\n",
+                  culminative_network_configuration_time);
+    ACA_LOG_DEBUG("gsOperationReply - total_operation_time: %lu\n", operation_total_time);
+  }
+
+  // update the operation status accordingly
+  GoalStateOperationReply_GoalStateOperationStatus *new_operation_statuses =
+          gsOperationReply.add_operation_statuses();
+  new_operation_statuses->set_resource_id(port_id);
+  new_operation_statuses->set_resource_type(PORT);
+  new_operation_statuses->set_operation_type(current_PortState.operation_type());
+  new_operation_statuses->set_operation_status(overall_operation_status);
+  new_operation_statuses->set_dataplane_programming_time(culminative_dataplane_programming_time);
+  new_operation_statuses->set_network_configuration_time(culminative_network_configuration_time);
+  new_operation_statuses->set_total_operation_time(operation_total_time);
+
+  return rc;
+}
+
+int Aca_Comm_Manager::update_port_states(const GoalState &parsed_struct,
+                                         GoalStateOperationReply &gsOperationReply)
+{
+  int rc = -EXIT_FAILURE;
+
+  if (parsed_struct.port_states_size() == 0) {
+    rc = EXIT_SUCCESS;
+  }
+
+  for (int i = 0; i < parsed_struct.port_states_size(); i++) {
+    ACA_LOG_DEBUG("=====>parsing port state #%d\n", i);
+
+    PortState current_PortState = parsed_struct.port_states(i);
+
+    update_port_state_workitem(current_PortState, parsed_struct, gsOperationReply);
 
   } // for (int i = 0; i < parsed_struct.port_states_size(); i++)
+
   return rc;
 }
 
 // Calls execute_command
-int Aca_Comm_Manager::update_goal_state(const GoalState &parsed_struct)
+int Aca_Comm_Manager::update_goal_state(const GoalState &parsed_struct,
+                                        GoalStateOperationReply &gsOperationReply)
 {
   int exec_command_rc = -EXIT_FAILURE;
   int rc = EXIT_SUCCESS;
@@ -1059,19 +1132,19 @@ int Aca_Comm_Manager::update_goal_state(const GoalState &parsed_struct)
 
   ACA_LOG_DEBUG("Starting to update goal state\n");
 
-  exec_command_rc = update_vpc_state(parsed_struct);
+  exec_command_rc = update_vpc_states(parsed_struct, gsOperationReply);
   if (exec_command_rc != EXIT_SUCCESS) {
     ACA_LOG_ERROR("Failed to update vpc state. Failed with error code %d\n", exec_command_rc);
     rc = exec_command_rc;
   }
 
-  exec_command_rc = update_subnet_state(parsed_struct);
+  exec_command_rc = update_subnet_states(parsed_struct, gsOperationReply);
   if (exec_command_rc != EXIT_SUCCESS) {
     ACA_LOG_ERROR("Failed to update subnet state. Failed with error code %d\n", exec_command_rc);
     rc = exec_command_rc;
   }
 
-  exec_command_rc = update_port_state(parsed_struct);
+  exec_command_rc = update_port_states(parsed_struct, gsOperationReply);
   if (exec_command_rc != EXIT_SUCCESS) {
     ACA_LOG_ERROR("Failed to update port state. Failed with error code %d\n", exec_command_rc);
     rc = exec_command_rc;
@@ -1079,17 +1152,20 @@ int Aca_Comm_Manager::update_goal_state(const GoalState &parsed_struct)
 
   auto end = chrono::steady_clock::now();
 
-  g_total_update_GS_time +=
+  auto goal_state_operation_total_time =
           chrono::duration_cast<chrono::nanoseconds>(end - start).count();
 
+  gsOperationReply.set_goal_state_operation_total_time(goal_state_operation_total_time);
+
+  g_total_update_GS_time += goal_state_operation_total_time;
+
   ACA_LOG_INFO("Elapsed time for update goal state took: %ld nanoseconds or %ld milliseconds.\n",
-               chrono::duration_cast<chrono::nanoseconds>(end - start).count(),
-               chrono::duration_cast<chrono::milliseconds>(end - start).count());
+               goal_state_operation_total_time, goal_state_operation_total_time / 1000000);
 
   return rc;
 }
 
-int Aca_Comm_Manager::load_agent_xdp(string interface)
+int Aca_Comm_Manager::load_agent_xdp(string interface, ulong &culminative_time)
 {
   int rc = EXIT_SUCCESS;
   rpc_trn_xdp_intf_t xdp_inf_in;
@@ -1102,19 +1178,19 @@ int Aca_Comm_Manager::load_agent_xdp(string interface)
   xdp_inf_in.xdp_path = agent_xdp_path;
   xdp_inf_in.pcapfile = agent_pcap_file;
 
-  rc = this->execute_command(transitd_command, &xdp_inf_in);
+  rc = this->execute_command(transitd_command, &xdp_inf_in, culminative_time);
   if (rc == EXIT_SUCCESS) {
     ACA_LOG_INFO("Successfully loaded transit agent on interface: %s\n",
                  interface.c_str());
   } else {
-    ACA_LOG_ERROR("Unable to loaded transit agent on interface: %s, rc: %d\n",
+    ACA_LOG_ERROR("Unable to load transit agent on interface: %s, rc: %d\n",
                   interface.c_str(), rc);
   }
 
   return rc;
 }
 
-int Aca_Comm_Manager::execute_command(int command, void *input_struct)
+int Aca_Comm_Manager::execute_command(int command, void *input_struct, ulong &culminative_time)
 {
   static CLIENT *client;
   int rc = EXIT_SUCCESS;
@@ -1347,17 +1423,17 @@ int Aca_Comm_Manager::execute_command(int command, void *input_struct)
 
   auto rpc_client_end = chrono::steady_clock::now();
 
-  g_total_rpc_client_time +=
+  auto rpc_client_time_total_time =
           chrono::duration_cast<chrono::nanoseconds>(rpc_client_end - rpc_client_start)
                   .count();
 
+  culminative_time += rpc_client_time_total_time;
+
+  g_total_rpc_client_time += rpc_client_time_total_time;
+
   ACA_LOG_INFO("Elapsed time for both RPC client create/destroy and transit "
                "daemon command %d took: %ld nanoseconds or %ld milliseconds.\n",
-               command,
-               chrono::duration_cast<chrono::nanoseconds>(rpc_client_end - rpc_client_start)
-                       .count(),
-               chrono::duration_cast<chrono::milliseconds>(rpc_client_end - rpc_client_start)
-                       .count());
+               command, rpc_client_time_total_time, rpc_client_time_total_time / 1000000);
 
   return rc;
 }
