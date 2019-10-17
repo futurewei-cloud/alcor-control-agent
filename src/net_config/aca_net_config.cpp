@@ -156,8 +156,9 @@ int Aca_Net_Config::setup_veth_device(string ns_name, veth_config new_veth_confi
   cmd_string = IP_NETNS_PREFIX + "exec " + ns_name + " route add default gw " +
                new_veth_config.gateway_ip;
   command_rc = execute_system_command(cmd_string, culminative_time);
-  if (command_rc != EXIT_SUCCESS)
-    overall_rc = command_rc;
+  // it is okay if the gateway is already setup
+  //   if (command_rc != EXIT_SUCCESS)
+  //     overall_rc = command_rc;
 
   cmd_string = IP_NETNS_PREFIX + "exec " + ns_name + " ifconfig " +
                new_veth_config.veth_name + " hw ether " + new_veth_config.mac;

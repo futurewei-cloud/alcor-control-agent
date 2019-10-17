@@ -20,14 +20,13 @@ static uint PORT_ID_TRUNCATION_LEN = 11;
 static char TEMP_PREFIX[] = "temp";
 static char VETH_PREFIX[] = "veth";
 static char PEER_PREFIX[] = "peer";
-static char agent_xdp_path[] = "/trn_xdp/trn_agent_xdp_ebpf_debug.o";
+static char agent_xdp_path[] = "/Transit/build/xdp/trn_agent_xdp_ebpf_debug.o";
 static char agent_pcap_file[] = "/bpffs/agent_xdp.pcap";
 
 extern string g_rpc_server;
 extern string g_rpc_protocol;
 extern std::atomic_ulong g_total_rpc_call_time;
 extern std::atomic_ulong g_total_rpc_client_time;
-// extern std::atomic_ulong g_total_network_configuration_time;
 extern std::atomic_ulong g_total_update_GS_time;
 extern bool g_demo_mode;
 
@@ -127,8 +126,7 @@ int Aca_Comm_Manager::deserialize(const cppkafka::Buffer *kafka_buffer, GoalStat
   }
 }
 
-int Aca_Comm_Manager::update_vpc_state_workitem(const VpcState &current_VpcState,
-                                                const GoalState &parsed_struct,
+int Aca_Comm_Manager::update_vpc_state_workitem(const VpcState current_VpcState,
                                                 GoalStateOperationReply &gsOperationReply)
 {
   int transitd_command;
@@ -281,20 +279,30 @@ int Aca_Comm_Manager::update_vpc_state_workitem(const VpcState &current_VpcState
 int Aca_Comm_Manager::update_vpc_states(const GoalState &parsed_struct,
                                         GoalStateOperationReply &gsOperationReply)
 {
+  std::vector<std::future<int> > workitem_future;
   int rc;
-  int overall_rc;
+  int overall_rc = EXIT_SUCCESS;
 
-  if (parsed_struct.vpc_states_size() == 0) {
-    overall_rc = EXIT_SUCCESS;
-  }
+  // if (parsed_struct.vpc_states_size() == 0)
+  //   overall_rc = EXIT_SUCCESS in the current logic
 
   for (int i = 0; i < parsed_struct.vpc_states_size(); i++) {
     ACA_LOG_DEBUG("=====>parsing vpc states #%d\n", i);
 
     VpcState current_VPCState = parsed_struct.vpc_states(i);
 
-    rc = update_vpc_state_workitem(current_VPCState, parsed_struct, gsOperationReply);
+    workitem_future.push_back(std::async(
+            std::launch::async, &Aca_Comm_Manager::update_vpc_state_workitem,
+            this, current_VPCState, std::ref(gsOperationReply)));
 
+    // keeping below just in case if we want to call it serially
+    // rc = update_vpc_state_workitem(current_VPCState, gsOperationReply);
+    // if (rc != EXIT_SUCCESS)
+    //   overall_rc = rc;
+  } // for (int i = 0; i < parsed_struct.vpc_states_size(); i++)
+
+  for (int i = 0; i < parsed_struct.vpc_states_size(); i++) {
+    rc = workitem_future[i].get();
     if (rc != EXIT_SUCCESS)
       overall_rc = rc;
   } // for (int i = 0; i < parsed_struct.vpc_states_size(); i++)
@@ -302,8 +310,7 @@ int Aca_Comm_Manager::update_vpc_states(const GoalState &parsed_struct,
   return overall_rc;
 }
 
-int Aca_Comm_Manager::update_subnet_state_workitem(const SubnetState &current_SubnetState,
-                                                   const GoalState &parsed_struct,
+int Aca_Comm_Manager::update_subnet_state_workitem(const SubnetState current_SubnetState,
                                                    GoalStateOperationReply &gsOperationReply)
 {
   int transitd_command;
@@ -537,19 +544,30 @@ int Aca_Comm_Manager::update_subnet_state_workitem(const SubnetState &current_Su
 int Aca_Comm_Manager::update_subnet_states(const GoalState &parsed_struct,
                                            GoalStateOperationReply &gsOperationReply)
 {
+  std::vector<std::future<int> > workitem_future;
   int rc;
-  int overall_rc;
+  int overall_rc = EXIT_SUCCESS;
 
-  if (parsed_struct.subnet_states_size() == 0)
-    overall_rc = EXIT_SUCCESS;
+  // if (parsed_struct.subnet_states_size() == 0)
+  //   overall_rc = EXIT_SUCCESS in the current logic
 
   for (int i = 0; i < parsed_struct.subnet_states_size(); i++) {
     ACA_LOG_DEBUG("=====>parsing subnet states #%d\n", i);
 
     SubnetState current_SubnetState = parsed_struct.subnet_states(i);
 
-    rc = update_subnet_state_workitem(current_SubnetState, parsed_struct, gsOperationReply);
+    workitem_future.push_back(std::async(
+            std::launch::async, &Aca_Comm_Manager::update_subnet_state_workitem,
+            this, current_SubnetState, std::ref(gsOperationReply)));
 
+    // keeping below just in case if we want to call it serially
+    // rc = update_subnet_state_workitem(current_SubnetState, gsOperationReply);
+    // if (rc != EXIT_SUCCESS)
+    //   overall_rc = rc;
+  } // for (int i = 0; i < parsed_struct.subnet_states_size(); i++)
+
+  for (int i = 0; i < parsed_struct.subnet_states_size(); i++) {
+    rc = workitem_future[i].get();
     if (rc != EXIT_SUCCESS)
       overall_rc = rc;
   } // for (int i = 0; i < parsed_struct.subnet_states_size(); i++)
@@ -890,8 +908,8 @@ int Aca_Comm_Manager::update_port_state_workitem(const PortState current_PortSta
     if (net_config_rc == EXIT_SUCCESS) {
       ACA_LOG_INFO("Successfully created namespace: %s\n", namespace_name.c_str());
     } else {
-      ACA_LOG_ERROR("Unable to create namespace: %s\n", namespace_name.c_str());
-      overall_rc = net_config_rc;
+      // it is okay if the namespace is already created
+      ACA_LOG_WARN("Unable to create namespace: %s\n", namespace_name.c_str());
     }
 
     net_config_rc = Aca_Net_Config::get_instance().create_veth_pair(
@@ -1094,7 +1112,7 @@ int Aca_Comm_Manager::update_port_state_workitem(const PortState current_PortSta
               }
 
               // workaround for the current contract with CNI
-              // Removed for the current demo setup
+              // Removed for the current setup
               //   net_config_rc = Aca_Net_Config::get_instance().add_gw(
               //           namespace_name, my_gw_address, culminative_network_configuration_time);
               //   if (net_config_rc == EXIT_SUCCESS) {
@@ -1144,45 +1162,37 @@ int Aca_Comm_Manager::update_port_state_workitem(const PortState current_PortSta
 int Aca_Comm_Manager::update_port_states(const GoalState &parsed_struct,
                                          GoalStateOperationReply &gsOperationReply)
 {
-  int rc;
-  int overall_rc = -EXIT_FAILURE;
-
-  // std::vector<std::thread> workitem_threads;
   std::vector<std::future<int> > workitem_future;
+  int rc;
+  int overall_rc = EXIT_SUCCESS;
 
-  if (parsed_struct.port_states_size() == 0)
-    overall_rc = EXIT_SUCCESS;
+  // if (parsed_struct.port_states_size() == 0)
+  //   overall_rc = EXIT_SUCCESS in the current logic
 
   for (int i = 0; i < parsed_struct.port_states_size(); i++) {
     ACA_LOG_DEBUG("=====>parsing port states #%d\n", i);
 
     PortState current_PortState = parsed_struct.port_states(i);
 
-    // update_port_state_workitem(current_PortState, parsed_struct, gsOperationReply);
-
-    // workitem_threads.push_back(std::thread(
-    //         &Aca_Comm_Manager::update_port_state_workitem, this,
-    //         current_PortState, parsed_struct, std::ref(gsOperationReply)));
-
     workitem_future.push_back(std::async(
             std::launch::async, &Aca_Comm_Manager::update_port_state_workitem, this,
             current_PortState, std::ref(parsed_struct), std::ref(gsOperationReply)));
+
+    // keeping below just in case if we want to call it serially
+    // rc = update_port_state_workitem(current_PortState, parsed_struct, gsOperationReply);
+    // if (rc != EXIT_SUCCESS)
+    //   overall_rc = rc;
   } // for (int i = 0; i < parsed_struct.port_states_size(); i++)
 
   for (int i = 0; i < parsed_struct.port_states_size(); i++) {
     rc = workitem_future[i].get();
     if (rc != EXIT_SUCCESS)
       overall_rc = rc;
-    // if (workitem_threads[i].joinable())
-    // {
-    //   workitem_threads[i].join();
-    // }
   } // for (int i = 0; i < parsed_struct.port_states_size(); i++)
 
   return overall_rc;
 }
 
-// Calls execute_command
 int Aca_Comm_Manager::update_goal_state(const GoalState &parsed_struct,
                                         GoalStateOperationReply &gsOperationReply)
 {
@@ -1240,20 +1250,17 @@ void Aca_Comm_Manager::add_goal_state_operation_status(
   else
     overall_operation_status = OperationStatus::FAILURE;
 
-  // print out the operation reply in debug mode only
-  if (g_debug_mode) {
-    ACA_LOG_DEBUG("gsOperationReply - resource_id: %s\n", id.c_str());
-    ACA_LOG_DEBUG("gsOperationReply - resource_type: %d\n", resource_type);
-    ACA_LOG_DEBUG("gsOperationReply - operation_type: %d\n", operation_type);
-    ACA_LOG_DEBUG("gsOperationReply - operation_status: %d\n", overall_operation_status);
-    ACA_LOG_DEBUG("gsOperationReply - dataplane_programming_time: %lu\n",
-                  culminative_dataplane_programming_time);
-    ACA_LOG_DEBUG("gsOperationReply - network_configuration_time: %lu\n",
-                  culminative_network_configuration_time);
-    ACA_LOG_DEBUG("gsOperationReply - total_operation_time: %lu\n", operation_total_time);
-  }
+  ACA_LOG_DEBUG("gsOperationReply - resource_id: %s\n", id.c_str());
+  ACA_LOG_DEBUG("gsOperationReply - resource_type: %d\n", resource_type);
+  ACA_LOG_DEBUG("gsOperationReply - operation_type: %d\n", operation_type);
+  ACA_LOG_DEBUG("gsOperationReply - operation_status: %d\n", overall_operation_status);
+  ACA_LOG_DEBUG("gsOperationReply - dataplane_programming_time: %lu\n",
+                culminative_dataplane_programming_time);
+  ACA_LOG_DEBUG("gsOperationReply - network_configuration_time: %lu\n",
+                culminative_network_configuration_time);
+  ACA_LOG_DEBUG("gsOperationReply - total_operation_time: %lu\n", operation_total_time);
 
-  // critical section
+  // -----critical section starts-----
   // (exclusive write access to gsOperationReply signaled by locking gs_reply_mutex):
   gs_reply_mutex.lock();
   GoalStateOperationReply_GoalStateOperationStatus *new_operation_statuses =
@@ -1266,6 +1273,7 @@ void Aca_Comm_Manager::add_goal_state_operation_status(
   new_operation_statuses->set_network_configuration_time(culminative_network_configuration_time);
   new_operation_statuses->set_total_operation_time(operation_total_time);
   gs_reply_mutex.unlock();
+  // -----critical section ends-----
 }
 
 int Aca_Comm_Manager::load_agent_xdp(string interface, ulong &culminative_time)

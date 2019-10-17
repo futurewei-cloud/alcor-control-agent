@@ -551,6 +551,56 @@ TEST(net_config_test_cases, subnet_CREATE_UPDATE_GATEWAY)
   new_subnet_states->clear_configuration();
 }
 
+TEST(net_config_test_cases, subnet_CREATE_UPDATE_GATEWAY_10)
+{
+  string vpc_id = "99d9d709-8478-4b46-9f3f-2206b1023fd3";
+  string gateway_ip_postfix = ".0.0.1";
+  string gateway_mac_prefix = "fa:16:3e:d7:f2:";
+  ulong culminative_network_configuration_time = 0;
+  int rc;
+
+  GoalState GoalState_builder;
+  SubnetState *new_subnet_states;
+
+  for (int i = 0; i < 10; i++) {
+    string i_string = std::to_string(i);
+
+    new_subnet_states = GoalState_builder.add_subnet_states();
+    new_subnet_states->set_operation_type(OperationType::CREATE_UPDATE_GATEWAY);
+
+    // this will allocate new SubnetConfiguration, will need to free it later
+    SubnetConfiguration *SubnetConiguration_builder =
+            new_subnet_states->mutable_configuration();
+    SubnetConiguration_builder->set_version(1);
+    SubnetConiguration_builder->set_project_id("dbf72700-5106-4a7a-918f-111111111111");
+    SubnetConiguration_builder->set_vpc_id(vpc_id);
+    SubnetConiguration_builder->set_id("superSubnetID" + i_string);
+    SubnetConiguration_builder->set_name("SuperSubnet");
+    SubnetConiguration_builder->set_cidr(i_string + ".0.0.0/16");
+    SubnetConiguration_builder->set_tunnel_id(22222);
+    SubnetConfiguration_Gateway *SubnetConiguration_Gateway_builder =
+            SubnetConiguration_builder->mutable_gateway();
+    SubnetConiguration_Gateway_builder->set_ip_address(i_string + gateway_ip_postfix);
+    SubnetConiguration_Gateway_builder->set_mac_address(gateway_mac_prefix + i_string);
+    // this will allocate new SubnetConfiguration_TransitSwitch, may need to free it later
+    SubnetConfiguration_TransitSwitch *TransitSwitch_builder =
+            SubnetConiguration_builder->add_transit_switches();
+    TransitSwitch_builder->set_vpc_id(vpc_id);
+    TransitSwitch_builder->set_subnet_id("superSubnet");
+    TransitSwitch_builder->set_ip_address("172.0.0.1");
+    TransitSwitch_builder->set_mac_address("cc:dd:ee:aa:bb:cc");
+  }
+
+  alcorcontroller::GoalStateOperationReply gsOperationalReply;
+  rc = Aca_Comm_Manager::get_instance().update_goal_state(GoalState_builder, gsOperationalReply);
+  // rc can be error if transitd is not loaded
+  if (g_transitd_loaded) {
+    ASSERT_EQ(rc, EXIT_SUCCESS);
+  }
+
+  new_subnet_states->clear_configuration();
+}
+
 TEST(net_config_test_cases, port_CREATE_UPDATE_SWITCH_10)
 {
   string port_name = "11111111-2222-3333-4444-555555555555";
@@ -651,7 +701,7 @@ TEST(net_config_test_cases, port_CREATE_UPDATE_SWITCH_10)
   new_subnet_states->clear_configuration();
 }
 
-TEST(net_config_test_cases, endpoint_create_integrated)
+TEST(net_config_test_cases, port_CREATE_integrated)
 {
   string port_name = "11111111-2222-3333-4444-555555555555";
   string vpc_id = "99d9d709-8478-4b46-9f3f-2206b1023fd3";
@@ -805,7 +855,7 @@ TEST(net_config_test_cases, endpoint_create_integrated)
   EXPECT_EQ(rc, EXIT_SUCCESS);
 }
 
-TEST(net_config_test_cases, endpoint_create_10)
+TEST(net_config_test_cases, port_CREATE_10)
 {
   string network_id = "superSubnetID";
   string port_name_postfix = "11111111-2222-3333-4444-555555555555";
