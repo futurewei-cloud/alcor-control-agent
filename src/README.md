@@ -38,7 +38,9 @@ docker exec -it a1 /bin/bash
 In order to compile alcor-control-agent you need to run:
 ```Shell
 docker exec -it a1 /bin/bash
-root@ca62b6feec63:# cd /mnt/host/code/alcor-control-agent/
+root@ca62b6feec63:# cd /mnt/host/code/alcor-control-agent/Transit
+root@ca62b6feec63:/mnt/host/code/alcor-control-agent/Transit# make
+root@ca62b6feec63:/mnt/host/code/alcor-control-agent/Transit# cd ..
 root@ca62b6feec63:/mnt/host/code/alcor-control-agent# cmake .
 root@ca62b6feec63:/mnt/host/code/alcor-control-agent# make
 ```
