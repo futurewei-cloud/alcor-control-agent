@@ -904,44 +904,6 @@ TEST(net_config_test_cases, endpoint_create_10)
 
   g_demo_mode = previous_demo_mode;
 
-  // check to ensure the endpoint is created and setup correctly
-
-  /* remove the checking for now for better execution time measurement
-  for (int i = 0; i < 10; i++) {
-    string i_string = std::to_string(i);
-    string port_name = i_string + port_name_postfix;
-    string truncated_port_id = port_name.substr(0, 11);
-    string temp_name_string = "temp" + truncated_port_id;
-    string veth_name_string = "veth" + truncated_port_id;
-
-    // the temp veth should be in the new namespace now
-    cmd_string = IP_NETNS_PREFIX + "exec " + vpc_ns + " ip link list | grep " + temp_name_string;
-    rc = Aca_Net_Config::get_instance().execute_system_command(cmd_string);
-    EXPECT_EQ(rc, EXIT_SUCCESS);
-
-    // was the ip set correctly?
-    cmd_string = IP_NETNS_PREFIX + "exec " + vpc_ns + " ifconfig " +
-                 temp_name_string + " | grep " + ip_address_prefix + i_string;
-    rc = Aca_Net_Config::get_instance().execute_system_command(cmd_string);
-    EXPECT_EQ(rc, EXIT_SUCCESS);
-
-    // was the default gw set correctly?
-    cmd_string = IP_NETNS_PREFIX + "exec " + vpc_ns + " ip route" + " | grep " + gateway_ip;
-    rc = Aca_Net_Config::get_instance().execute_system_command(cmd_string);
-    EXPECT_EQ(rc, EXIT_SUCCESS);
-
-    // was the mac set correctly?
-    cmd_string = IP_NETNS_PREFIX + "exec " + vpc_ns + " ifconfig " +
-                 temp_name_string + " | grep " + mac_address_prefix + i_string;
-    rc = Aca_Net_Config::get_instance().execute_system_command(cmd_string);
-    EXPECT_EQ(rc, EXIT_SUCCESS);
-  }
-
-  // free the allocated configurations since we are done with it now
-  new_port_states->clear_configuration(); // TODO: do we need to free the whole array?
-  new_subnet_states->clear_configuration();
-  */
-
   // delete the newly created ns
   // this will delete everything including the newly creates veth pairs
   cmd_string = IP_NETNS_PREFIX + "delete " + vpc_ns;

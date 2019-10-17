@@ -5,12 +5,15 @@
 #include "goalstateprovisioner.grpc.pb.h"
 #include "trn_rpc_protocol.h"
 #include <chrono>
+#include <future>
 #include <errno.h>
 #include <arpa/inet.h>
 
 using namespace std;
 using namespace alcorcontroller;
 using aca_net_config::Aca_Net_Config;
+
+std::mutex gs_reply_mutex; // mutex for writing gs reply object
 
 static char VPC_NS_PREFIX[] = "vpc-ns-";
 static uint PORT_ID_TRUNCATION_LEN = 11;
@@ -554,7 +557,7 @@ int Aca_Comm_Manager::update_subnet_states(const GoalState &parsed_struct,
   return overall_rc;
 }
 
-int Aca_Comm_Manager::update_port_state_workitem(const PortState &current_PortState,
+int Aca_Comm_Manager::update_port_state_workitem(const PortState current_PortState,
                                                  const alcorcontroller::GoalState &parsed_struct,
                                                  GoalStateOperationReply &gsOperationReply)
 {
@@ -925,10 +928,10 @@ int Aca_Comm_Manager::update_port_state_workitem(const PortState &current_PortSt
     net_config_rc = Aca_Net_Config::get_instance().move_to_namespace(
             temp_name_string, namespace_name, culminative_network_configuration_time);
     if (net_config_rc == EXIT_SUCCESS) {
-      ACA_LOG_INFO("Successfully created move veth: %s, to namespace: %s\n",
+      ACA_LOG_INFO("Successfully moved veth: %s, to namespace: %s\n",
                    temp_name_string.c_str(), namespace_name.c_str());
     } else {
-      ACA_LOG_ERROR("Unable to create move veth: %s, to namespace: %s\n",
+      ACA_LOG_ERROR("Unable to move veth: %s, to namespace: %s\n",
                     temp_name_string.c_str(), namespace_name.c_str());
       overall_rc = net_config_rc;
     }
@@ -943,12 +946,12 @@ int Aca_Comm_Manager::update_port_state_workitem(const PortState &current_PortSt
     net_config_rc = Aca_Net_Config::get_instance().setup_veth_device(
             namespace_name, new_veth_config, culminative_network_configuration_time);
     if (net_config_rc == EXIT_SUCCESS) {
-      ACA_LOG_INFO("Successfully setup ns: %s, veth: %s, ip: %s, prefix: %s, mac: %s, gw: %s\n",
+      ACA_LOG_INFO("Successfully setup veth device: %s, veth: %s, ip: %s, prefix: %s, mac: %s, gw: %s\n",
                    namespace_name.c_str(), temp_name_string.c_str(),
                    my_ep_ip_address.c_str(), my_prefixlen.c_str(),
                    my_ep_mac_address.c_str(), my_gw_address.c_str());
     } else {
-      ACA_LOG_ERROR("Unable to setup ns: %s, veth: %s, ip: %s, prefix: %s, mac: %s, gw: %s\n",
+      ACA_LOG_ERROR("Unable to setup veth device: %s, veth: %s, ip: %s, prefix: %s, mac: %s, gw: %s\n",
                     namespace_name.c_str(), temp_name_string.c_str(),
                     my_ep_ip_address.c_str(), my_prefixlen.c_str(),
                     my_ep_mac_address.c_str(), my_gw_address.c_str());
@@ -1142,7 +1145,10 @@ int Aca_Comm_Manager::update_port_states(const GoalState &parsed_struct,
                                          GoalStateOperationReply &gsOperationReply)
 {
   int rc;
-  int overall_rc;
+  int overall_rc = -EXIT_FAILURE;
+
+  // std::vector<std::thread> workitem_threads;
+  std::vector<std::future<int> > workitem_future;
 
   if (parsed_struct.port_states_size() == 0)
     overall_rc = EXIT_SUCCESS;
@@ -1152,10 +1158,25 @@ int Aca_Comm_Manager::update_port_states(const GoalState &parsed_struct,
 
     PortState current_PortState = parsed_struct.port_states(i);
 
-    rc = update_port_state_workitem(current_PortState, parsed_struct, gsOperationReply);
+    // update_port_state_workitem(current_PortState, parsed_struct, gsOperationReply);
 
+    // workitem_threads.push_back(std::thread(
+    //         &Aca_Comm_Manager::update_port_state_workitem, this,
+    //         current_PortState, parsed_struct, std::ref(gsOperationReply)));
+
+    workitem_future.push_back(std::async(
+            std::launch::async, &Aca_Comm_Manager::update_port_state_workitem, this,
+            current_PortState, std::ref(parsed_struct), std::ref(gsOperationReply)));
+  } // for (int i = 0; i < parsed_struct.port_states_size(); i++)
+
+  for (int i = 0; i < parsed_struct.port_states_size(); i++) {
+    rc = workitem_future[i].get();
     if (rc != EXIT_SUCCESS)
       overall_rc = rc;
+    // if (workitem_threads[i].joinable())
+    // {
+    //   workitem_threads[i].join();
+    // }
   } // for (int i = 0; i < parsed_struct.port_states_size(); i++)
 
   return overall_rc;
@@ -1232,7 +1253,9 @@ void Aca_Comm_Manager::add_goal_state_operation_status(
     ACA_LOG_DEBUG("gsOperationReply - total_operation_time: %lu\n", operation_total_time);
   }
 
-  // update the operation status accordingly, may need to lock the write operations
+  // critical section
+  // (exclusive write access to gsOperationReply signaled by locking gs_reply_mutex):
+  gs_reply_mutex.lock();
   GoalStateOperationReply_GoalStateOperationStatus *new_operation_statuses =
           gsOperationReply.add_operation_statuses();
   new_operation_statuses->set_resource_id(id);
@@ -1242,6 +1265,7 @@ void Aca_Comm_Manager::add_goal_state_operation_status(
   new_operation_statuses->set_dataplane_programming_time(culminative_dataplane_programming_time);
   new_operation_statuses->set_network_configuration_time(culminative_network_configuration_time);
   new_operation_statuses->set_total_operation_time(operation_total_time);
+  gs_reply_mutex.unlock();
 }
 
 int Aca_Comm_Manager::load_agent_xdp(string interface, ulong &culminative_time)

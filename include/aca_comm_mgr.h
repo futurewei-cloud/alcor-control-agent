@@ -34,7 +34,7 @@ class Aca_Comm_Manager {
   int update_subnet_states(const alcorcontroller::GoalState &parsed_struct,
                            alcorcontroller::GoalStateOperationReply &gsOperationReply);
 
-  int update_port_state_workitem(const alcorcontroller::PortState &current_PortState,
+  int update_port_state_workitem(const alcorcontroller::PortState current_PortState,
                                  const alcorcontroller::GoalState &parsed_struct,
                                  alcorcontroller::GoalStateOperationReply &gsOperationReply);
 
