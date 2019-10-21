@@ -14,13 +14,15 @@ using namespace alcorcontroller;
 using aca_net_config::Aca_Net_Config;
 
 std::mutex gs_reply_mutex; // mutex for writing gs reply object
+std::mutex rpc_client_call_mutex; // mutex to protect the RPC client and call
 
 static char VPC_NS_PREFIX[] = "vpc-ns-";
 static uint PORT_ID_TRUNCATION_LEN = 11;
 static char TEMP_PREFIX[] = "temp";
 static char VETH_PREFIX[] = "veth";
 static char PEER_PREFIX[] = "peer";
-static char agent_xdp_path[] = "/Transit/build/xdp/trn_agent_xdp_ebpf_debug.o";
+// static char agent_xdp_path[] = "/Transit/build/xdp/trn_agent_xdp_ebpf_debug.o";
+static char agent_xdp_path[] = "/trn_xdp/trn_agent_xdp_ebpf_debug.o";
 static char agent_pcap_file[] = "/bpffs/agent_xdp.pcap";
 
 extern string g_rpc_server;
@@ -430,6 +432,7 @@ int Aca_Comm_Manager::update_subnet_state_workitem(const SubnetState current_Sub
               endpoint_in.mac);
 
       endpoint_in.hosted_interface = EMPTY_STRING;
+      endpoint_in.veth = EMPTY_STRING; // not needed for transit
       endpoint_in.tunid = current_SubnetConfiguration.tunnel_id();
       overall_rc = EXIT_SUCCESS;
 
@@ -1429,6 +1432,10 @@ int Aca_Comm_Manager::execute_command(int command, void *input_struct, ulong &cu
 
   auto rpc_client_start = chrono::steady_clock::now();
 
+  // -----critical section starts-----
+  // (exclusive access to rpc client and call):
+  rpc_client_call_mutex.lock();
+
   // TODO: We may change it to have a static client for health checking on
   // transit daemon in the future.
   client = clnt_create((char *)g_rpc_server.c_str(), RPC_TRANSIT_REMOTE_PROTOCOL,
@@ -1530,6 +1537,9 @@ int Aca_Comm_Manager::execute_command(int command, void *input_struct, ulong &cu
 
     clnt_destroy(client);
   }
+
+  rpc_client_call_mutex.unlock();
+  // -----critical section ends-----
 
   auto rpc_client_end = chrono::steady_clock::now();
 

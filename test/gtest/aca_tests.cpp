@@ -990,7 +990,7 @@ int main(int argc, char **argv)
               "Usage: %s\n"
               "\t\t[-s transitd RPC server]\n"
               "\t\t[-p transitd RPC protocol]\n"
-              "\t\t[-p transitd is loaded]\n",
+              "\t\t[-t transitd is loaded]\n",
               argv[0]);
       exit(EXIT_FAILURE);
     }
