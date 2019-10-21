@@ -1222,15 +1222,15 @@ int Aca_Comm_Manager::update_goal_state(const GoalState &parsed_struct,
 
   auto end = chrono::steady_clock::now();
 
-  auto goal_state_operation_total_time =
+  auto message_total_operation_time =
           chrono::duration_cast<chrono::nanoseconds>(end - start).count();
 
-  gsOperationReply.set_goal_state_operation_total_time(goal_state_operation_total_time);
+  gsOperationReply.set_message_total_operation_time(message_total_operation_time);
 
-  g_total_update_GS_time += goal_state_operation_total_time;
+  g_total_update_GS_time += message_total_operation_time;
 
-  ACA_LOG_INFO("Elapsed time for update goal state took: %ld nanoseconds or %ld milliseconds.\n",
-               goal_state_operation_total_time, goal_state_operation_total_time / 1000000);
+  ACA_LOG_INFO("Elapsed time for message total operation took: %ld nanoseconds or %ld milliseconds.\n",
+               message_total_operation_time, message_total_operation_time / 1000000);
 
   return rc;
 }
@@ -1239,7 +1239,7 @@ void Aca_Comm_Manager::add_goal_state_operation_status(
         alcorcontroller::GoalStateOperationReply &gsOperationReply, string id,
         alcorcontroller::ResourceType resource_type, alcorcontroller::OperationType operation_type,
         int operation_rc, ulong culminative_dataplane_programming_time,
-        ulong culminative_network_configuration_time, ulong operation_total_time)
+        ulong culminative_network_configuration_time, ulong state_elapse_time)
 {
   OperationStatus overall_operation_status;
 
@@ -1258,7 +1258,7 @@ void Aca_Comm_Manager::add_goal_state_operation_status(
                 culminative_dataplane_programming_time);
   ACA_LOG_DEBUG("gsOperationReply - network_configuration_time: %lu\n",
                 culminative_network_configuration_time);
-  ACA_LOG_DEBUG("gsOperationReply - total_operation_time: %lu\n", operation_total_time);
+  ACA_LOG_DEBUG("gsOperationReply - total_operation_time: %lu\n", state_elapse_time);
 
   // -----critical section starts-----
   // (exclusive write access to gsOperationReply signaled by locking gs_reply_mutex):
@@ -1271,7 +1271,7 @@ void Aca_Comm_Manager::add_goal_state_operation_status(
   new_operation_statuses->set_operation_status(overall_operation_status);
   new_operation_statuses->set_dataplane_programming_time(culminative_dataplane_programming_time);
   new_operation_statuses->set_network_configuration_time(culminative_network_configuration_time);
-  new_operation_statuses->set_total_operation_time(operation_total_time);
+  new_operation_statuses->set_state_elapse_time(state_elapse_time);
   gs_reply_mutex.unlock();
   // -----critical section ends-----
 }
@@ -1303,7 +1303,7 @@ int Aca_Comm_Manager::load_agent_xdp(string interface, ulong &culminative_time)
 
 int Aca_Comm_Manager::execute_command(int command, void *input_struct, ulong &culminative_time)
 {
-  static CLIENT *client;
+  CLIENT *client;
   int rc = EXIT_SUCCESS;
   int *transitd_return;
 

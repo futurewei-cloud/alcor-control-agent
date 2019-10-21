@@ -56,7 +56,7 @@ class Aca_Comm_Manager {
                                   alcorcontroller::OperationType operation_type,
                                   int operation_rc, ulong culminative_dataplane_programming_time,
                                   ulong culminative_network_configuration_time,
-                                  ulong operation_total_time);
+                                  ulong state_elapse_time);
 
   int load_agent_xdp(string interface, ulong &culminative_time);
 
