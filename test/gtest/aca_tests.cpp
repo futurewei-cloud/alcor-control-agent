@@ -602,7 +602,7 @@ TEST(net_config_test_cases, subnet_CREATE_UPDATE_GATEWAY_10)
   new_subnet_states->clear_configuration();
 }
 
-TEST(net_config_test_cases, port_CREATE_UPDATE_SWITCH_10)
+TEST(net_config_test_cases, port_CREATE_UPDATE_SWITCH_100)
 {
   string port_name = "11111111-2222-3333-4444-555555555555";
   string vpc_id = "99d9d709-8478-4b46-9f3f-2206b1023fd3";
@@ -622,7 +622,7 @@ TEST(net_config_test_cases, port_CREATE_UPDATE_SWITCH_10)
   PortState *new_port_states;
   SubnetState *new_subnet_states = GoalState_builder.add_subnet_states();
 
-  for (int i = 0; i < 10; i++) {
+  for (int i = 0; i < 100; i++) {
     new_port_states = GoalState_builder.add_port_states();
     new_port_states->set_operation_type(OperationType::CREATE_UPDATE_SWITCH);
 
@@ -693,7 +693,7 @@ TEST(net_config_test_cases, port_CREATE_UPDATE_SWITCH_10)
   rc = Aca_Comm_Manager::get_instance().update_goal_state(GoalState_builder, gsOperationalReply);
   // rc can be error if transitd is not loaded
   if (g_transitd_loaded) {
-    ASSERT_EQ(rc, EXIT_SUCCESS);
+    EXPECT_EQ(rc, EXIT_SUCCESS);
   }
 
   // free the allocated configurations since we are done with it now
