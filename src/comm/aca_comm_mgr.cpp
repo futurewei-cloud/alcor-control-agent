@@ -16,6 +16,7 @@ using aca_net_config::Aca_Net_Config;
 std::mutex gs_reply_mutex; // mutex for writing gs reply object
 std::mutex rpc_client_call_mutex; // mutex to protect the RPC client and call
 
+static char PHYSICAL_IF[] = "eth0";
 static char VPC_NS_PREFIX[] = "vpc-ns-";
 static uint PORT_ID_TRUNCATION_LEN = 11;
 static char TEMP_PREFIX[] = "temp";
@@ -1321,7 +1322,7 @@ int Aca_Comm_Manager::execute_command(int command, void *input_struct, ulong &cu
       ACA_LOG_DEBUG("[execute_command] Calling UPDATE VPC with interface %s, tunid %lu, routers_ips_len %u .\n",
                     rpc_trn_vpc_t_in->interface, rpc_trn_vpc_t_in->tunid,
                     rpc_trn_vpc_t_in->routers_ips.routers_ips_len);
-      for (int i = 0; i < rpc_trn_vpc_t_in->routers_ips.routers_ips_len; i++) {
+      for (uint i = 0; i < rpc_trn_vpc_t_in->routers_ips.routers_ips_len; i++) {
         ACA_LOG_DEBUG("[execute_command] routers_ips_val[%d]: %u .\n", i,
                       rpc_trn_vpc_t_in->routers_ips.routers_ips_val[i]);
       }
@@ -1333,7 +1334,7 @@ int Aca_Comm_Manager::execute_command(int command, void *input_struct, ulong &cu
                     rpc_trn_network_t_in->interface, rpc_trn_network_t_in->prefixlen,
                     rpc_trn_network_t_in->tunid, rpc_trn_network_t_in->netip,
                     rpc_trn_network_t_in->switches_ips.switches_ips_len);
-      for (int i = 0; i < rpc_trn_network_t_in->switches_ips.switches_ips_len; i++) {
+      for (uint i = 0; i < rpc_trn_network_t_in->switches_ips.switches_ips_len; i++) {
         ACA_LOG_DEBUG("[execute_command] switches_ips_val[%d]: %u .\n", i,
                       rpc_trn_network_t_in->switches_ips.switches_ips_val[i]);
       }
@@ -1351,7 +1352,7 @@ int Aca_Comm_Manager::execute_command(int command, void *input_struct, ulong &cu
                     rpc_trn_endpoint_t_in->mac[5], rpc_trn_endpoint_t_in->hosted_interface,
                     rpc_trn_endpoint_t_in->veth, rpc_trn_endpoint_t_in->tunid,
                     rpc_trn_endpoint_t_in->remote_ips.remote_ips_len);
-      for (int i = 0; i < rpc_trn_endpoint_t_in->remote_ips.remote_ips_len; i++) {
+      for (uint i = 0; i < rpc_trn_endpoint_t_in->remote_ips.remote_ips_len; i++) {
         ACA_LOG_DEBUG("[execute_command] remote_ips_val[%d]: %u .\n", i,
                       rpc_trn_endpoint_t_in->remote_ips.remote_ips_val[i]);
       }
@@ -1369,7 +1370,7 @@ int Aca_Comm_Manager::execute_command(int command, void *input_struct, ulong &cu
                     rpc_trn_endpoint_t_in->mac[5], rpc_trn_endpoint_t_in->hosted_interface,
                     rpc_trn_endpoint_t_in->veth, rpc_trn_endpoint_t_in->tunid,
                     rpc_trn_endpoint_t_in->remote_ips.remote_ips_len);
-      for (int i = 0; i < rpc_trn_endpoint_t_in->remote_ips.remote_ips_len; i++) {
+      for (uint i = 0; i < rpc_trn_endpoint_t_in->remote_ips.remote_ips_len; i++) {
         ACA_LOG_DEBUG("[execute_command] remote_ips_val[%d]: %u .\n", i,
                       rpc_trn_endpoint_t_in->remote_ips.remote_ips_val[i]);
       }
@@ -1400,7 +1401,7 @@ int Aca_Comm_Manager::execute_command(int command, void *input_struct, ulong &cu
                     rpc_trn_endpoint_t_in->mac[5], rpc_trn_endpoint_t_in->hosted_interface,
                     rpc_trn_endpoint_t_in->veth, rpc_trn_endpoint_t_in->tunid,
                     rpc_trn_endpoint_t_in->remote_ips.remote_ips_len);
-      for (int i = 0; i < rpc_trn_endpoint_t_in->remote_ips.remote_ips_len; i++) {
+      for (uint i = 0; i < rpc_trn_endpoint_t_in->remote_ips.remote_ips_len; i++) {
         ACA_LOG_DEBUG("[execute_command] remote_ips_val[%d]: %u .\n", i,
                       rpc_trn_endpoint_t_in->remote_ips.remote_ips_val[i]);
       }
@@ -1410,7 +1411,7 @@ int Aca_Comm_Manager::execute_command(int command, void *input_struct, ulong &cu
                     rpc_trn_network_t_in->interface, rpc_trn_network_t_in->prefixlen,
                     rpc_trn_network_t_in->tunid, rpc_trn_network_t_in->netip,
                     rpc_trn_network_t_in->switches_ips.switches_ips_len);
-      for (int i = 0; i < rpc_trn_network_t_in->switches_ips.switches_ips_len; i++) {
+      for (uint i = 0; i < rpc_trn_network_t_in->switches_ips.switches_ips_len; i++) {
         ACA_LOG_DEBUG("[execute_command] switches_ips_val[%d]: %u .\n", i,
                       rpc_trn_network_t_in->switches_ips.switches_ips_val[i]);
       }

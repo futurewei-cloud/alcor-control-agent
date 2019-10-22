@@ -17,7 +17,10 @@ using namespace std;
 using namespace alcorcontroller;
 using aca_comm_manager::Aca_Comm_Manager;
 
+// Defines
 #define ACALOGNAME "AlcorControlAgentTest"
+static char LOCALHOST[] = "localhost";
+static char UDP_PROTOCOL[] = "udp";
 
 static char VALID_STRING[] = "VALID_STRING";
 static char DEFAULT_MTU[] = "9000";
@@ -510,7 +513,6 @@ TEST(net_config_test_cases, subnet_CREATE_UPDATE_GATEWAY)
   string vpc_id = "99d9d709-8478-4b46-9f3f-2206b1023fd3";
   string gateway_ip = "10.0.0.1";
   string gateway_mac = "fa:16:3e:d7:f2:00";
-  ulong culminative_network_configuration_time = 0;
   int rc;
 
   GoalState GoalState_builder;
@@ -556,7 +558,6 @@ TEST(net_config_test_cases, subnet_CREATE_UPDATE_GATEWAY_10)
   string vpc_id = "99d9d709-8478-4b46-9f3f-2206b1023fd3";
   string gateway_ip_postfix = ".0.0.1";
   string gateway_mac_prefix = "fa:16:3e:d7:f2:";
-  ulong culminative_network_configuration_time = 0;
   int rc;
 
   GoalState GoalState_builder;
@@ -611,7 +612,6 @@ TEST(net_config_test_cases, port_CREATE_UPDATE_SWITCH_10)
   string gateway_ip = "10.0.0.1";
   string gateway_mac = "fa:16:3e:d7:f2:00";
   string cmd_string;
-  ulong culminative_network_configuration_time = 0;
   int rc;
 
   string truncated_port_id = port_name.substr(0, 11);
@@ -711,7 +711,6 @@ TEST(net_config_test_cases, port_CREATE_integrated)
   string gateway_ip = "10.0.0.1";
   string gateway_mac = "fa:16:3e:d7:f2:00";
   string cmd_string;
-  ulong culminative_network_configuration_time = 0;
   int rc;
 
   string truncated_port_id = port_name.substr(0, 11);
@@ -866,7 +865,6 @@ TEST(net_config_test_cases, port_CREATE_10)
   string gateway_ip = "10.0.0.1";
   string gateway_mac = "fa:16:3e:d7:f2:00";
   string cmd_string;
-  ulong culminative_network_configuration_time = 0;
   int rc;
 
   GoalState GoalState_builder;
@@ -949,7 +947,7 @@ TEST(net_config_test_cases, port_CREATE_10)
   rc = Aca_Comm_Manager::get_instance().update_goal_state(GoalState_builder, gsOperationalReply);
   // rc can be error if transitd is not loaded
   if (g_transitd_loaded) {
-    ASSERT_EQ(rc, EXIT_SUCCESS);
+    EXPECT_EQ(rc, EXIT_SUCCESS);
   }
 
   g_demo_mode = previous_demo_mode;

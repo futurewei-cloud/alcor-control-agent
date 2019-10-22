@@ -16,6 +16,8 @@
 #include <grpc/support/log.h>
 
 #define ACALOGNAME "AlcorControlAgentTest"
+static char LOCALHOST[] = "localhost";
+static char UDP_PROTOCOL[] = "udp";
 
 using namespace std;
 using namespace alcorcontroller;
@@ -364,7 +366,7 @@ int main(int argc, char *argv[])
     g_rpc_server = LOCALHOST;
   }
   if (g_rpc_protocol == EMPTY_STRING) {
-    g_rpc_protocol = UDP;
+    g_rpc_protocol = UDP_PROTOCOL;
   }
 
   // Verify that the version of the library that we linked against is
