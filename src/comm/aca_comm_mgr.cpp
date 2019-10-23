@@ -16,6 +16,8 @@ using aca_net_config::Aca_Net_Config;
 std::mutex gs_reply_mutex; // mutex for writing gs reply object
 std::mutex rpc_client_call_mutex; // mutex to protect the RPC client and call
 
+#define cast_to_nanoseconds(x) chrono::duration_cast<chrono::nanoseconds>(x)
+
 static char PHYSICAL_IF[] = "eth0";
 static char VPC_NS_PREFIX[] = "vpc-ns-";
 static uint PORT_ID_TRUNCATION_LEN = 11;
@@ -268,8 +270,7 @@ int Aca_Comm_Manager::update_vpc_state_workitem(const VpcState current_VpcState,
   auto operation_end = chrono::steady_clock::now();
 
   auto operation_total_time =
-          chrono::duration_cast<chrono::nanoseconds>(operation_end - operation_start)
-                  .count();
+          cast_to_nanoseconds(operation_end - operation_start).count();
 
   add_goal_state_operation_status(
           gsOperationReply, current_VpcConfiguration.id(), VPC,
@@ -534,8 +535,7 @@ int Aca_Comm_Manager::update_subnet_state_workitem(const SubnetState current_Sub
   auto operation_end = chrono::steady_clock::now();
 
   auto operation_total_time =
-          chrono::duration_cast<chrono::nanoseconds>(operation_end - operation_start)
-                  .count();
+          cast_to_nanoseconds(operation_end - operation_start).count();
 
   add_goal_state_operation_status(
           gsOperationReply, current_SubnetConfiguration.id(), SUBNET,
@@ -1152,8 +1152,7 @@ int Aca_Comm_Manager::update_port_state_workitem(const PortState current_PortSta
   auto operation_end = chrono::steady_clock::now();
 
   auto operation_total_time =
-          chrono::duration_cast<chrono::nanoseconds>(operation_end - operation_start)
-                  .count();
+          cast_to_nanoseconds(operation_end - operation_start).count();
 
   add_goal_state_operation_status(
           gsOperationReply, port_id, PORT, current_PortState.operation_type(),
@@ -1226,8 +1225,7 @@ int Aca_Comm_Manager::update_goal_state(const GoalState &parsed_struct,
 
   auto end = chrono::steady_clock::now();
 
-  auto message_total_operation_time =
-          chrono::duration_cast<chrono::nanoseconds>(end - start).count();
+  auto message_total_operation_time = cast_to_nanoseconds(end - start).count();
 
   gsOperationReply.set_message_total_operation_time(message_total_operation_time);
 
@@ -1512,16 +1510,13 @@ int Aca_Comm_Manager::execute_command(int command, void *input_struct, ulong &cu
 
     auto rpc_call_end = chrono::steady_clock::now();
 
-    g_total_rpc_call_time +=
-            chrono::duration_cast<chrono::nanoseconds>(rpc_call_end - rpc_call_start)
-                    .count();
+    auto rpc_call_time_total_time =
+            cast_to_nanoseconds(rpc_call_end - rpc_call_start).count();
+
+    g_total_rpc_call_time += rpc_call_time_total_time;
 
     ACA_LOG_INFO("Elapsed time for transit daemon command %d took: %ld nanoseconds or %ld milliseconds.\n",
-                 command,
-                 chrono::duration_cast<chrono::nanoseconds>(rpc_call_end - rpc_call_start)
-                         .count(),
-                 chrono::duration_cast<chrono::milliseconds>(rpc_call_end - rpc_call_start)
-                         .count());
+                 command, rpc_call_time_total_time, rpc_call_time_total_time / 1000000);
 
     if (transitd_return == (int *)NULL) {
       clnt_perror(client, "Call failed to program Transit daemon");
@@ -1545,8 +1540,7 @@ int Aca_Comm_Manager::execute_command(int command, void *input_struct, ulong &cu
   auto rpc_client_end = chrono::steady_clock::now();
 
   auto rpc_client_time_total_time =
-          chrono::duration_cast<chrono::nanoseconds>(rpc_client_end - rpc_client_start)
-                  .count();
+          cast_to_nanoseconds(rpc_client_end - rpc_client_start).count();
 
   culminative_time += rpc_client_time_total_time;
 

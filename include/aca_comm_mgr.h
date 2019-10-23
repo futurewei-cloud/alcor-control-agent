@@ -20,22 +20,28 @@ class Aca_Comm_Manager {
   int deserialize(const cppkafka::Buffer *kafka_buffer,
                   alcorcontroller::GoalState &parsed_struct);
 
+  // process ONE VPC state
   int update_vpc_state_workitem(const alcorcontroller::VpcState current_VpcState,
                                 alcorcontroller::GoalStateOperationReply &gsOperationReply);
 
+  // process 0 to N VPC states
   int update_vpc_states(const alcorcontroller::GoalState &parsed_struct,
                         alcorcontroller::GoalStateOperationReply &gsOperationReply);
 
+  // process ONE subnet state
   int update_subnet_state_workitem(const alcorcontroller::SubnetState current_SubnetState,
                                    alcorcontroller::GoalStateOperationReply &gsOperationReply);
 
+  // process 0 to N subnet states
   int update_subnet_states(const alcorcontroller::GoalState &parsed_struct,
                            alcorcontroller::GoalStateOperationReply &gsOperationReply);
 
+  // process ONE port state
   int update_port_state_workitem(const alcorcontroller::PortState current_PortState,
                                  const alcorcontroller::GoalState &parsed_struct,
                                  alcorcontroller::GoalStateOperationReply &gsOperationReply);
 
+  // process 0 to N port states
   int update_port_states(const alcorcontroller::GoalState &parsed_struct,
                          alcorcontroller::GoalStateOperationReply &gsOperationReply);
 
