@@ -17,7 +17,10 @@ using namespace std;
 using namespace alcorcontroller;
 using aca_comm_manager::Aca_Comm_Manager;
 
+// Defines
 #define ACALOGNAME "AlcorControlAgentTest"
+static char LOCALHOST[] = "localhost";
+static char UDP_PROTOCOL[] = "udp";
 
 static char VALID_STRING[] = "VALID_STRING";
 static char DEFAULT_MTU[] = "9000";
@@ -25,20 +28,46 @@ static char DEFAULT_MTU[] = "9000";
 // Global variables
 string g_rpc_server = EMPTY_STRING;
 string g_rpc_protocol = EMPTY_STRING;
-bool g_transitd_loaded = false;
-long g_total_rpc_call_time = 0;
-long g_total_rpc_client_time = 0;
-long g_total_update_GS_time = 0;
+std::atomic_ulong g_total_rpc_call_time(0);
+std::atomic_ulong g_total_rpc_client_time(0);
+std::atomic_ulong g_total_network_configuration_time(0);
+std::atomic_ulong g_total_update_GS_time(0);
 bool g_debug_mode = true;
 bool g_demo_mode = false;
+bool g_transitd_loaded = false;
 
 using aca_net_config::Aca_Net_Config;
 
+static void aca_cleanup()
+{
+  ACA_LOG_DEBUG("g_total_rpc_call_time = %lu nanoseconds or %lu milliseconds\n",
+                g_total_rpc_call_time.load(), g_total_rpc_call_time.load() / 1000000);
+
+  ACA_LOG_DEBUG("g_total_rpc_client_time = %lu nanoseconds or %lu milliseconds\n",
+                g_total_rpc_client_time.load(), g_total_rpc_client_time.load() / 1000000);
+
+  ACA_LOG_DEBUG("g_total_network_configuration_time = %lu nanoseconds or %lu milliseconds\n",
+                g_total_network_configuration_time.load(),
+                g_total_network_configuration_time.load() / 1000000);
+
+  ACA_LOG_DEBUG("g_total_update_GS_time = %lu nanoseconds or %lu milliseconds\n",
+                g_total_update_GS_time.load(), g_total_update_GS_time.load() / 1000000);
+
+  ACA_LOG_INFO("Program exiting, cleaning up...\n");
+
+  // Optional:  Delete all global objects allocated by libprotobuf.
+  google::protobuf::ShutdownProtobufLibrary();
+
+  ACA_LOG_CLOSE();
+}
+
 TEST(net_config_test_cases, create_namespace_invalid)
 {
+  ulong culminative_network_configuration_time = 0;
   int rc;
 
-  rc = Aca_Net_Config::get_instance().create_namespace(EMPTY_STRING);
+  rc = Aca_Net_Config::get_instance().create_namespace(
+          EMPTY_STRING, culminative_network_configuration_time);
   ASSERT_NE(rc, EXIT_SUCCESS);
 }
 
@@ -46,9 +75,11 @@ TEST(net_config_test_cases, create_namespace_valid)
 {
   string test_ns = "test_ns";
   string cmd_string;
+  ulong culminative_network_configuration_time = 0;
   int rc;
 
-  rc = Aca_Net_Config::get_instance().create_namespace(test_ns);
+  rc = Aca_Net_Config::get_instance().create_namespace(
+          test_ns, culminative_network_configuration_time);
   ASSERT_EQ(rc, EXIT_SUCCESS);
 
   // is the newly create namespace there?
@@ -72,12 +103,15 @@ TEST(net_config_test_cases, create_namespace_valid)
 
 TEST(net_config_test_cases, create_veth_pair_invalid)
 {
+  ulong culminative_network_configuration_time = 0;
   int rc;
 
-  rc = Aca_Net_Config::get_instance().create_veth_pair(EMPTY_STRING, VALID_STRING);
+  rc = Aca_Net_Config::get_instance().create_veth_pair(
+          EMPTY_STRING, VALID_STRING, culminative_network_configuration_time);
   ASSERT_NE(rc, EXIT_SUCCESS);
 
-  rc = Aca_Net_Config::get_instance().create_veth_pair(VALID_STRING, EMPTY_STRING);
+  rc = Aca_Net_Config::get_instance().create_veth_pair(
+          VALID_STRING, EMPTY_STRING, culminative_network_configuration_time);
   ASSERT_NE(rc, EXIT_SUCCESS);
 }
 
@@ -86,10 +120,12 @@ TEST(net_config_test_cases, create_veth_pair_valid)
   string veth = "vethtest";
   string peer = "peertest";
   string cmd_string;
+  ulong culminative_network_configuration_time = 0;
   int rc;
 
   // create the veth pair
-  rc = Aca_Net_Config::get_instance().create_veth_pair(veth, peer);
+  rc = Aca_Net_Config::get_instance().create_veth_pair(
+          veth, peer, culminative_network_configuration_time);
   ASSERT_EQ(rc, EXIT_SUCCESS);
 
   // is the newly created veth pair there?
@@ -123,9 +159,11 @@ TEST(net_config_test_cases, create_veth_pair_valid)
 
 TEST(net_config_test_cases, setup_peer_device_invalid)
 {
+  ulong culminative_network_configuration_time = 0;
   int rc;
 
-  rc = Aca_Net_Config::get_instance().setup_peer_device(EMPTY_STRING);
+  rc = Aca_Net_Config::get_instance().setup_peer_device(
+          EMPTY_STRING, culminative_network_configuration_time);
   ASSERT_NE(rc, EXIT_SUCCESS);
 }
 
@@ -134,13 +172,16 @@ TEST(net_config_test_cases, setup_peer_device_valid)
   string veth = "vethtest";
   string peer = "peertest";
   string cmd_string;
+  ulong culminative_network_configuration_time = 0;
   int rc;
 
   // create the veth pair
-  rc = Aca_Net_Config::get_instance().create_veth_pair(veth, peer);
+  rc = Aca_Net_Config::get_instance().create_veth_pair(
+          veth, peer, culminative_network_configuration_time);
   ASSERT_EQ(rc, EXIT_SUCCESS);
 
-  rc = Aca_Net_Config::get_instance().setup_peer_device(peer);
+  rc = Aca_Net_Config::get_instance().setup_peer_device(
+          peer, culminative_network_configuration_time);
   EXPECT_EQ(rc, EXIT_SUCCESS);
 
   // was the MTU applied successfully?
@@ -158,12 +199,15 @@ TEST(net_config_test_cases, setup_peer_device_valid)
 
 TEST(net_config_test_cases, move_to_namespace_invalid)
 {
+  ulong culminative_network_configuration_time = 0;
   int rc;
 
-  rc = Aca_Net_Config::get_instance().move_to_namespace(EMPTY_STRING, VALID_STRING);
+  rc = Aca_Net_Config::get_instance().move_to_namespace(
+          EMPTY_STRING, VALID_STRING, culminative_network_configuration_time);
   ASSERT_NE(rc, EXIT_SUCCESS);
 
-  rc = Aca_Net_Config::get_instance().move_to_namespace(VALID_STRING, EMPTY_STRING);
+  rc = Aca_Net_Config::get_instance().move_to_namespace(
+          VALID_STRING, EMPTY_STRING, culminative_network_configuration_time);
   ASSERT_NE(rc, EXIT_SUCCESS);
 }
 
@@ -173,12 +217,15 @@ TEST(net_config_test_cases, move_to_namespace_valid)
   string peer = "peertest";
   string test_ns = "test_ns";
   string cmd_string;
+  ulong culminative_network_configuration_time = 0;
   int rc;
 
-  rc = Aca_Net_Config::get_instance().create_namespace(test_ns);
+  rc = Aca_Net_Config::get_instance().create_namespace(
+          test_ns, culminative_network_configuration_time);
   ASSERT_EQ(rc, EXIT_SUCCESS);
 
-  rc = Aca_Net_Config::get_instance().create_veth_pair(veth, peer);
+  rc = Aca_Net_Config::get_instance().create_veth_pair(
+          veth, peer, culminative_network_configuration_time);
   EXPECT_EQ(rc, EXIT_SUCCESS);
 
   // the veth should not be in the new namespace yet
@@ -188,7 +235,8 @@ TEST(net_config_test_cases, move_to_namespace_valid)
   EXPECT_NE(rc, EXIT_SUCCESS);
 
   // move the veth into the new namespace
-  rc = Aca_Net_Config::get_instance().move_to_namespace(veth, test_ns);
+  rc = Aca_Net_Config::get_instance().move_to_namespace(
+          veth, test_ns, culminative_network_configuration_time);
   EXPECT_EQ(rc, EXIT_SUCCESS);
 
   // the veth should be in the new namespace now
@@ -210,6 +258,7 @@ TEST(net_config_test_cases, move_to_namespace_valid)
 
 TEST(net_config_test_cases, setup_veth_device_invalid)
 {
+  ulong culminative_network_configuration_time = 0;
   int rc;
 
   veth_config new_veth_config;
@@ -219,31 +268,37 @@ TEST(net_config_test_cases, setup_veth_device_invalid)
   new_veth_config.mac = VALID_STRING;
   new_veth_config.gateway_ip = VALID_STRING;
 
-  rc = Aca_Net_Config::get_instance().setup_veth_device(EMPTY_STRING, new_veth_config);
+  rc = Aca_Net_Config::get_instance().setup_veth_device(
+          EMPTY_STRING, new_veth_config, culminative_network_configuration_time);
   ASSERT_NE(rc, EXIT_SUCCESS);
 
   new_veth_config.veth_name = EMPTY_STRING;
-  rc = Aca_Net_Config::get_instance().setup_veth_device(EMPTY_STRING, new_veth_config);
+  rc = Aca_Net_Config::get_instance().setup_veth_device(
+          EMPTY_STRING, new_veth_config, culminative_network_configuration_time);
   ASSERT_NE(rc, EXIT_SUCCESS);
 
   new_veth_config.veth_name = VALID_STRING;
   new_veth_config.ip = EMPTY_STRING;
-  rc = Aca_Net_Config::get_instance().setup_veth_device(EMPTY_STRING, new_veth_config);
+  rc = Aca_Net_Config::get_instance().setup_veth_device(
+          EMPTY_STRING, new_veth_config, culminative_network_configuration_time);
   ASSERT_NE(rc, EXIT_SUCCESS);
 
   new_veth_config.ip = VALID_STRING;
   new_veth_config.prefix_len = EMPTY_STRING;
-  rc = Aca_Net_Config::get_instance().setup_veth_device(EMPTY_STRING, new_veth_config);
+  rc = Aca_Net_Config::get_instance().setup_veth_device(
+          EMPTY_STRING, new_veth_config, culminative_network_configuration_time);
   ASSERT_NE(rc, EXIT_SUCCESS);
 
   new_veth_config.prefix_len = VALID_STRING;
   new_veth_config.mac = EMPTY_STRING;
-  rc = Aca_Net_Config::get_instance().setup_veth_device(EMPTY_STRING, new_veth_config);
+  rc = Aca_Net_Config::get_instance().setup_veth_device(
+          EMPTY_STRING, new_veth_config, culminative_network_configuration_time);
   ASSERT_NE(rc, EXIT_SUCCESS);
 
   new_veth_config.mac = VALID_STRING;
   new_veth_config.gateway_ip = EMPTY_STRING;
-  rc = Aca_Net_Config::get_instance().setup_veth_device(EMPTY_STRING, new_veth_config);
+  rc = Aca_Net_Config::get_instance().setup_veth_device(
+          EMPTY_STRING, new_veth_config, culminative_network_configuration_time);
   ASSERT_NE(rc, EXIT_SUCCESS);
 }
 
@@ -257,12 +312,15 @@ TEST(net_config_test_cases, setup_veth_device_valid)
   string mac = "aa:bb:cc:dd:ee:ff";
   string gateway = "10.0.0.1";
   string cmd_string;
+  ulong culminative_network_configuration_time = 0;
   int rc;
 
-  rc = Aca_Net_Config::get_instance().create_namespace(test_ns);
+  rc = Aca_Net_Config::get_instance().create_namespace(
+          test_ns, culminative_network_configuration_time);
   ASSERT_EQ(rc, EXIT_SUCCESS);
 
-  rc = Aca_Net_Config::get_instance().create_veth_pair(veth, peer);
+  rc = Aca_Net_Config::get_instance().create_veth_pair(
+          veth, peer, culminative_network_configuration_time);
   EXPECT_EQ(rc, EXIT_SUCCESS);
 
   // the veth should not be in the new namespace yet
@@ -272,7 +330,8 @@ TEST(net_config_test_cases, setup_veth_device_valid)
   EXPECT_NE(rc, EXIT_SUCCESS);
 
   // move the veth into the new namespace
-  rc = Aca_Net_Config::get_instance().move_to_namespace(veth, test_ns);
+  rc = Aca_Net_Config::get_instance().move_to_namespace(
+          veth, test_ns, culminative_network_configuration_time);
   EXPECT_EQ(rc, EXIT_SUCCESS);
 
   // the veth should be in the new namespace now
@@ -288,7 +347,8 @@ TEST(net_config_test_cases, setup_veth_device_valid)
   new_veth_config.prefix_len = prefix_len;
   new_veth_config.mac = mac;
   new_veth_config.gateway_ip = gateway;
-  rc = Aca_Net_Config::get_instance().setup_veth_device(test_ns, new_veth_config);
+  rc = Aca_Net_Config::get_instance().setup_veth_device(
+          test_ns, new_veth_config, culminative_network_configuration_time);
   EXPECT_EQ(rc, EXIT_SUCCESS);
 
   g_demo_mode = previous_demo_mode;
@@ -323,18 +383,19 @@ TEST(net_config_test_cases, setup_veth_device_valid)
 
 TEST(net_config_test_cases, rename_veth_device_invalid)
 {
+  ulong culminative_network_configuration_time = 0;
   int rc;
 
   rc = Aca_Net_Config::get_instance().rename_veth_device(
-          EMPTY_STRING, VALID_STRING, VALID_STRING);
+          EMPTY_STRING, VALID_STRING, VALID_STRING, culminative_network_configuration_time);
   ASSERT_NE(rc, EXIT_SUCCESS);
 
   rc = Aca_Net_Config::get_instance().rename_veth_device(
-          VALID_STRING, EMPTY_STRING, VALID_STRING);
+          VALID_STRING, EMPTY_STRING, VALID_STRING, culminative_network_configuration_time);
   ASSERT_NE(rc, EXIT_SUCCESS);
 
   rc = Aca_Net_Config::get_instance().rename_veth_device(
-          VALID_STRING, VALID_STRING, EMPTY_STRING);
+          VALID_STRING, VALID_STRING, EMPTY_STRING, culminative_network_configuration_time);
   ASSERT_NE(rc, EXIT_SUCCESS);
 }
 
@@ -345,12 +406,15 @@ TEST(net_config_test_cases, rename_veth_device_valid)
   string test_ns = "test_ns";
   string new_veth = "vethnew";
   string cmd_string;
+  ulong culminative_network_configuration_time = 0;
   int rc;
 
-  rc = Aca_Net_Config::get_instance().create_namespace(test_ns);
+  rc = Aca_Net_Config::get_instance().create_namespace(
+          test_ns, culminative_network_configuration_time);
   ASSERT_EQ(rc, EXIT_SUCCESS);
 
-  rc = Aca_Net_Config::get_instance().create_veth_pair(old_veth, peer);
+  rc = Aca_Net_Config::get_instance().create_veth_pair(
+          old_veth, peer, culminative_network_configuration_time);
   EXPECT_EQ(rc, EXIT_SUCCESS);
 
   // the veth should not be in the new namespace yet
@@ -360,7 +424,8 @@ TEST(net_config_test_cases, rename_veth_device_valid)
   EXPECT_NE(rc, EXIT_SUCCESS);
 
   // move the veth into the new namespace
-  rc = Aca_Net_Config::get_instance().move_to_namespace(old_veth, test_ns);
+  rc = Aca_Net_Config::get_instance().move_to_namespace(
+          old_veth, test_ns, culminative_network_configuration_time);
   EXPECT_EQ(rc, EXIT_SUCCESS);
 
   // the veth should be in the new namespace now
@@ -368,7 +433,8 @@ TEST(net_config_test_cases, rename_veth_device_valid)
   EXPECT_EQ(rc, EXIT_SUCCESS);
 
   // rename the veth
-  rc = Aca_Net_Config::get_instance().rename_veth_device(test_ns, old_veth, new_veth);
+  rc = Aca_Net_Config::get_instance().rename_veth_device(
+          test_ns, old_veth, new_veth, culminative_network_configuration_time);
   EXPECT_EQ(rc, EXIT_SUCCESS);
 
   // the new veth should be there
@@ -431,7 +497,9 @@ TEST(net_config_test_cases, subnet_CREATE_UPDATE_ROUTER)
   TransitSwitch_builder->set_ip_address("172.0.0.1");
   TransitSwitch_builder->set_mac_address("cc:dd:ee:aa:bb:cc");
 
-  rc = Aca_Comm_Manager::get_instance().update_goal_state(GoalState_builder);
+  alcorcontroller::GoalStateOperationReply gsOperationalReply;
+
+  rc = Aca_Comm_Manager::get_instance().update_goal_state(GoalState_builder, gsOperationalReply);
   // rc can be error if transitd is not loaded
   if (g_transitd_loaded) {
     ASSERT_EQ(rc, EXIT_SUCCESS);
@@ -475,7 +543,8 @@ TEST(net_config_test_cases, subnet_CREATE_UPDATE_GATEWAY)
   TransitSwitch_builder->set_ip_address("172.0.0.1");
   TransitSwitch_builder->set_mac_address("cc:dd:ee:aa:bb:cc");
 
-  rc = Aca_Comm_Manager::get_instance().update_goal_state(GoalState_builder);
+  alcorcontroller::GoalStateOperationReply gsOperationalReply;
+  rc = Aca_Comm_Manager::get_instance().update_goal_state(GoalState_builder, gsOperationalReply);
   // rc can be error if transitd is not loaded
   if (g_transitd_loaded) {
     ASSERT_EQ(rc, EXIT_SUCCESS);
@@ -484,7 +553,56 @@ TEST(net_config_test_cases, subnet_CREATE_UPDATE_GATEWAY)
   new_subnet_states->clear_configuration();
 }
 
-TEST(net_config_test_cases, port_CREATE_UPDATE_SWITCH)
+TEST(net_config_test_cases, subnet_CREATE_UPDATE_GATEWAY_10)
+{
+  string vpc_id = "99d9d709-8478-4b46-9f3f-2206b1023fd3";
+  string gateway_ip_postfix = ".0.0.1";
+  string gateway_mac_prefix = "fa:16:3e:d7:f2:";
+  int rc;
+
+  GoalState GoalState_builder;
+  SubnetState *new_subnet_states;
+
+  for (int i = 0; i < 10; i++) {
+    string i_string = std::to_string(i);
+
+    new_subnet_states = GoalState_builder.add_subnet_states();
+    new_subnet_states->set_operation_type(OperationType::CREATE_UPDATE_GATEWAY);
+
+    // this will allocate new SubnetConfiguration, will need to free it later
+    SubnetConfiguration *SubnetConiguration_builder =
+            new_subnet_states->mutable_configuration();
+    SubnetConiguration_builder->set_version(1);
+    SubnetConiguration_builder->set_project_id("dbf72700-5106-4a7a-918f-111111111111");
+    SubnetConiguration_builder->set_vpc_id(vpc_id);
+    SubnetConiguration_builder->set_id("superSubnetID" + i_string);
+    SubnetConiguration_builder->set_name("SuperSubnet");
+    SubnetConiguration_builder->set_cidr(i_string + ".0.0.0/16");
+    SubnetConiguration_builder->set_tunnel_id(22222);
+    SubnetConfiguration_Gateway *SubnetConiguration_Gateway_builder =
+            SubnetConiguration_builder->mutable_gateway();
+    SubnetConiguration_Gateway_builder->set_ip_address(i_string + gateway_ip_postfix);
+    SubnetConiguration_Gateway_builder->set_mac_address(gateway_mac_prefix + i_string);
+    // this will allocate new SubnetConfiguration_TransitSwitch, may need to free it later
+    SubnetConfiguration_TransitSwitch *TransitSwitch_builder =
+            SubnetConiguration_builder->add_transit_switches();
+    TransitSwitch_builder->set_vpc_id(vpc_id);
+    TransitSwitch_builder->set_subnet_id("superSubnet");
+    TransitSwitch_builder->set_ip_address("172.0.0.1");
+    TransitSwitch_builder->set_mac_address("cc:dd:ee:aa:bb:cc");
+  }
+
+  alcorcontroller::GoalStateOperationReply gsOperationalReply;
+  rc = Aca_Comm_Manager::get_instance().update_goal_state(GoalState_builder, gsOperationalReply);
+  // rc can be error if transitd is not loaded
+  if (g_transitd_loaded) {
+    ASSERT_EQ(rc, EXIT_SUCCESS);
+  }
+
+  new_subnet_states->clear_configuration();
+}
+
+TEST(net_config_test_cases, port_CREATE_UPDATE_SWITCH_100)
 {
   string port_name = "11111111-2222-3333-4444-555555555555";
   string vpc_id = "99d9d709-8478-4b46-9f3f-2206b1023fd3";
@@ -504,11 +622,11 @@ TEST(net_config_test_cases, port_CREATE_UPDATE_SWITCH)
   PortState *new_port_states;
   SubnetState *new_subnet_states = GoalState_builder.add_subnet_states();
 
-  for (int i = 0; i < 1000; i++) {
+  for (int i = 0; i < 100; i++) {
     new_port_states = GoalState_builder.add_port_states();
     new_port_states->set_operation_type(OperationType::CREATE_UPDATE_SWITCH);
 
-    // this will allocate new PortConfiguration, will need to free it later
+    // this will allocate new PortConfiguration, may need to free it later
     PortConfiguration *PortConfiguration_builder =
             new_port_states->mutable_configuration();
     PortConfiguration_builder->set_version(1);
@@ -571,10 +689,11 @@ TEST(net_config_test_cases, port_CREATE_UPDATE_SWITCH)
   TransitSwitch_builder->set_ip_address("172.0.0.1");
   TransitSwitch_builder->set_mac_address("cc:dd:ee:aa:bb:cc");
 
-  rc = Aca_Comm_Manager::get_instance().update_goal_state(GoalState_builder);
+  alcorcontroller::GoalStateOperationReply gsOperationalReply;
+  rc = Aca_Comm_Manager::get_instance().update_goal_state(GoalState_builder, gsOperationalReply);
   // rc can be error if transitd is not loaded
   if (g_transitd_loaded) {
-    ASSERT_EQ(rc, EXIT_SUCCESS);
+    EXPECT_EQ(rc, EXIT_SUCCESS);
   }
 
   // free the allocated configurations since we are done with it now
@@ -582,7 +701,7 @@ TEST(net_config_test_cases, port_CREATE_UPDATE_SWITCH)
   new_subnet_states->clear_configuration();
 }
 
-TEST(net_config_test_cases, endpoint_create_integrated)
+TEST(net_config_test_cases, port_CREATE_integrated)
 {
   string port_name = "11111111-2222-3333-4444-555555555555";
   string vpc_id = "99d9d709-8478-4b46-9f3f-2206b1023fd3";
@@ -668,7 +787,8 @@ TEST(net_config_test_cases, endpoint_create_integrated)
   bool previous_demo_mode = g_demo_mode;
   g_demo_mode = true;
 
-  rc = Aca_Comm_Manager::get_instance().update_goal_state(GoalState_builder);
+  alcorcontroller::GoalStateOperationReply gsOperationalReply;
+  rc = Aca_Comm_Manager::get_instance().update_goal_state(GoalState_builder, gsOperationalReply);
   // rc can be error if transitd is not loaded
   if (g_transitd_loaded) {
     ASSERT_EQ(rc, EXIT_SUCCESS);
@@ -704,7 +824,7 @@ TEST(net_config_test_cases, endpoint_create_integrated)
   PortState *final_port_states = GoalState_builder.mutable_port_states(0);
   final_port_states->set_operation_type(OperationType::FINALIZE);
 
-  rc = Aca_Comm_Manager::get_instance().update_goal_state(GoalState_builder);
+  rc = Aca_Comm_Manager::get_instance().update_goal_state(GoalState_builder, gsOperationalReply);
   // rc can be error if transitd is not loaded
   if (g_transitd_loaded) {
     EXPECT_EQ(rc, EXIT_SUCCESS);
@@ -728,6 +848,112 @@ TEST(net_config_test_cases, endpoint_create_integrated)
   EXPECT_EQ(rc, EXIT_SUCCESS);
 
   // delete the newly created ns
+  cmd_string = IP_NETNS_PREFIX + "delete " + vpc_ns;
+
+  rc = Aca_Net_Config::get_instance().execute_system_command(cmd_string);
+  EXPECT_EQ(rc, EXIT_SUCCESS);
+}
+
+TEST(net_config_test_cases, port_CREATE_10)
+{
+  string network_id = "superSubnetID";
+  string port_name_postfix = "11111111-2222-3333-4444-555555555555";
+  string vpc_id = "99d9d709-8478-4b46-9f3f-2206b1023fa";
+  string vpc_ns = "vpc-ns-" + vpc_id;
+  string ip_address_prefix = "10.0.0.";
+  string mac_address_prefix = "fa:16:3e:d7:f2:6";
+  string gateway_ip = "10.0.0.1";
+  string gateway_mac = "fa:16:3e:d7:f2:00";
+  string cmd_string;
+  int rc;
+
+  GoalState GoalState_builder;
+  PortState *new_port_states;
+  SubnetState *new_subnet_states = GoalState_builder.add_subnet_states();
+
+  for (int i = 0; i < 10; i++) {
+    string i_string = std::to_string(i);
+
+    new_port_states = GoalState_builder.add_port_states();
+    new_port_states->set_operation_type(OperationType::CREATE);
+
+    // this will allocate new PortConfiguration, may need to free it later
+    PortConfiguration *PortConfiguration_builder =
+            new_port_states->mutable_configuration();
+    PortConfiguration_builder->set_version(1);
+    PortConfiguration_builder->set_project_id("dbf72700-5106-4a7a-918f-111111111111");
+    PortConfiguration_builder->set_network_id(network_id);
+    PortConfiguration_builder->set_id(i_string + port_name_postfix);
+    PortConfiguration_builder->set_name("FriendlyPortName");
+    PortConfiguration_builder->set_admin_state_up(true);
+    PortConfiguration_builder->set_mac_address(mac_address_prefix + i_string);
+    PortConfiguration_builder->set_veth_name("veth0");
+
+    PortConfiguration_HostInfo *portConfig_HostInfoBuilder(new PortConfiguration_HostInfo);
+    portConfig_HostInfoBuilder->set_ip_address("172.0.0.2");
+    portConfig_HostInfoBuilder->set_mac_address("aa-bb-cc-dd-ee-ff");
+    PortConfiguration_builder->set_allocated_host_info(portConfig_HostInfoBuilder);
+
+    // this will allocate new PortConfiguration_FixedIp may need to free later
+    PortConfiguration_FixedIp *PortIp_builder =
+            PortConfiguration_builder->add_fixed_ips();
+    PortIp_builder->set_ip_address(ip_address_prefix + i_string);
+    PortIp_builder->set_subnet_id("2");
+    // this will allocate new PortConfiguration_SecurityGroupId may need to free later
+    PortConfiguration_SecurityGroupId *SecurityGroup_builder =
+            PortConfiguration_builder->add_security_group_ids();
+    SecurityGroup_builder->set_id("1");
+    // this will allocate new PortConfiguration_AllowAddressPair may need to free later
+    PortConfiguration_AllowAddressPair *AddressPair_builder =
+            PortConfiguration_builder->add_allow_address_pairs();
+    AddressPair_builder->set_ip_address("10.0.0.5");
+    AddressPair_builder->set_mac_address("fa:16:3e:d7:f2:9f");
+    // this will allocate new PortConfiguration_ExtraDhcpOption may need to free later
+    PortConfiguration_ExtraDhcpOption *ExtraDhcp_builder =
+            PortConfiguration_builder->add_extra_dhcp_options();
+    ExtraDhcp_builder->set_name("opt_1");
+    ExtraDhcp_builder->set_value("12");
+  }
+
+  // fill in the subnet state structs
+  new_subnet_states->set_operation_type(OperationType::INFO);
+
+  // this will allocate new SubnetConfiguration, will need to free it later
+  SubnetConfiguration *SubnetConiguration_builder =
+          new_subnet_states->mutable_configuration();
+  SubnetConiguration_builder->set_version(1);
+  SubnetConiguration_builder->set_project_id("dbf72700-5106-4a7a-918f-111111111111");
+  SubnetConiguration_builder->set_vpc_id(vpc_id);
+  SubnetConiguration_builder->set_id(network_id);
+  SubnetConiguration_builder->set_name("SuperSubnet");
+  SubnetConiguration_builder->set_cidr("10.0.0.0/16");
+  SubnetConiguration_builder->set_tunnel_id(22222);
+  SubnetConfiguration_Gateway *SubnetConiguration_Gateway_builder =
+          SubnetConiguration_builder->mutable_gateway();
+  SubnetConiguration_Gateway_builder->set_ip_address(gateway_ip);
+  SubnetConiguration_Gateway_builder->set_mac_address(gateway_mac);
+  // this will allocate new SubnetConfiguration_TransitSwitch, may need to free it later
+  SubnetConfiguration_TransitSwitch *TransitSwitch_builder =
+          SubnetConiguration_builder->add_transit_switches();
+  TransitSwitch_builder->set_vpc_id(vpc_id);
+  TransitSwitch_builder->set_subnet_id("superSubnet");
+  TransitSwitch_builder->set_ip_address("172.0.0.1");
+  TransitSwitch_builder->set_mac_address("cc:dd:ee:aa:bb:cc");
+
+  bool previous_demo_mode = g_demo_mode;
+  g_demo_mode = false;
+
+  alcorcontroller::GoalStateOperationReply gsOperationalReply;
+  rc = Aca_Comm_Manager::get_instance().update_goal_state(GoalState_builder, gsOperationalReply);
+  // rc can be error if transitd is not loaded
+  if (g_transitd_loaded) {
+    EXPECT_EQ(rc, EXIT_SUCCESS);
+  }
+
+  g_demo_mode = previous_demo_mode;
+
+  // delete the newly created ns
+  // this will delete everything including the newly creates veth pairs
   cmd_string = IP_NETNS_PREFIX + "delete " + vpc_ns;
 
   rc = Aca_Net_Config::get_instance().execute_system_command(cmd_string);
@@ -762,7 +988,7 @@ int main(int argc, char **argv)
               "Usage: %s\n"
               "\t\t[-s transitd RPC server]\n"
               "\t\t[-p transitd RPC protocol]\n"
-              "\t\t[-p transitd is loaded]\n",
+              "\t\t[-t transitd is loaded]\n",
               argv[0]);
       exit(EXIT_FAILURE);
     }
@@ -779,7 +1005,7 @@ int main(int argc, char **argv)
 
   int rc = RUN_ALL_TESTS();
 
-  ACA_LOG_CLOSE();
+  aca_cleanup();
 
   return rc;
 }

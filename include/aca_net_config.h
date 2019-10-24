@@ -26,21 +26,24 @@ class Aca_Net_Config {
 
   static Aca_Net_Config &get_instance();
 
-  int create_namespace(string ns_name);
+  int create_namespace(string ns_name, ulong &culminative_time);
 
-  int create_veth_pair(string veth_name, string peer_name);
+  int create_veth_pair(string veth_name, string peer_name, ulong &culminative_time);
 
-  int setup_peer_device(string peer_name);
+  int setup_peer_device(string peer_name, ulong &culminative_time);
 
-  int move_to_namespace(string veth_name, string ns_name);
+  int move_to_namespace(string veth_name, string ns_name, ulong &culminative_time);
 
-  int setup_veth_device(string ns_name, veth_config new_veth_config);
+  int setup_veth_device(string ns_name, veth_config new_veth_config, ulong &culminative_time);
 
-  int rename_veth_device(string ns_name, string org_veth_name, string new_veth_name);
+  int rename_veth_device(string ns_name, string org_veth_name,
+                         string new_veth_name, ulong &culminative_time);
 
-  int add_gw(string ns_name, string gateway_ip);
+  int add_gw(string ns_name, string gateway_ip, ulong &culminative_time);
 
   int execute_system_command(string cmd_string);
+
+  int execute_system_command(string cmd_string, ulong &culminative_time);
 
   // compiler will flag the error when below is called.
   Aca_Net_Config(Aca_Net_Config const &) = delete;

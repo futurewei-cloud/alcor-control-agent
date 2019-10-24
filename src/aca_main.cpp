@@ -1,20 +1,24 @@
-
-#include <unistd.h> /* for getopt */
-#include <thread>
 #include "aca_log.h"
 #include "aca_util.h"
-#include "goalstate.pb.h"
-#include "messageconsumer.h"
-#include "goalstateprovisioner.grpc.pb.h"
 #include "aca_comm_mgr.h"
-#include "cppkafka/utils/consumer_dispatcher.h"
-#include <grpcpp/grpcpp.h>
+#include "messageconsumer.h"
 #include "aca_async_grpc_server.h"
+#include "goalstateprovisioner.grpc.pb.h"
+#include "cppkafka/utils/consumer_dispatcher.h"
+#include <thread>
+#include <unistd.h> /* for getopt */
+#include <grpcpp/grpcpp.h>
 
 using messagemanager::MessageConsumer;
 using std::string;
 
+// Defines
 #define ACALOGNAME "AliothControlAgent"
+static char BROKER_LIST[] = "10.213.43.158:9092";
+static char KAFKA_TOPIC[] = "Host-ts-1";
+static char KAFKA_GROUP_ID[] = "test-group-id";
+static char LOCALHOST[] = "localhost";
+static char UDP_PROTOCOL[] = "udp";
 
 using aca_comm_manager::Aca_Comm_Manager;
 using namespace std;
@@ -28,22 +32,27 @@ string g_kafka_topic = EMPTY_STRING;
 string g_kafka_group_id = EMPTY_STRING;
 string g_rpc_server = EMPTY_STRING;
 string g_rpc_protocol = EMPTY_STRING;
-long g_total_rpc_call_time = 0;
-long g_total_rpc_client_time = 0;
-long g_total_update_GS_time = 0;
+std::atomic_ulong g_total_rpc_call_time(0);
+std::atomic_ulong g_total_rpc_client_time(0);
+std::atomic_ulong g_total_network_configuration_time(0);
+std::atomic_ulong g_total_update_GS_time(0);
 bool g_demo_mode = false;
 bool g_debug_mode = false;
 
 static void aca_cleanup()
 {
-  ACA_LOG_DEBUG("g_total_rpc_call_time = %ld nanoseconds or %ld milliseconds\n",
-                g_total_rpc_call_time, g_total_rpc_call_time / 1000000);
+  ACA_LOG_DEBUG("g_total_rpc_call_time = %lu nanoseconds or %lu milliseconds\n",
+                g_total_rpc_call_time.load(), g_total_rpc_call_time.load() / 1000000);
 
-  ACA_LOG_DEBUG("g_total_rpc_client_time = %ld nanoseconds or %ld milliseconds\n",
-                g_total_rpc_client_time, g_total_rpc_client_time / 1000000);
+  ACA_LOG_DEBUG("g_total_rpc_client_time = %lu nanoseconds or %lu milliseconds\n",
+                g_total_rpc_client_time.load(), g_total_rpc_client_time.load() / 1000000);
 
-  ACA_LOG_DEBUG("g_total_update_GS_time = %ld nanoseconds or %ld milliseconds\n",
-                g_total_update_GS_time, g_total_update_GS_time / 1000000);
+  ACA_LOG_DEBUG("g_total_network_configuration_time = %lu nanoseconds or %lu milliseconds\n",
+                g_total_network_configuration_time.load(),
+                g_total_network_configuration_time.load() / 1000000);
+
+  ACA_LOG_DEBUG("g_total_update_GS_time = %lu nanoseconds or %lu milliseconds\n",
+                g_total_update_GS_time.load(), g_total_update_GS_time.load() / 1000000);
 
   ACA_LOG_INFO("Program exiting, cleaning up...\n");
 
