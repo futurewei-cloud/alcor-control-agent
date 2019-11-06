@@ -110,7 +110,7 @@ static void aca_signal_handler(int sig_num)
 int main(int argc, char *argv[])
 {
   int option;
-  int rc = EXIT_FAILURE;
+  int rc;
 
   ACA_LOG_INIT(ACALOGNAME);
 
@@ -180,7 +180,7 @@ int main(int argc, char *argv[])
           new std::thread(std::bind(&Aca_Async_GRPC_Server::Run, async_grpc_server));
 
   MessageConsumer network_config_consumer(g_broker_list, g_kafka_group_id);
-  network_config_consumer.consumeDispatched(g_kafka_topic);
+  rc = network_config_consumer.consumeDispatched(g_kafka_topic);
 
   aca_cleanup();
   return rc;

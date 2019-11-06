@@ -1,8 +1,8 @@
-[submodule "Transit"]
-	path = Transit
-	url = https://github.com/futurewei-cloud/Transit.git
-	ignore = untracked
-[submodule "Alcor"]
-	path = Alcor
-	url = https://github.com/futurewei-cloud/Alcor.git
+[submodule "mizar"]
+	path = mizar
+	url = https://github.com/futurewei-cloud/mizar
+    ignore = untracked
+[submodule "alcor"]
+	path = alcor
+	url = https://github.com/futurewei-cloud/alcor
     ignore = untracked
