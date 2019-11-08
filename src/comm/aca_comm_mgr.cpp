@@ -708,6 +708,11 @@ int Aca_Comm_Manager::update_port_state_workitem(const PortState current_PortSta
 
               // substr can throw out_of_range and bad_alloc exceptions
               my_prefixlen = my_cidr.substr(slash_pos + 1);
+            } else if (current_PortState.operation_type() == OperationType::CREATE_UPDATE_SWITCH) {
+              if (current_SubnetConfiguration.tunnel_id() == 0) {
+                throw std::invalid_argument("tunnel id is 0");
+              }
+              endpoint_in.tunid = current_SubnetConfiguration.tunnel_id();
             }
 
             subnet_info_found = true;
@@ -1098,39 +1103,38 @@ int Aca_Comm_Manager::update_port_state_workitem(const PortState current_PortSta
                               exec_command_rc);
                 overall_rc = exec_command_rc;
               }
-
-              namespace_name = VPC_NS_PREFIX + vpc_id;
-
-              net_config_rc = Aca_Net_Config::get_instance().rename_veth_device(
-                      namespace_name, temp_name_string, veth_name_string,
-                      culminative_network_configuration_time);
-              if (net_config_rc == EXIT_SUCCESS) {
-                ACA_LOG_INFO("Successfully renamed in ns: %s, old_veth: %s, new_veth: %s\n",
-                             namespace_name.c_str(), temp_name_string.c_str(),
-                             veth_name_string.c_str());
-              } else {
-                ACA_LOG_ERROR("Unable to renamed in ns: %s, old_veth: %s, new_veth: %s\n",
-                              namespace_name.c_str(), temp_name_string.c_str(),
-                              veth_name_string.c_str());
-                overall_rc = net_config_rc;
-              }
-
-              // workaround for the current contract with CNI
-              // Removed for the current setup
-              //   net_config_rc = Aca_Net_Config::get_instance().add_gw(
-              //           namespace_name, my_gw_address, culminative_network_configuration_time);
-              //   if (net_config_rc == EXIT_SUCCESS) {
-              //     ACA_LOG_INFO("Successfully added gw in ns: %s, gateway: %s\n",
-              //                  namespace_name.c_str(), my_gw_address.c_str());
-              //   } else {
-              //     ACA_LOG_ERROR("Unable to added gw in ns: %s, gateway: %s\n",
-              //                   namespace_name.c_str(), my_gw_address.c_str());
-              //     overall_rc = net_config_rc;
-              //   }
-
             } // for (int k = 0; k < current_SubnetConfiguration.transit_switches_size(); k++)
 
-            // found subnet information and completed the work, breaking out of the if condition
+            namespace_name = VPC_NS_PREFIX + vpc_id;
+
+            net_config_rc = Aca_Net_Config::get_instance().rename_veth_device(
+                    namespace_name, temp_name_string, veth_name_string,
+                    culminative_network_configuration_time);
+            if (net_config_rc == EXIT_SUCCESS) {
+              ACA_LOG_INFO("Successfully renamed in ns: %s, old_veth: %s, new_veth: %s\n",
+                           namespace_name.c_str(), temp_name_string.c_str(),
+                           veth_name_string.c_str());
+            } else {
+              ACA_LOG_ERROR("Unable to renamed in ns: %s, old_veth: %s, new_veth: %s\n",
+                            namespace_name.c_str(), temp_name_string.c_str(),
+                            veth_name_string.c_str());
+              overall_rc = net_config_rc;
+            }
+
+            // workaround for the current contract with CNI
+            // Removed for the current setup
+            //   net_config_rc = Aca_Net_Config::get_instance().add_gw(
+            //           namespace_name, my_gw_address, culminative_network_configuration_time);
+            //   if (net_config_rc == EXIT_SUCCESS) {
+            //     ACA_LOG_INFO("Successfully added gw in ns: %s, gateway: %s\n",
+            //                  namespace_name.c_str(), my_gw_address.c_str());
+            //   } else {
+            //     ACA_LOG_ERROR("Unable to added gw in ns: %s, gateway: %s\n",
+            //                   namespace_name.c_str(), my_gw_address.c_str());
+            //     overall_rc = net_config_rc;
+            //   }
+
+            // found subnet information and completed the work, breaking out
             break;
           }
         }

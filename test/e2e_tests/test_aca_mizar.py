@@ -20,11 +20,10 @@ import unittest
 class test_aca_mizar(unittest.TestCase):
 
     def setUp(self):
-
         groupID = "test5"
         prefix = "-d -h es7"
         self.aca_droplet = {}
-        n_droplets = 20
+        n_droplets = 10
         for i in range(n_droplets):
             id = "d" + str(i)
             name = "ephost_" + str(i)
@@ -33,18 +32,18 @@ class test_aca_mizar(unittest.TestCase):
         self.aca_droplet["d200"] = aca_droplet("switchhost_0", prefix + "-subnet1-transit-switch1 -g " + groupID)
         self.aca_droplet["d201"] = aca_droplet("switchhost_1", prefix + "-subnet1-transit-switch2 -g " + groupID)
         self.aca_droplet["d202"] = aca_droplet("switchhost_2", prefix + "-subnet1-transit-switch3 -g " + groupID)
+        self.aca_droplet["d203"] = aca_droplet("routerhost_0", prefix + "-vpc1-transit-router1 -g " + groupID)
 
     def test_aca_mizar(self):
         open('machine_config.json', 'w').close()
         output = open("machine_config.json", "a")
-        print("Network Agent not yet loaded")
+        print("!!!Alcor Control Agent not yet loaded!!!")
         input("Press Enter to continue...")
         for d in self.aca_droplet.values():
             output.write(d.get_net_state())
-            # Run network control agent in the background
-            # TODO: fix below
-            d.run(d.nca_command, True)        
+            # Run alcor control agent in the background
+            d.run(d.aca_command, True)        
 
         output.close()
-        print("Network Agent now loaded")
-        input("Press Enter to cleanup")
+        print("Alcor Control Agent now loaded!")
+        input("Press Enter to cleanup and destroy all the created containers.")
