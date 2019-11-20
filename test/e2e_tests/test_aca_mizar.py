@@ -11,7 +11,7 @@
 #    under the License.
 
 #from test.trn_controller.controller import controller
-from test.e2e_test.aca_droplet import aca_droplet
+from aca_droplet import aca_droplet
 #from test.trn_controller.common import cidr
 #from test.trn_controller.endpoint import endpoint
 import unittest

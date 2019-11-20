@@ -1,9 +1,9 @@
 # Copyright (c) 2019 The Authors.
 #
-# Authors: Sherif Abdelwahab <@zasherif>
+# Authors: Eric Li           <@er1cthe0ne>
+#          Sherif Abdelwahab <@zasherif>
 #          Phu Tran          <@phudtran>
-#          Eric Li           <@er1cthe0ne>   
-#
+#          
 #    Unless required by applicable law or agreed to in writing, software
 #    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
@@ -11,7 +11,7 @@
 #    under the License.
 
 #from test.trn_controller.common import cidr, logger, run_cmd
-from Transit.e2e_test.aca_droplet import aca_droplet
+from mizar.test.trn_controller.droplet import droplet
 import os
 import docker
 import time
@@ -53,13 +53,13 @@ class aca_droplet(droplet):
             docker_image, '/bin/bash', tty=True,
             stdin_open=True, auto_remove=False, mounts=[mount_pnt, mount_modules],
             privileged=True, cap_add=["SYS_PTRACE"],
-            ports={str(droplet.port_internal) + "/tcp": ('0.0.0.0', droplet.port_external)},
+            ports={str(aca_droplet.port_internal) + "/tcp": ('0.0.0.0', aca_droplet.port_external)},
             security_opt=["seccomp=unconfined"])
         container.start()
         container.reload()
 
         # Increment the static external port number
-        droplet.port_external = droplet.port_external + 1
+        aca_droplet.port_external = aca_droplet.port_external + 1
 
         # Restart dependancy services
         container.exec_run("/etc/init.d/rpcbind restart")

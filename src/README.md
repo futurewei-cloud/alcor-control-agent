@@ -28,8 +28,6 @@ Assuming alcor-control-agent was cloned into ~/dev directory:
 cd build
 docker build -t aca_build0 .
 docker create -v ~/dev:/mnt/host/code -it --privileged --cap-add=NET_ADMIN --cap-add=SYS_PTRACE --security-opt seccomp=unconfined --name a1 aca_build0:latest /bin/bash
-docker network connect net0 a1
-docker network connect net1 a1
 docker start a1
 docker exec -it a1 /bin/bash
 ```
@@ -38,9 +36,9 @@ docker exec -it a1 /bin/bash
 In order to compile alcor-control-agent you need to run:
 ```Shell
 docker exec -it a1 /bin/bash
-root@ca62b6feec63:# cd /mnt/host/code/alcor-control-agent/Transit
-root@ca62b6feec63:/mnt/host/code/alcor-control-agent/Transit# make
-root@ca62b6feec63:/mnt/host/code/alcor-control-agent/Transit# cd ..
+root@ca62b6feec63:# cd /mnt/host/code/alcor-control-agent/mizar
+root@ca62b6feec63:/mnt/host/code/alcor-control-agent/mizar# make
+root@ca62b6feec63:/mnt/host/code/alcor-control-agent/mizar# cd ..
 root@ca62b6feec63:/mnt/host/code/alcor-control-agent# cmake .
 root@ca62b6feec63:/mnt/host/code/alcor-control-agent# make
 ```
