@@ -11,7 +11,7 @@
 #    under the License.
 
 #from test.trn_controller.common import cidr, logger, run_cmd
-from mizar.test.trn_controller.droplet import droplet
+from test.trn_controller.droplet import droplet
 import os
 import docker
 import time

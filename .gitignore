@@ -63,6 +63,10 @@ dkms.conf
 **/CMakeScripts
 **/compile_commands.json
 
+# python
+*.swp
+__pycache__
+
 # Other files to ignore
 .vscode/
 cppkafka/
