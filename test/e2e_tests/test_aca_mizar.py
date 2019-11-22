@@ -23,7 +23,7 @@ class test_aca_mizar(unittest.TestCase):
         groupID = "test5"
         prefix = "-d -h es7"
         self.aca_droplet = {}
-        n_droplets = 10
+        n_droplets = 1
         for i in range(n_droplets):
             id = "d" + str(i)
             name = "ephost_" + str(i)

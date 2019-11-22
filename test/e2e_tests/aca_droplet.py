@@ -28,7 +28,7 @@ class aca_droplet(droplet):
         """
         super().__init__(self, id)
 
-        self.aca_command = f'''./aliothcontroller/AlcorControlAgent {aca_options}'''
+        self.aca_command = f'''./aca_build/bin/AlcorControlAgent {aca_options}'''
 
     def _create_docker_container(self):
         """
@@ -40,7 +40,7 @@ class aca_droplet(droplet):
         # get a docker client
         docker_client = docker.from_env()
         docker_image = "buildbox:v2"
-        mount_pnt = docker.types.Mount("/mnt/Transit",
+        mount_pnt = docker.types.Mount("/mnt/alcor-control-agent",
                                        cwd,
                                        type='bind')
 
@@ -48,7 +48,7 @@ class aca_droplet(droplet):
                                            "/lib/modules",
                                            type='bind')
 
-        # Create the container in previlaged mode
+        # Create the container in privileged mode
         container = docker_client.containers.create(
             docker_image, '/bin/bash', tty=True,
             stdin_open=True, auto_remove=False, mounts=[mount_pnt, mount_modules],
@@ -58,7 +58,7 @@ class aca_droplet(droplet):
         container.start()
         container.reload()
 
-        # Increment the static external port number
+        # Increment the static external port number counter
         aca_droplet.port_external = aca_droplet.port_external + 1
 
         # Restart dependancy services
@@ -66,18 +66,20 @@ class aca_droplet(droplet):
         container.exec_run("/etc/init.d/rsyslog restart")
         container.exec_run("ip link set dev eth0 up mtu 9000")
 
-        # We may need ovs for compatability tests
+        # We may need to restart ovs
         # container.exec_run("/etc/init.d/openvswitch-switch restart")
 
         # Create simlinks
-        container.exec_run("ln -s /mnt/Transit/build/bin /trn_bin")
-        container.exec_run("ln -s /mnt/Transit/build/xdp /trn_xdp")
+        container.exec_run("ln -s /mnt/alcor-control-agent/mizar/build/bin /trn_bin")
+        container.exec_run("ln -s /mnt/alcor-control-agent/mizar/build/xdp /trn_xdp")
         container.exec_run("ln -s /sys/fs/bpf /bpffs")
+
+        # TODO: remove the space in - s
         container.exec_run(
-            "ln - s /mnt/Transit/test/trn_func_tests/output /trn_test_out")
+            "ln - s /mnt/alcor-control-agent/mizar/test/trn_func_tests/output /trn_test_out")
 
         container.exec_run(
-            "ln -s /mnt/Transit/aliothcontroller/ /aliothcontroller")
+            "ln -s /mnt/alcor-control-agent/build/ /aca_build")
 
         # Run the transitd in the background
         container.exec_run("/trn_bin/transitd ",
@@ -91,7 +93,7 @@ class aca_droplet(droplet):
 
         # Enable core dumps (just in case!!)
         container.exec_run("ulimit -u")
-        cmd = "echo '/mnt/Transit/core/core_{}_%e.%p' |\
+        cmd = "echo '/mnt/alcor-control-agent/mizar/core/core_{}_%e.%p' |\
  tee /proc/sys/kernel/core_pattern ".format(self.ip)
         container.exec_run(cmd)
 
