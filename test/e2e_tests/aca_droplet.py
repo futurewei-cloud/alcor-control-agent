@@ -10,7 +10,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-#from test.trn_controller.common import cidr, logger, run_cmd
 from test.trn_controller.droplet import droplet
 import os
 import docker
@@ -26,22 +25,21 @@ class aca_droplet(droplet):
         """
         (aca version) call base droplet init, and initialize aca specific property
         """
-        super().__init__(self, id)
-
+        super().__init__(id)
         self.aca_command = f'''./aca_build/bin/AlcorControlAgent {aca_options}'''
 
     def _create_docker_container(self):
         """
         (aca version) Create and initialize a docker container.
-        Assumes "buildbox:v2" image exist and setup on host
+        Assumes "aca_build0:latest"" image exist and setup on host
         """
         cwd = os.getcwd()
 
         # get a docker client
         docker_client = docker.from_env()
-        docker_image = "buildbox:v2"
+        docker_image = "aca_build0:latest"
         mount_pnt = docker.types.Mount("/mnt/alcor-control-agent",
-                                       cwd,
+                                       f'''{cwd}/../..''',
                                        type='bind')
 
         mount_modules = docker.types.Mount("/lib/modules",
@@ -73,10 +71,6 @@ class aca_droplet(droplet):
         container.exec_run("ln -s /mnt/alcor-control-agent/mizar/build/bin /trn_bin")
         container.exec_run("ln -s /mnt/alcor-control-agent/mizar/build/xdp /trn_xdp")
         container.exec_run("ln -s /sys/fs/bpf /bpffs")
-
-        # TODO: remove the space in - s
-        container.exec_run(
-            "ln - s /mnt/alcor-control-agent/mizar/test/trn_func_tests/output /trn_test_out")
 
         container.exec_run(
             "ln -s /mnt/alcor-control-agent/build/ /aca_build")
