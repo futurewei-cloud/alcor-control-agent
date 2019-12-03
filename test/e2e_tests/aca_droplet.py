@@ -17,11 +17,11 @@ import time
 import json
 
 class aca_droplet(droplet):
-    # "static" variable for all droplets
+    # "static" variables for all droplets
     port_internal = 50001
     port_external = 50001
 
-    def __init__(self, id, aca_options, droplet_type='docker', phy_itf='eth0'):
+    def __init__(self, id, aca_options):
         """
         (aca version) call base droplet init, and initialize aca specific property
         """
@@ -31,7 +31,7 @@ class aca_droplet(droplet):
     def _create_docker_container(self):
         """
         (aca version) Create and initialize a docker container.
-        Assumes "aca_build0:latest"" image exist and setup on host
+        Assumes "aca_build0:latest" image exists and setup on host
         """
         cwd = os.getcwd()
 
