@@ -1,8 +1,6 @@
 # Copyright (c) 2019 The Authors.
 #
 # Authors: Eric Li           <@er1cthe0ne>
-#          Sherif Abdelwahab <@zasherif>
-#          Phu Tran          <@phudtran>
 #          
 #    Unless required by applicable law or agreed to in writing, software
 #    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -37,7 +35,7 @@ class aca_droplet(droplet):
 
         # get a docker client
         docker_client = docker.from_env()
-        docker_image = "aca_build0:latest"
+        docker_image = "aca_build1:latest"
         mount_pnt = docker.types.Mount("/mnt/alcor-control-agent",
                                        f'''{cwd}/../..''',
                                        type='bind')
