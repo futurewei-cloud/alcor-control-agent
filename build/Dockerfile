@@ -31,9 +31,8 @@ ENV GRPC_RELEASE_TAG v1.24.x
 RUN echo "--- cloning grpc repo ---" && \
     git clone -b ${GRPC_RELEASE_TAG} https://github.com/grpc/grpc /var/local/git/grpc && \
     cd /var/local/git/grpc && \
-    git submodule update --init
-
-RUN echo "--- installing c-ares ---" && \
+    git submodule update --init && \
+    echo "--- installing c-ares ---" && \
     cd /var/local/git/grpc/third_party/cares/cares && \
     git fetch origin && \
     git checkout cares-1_15_0 && \
@@ -42,34 +41,31 @@ RUN echo "--- installing c-ares ---" && \
     cmake -DCMAKE_BUILD_TYPE=Release ../.. && \
     make -j4 install && \
     cd ../../../../.. && \
-    rm -rf third_party/cares/cares  
-# wipe out to prevent influencing the grpc build
-
-RUN echo "--- installing protobuf ---" && \
+    rm -rf third_party/cares/cares && \
+    echo "--- installing protobuf ---" && \
     cd /var/local/git/grpc/third_party/protobuf && \
     mkdir -p cmake/build && \
     cd cmake/build && \
     cmake -Dprotobuf_BUILD_TESTS=OFF -DCMAKE_BUILD_TYPE=Release .. && \
     make -j4 install && \
     cd ../../../.. && \
-    rm -rf third_party/protobuf
-# wipe out to prevent influencing the grpc build
-
-RUN echo "--- installing grpc ---" && \
+    rm -rf third_party/protobuf && \
+    echo "--- installing grpc ---" && \
     cd /var/local/git/grpc && \
     mkdir -p cmake/build && \
     cd cmake/build && \
     cmake -DgRPC_INSTALL=ON -DgRPC_BUILD_TESTS=OFF -DgRPC_PROTOBUF_PROVIDER=package -DgRPC_ZLIB_PROVIDER=package -DgRPC_CARES_PROVIDER=package -DgRPC_SSL_PROVIDER=package -DCMAKE_BUILD_TYPE=Release ../.. && \
-    make -j4 install
-
-RUN echo "--- installing google test ---" && \
+    make -j4 install && \
+    echo "--- installing google test ---" && \
     cd /var/local/git/grpc/third_party/googletest && \
     cmake -Dgtest_build_samples=ON -DBUILD_SHARED_LIBS=ON . && \
     make && \
-    make install
+    make install && \
+    rm -rf /var/local/git/grpc
 
+# this layer is consuming about 406MB, can try to optimize 
 RUN echo "--- installing librdkafka ---" && \
-    apt-get install -y \
+    apt-get install -y --no-install-recommends\
     librdkafka-dev \
     doxygen \
     libssl-dev \
@@ -86,4 +82,5 @@ RUN echo "--- installing cppkafka ---" && \
     cmake .. && \
     make && \
     make install && \
-    ldconfig
+    ldconfig && \
+    rm -rf /var/local/git/cppkafka
