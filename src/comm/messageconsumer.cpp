@@ -1,12 +1,9 @@
-#include <iostream>
-#include <stdexcept>
 #include "messageconsumer.h"
 #include "goalstate.pb.h"
 #include "cppkafka/utils/consumer_dispatcher.h"
 #include "aca_comm_mgr.h"
 #include "aca_log.h"
 
-extern bool g_debug_mode;
 extern cppkafka::ConsumerDispatcher *dispatcher;
 
 using aca_comm_manager::Aca_Comm_Manager;
@@ -17,10 +14,6 @@ using cppkafka::Error;
 using cppkafka::Message;
 using cppkafka::TopicPartition;
 using cppkafka::TopicPartitionList;
-using std::cout;
-using std::endl;
-using std::exception;
-using std::string;
 
 namespace messagemanager
 {
@@ -36,10 +29,8 @@ MessageConsumer::MessageConsumer(string brokers, string group_id)
                    { "enable.auto.commit", false },
                    { "auto.offset.reset", "earliest" } };
 
-  if (g_debug_mode) {
-    cout << "Broker list " << this->brokers_list << endl;
-    cout << "Consumer group.id " << this->group_id << endl;
-  }
+  ACA_LOG_DEBUG("Broker list: %s\n", this->brokers_list.c_str());
+  ACA_LOG_DEBUG("Consumer group.id: %s\n", this->group_id.c_str());
 
   // Create the consumer
   this->ptr_consumer = new Consumer(this->config);
@@ -74,13 +65,12 @@ bool MessageConsumer::consumeDispatched(string topic)
 {
   alcorcontroller::GoalState deserialized_GoalState;
   alcorcontroller::GoalStateOperationReply gsOperationalReply;
-  int rc = EXIT_FAILURE;
+  int rc;
+  int overall_rc = EXIT_SUCCESS;
 
   this->ptr_consumer->subscribe({ topic });
 
-  if (g_debug_mode) {
-    cout << "Dispatcher consuming messages from topic " << topic << endl;
-  }
+  ACA_LOG_DEBUG("Dispatcher consuming messages from topic: %s\n", topic.c_str());
 
   // Create a consumer dispatcher
   dispatcher = new ConsumerDispatcher(*(this->ptr_consumer));
@@ -91,14 +81,12 @@ bool MessageConsumer::consumeDispatched(string topic)
           // Callback executed whenever a new message is consumed
           [&](Message message) {
             // Print the key (if any)
-            if (g_debug_mode) {
-              if (message.get_key()) {
-                cout << message.get_key() << " -> ";
-              }
-              // Print the payload
-              cout << endl
-                   << "<=====incoming message: " << message.get_payload() << endl;
+            if (message.get_key()) {
+              ACA_LOG_DEBUG("%s  -> ", string(message.get_key()).c_str());
             }
+            // Print the payload
+            ACA_LOG_DEBUG("\n<=====incoming message: %s\n",
+                          string(message.get_payload()).c_str());
 
             rc = Aca_Comm_Manager::get_instance().deserialize(
                     &(message.get_payload()), deserialized_GoalState);
@@ -110,11 +98,13 @@ bool MessageConsumer::consumeDispatched(string topic)
 
               if (rc != EXIT_SUCCESS) {
                 ACA_LOG_ERROR("Failed to update host with latest goal state, rc=%d.\n", rc);
+                overall_rc = rc;
               } else {
                 ACA_LOG_INFO("Successfully updated host with latest goal state %d.\n", rc);
               }
             } else {
               ACA_LOG_ERROR("Deserialization failed with error code %d.\n", rc);
+              overall_rc = rc;
             }
 
             // Now commit the message
@@ -122,14 +112,16 @@ bool MessageConsumer::consumeDispatched(string topic)
           },
           // Whenever there's an error (other than the EOF soft error)
           [](Error error) {
-            if (g_debug_mode)
-              cout << "[+] Received error notification: " << error << endl;
+            ACA_LOG_ERROR("[+] Received error notification: %s\n",
+                          error.to_string().c_str());
           },
           // Whenever EOF is reached on a partition, print this
           [](ConsumerDispatcher::EndOfFile, const TopicPartition &topic_partition) {
-            if (g_debug_mode)
-              cout << "Reached EOF on partition " << topic_partition << endl;
+            ACA_LOG_DEBUG("Reached EOF on partition: %s\n",
+                          topic_partition.get_topic().c_str());
           });
+
+  return overall_rc;
 }
 
 void MessageConsumer::setBrokers(string brokers)
