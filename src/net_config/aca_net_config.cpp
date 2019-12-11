@@ -61,6 +61,21 @@ int Aca_Net_Config::create_veth_pair(string veth_name, string peer_name, ulong &
   return execute_system_command(cmd_string, culminative_time);
 }
 
+int Aca_Net_Config::delete_veth_pair(string peer_name, ulong &culminative_time)
+{
+  int rc;
+
+  if (peer_name.empty()) {
+    rc = -EINVAL;
+    ACA_LOG_ERROR("Invalid argument: Empty peer_name, rc: %d\n", rc);
+    return rc;
+  }
+
+  string cmd_string = "ip link delete " + peer_name;
+
+  return execute_system_command(cmd_string, culminative_time);
+}
+
 int Aca_Net_Config::setup_peer_device(string peer_name, ulong &culminative_time)
 {
   int rc;

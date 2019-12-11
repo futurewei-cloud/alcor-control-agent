@@ -48,6 +48,8 @@ class Aca_Comm_Manager {
   int update_goal_state(const alcorcontroller::GoalState &parsed_struct,
                         alcorcontroller::GoalStateOperationReply &gsOperationReply);
 
+  int unload_agent_xdp(string interface, ulong &culminative_time);
+
   // compiler will flag the error when below is called.
   Aca_Comm_Manager(Aca_Comm_Manager const &) = delete;
   void operator=(Aca_Comm_Manager const &) = delete;

@@ -140,9 +140,8 @@ TEST(net_config_test_cases, create_veth_pair_valid)
   EXPECT_EQ(rc, EXIT_SUCCESS);
 
   // delete the newly created veth pair
-  cmd_string = "ip link delete " + veth;
-
-  rc = Aca_Net_Config::get_instance().execute_system_command(cmd_string);
+  rc = Aca_Net_Config::get_instance().delete_veth_pair(
+          peer, culminative_network_configuration_time);
   EXPECT_EQ(rc, EXIT_SUCCESS);
 
   // the newly created veth pair should be gone now
@@ -191,9 +190,8 @@ TEST(net_config_test_cases, setup_peer_device_valid)
   EXPECT_EQ(rc, EXIT_SUCCESS);
 
   // delete the newly created veth pair
-  cmd_string = "ip link delete " + veth;
-
-  rc = Aca_Net_Config::get_instance().execute_system_command(cmd_string);
+  rc = Aca_Net_Config::get_instance().delete_veth_pair(
+          peer, culminative_network_configuration_time);
   EXPECT_EQ(rc, EXIT_SUCCESS);
 }
 
@@ -244,9 +242,8 @@ TEST(net_config_test_cases, move_to_namespace_valid)
   EXPECT_EQ(rc, EXIT_SUCCESS);
 
   // delete the newly created veth pair
-  cmd_string = IP_NETNS_PREFIX + "exec " + test_ns + " ip link delete " + veth;
-
-  rc = Aca_Net_Config::get_instance().execute_system_command(cmd_string);
+  rc = Aca_Net_Config::get_instance().delete_veth_pair(
+          peer, culminative_network_configuration_time);
   EXPECT_EQ(rc, EXIT_SUCCESS);
 
   // delete the newly created ns
@@ -369,9 +366,8 @@ TEST(net_config_test_cases, setup_veth_device_valid)
   EXPECT_EQ(rc, EXIT_SUCCESS);
 
   // delete the newly created veth pair
-  cmd_string = IP_NETNS_PREFIX + "exec " + test_ns + " ip link delete " + veth;
-
-  rc = Aca_Net_Config::get_instance().execute_system_command(cmd_string);
+  rc = Aca_Net_Config::get_instance().delete_veth_pair(
+          peer, culminative_network_configuration_time);
   EXPECT_EQ(rc, EXIT_SUCCESS);
 
   // delete the newly created ns
@@ -450,9 +446,8 @@ TEST(net_config_test_cases, rename_veth_device_valid)
   EXPECT_NE(rc, EXIT_SUCCESS);
 
   // delete the newly created veth pair
-  cmd_string = IP_NETNS_PREFIX + "exec " + test_ns + " ip link delete " + new_veth;
-
-  rc = Aca_Net_Config::get_instance().execute_system_command(cmd_string);
+  rc = Aca_Net_Config::get_instance().delete_veth_pair(
+          peer, culminative_network_configuration_time);
   EXPECT_EQ(rc, EXIT_SUCCESS);
 
   // delete the newly created ns
@@ -553,7 +548,7 @@ TEST(net_config_test_cases, subnet_CREATE_UPDATE_GATEWAY)
   new_subnet_states->clear_configuration();
 }
 
-TEST(net_config_test_cases, subnet_CREATE_UPDATE_GATEWAY_10)
+TEST(net_config_test_cases, subnet_CREATE_UPDATE_GATEWAY_100)
 {
   string vpc_id = "99d9d709-8478-4b46-9f3f-2206b1023fd3";
   string gateway_ip_postfix = ".0.0.1";
@@ -563,7 +558,7 @@ TEST(net_config_test_cases, subnet_CREATE_UPDATE_GATEWAY_10)
   GoalState GoalState_builder;
   SubnetState *new_subnet_states;
 
-  for (int i = 0; i < 10; i++) {
+  for (int i = 0; i < 100; i++) {
     string i_string = std::to_string(i);
 
     new_subnet_states = GoalState_builder.add_subnet_states();
@@ -716,6 +711,7 @@ TEST(net_config_test_cases, port_CREATE_integrated)
   string truncated_port_id = port_name.substr(0, 11);
   string temp_name_string = "temp" + truncated_port_id;
   string veth_name_string = "veth" + truncated_port_id;
+  string peer_name_string = "peer" + truncated_port_id;
 
   GoalState GoalState_builder;
   PortState *new_port_states = GoalState_builder.add_port_states();
@@ -841,10 +837,11 @@ TEST(net_config_test_cases, port_CREATE_integrated)
 
   // clean up
 
-  // delete the newly created veth pair
-  cmd_string = IP_NETNS_PREFIX + "exec " + vpc_ns + " ip link delete " + veth_name_string;
+  ulong culminative_network_configuration_time = 0;
 
-  rc = Aca_Net_Config::get_instance().execute_system_command(cmd_string);
+  // delete the newly created veth pair
+  rc = Aca_Net_Config::get_instance().delete_veth_pair(
+          peer_name_string, culminative_network_configuration_time);
   EXPECT_EQ(rc, EXIT_SUCCESS);
 
   // delete the newly created ns
@@ -865,14 +862,19 @@ TEST(net_config_test_cases, port_CREATE_10)
   string gateway_ip = "10.0.0.1";
   string gateway_mac = "fa:16:3e:d7:f2:00";
   string cmd_string;
+  ulong culminative_dataplane_programming_time = 0;
+  ulong culminative_network_configuration_time = 0;
   int rc;
 
   GoalState GoalState_builder;
   PortState *new_port_states;
   SubnetState *new_subnet_states = GoalState_builder.add_subnet_states();
 
-  for (int i = 0; i < 10; i++) {
+  const int PORTS_TO_CREATE = 10;
+
+  for (int i = 0; i < PORTS_TO_CREATE; i++) {
     string i_string = std::to_string(i);
+    string port_name = i_string + port_name_postfix;
 
     new_port_states = GoalState_builder.add_port_states();
     new_port_states->set_operation_type(OperationType::CREATE);
@@ -883,7 +885,7 @@ TEST(net_config_test_cases, port_CREATE_10)
     PortConfiguration_builder->set_version(1);
     PortConfiguration_builder->set_project_id("dbf72700-5106-4a7a-918f-111111111111");
     PortConfiguration_builder->set_network_id(network_id);
-    PortConfiguration_builder->set_id(i_string + port_name_postfix);
+    PortConfiguration_builder->set_id(port_name);
     PortConfiguration_builder->set_name("FriendlyPortName");
     PortConfiguration_builder->set_admin_state_up(true);
     PortConfiguration_builder->set_mac_address(mac_address_prefix + i_string);
@@ -951,6 +953,28 @@ TEST(net_config_test_cases, port_CREATE_10)
   }
 
   g_demo_mode = previous_demo_mode;
+
+  // clean up
+  for (int i = 0; i < PORTS_TO_CREATE; i++) {
+    string i_string = std::to_string(i);
+    string port_name = i_string + port_name_postfix;
+
+    string truncated_port_id = port_name.substr(0, 11);
+    string peer_name_string = "peer" + truncated_port_id;
+
+    // unload transit agent XDP on the peer device
+    rc = Aca_Comm_Manager::get_instance().unload_agent_xdp(
+            peer_name_string, culminative_dataplane_programming_time);
+    // rc can be error if transitd is not loaded
+    if (g_transitd_loaded) {
+      EXPECT_EQ(rc, EXIT_SUCCESS);
+    }
+
+    // delete the newly created veth pair
+    rc = Aca_Net_Config::get_instance().delete_veth_pair(
+            peer_name_string, culminative_network_configuration_time);
+    EXPECT_EQ(rc, EXIT_SUCCESS);
+  }
 
   // delete the newly created ns
   // this will delete everything including the newly creates veth pairs
