@@ -1448,6 +1448,11 @@ int Aca_Comm_Manager::execute_command(int command, void *input_struct, ulong &cu
       break;
     }
 
+    case UNLOAD_TRANSIT_AGENT_XDP: {
+      // add debug print if needed
+      break;
+    }
+
     default:
       ACA_LOG_ERROR("Unknown controller command in debug print: %d\n", command);
       rc = EXIT_FAILURE;
@@ -1526,7 +1531,7 @@ int Aca_Comm_Manager::execute_command(int command, void *input_struct, ulong &cu
       // rc = UNLOAD_TRANSIT_XDP ...
       break;
     case UNLOAD_TRANSIT_AGENT_XDP:
-      // rc = UNLOAD_TRANSIT_AGENT_XDP ...
+      transitd_return = unload_transit_agent_xdp_1((rpc_intf_t *)input_struct, client);
       break;
     default:
       ACA_LOG_ERROR("Unknown controller command: %d\n", command);
