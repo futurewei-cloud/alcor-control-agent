@@ -842,11 +842,6 @@ TEST(net_config_test_cases, port_CREATE_integrated)
   ulong culminative_network_configuration_time = 0;
   ulong culminative_dataplane_programming_time = 0;
 
-  // delete the newly created veth pair
-  rc = Aca_Net_Config::get_instance().delete_veth_pair(
-          peer_name_string, culminative_network_configuration_time);
-  EXPECT_EQ(rc, EXIT_SUCCESS);
-
   // unload transit agent XDP on the peer device
   rc = Aca_Comm_Manager::get_instance().unload_agent_xdp(
           peer_name_string, culminative_dataplane_programming_time);
@@ -854,6 +849,11 @@ TEST(net_config_test_cases, port_CREATE_integrated)
   if (g_transitd_loaded) {
     EXPECT_EQ(rc, EXIT_SUCCESS);
   }
+
+  // delete the newly created veth pair
+  rc = Aca_Net_Config::get_instance().delete_veth_pair(
+          peer_name_string, culminative_network_configuration_time);
+  EXPECT_EQ(rc, EXIT_SUCCESS);
 
   // delete the newly created ns
   cmd_string = IP_NETNS_PREFIX + "delete " + vpc_ns;
@@ -973,11 +973,6 @@ TEST(net_config_test_cases, port_CREATE_10)
     string truncated_port_id = port_name.substr(0, 11);
     string peer_name_string = "peer" + truncated_port_id;
 
-    // delete the newly created veth pair
-    rc = Aca_Net_Config::get_instance().delete_veth_pair(
-            peer_name_string, culminative_network_configuration_time);
-    EXPECT_EQ(rc, EXIT_SUCCESS);
-
     // unload transit agent XDP on the peer device
     rc = Aca_Comm_Manager::get_instance().unload_agent_xdp(
             peer_name_string, culminative_dataplane_programming_time);
@@ -985,10 +980,14 @@ TEST(net_config_test_cases, port_CREATE_10)
     if (g_transitd_loaded) {
       EXPECT_EQ(rc, EXIT_SUCCESS);
     }
+
+    // delete the newly created veth pair
+    rc = Aca_Net_Config::get_instance().delete_veth_pair(
+            peer_name_string, culminative_network_configuration_time);
+    EXPECT_EQ(rc, EXIT_SUCCESS);
   }
 
   // delete the newly created ns
-  // this will delete everything including the newly creates veth pairs
   cmd_string = IP_NETNS_PREFIX + "delete " + vpc_ns;
 
   rc = Aca_Net_Config::get_instance().execute_system_command(cmd_string);
