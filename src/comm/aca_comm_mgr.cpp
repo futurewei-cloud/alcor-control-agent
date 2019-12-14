@@ -1284,7 +1284,7 @@ void Aca_Comm_Manager::add_goal_state_operation_status(
 
 int Aca_Comm_Manager::load_agent_xdp(string interface, ulong &culminative_time)
 {
-  int rc = EXIT_SUCCESS;
+  int rc;
   rpc_trn_xdp_intf_t xdp_inf_in;
   char inf[20];
 
@@ -1298,10 +1298,32 @@ int Aca_Comm_Manager::load_agent_xdp(string interface, ulong &culminative_time)
   rc = this->execute_command(transitd_command, &xdp_inf_in, culminative_time);
   if (rc == EXIT_SUCCESS) {
     ACA_LOG_INFO("Successfully loaded transit agent on interface: %s\n",
-                 interface.c_str());
+                 xdp_inf_in.interface);
   } else {
     ACA_LOG_ERROR("Unable to load transit agent on interface: %s, rc: %d\n",
-                  interface.c_str(), rc);
+                  xdp_inf_in.interface, rc);
+  }
+
+  return rc;
+}
+
+int Aca_Comm_Manager::unload_agent_xdp(string interface, ulong &culminative_time)
+{
+  int rc;
+  rpc_intf_t inf_in;
+  char inf[20];
+
+  int transitd_command = UNLOAD_TRANSIT_AGENT_XDP;
+
+  strncpy(inf, interface.c_str(), strlen(interface.c_str()) + 1);
+  inf_in.interface = inf;
+
+  rc = this->execute_command(transitd_command, &inf_in, culminative_time);
+  if (rc == EXIT_SUCCESS) {
+    ACA_LOG_INFO("Successfully unloaded transit agent on interface: %s\n", inf_in.interface);
+  } else {
+    ACA_LOG_ERROR("Unable to unload transit agent on interface: %s, rc: %d\n",
+                  inf_in.interface, rc);
   }
 
   return rc;
@@ -1426,6 +1448,11 @@ int Aca_Comm_Manager::execute_command(int command, void *input_struct, ulong &cu
       break;
     }
 
+    case UNLOAD_TRANSIT_AGENT_XDP: {
+      // add debug print if needed
+      break;
+    }
+
     default:
       ACA_LOG_ERROR("Unknown controller command in debug print: %d\n", command);
       rc = EXIT_FAILURE;
@@ -1504,7 +1531,7 @@ int Aca_Comm_Manager::execute_command(int command, void *input_struct, ulong &cu
       // rc = UNLOAD_TRANSIT_XDP ...
       break;
     case UNLOAD_TRANSIT_AGENT_XDP:
-      // rc = UNLOAD_TRANSIT_AGENT_XDP ...
+      transitd_return = unload_transit_agent_xdp_1((rpc_intf_t *)input_struct, client);
       break;
     default:
       ACA_LOG_ERROR("Unknown controller command: %d\n", command);

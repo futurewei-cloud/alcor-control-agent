@@ -30,6 +30,8 @@ class Aca_Net_Config {
 
   int create_veth_pair(string veth_name, string peer_name, ulong &culminative_time);
 
+  int delete_veth_pair(string peer_name, ulong &culminative_time);
+
   int setup_peer_device(string peer_name, ulong &culminative_time);
 
   int move_to_namespace(string veth_name, string ns_name, ulong &culminative_time);

@@ -1,8 +1,6 @@
 # Copyright (c) 2019 The Authors.
 #
 # Authors: Eric Li           <@er1cthe0ne>
-#          Sherif Abdelwahab <@zasherif>
-#          Phu Tran          <@phudtran>
 #
 #    Unless required by applicable law or agreed to in writing, software
 #    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -31,15 +29,18 @@ class test_aca_mizar(unittest.TestCase):
             self.aca_droplets[id] = aca_droplet(name, aca_options) 
 
     def test_aca_mizar(self):
-        open('machine_config.json', 'w').close()
-        output = open("machine_config.json", "a")
-        print("!!!Alcor Control Agent not yet loaded!!!")
-        input("Press Enter to continue...")
+        open('machine.json', 'w').close()
+        output = open("machine.json", "a")
+        output.write("{ ")
+        output.write("\"Hosts\": [ ")
         for d in self.aca_droplets.values():
+            if (d.id != "routerhost_0"):
+                output.write(", ")
             output.write(d.get_net_state())
             # Run alcor control agent in the background
             d.run(d.aca_command, True)        
-
+        output.write("] ")
+        output.write("}")
         output.close()
         print("Alcor Control Agent now loaded!")
         input("Press Enter to cleanup and destroy all the created containers.")

@@ -13,8 +13,8 @@ using messagemanager::MessageConsumer;
 using std::string;
 
 // Defines
-#define ACALOGNAME "AliothControlAgent"
-static char BROKER_LIST[] = "10.213.43.158:9092";
+#define ACALOGNAME "AlcorControlAgent"
+static char BROKER_LIST[] = "172.17.0.1:9092";
 static char KAFKA_TOPIC[] = "Host-ts-1";
 static char KAFKA_GROUP_ID[] = "test-group-id";
 static char LOCALHOST[] = "localhost";
@@ -114,7 +114,7 @@ int main(int argc, char *argv[])
 
   ACA_LOG_INIT(ACALOGNAME);
 
-  ACA_LOG_INFO("Network Control Agent started...\n");
+  ACA_LOG_INFO("Alcor Control Agent started...\n");
 
   // Register the signal handlers
   signal(SIGINT, aca_signal_handler);
