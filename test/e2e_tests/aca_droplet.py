@@ -21,14 +21,14 @@ class aca_droplet(droplet):
 
     def __init__(self, id, aca_options):
         """
-        (aca version) call base droplet init, and initialize aca specific property
+        Call the base droplet class init, and initialize aca specific property
         """
         super().__init__(id)
         self.aca_command = f'''./aca_build/bin/AlcorControlAgent {aca_options}'''
 
     def _create_docker_container(self):
         """
-        (aca version) Create and initialize a docker container.
+        Create and initialize a docker container.
         Assumes "aca_build0:latest" image exists and setup on host
         """
         cwd = os.getcwd()
@@ -50,7 +50,7 @@ class aca_droplet(droplet):
             stdin_open=True, auto_remove=False, mounts=[mount_pnt, mount_modules],
             privileged=True, cap_add=["SYS_PTRACE"],
             ports={str(aca_droplet.port_internal) + "/tcp": ('0.0.0.0', aca_droplet.port_external)},
-            security_opt=["seccomp=unconfined"])
+            security_opt=["seccomp=unconfined"], name=self.id)
         container.start()
         container.reload()
 
@@ -95,7 +95,7 @@ class aca_droplet(droplet):
 
     def get_net_state(self):
         """
-        (aca version) Get the configuration in json format.
+        Get the configuration in json format.
         Need to be fixed to generate correct formatting.
         """
         json_ns_state = {}
