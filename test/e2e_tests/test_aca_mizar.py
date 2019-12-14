@@ -29,8 +29,8 @@ class test_aca_mizar(unittest.TestCase):
             self.aca_droplets[id] = aca_droplet(name, aca_options) 
 
     def test_aca_mizar(self):
-        open('machine_config.json', 'w').close()
-        output = open("machine_config.json", "a")
+        open('machine.json', 'w').close()
+        output = open("machine.json", "a")
         output.write("{ ")
         output.write("\"Hosts\": [ ")
         for d in self.aca_droplets.values():
