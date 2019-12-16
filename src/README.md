@@ -18,6 +18,7 @@ Since the Alcor Control Agent relies on a few external dependencies, Dockerfile 
 The Alcor Control Agent includes the Alcor controller and Transit submodules to consume the needed proto3 schemas and RPC definitions. Therefore, the below commands are needed when cloning:
 
 ```Shell
+cd ~/dev
 git clone --recurse-submodules https://github.com/futurewei-cloud/alcor-control-agent.git
 git submodule update --init --recursive
 ```
