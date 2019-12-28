@@ -23,27 +23,12 @@ git clone --recurse-submodules https://github.com/futurewei-cloud/alcor-control-
 git submodule update --init --recursive
 ```
 
-## Setting up the build container
+## Run the build script to set up the build container and compile the alcor-control-agent
 Assuming alcor-control-agent was cloned into ~/dev directory:
 ```Shell
 cd build
-docker build -t aca_build0 .
-docker create -v ~/dev:/mnt/host/code -it --privileged --cap-add=NET_ADMIN --cap-add=SYS_PTRACE --security-opt seccomp=unconfined --name a1 aca_build0:latest /bin/bash
-docker start a1
-docker exec -it a1 /bin/bash
+./build.sh
 ```
-
-## Compiling alcor-control-agent
-In order to compile alcor-control-agent you need to run:
-```Shell
-docker exec -it a1 /bin/bash
-root@ca62b6feec63:# cd /mnt/host/code/alcor-control-agent/mizar
-root@ca62b6feec63:/mnt/host/code/alcor-control-agent/mizar# make
-root@ca62b6feec63:/mnt/host/code/alcor-control-agent/mizar# cd ..
-root@ca62b6feec63:/mnt/host/code/alcor-control-agent# cmake .
-root@ca62b6feec63:/mnt/host/code/alcor-control-agent# make
-```
-
 ## Running alcor-control-agent and tests
 You can run the test (optional):
 ```Shell
