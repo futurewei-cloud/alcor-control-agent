@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: aca
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      job: aca
+  template:
+    metadata:
+      labels:
+        job: aca
+    spec:
+      hostPID: true
+      restartPolicy: Always
+      containers:
+      - image: fwnetworking/aca:aca
+        name: aca
+        securityContext:
+          privileged: true
