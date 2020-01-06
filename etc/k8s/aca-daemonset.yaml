@@ -15,7 +15,7 @@ spec:
       hostPID: true
       restartPolicy: Always
       containers:
-      - image: er1cthe0ne/aca:aca
+      - image: fwnetworking/aca:aca
         name: aca
         securityContext:
           privileged: true

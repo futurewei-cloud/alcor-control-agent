@@ -1,9 +1,7 @@
 #!/bin/bash
 
-nsenter -t 1 -m -u -n -i rm -rf ~/alcor-control-agent
-nsenter -t 1 -m -u -n -i echo "--- installing mizar dependencies ---" && \
-    apt-get update -y && nsenter -t 1 -m -u -n -i apt-get install -y \
-    sudo \
+echo "--- installing mizar dependencies ---" && \
+    apt-get update -y && apt-get install -y \
     rpcbind \
     rsyslog \
     build-essential \
@@ -20,13 +18,12 @@ nsenter -t 1 -m -u -n -i echo "--- installing mizar dependencies ---" && \
     python3-pip \
     netcat \
     libcmocka-dev \
-    lcov \
-    git && \
-nsenter -t 1 -m -u -n -i pip3 install httpserver netaddr && \
-nsenter -t 1 -m -u -n -i git clone --recurse-submodules -j8 https://github.com/futurewei-cloud/alcor-control-agent.git ~/alcor-control-agent && \
-nsenter -t 1 -m -u -n -i make -C /root/alcor-control-agent/mizar
+    lcov
+pip3 install httpserver netaddr
+git clone --recurse-submodules -j8 https://github.com/futurewei-cloud/alcor-control-agent.git ~/alcor-control-agent && \
+make -C /root/alcor-control-agent/mizar
 
-nsenter -t 1 -m -u -n -i echo "--- installing grpc dependencies ---" && \
+echo "--- installing grpc dependencies ---" && \
     apt-get install -y \
     cmake libssl-dev \
     autoconf git pkg-config \
@@ -34,7 +31,7 @@ nsenter -t 1 -m -u -n -i echo "--- installing grpc dependencies ---" && \
 
 # installing grpc and its dependencies
 ENV GRPC_RELEASE_TAG v1.24.x
-nsenter -t 1 -m -u -n -i echo "--- cloning grpc repo ---" && \
+echo "--- cloning grpc repo ---" && \
     git clone -b ${GRPC_RELEASE_TAG} https://github.com/grpc/grpc /var/local/git/grpc && \
     cd /var/local/git/grpc && \
     git submodule update --init && \
@@ -69,7 +66,7 @@ nsenter -t 1 -m -u -n -i echo "--- cloning grpc repo ---" && \
     make install && \
     rm -rf /var/local/git/grpc
 
-nsenter -t 1 -m -u -n -i echo "--- installing librdkafka ---" && \
+echo "--- installing librdkafka ---" && \
     apt-get install -y --no-install-recommends\
     librdkafka-dev \
     doxygen \
@@ -79,7 +76,7 @@ nsenter -t 1 -m -u -n -i echo "--- installing librdkafka ---" && \
     libboost-all-dev \
     && apt-get clean
 
-nsenter -t 1 -m -u -n -i echo "--- installing cppkafka ---" && \
+echo "--- installing cppkafka ---" && \
     git clone https://github.com/mfontanini/cppkafka.git /var/local/git/cppkafka && \
     cd /var/local/git/cppkafka && \
     mkdir build && \
@@ -90,7 +87,6 @@ nsenter -t 1 -m -u -n -i echo "--- installing cppkafka ---" && \
     ldconfig && \
     rm -rf /var/local/git/cppkafka
 
-nsenter -t 1 -m -u -n -i cd ~/alcor-control-agent && cmake . && make
-nsenter -t 1 -m -u -n -i ln -snf ~/alcor-control-agent/build/ /aca_build && \
-
-echo "done" && sleep infinity
+# building alcor-control-agent
+cd ~/alcor-control-agent && cmake . && make
+ln -snf ~/alcor-control-agent/build/ /aca_build
