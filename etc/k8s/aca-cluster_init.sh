@@ -1,9 +1,11 @@
 #!/bin/bash
+# TBD: need validation
 
 set -euo pipefail
 
 function main() {
     timeout=600
+    running="running"
 
     # Start aca on all nodes.
     kubectl apply -f aca-daemonset.yaml

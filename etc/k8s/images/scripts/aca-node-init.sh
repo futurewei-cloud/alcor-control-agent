@@ -20,8 +20,7 @@ echo "--- installing mizar dependencies ---" && \
     libcmocka-dev \
     lcov
 pip3 install httpserver netaddr
-git clone --recurse-submodules -j8 https://github.com/futurewei-cloud/alcor-control-agent.git ~/alcor-control-agent && \
-make -C /root/alcor-control-agent/mizar
+make -C ~/alcor-control-agent/mizar
 
 echo "--- installing grpc dependencies ---" && \
     apt-get install -y \
@@ -30,9 +29,8 @@ echo "--- installing grpc dependencies ---" && \
     automake libtool make g++ unzip 
 
 # installing grpc and its dependencies
-ENV GRPC_RELEASE_TAG v1.24.x
 echo "--- cloning grpc repo ---" && \
-    git clone -b ${GRPC_RELEASE_TAG} https://github.com/grpc/grpc /var/local/git/grpc && \
+    git clone -b v1.24.x https://github.com/grpc/grpc /var/local/git/grpc && \
     cd /var/local/git/grpc && \
     git submodule update --init && \
     echo "--- installing c-ares ---" && \
