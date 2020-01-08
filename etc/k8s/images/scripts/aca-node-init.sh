@@ -22,6 +22,27 @@ echo "--- installing mizar dependencies ---" && \
 pip3 install httpserver netaddr
 make -C ~/alcor-control-agent/mizar
 
+echo "--- installing librdkafka ---" && \
+    apt-get install -y --no-install-recommends\
+    librdkafka-dev \
+    doxygen \
+    libssl-dev \
+    zlib1g-dev \
+    libboost-program-options-dev \
+    libboost-all-dev \
+    && apt-get clean
+
+echo "--- installing cppkafka ---" && \
+    git clone https://github.com/mfontanini/cppkafka.git /var/local/git/cppkafka && \
+    cd /var/local/git/cppkafka && \
+    mkdir build && \
+    cd build && \
+    cmake .. && \
+    make && \
+    make install && \
+    ldconfig && \
+    rm -rf /var/local/git/cppkafka
+
 echo "--- installing grpc dependencies ---" && \
     apt-get install -y \
     cmake libssl-dev \
@@ -64,27 +85,6 @@ echo "--- cloning grpc repo ---" && \
     make && \
     make install && \
     rm -rf /var/local/git/grpc
-
-echo "--- installing librdkafka ---" && \
-    apt-get install -y --no-install-recommends\
-    librdkafka-dev \
-    doxygen \
-    libssl-dev \
-    zlib1g-dev \
-    libboost-program-options-dev \
-    libboost-all-dev \
-    && apt-get clean
-
-echo "--- installing cppkafka ---" && \
-    git clone https://github.com/mfontanini/cppkafka.git /var/local/git/cppkafka && \
-    cd /var/local/git/cppkafka && \
-    mkdir build && \
-    cd build && \
-    cmake .. && \
-    make && \
-    make install && \
-    ldconfig && \
-    rm -rf /var/local/git/cppkafka
 
 # building alcor-control-agent
 cd ~/alcor-control-agent && cmake . && make

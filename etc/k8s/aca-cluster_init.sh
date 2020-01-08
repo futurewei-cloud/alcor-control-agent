@@ -1,5 +1,4 @@
 #!/bin/bash
-# TBD: need validation
 
 set -euo pipefail
 
@@ -9,7 +8,7 @@ function main() {
 
     # Start aca on all nodes.
     kubectl apply -f aca-daemonset.yaml
-    validate $running aca-daemonset.yaml AlcorControlAgent $timeout
+    validate $running aca-daemonset.yaml aca $timeout
 }
 
 function validate() {
