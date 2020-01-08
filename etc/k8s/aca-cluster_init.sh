@@ -4,10 +4,11 @@ set -euo pipefail
 
 function main() {
     timeout=600
+    running="running"
 
     # Start aca on all nodes.
     kubectl apply -f aca-daemonset.yaml
-    validate $running aca-daemonset.yaml AlcorControlAgent $timeout
+    validate $running aca-daemonset.yaml aca $timeout
 }
 
 function validate() {

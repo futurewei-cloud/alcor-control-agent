@@ -20,8 +20,28 @@ echo "--- installing mizar dependencies ---" && \
     libcmocka-dev \
     lcov
 pip3 install httpserver netaddr
-git clone --recurse-submodules -j8 https://github.com/futurewei-cloud/alcor-control-agent.git ~/alcor-control-agent && \
-make -C /root/alcor-control-agent/mizar
+make -C ~/alcor-control-agent/mizar
+
+echo "--- installing librdkafka ---" && \
+    apt-get install -y --no-install-recommends\
+    librdkafka-dev \
+    doxygen \
+    libssl-dev \
+    zlib1g-dev \
+    libboost-program-options-dev \
+    libboost-all-dev \
+    && apt-get clean
+
+echo "--- installing cppkafka ---" && \
+    git clone https://github.com/mfontanini/cppkafka.git /var/local/git/cppkafka && \
+    cd /var/local/git/cppkafka && \
+    mkdir build && \
+    cd build && \
+    cmake .. && \
+    make && \
+    make install && \
+    ldconfig && \
+    rm -rf /var/local/git/cppkafka
 
 echo "--- installing grpc dependencies ---" && \
     apt-get install -y \
@@ -30,9 +50,9 @@ echo "--- installing grpc dependencies ---" && \
     automake libtool make g++ unzip 
 
 # installing grpc and its dependencies
-ENV GRPC_RELEASE_TAG v1.24.x
+GRPC_RELEASE_TAG="v1.24.x"
 echo "--- cloning grpc repo ---" && \
-    git clone -b ${GRPC_RELEASE_TAG} https://github.com/grpc/grpc /var/local/git/grpc && \
+    git clone -b $GRPC_RELEASE_TAG https://github.com/grpc/grpc /var/local/git/grpc && \
     cd /var/local/git/grpc && \
     git submodule update --init && \
     echo "--- installing c-ares ---" && \
@@ -65,27 +85,6 @@ echo "--- cloning grpc repo ---" && \
     make && \
     make install && \
     rm -rf /var/local/git/grpc
-
-echo "--- installing librdkafka ---" && \
-    apt-get install -y --no-install-recommends\
-    librdkafka-dev \
-    doxygen \
-    libssl-dev \
-    zlib1g-dev \
-    libboost-program-options-dev \
-    libboost-all-dev \
-    && apt-get clean
-
-echo "--- installing cppkafka ---" && \
-    git clone https://github.com/mfontanini/cppkafka.git /var/local/git/cppkafka && \
-    cd /var/local/git/cppkafka && \
-    mkdir build && \
-    cd build && \
-    cmake .. && \
-    make && \
-    make install && \
-    ldconfig && \
-    rm -rf /var/local/git/cppkafka
 
 # building alcor-control-agent
 cd ~/alcor-control-agent && cmake . && make
