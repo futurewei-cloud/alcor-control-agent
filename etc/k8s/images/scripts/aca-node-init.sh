@@ -29,8 +29,9 @@ echo "--- installing grpc dependencies ---" && \
     automake libtool make g++ unzip 
 
 # installing grpc and its dependencies
+GRPC_RELEASE_TAG="v1.24.x"
 echo "--- cloning grpc repo ---" && \
-    git clone -b v1.24.x https://github.com/grpc/grpc /var/local/git/grpc && \
+    git clone -b $GRPC_RELEASE_TAG https://github.com/grpc/grpc /var/local/git/grpc && \
     cd /var/local/git/grpc && \
     git submodule update --init && \
     echo "--- installing c-ares ---" && \
