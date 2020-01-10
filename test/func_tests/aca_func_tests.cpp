@@ -150,8 +150,8 @@ int parse_goalstate(GoalState parsed_struct, GoalState GoalState_builder)
     assert(parsed_struct.port_states(i).configuration().name() ==
            GoalState_builder.port_states(i).configuration().name());
 
-    assert(parsed_struct.port_states(i).configuration().admin_state_up() ==
-           GoalState_builder.port_states(i).configuration().admin_state_up());
+    assert(parsed_struct.port_states(i).configuration().network_ns() ==
+           GoalState_builder.port_states(i).configuration().network_ns());
 
     assert(parsed_struct.port_states(i).configuration().mac_address() ==
            GoalState_builder.port_states(i).configuration().mac_address());
@@ -402,7 +402,7 @@ int main(int argc, char *argv[])
   PortConfiguration_builder->set_network_id("superSubnetID");
   PortConfiguration_builder->set_id("dd12d1dadad2g4h");
   PortConfiguration_builder->set_name("Peer1");
-  PortConfiguration_builder->set_admin_state_up(true);
+  PortConfiguration_builder->set_network_ns("Final_ns_dd12d1dadad2g4h");
   PortConfiguration_builder->set_mac_address("fa:16:3e:d7:f2:6c");
   PortConfiguration_builder->set_veth_name("veth0");
 

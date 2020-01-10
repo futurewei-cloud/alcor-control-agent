@@ -925,7 +925,17 @@ int Aca_Comm_Manager::update_port_state_workitem(const PortState current_PortSta
 
   if ((overall_rc == EXIT_SUCCESS) &&
       (current_PortState.operation_type() == OperationType::CREATE)) {
-    namespace_name = VPC_NS_PREFIX + vpc_id;
+    // use the namespace string if available
+    if (!current_PortConfiguration.network_ns().empty()) {
+      namespace_name = current_PortConfiguration.network_ns();
+      ACA_LOG_INFO("Found namespace string in port configuration: %s\n",
+                   namespace_name.c_str());
+    } else {
+      namespace_name = VPC_NS_PREFIX + vpc_id;
+      ACA_LOG_INFO("Didn't find namespace string in port configuration, using: %s\n",
+                   namespace_name.c_str());
+    }
+
     net_config_rc = Aca_Net_Config::get_instance().create_namespace(
             namespace_name, culminative_network_configuration_time);
     if (net_config_rc == EXIT_SUCCESS) {
@@ -1119,7 +1129,16 @@ int Aca_Comm_Manager::update_port_state_workitem(const PortState current_PortSta
               }
             } // for (int k = 0; k < current_SubnetConfiguration.transit_switches_size(); k++)
 
-            namespace_name = VPC_NS_PREFIX + vpc_id;
+            // use the namespace string if available
+            if (!current_PortConfiguration.network_ns().empty()) {
+              namespace_name = current_PortConfiguration.network_ns();
+              ACA_LOG_INFO("Found namespace string in port configuration: %s\n",
+                           namespace_name.c_str());
+            } else {
+              namespace_name = VPC_NS_PREFIX + vpc_id;
+              ACA_LOG_INFO("Didn't find namespace string in port configuration, using: %s\n",
+                           namespace_name.c_str());
+            }
 
             net_config_rc = Aca_Net_Config::get_instance().rename_veth_device(
                     namespace_name, temp_name_string, veth_name_string,
@@ -1626,8 +1645,8 @@ void Aca_Comm_Manager::print_goal_state(GoalState parsed_struct)
     fprintf(stdout, "current_PortConfiguration.name(): %s \n",
             current_PortConfiguration.name().c_str());
 
-    fprintf(stdout, "current_PortConfiguration.admin_state_up(): %d \n",
-            current_PortConfiguration.admin_state_up());
+    fprintf(stdout, "current_PortConfiguration.network_ns(): %s \n",
+            current_PortConfiguration.network_ns().c_str());
 
     fprintf(stdout, "current_PortConfiguration.mac_address(): %s \n",
             current_PortConfiguration.mac_address().c_str());
