@@ -770,7 +770,36 @@ int Aca_Comm_Manager::update_port_state_workitem(const PortState current_PortSta
       strncpy(peer_name, peer_name_string.c_str(), strlen(peer_name_string.c_str()) + 1);
       agent_md_in.interface = peer_name;
 
+      // fill in agent_md_in.eth
       agent_md_in.eth.interface = PHYSICAL_IF;
+
+      my_ep_host_ip_address = current_PortConfiguration.host_info().ip_address();
+      // inet_pton returns 1 for success 0 for failure
+      if (inet_pton(AF_INET, my_ep_host_ip_address.c_str(), &(sa.sin_addr)) != 1) {
+        throw std::invalid_argument("EP host ip address is not in the expect format");
+      }
+
+      agent_md_in.eth.ip = sa.sin_addr.s_addr;
+      ACA_LOG_DEBUG("host_info().ip_address(): %s converted to agent_md_in.eth.ip: %u\n",
+                    current_PortConfiguration.host_info().ip_address().c_str(),
+                    agent_md_in.eth.ip);
+
+      // the below will throw exceptions when it cannot convert the mac string
+      aca_convert_to_mac_array(current_PortConfiguration.mac_address().c_str(),
+                               agent_md_in.eth.mac);
+
+      // fill in agent_md_in.ep
+      agent_md_in.ep.interface = PHYSICAL_IF;
+
+      uint32_t md_remote_ips[RPC_TRN_MAX_REMOTE_IPS];
+      agent_md_in.ep.remote_ips.remote_ips_val = md_remote_ips;
+      agent_md_in.ep.remote_ips.remote_ips_len = 1;
+      // using the previously converted host IP value
+      agent_md_in.ep.remote_ips.remote_ips_val[0] = sa.sin_addr.s_addr;
+      ACA_LOG_DEBUG("host_info().ip_address(): %s converted to agent_md_in.ep.remote_ips.remote_ips_val[0]: %u\n",
+                    current_PortConfiguration.host_info().ip_address().c_str(),
+                    agent_md_in.ep.remote_ips.remote_ips_val[0]);
+
       assert(current_PortConfiguration.fixed_ips_size() == 1);
       my_ep_ip_address = current_PortConfiguration.fixed_ips(0).ip_address();
       // inet_pton returns 1 for success 0 for failure
@@ -778,37 +807,17 @@ int Aca_Comm_Manager::update_port_state_workitem(const PortState current_PortSta
         throw std::invalid_argument("EP ip address is not in the expect format");
       }
 
-      // the below will throw exceptions when it cannot convert the mac string
-      aca_convert_to_mac_array(current_PortConfiguration.mac_address().c_str(),
-                               agent_md_in.eth.mac);
-
-      agent_md_in.ep.interface = PHYSICAL_IF;
-      my_ep_host_ip_address = current_PortConfiguration.host_info().ip_address();
-      // inet_pton returns 1 for success 0 for failure
-      if (inet_pton(AF_INET, my_ep_host_ip_address.c_str(), &(sa.sin_addr)) != 1) {
-        throw std::invalid_argument("EP host ip address is not in the expect format");
-      }
-
       agent_md_in.ep.ip = sa.sin_addr.s_addr;
+      ACA_LOG_DEBUG("current_PortConfiguration.fixed_ips(0).ip_address(): %s converted to agent_md_in.ep.ip: %u\n",
+                    current_PortConfiguration.fixed_ips(0).ip_address().c_str(),
+                    agent_md_in.ep.ip);
+
       agent_md_in.ep.eptype = TRAN_SIMPLE_EP;
 
-      uint32_t md_remote_ips[RPC_TRN_MAX_REMOTE_IPS];
-      agent_md_in.ep.remote_ips.remote_ips_val = md_remote_ips;
-      agent_md_in.ep.remote_ips.remote_ips_len = 1;
-      if (inet_pton(AF_INET, current_PortConfiguration.host_info().ip_address().c_str(),
-                    &(sa.sin_addr)) != 1) {
-        throw std::invalid_argument("EP host ip address is not in the expect format");
-      }
-      agent_md_in.ep.remote_ips.remote_ips_val[0] = sa.sin_addr.s_addr;
-
       // the below will throw invalid_argument exceptions when it cannot convert the mac string
-      aca_convert_to_mac_array(
-              current_PortConfiguration.host_info().mac_address().c_str(),
-              agent_md_in.ep.mac);
+      aca_convert_to_mac_array(current_PortConfiguration.mac_address().c_str(),
+                               agent_md_in.ep.mac);
 
-      if (strlen(current_PortConfiguration.name().c_str()) >= 20) {
-        throw std::invalid_argument("Input port name is >=20");
-      }
       strncpy(veth_name, veth_name_string.c_str(), strlen(veth_name_string.c_str()) + 1);
       agent_md_in.ep.veth = veth_name;
 
@@ -839,6 +848,7 @@ int Aca_Comm_Manager::update_port_state_workitem(const PortState current_PortSta
             }
             agent_md_in.ep.tunid = current_SubnetConfiguration.tunnel_id();
 
+            // fill in agent_md_in.ep
             agent_md_in.net.interface = PHYSICAL_IF;
             agent_md_in.net.tunid = current_SubnetConfiguration.tunnel_id();
 
@@ -857,6 +867,8 @@ int Aca_Comm_Manager::update_port_state_workitem(const PortState current_PortSta
               throw std::invalid_argument("Ip address is not in the expect format");
             }
             agent_md_in.net.netip = sa.sin_addr.s_addr;
+            ACA_LOG_DEBUG("my_ip_address() from cidr: %s converted to agent_md_in.net.netip: %u\n",
+                          my_ip_address.c_str(), agent_md_in.net.netip);
 
             my_prefixlen = my_cidr.substr(slash_pos + 1);
             // stoi throw invalid argument exception when it cannot covert
