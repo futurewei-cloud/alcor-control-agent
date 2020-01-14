@@ -636,7 +636,7 @@ int Aca_Comm_Manager::update_port_state_workitem(const PortState current_PortSta
   string truncated_port_id = port_id.substr(0, PORT_ID_TRUNCATION_LEN);
 
   temp_name_string = TEMP_PREFIX + truncated_port_id;
-  veth_name_string = VETH_PREFIX + truncated_port_id;
+  //  veth_name_string = VETH_PREFIX + truncated_port_id;
   peer_name_string = PEER_PREFIX + truncated_port_id;
 
   switch (current_PortState.operation_type()) {
@@ -672,6 +672,8 @@ int Aca_Comm_Manager::update_port_state_workitem(const PortState current_PortSta
       // the below will throw invalid_argument exceptions when it cannot convert the mac string
       aca_convert_to_mac_array(current_PortConfiguration.mac_address().c_str(),
                                endpoint_in.mac);
+
+      veth_name_string = current_PortConfiguration.veth_name().substr(0, PORT_ID_TRUNCATION_LEN);
 
       strncpy(veth_name, veth_name_string.c_str(), strlen(veth_name_string.c_str()) + 1);
       endpoint_in.veth = veth_name;
@@ -818,6 +820,8 @@ int Aca_Comm_Manager::update_port_state_workitem(const PortState current_PortSta
       aca_convert_to_mac_array(current_PortConfiguration.mac_address().c_str(),
                                agent_md_in.ep.mac);
 
+      veth_name_string = current_PortConfiguration.veth_name().substr(0, PORT_ID_TRUNCATION_LEN);
+
       strncpy(veth_name, veth_name_string.c_str(), strlen(veth_name_string.c_str()) + 1);
       agent_md_in.ep.veth = veth_name;
 
@@ -938,11 +942,11 @@ int Aca_Comm_Manager::update_port_state_workitem(const PortState current_PortSta
   if ((overall_rc == EXIT_SUCCESS) &&
       (current_PortState.operation_type() == OperationType::CREATE)) {
     // use the namespace string if available
-    if (!current_PortConfiguration.network_ns().empty()) {
+    namespace_name = current_PortConfiguration.network_ns();
+
+    if (!namespace_name.empty()) {
       ACA_LOG_INFO("Found namespace string in port configuration: %s\n",
                    namespace_name.c_str());
-
-      namespace_name = current_PortConfiguration.network_ns();
 
       slash_pos = namespace_name.rfind('/');
       if (slash_pos != string::npos) {
@@ -1154,12 +1158,12 @@ int Aca_Comm_Manager::update_port_state_workitem(const PortState current_PortSta
               }
             } // for (int k = 0; k < current_SubnetConfiguration.transit_switches_size(); k++)
 
+            namespace_name = current_PortConfiguration.network_ns();
+
             // use the namespace string if available
-            if (!current_PortConfiguration.network_ns().empty()) {
+            if (!namespace_name.empty()) {
               ACA_LOG_INFO("Found namespace string in port configuration: %s\n",
                            namespace_name.c_str());
-
-              namespace_name = current_PortConfiguration.network_ns();
 
               slash_pos = namespace_name.rfind('/');
               if (slash_pos != string::npos) {
@@ -1191,19 +1195,6 @@ int Aca_Comm_Manager::update_port_state_workitem(const PortState current_PortSta
                             veth_name_string.c_str());
               overall_rc = net_config_rc;
             }
-
-            // workaround for the current contract with CNI
-            // Removed for the current setup
-            //   net_config_rc = Aca_Net_Config::get_instance().add_gw(
-            //           namespace_name, my_gw_address, culminative_network_configuration_time);
-            //   if (net_config_rc == EXIT_SUCCESS) {
-            //     ACA_LOG_INFO("Successfully added gw in ns: %s, gateway: %s\n",
-            //                  namespace_name.c_str(), my_gw_address.c_str());
-            //   } else {
-            //     ACA_LOG_ERROR("Unable to added gw in ns: %s, gateway: %s\n",
-            //                   namespace_name.c_str(), my_gw_address.c_str());
-            //     overall_rc = net_config_rc;
-            //   }
 
             // found subnet information and completed the work, breaking out
             break;
