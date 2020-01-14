@@ -939,9 +939,22 @@ int Aca_Comm_Manager::update_port_state_workitem(const PortState current_PortSta
       (current_PortState.operation_type() == OperationType::CREATE)) {
     // use the namespace string if available
     if (!current_PortConfiguration.network_ns().empty()) {
-      namespace_name = current_PortConfiguration.network_ns();
       ACA_LOG_INFO("Found namespace string in port configuration: %s\n",
                    namespace_name.c_str());
+
+      namespace_name = current_PortConfiguration.network_ns();
+
+      slash_pos = namespace_name.rfind('/');
+      if (slash_pos != string::npos) {
+        // TODO: workaround the current ip netns usage issue by
+        // only taking the last part of the string after '/'
+
+        // substr can throw out_of_range and bad_alloc exceptions
+        namespace_name = namespace_name.substr(slash_pos + 1);
+
+        ACA_LOG_INFO("Using namespace string (workarounded applied): %s\n",
+                     namespace_name.c_str());
+      }
     } else {
       namespace_name = VPC_NS_PREFIX + vpc_id;
       ACA_LOG_INFO("Didn't find namespace string in port configuration, using: %s\n",
@@ -1143,9 +1156,22 @@ int Aca_Comm_Manager::update_port_state_workitem(const PortState current_PortSta
 
             // use the namespace string if available
             if (!current_PortConfiguration.network_ns().empty()) {
-              namespace_name = current_PortConfiguration.network_ns();
               ACA_LOG_INFO("Found namespace string in port configuration: %s\n",
                            namespace_name.c_str());
+
+              namespace_name = current_PortConfiguration.network_ns();
+
+              slash_pos = namespace_name.rfind('/');
+              if (slash_pos != string::npos) {
+                // TODO: workaround the current ip netns usage issue by
+                // only taking the last part of the string after '/'
+
+                // substr can throw out_of_range and bad_alloc exceptions
+                namespace_name = namespace_name.substr(slash_pos + 1);
+
+                ACA_LOG_INFO("Using namespace string (workarounded applied): %s\n",
+                             namespace_name.c_str());
+              }
             } else {
               namespace_name = VPC_NS_PREFIX + vpc_id;
               ACA_LOG_INFO("Didn't find namespace string in port configuration, using: %s\n",
