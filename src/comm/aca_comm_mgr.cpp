@@ -787,8 +787,9 @@ int Aca_Comm_Manager::update_port_state_workitem(const PortState current_PortSta
                     agent_md_in.eth.ip);
 
       // the below will throw exceptions when it cannot convert the mac string
-      aca_convert_to_mac_array(current_PortConfiguration.mac_address().c_str(),
-                               agent_md_in.eth.mac);
+      aca_convert_to_mac_array(
+              current_PortConfiguration.host_info().mac_address().c_str(),
+              agent_md_in.eth.mac);
 
       // fill in agent_md_in.ep
       agent_md_in.ep.interface = PHYSICAL_IF;
