@@ -35,10 +35,9 @@ std::mutex rpc_client_call_mutex; // mutex to protect the RPC client and call
 static char PHYSICAL_IF[] = "eth0";
 static char VPC_NS_PREFIX[] = "vpc-ns-";
 static uint PORT_ID_TRUNCATION_LEN = 11;
+static uint VETH_NAME_TRUNCATION_LEN = 15;
 static char TEMP_PREFIX[] = "temp";
-static char VETH_PREFIX[] = "veth";
 static char PEER_PREFIX[] = "peer";
-// static char agent_xdp_path[] = "/Transit/build/xdp/trn_agent_xdp_ebpf_debug.o";
 static char agent_xdp_path[] = "/trn_xdp/trn_agent_xdp_ebpf_debug.o";
 static char agent_pcap_file[] = "/bpffs/agent_xdp.pcap";
 
@@ -75,7 +74,45 @@ static inline const char *aca_get_operation_name(OperationType operation)
   }
 }
 
-// throw exception for invalid arguments
+static inline void aca_truncate_device_name(string &device_name, uint truncation_len)
+{
+  if (!device_name.empty()) {
+    if (device_name.length() > truncation_len) {
+      device_name = device_name.substr(0, truncation_len);
+    }
+    // else length <= truncation_len
+    // do nothing since the name is good already
+  } else {
+    throw std::invalid_argument("Input device_name is null");
+  }
+}
+
+static inline void aca_fix_namespace_name(string &namespace_name, const string vpc_id)
+{
+  if (!namespace_name.empty()) {
+    ACA_LOG_INFO("Namespace string not empty: %s\n", namespace_name.c_str());
+
+    // TODO: workaround the current ip netns limitation where it can only deal with
+    // namespace under path /var/run/netns. It will not be able to handle other paths
+    // used by container runtime like docker.
+    //
+    // The workaround is to only take the last part of the path string after '/' to
+    // use with ip netns. Will need to switch to another method e.g. netlink in order
+    // to deal with full namespace path in the future.
+    size_t last_slash_pos = namespace_name.rfind('/');
+    if (last_slash_pos != string::npos) {
+      // substr can throw out_of_range and bad_alloc exceptions
+      namespace_name = namespace_name.substr(last_slash_pos + 1);
+
+      ACA_LOG_INFO("Using namespace string (workarounded applied): %s\n",
+                   namespace_name.c_str());
+    }
+  } else {
+    namespace_name = VPC_NS_PREFIX + vpc_id;
+    ACA_LOG_INFO("Namespace string empty, using: %s instead\n", namespace_name.c_str());
+  }
+}
+
 static void aca_convert_to_mac_array(const char *mac_string, u_char *mac)
 {
   if (mac_string == nullptr) {
@@ -608,9 +645,6 @@ int Aca_Comm_Manager::update_port_state_workitem(const PortState current_PortSta
   string my_ep_mac_address;
   string my_ep_host_ip_address;
   string my_cidr;
-  string temp_name_string;
-  string veth_name_string;
-  string peer_name_string;
   string namespace_name;
   string vpc_id;
   string my_ip_address;
@@ -632,12 +666,13 @@ int Aca_Comm_Manager::update_port_state_workitem(const PortState current_PortSta
 
   PortConfiguration current_PortConfiguration = current_PortState.configuration();
 
-  string port_id = current_PortConfiguration.id();
-  string truncated_port_id = port_id.substr(0, PORT_ID_TRUNCATION_LEN);
+  string veth_name_string = current_PortConfiguration.veth_name();
+  aca_truncate_device_name(veth_name_string, VETH_NAME_TRUNCATION_LEN);
 
-  temp_name_string = TEMP_PREFIX + truncated_port_id;
-  //  veth_name_string = VETH_PREFIX + truncated_port_id;
-  peer_name_string = PEER_PREFIX + truncated_port_id;
+  string port_id = current_PortConfiguration.id();
+  aca_truncate_device_name(port_id, PORT_ID_TRUNCATION_LEN);
+  string temp_name_string = TEMP_PREFIX + port_id;
+  string peer_name_string = PEER_PREFIX + port_id;
 
   switch (current_PortState.operation_type()) {
   case OperationType::CREATE:
@@ -672,8 +707,6 @@ int Aca_Comm_Manager::update_port_state_workitem(const PortState current_PortSta
       // the below will throw invalid_argument exceptions when it cannot convert the mac string
       aca_convert_to_mac_array(current_PortConfiguration.mac_address().c_str(),
                                endpoint_in.mac);
-
-      veth_name_string = current_PortConfiguration.veth_name().substr(0, PORT_ID_TRUNCATION_LEN);
 
       strncpy(veth_name, veth_name_string.c_str(), strlen(veth_name_string.c_str()) + 1);
       endpoint_in.veth = veth_name;
@@ -782,9 +815,8 @@ int Aca_Comm_Manager::update_port_state_workitem(const PortState current_PortSta
       }
 
       agent_md_in.eth.ip = sa.sin_addr.s_addr;
-      ACA_LOG_DEBUG("host_info().ip_address(): %s converted to agent_md_in.eth.ip: %u\n",
-                    current_PortConfiguration.host_info().ip_address().c_str(),
-                    agent_md_in.eth.ip);
+      ACA_LOG_DEBUG("my_ep_host_ip_address string: %s converted to uint: %u and assigned to agent_md_in.eth.ip\n",
+                    my_ep_host_ip_address.c_str(), agent_md_in.eth.ip);
 
       // the below will throw exceptions when it cannot convert the mac string
       aca_convert_to_mac_array(
@@ -799,8 +831,8 @@ int Aca_Comm_Manager::update_port_state_workitem(const PortState current_PortSta
       agent_md_in.ep.remote_ips.remote_ips_len = 1;
       // using the previously converted host IP value
       agent_md_in.ep.remote_ips.remote_ips_val[0] = sa.sin_addr.s_addr;
-      ACA_LOG_DEBUG("host_info().ip_address(): %s converted to agent_md_in.ep.remote_ips.remote_ips_val[0]: %u\n",
-                    current_PortConfiguration.host_info().ip_address().c_str(),
+      ACA_LOG_DEBUG("my_ep_host_ip_address string: %s converted to uint: %u and assigned to agent_md_in.ep.remote_ips.remote_ips_val[0]\n",
+                    my_ep_host_ip_address.c_str(),
                     agent_md_in.ep.remote_ips.remote_ips_val[0]);
 
       assert(current_PortConfiguration.fixed_ips_size() == 1);
@@ -811,17 +843,14 @@ int Aca_Comm_Manager::update_port_state_workitem(const PortState current_PortSta
       }
 
       agent_md_in.ep.ip = sa.sin_addr.s_addr;
-      ACA_LOG_DEBUG("current_PortConfiguration.fixed_ips(0).ip_address(): %s converted to agent_md_in.ep.ip: %u\n",
-                    current_PortConfiguration.fixed_ips(0).ip_address().c_str(),
-                    agent_md_in.ep.ip);
+      ACA_LOG_DEBUG("my_ep_ip_address string: %s converted to uint: %u and assigned to agent_md_in.ep.ip\n",
+                    my_ep_ip_address.c_str(), agent_md_in.ep.ip);
 
       agent_md_in.ep.eptype = TRAN_SIMPLE_EP;
 
       // the below will throw invalid_argument exceptions when it cannot convert the mac string
       aca_convert_to_mac_array(current_PortConfiguration.mac_address().c_str(),
                                agent_md_in.ep.mac);
-
-      veth_name_string = current_PortConfiguration.veth_name().substr(0, PORT_ID_TRUNCATION_LEN);
 
       strncpy(veth_name, veth_name_string.c_str(), strlen(veth_name_string.c_str()) + 1);
       agent_md_in.ep.veth = veth_name;
@@ -945,26 +974,7 @@ int Aca_Comm_Manager::update_port_state_workitem(const PortState current_PortSta
     // use the namespace string if available
     namespace_name = current_PortConfiguration.network_ns();
 
-    if (!namespace_name.empty()) {
-      ACA_LOG_INFO("Found namespace string in port configuration: %s\n",
-                   namespace_name.c_str());
-
-      slash_pos = namespace_name.rfind('/');
-      if (slash_pos != string::npos) {
-        // TODO: workaround the current ip netns usage issue by
-        // only taking the last part of the string after '/'
-
-        // substr can throw out_of_range and bad_alloc exceptions
-        namespace_name = namespace_name.substr(slash_pos + 1);
-
-        ACA_LOG_INFO("Using namespace string (workarounded applied): %s\n",
-                     namespace_name.c_str());
-      }
-    } else {
-      namespace_name = VPC_NS_PREFIX + vpc_id;
-      ACA_LOG_INFO("Didn't find namespace string in port configuration, using: %s\n",
-                   namespace_name.c_str());
-    }
+    aca_fix_namespace_name(namespace_name, vpc_id);
 
     net_config_rc = Aca_Net_Config::get_instance().create_namespace(
             namespace_name, culminative_network_configuration_time);
@@ -1161,27 +1171,7 @@ int Aca_Comm_Manager::update_port_state_workitem(const PortState current_PortSta
 
             namespace_name = current_PortConfiguration.network_ns();
 
-            // use the namespace string if available
-            if (!namespace_name.empty()) {
-              ACA_LOG_INFO("Found namespace string in port configuration: %s\n",
-                           namespace_name.c_str());
-
-              slash_pos = namespace_name.rfind('/');
-              if (slash_pos != string::npos) {
-                // TODO: workaround the current ip netns usage issue by
-                // only taking the last part of the string after '/'
-
-                // substr can throw out_of_range and bad_alloc exceptions
-                namespace_name = namespace_name.substr(slash_pos + 1);
-
-                ACA_LOG_INFO("Using namespace string (workarounded applied): %s\n",
-                             namespace_name.c_str());
-              }
-            } else {
-              namespace_name = VPC_NS_PREFIX + vpc_id;
-              ACA_LOG_INFO("Didn't find namespace string in port configuration, using: %s\n",
-                           namespace_name.c_str());
-            }
+            aca_fix_namespace_name(namespace_name, vpc_id);
 
             net_config_rc = Aca_Net_Config::get_instance().rename_veth_device(
                     namespace_name, temp_name_string, veth_name_string,
