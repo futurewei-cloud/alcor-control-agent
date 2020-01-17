@@ -711,13 +711,8 @@ int Aca_Comm_Manager::update_port_state_workitem(const PortState current_PortSta
       strncpy(veth_name, veth_name_string.c_str(), strlen(veth_name_string.c_str()) + 1);
       endpoint_in.veth = veth_name;
 
-      if (current_PortState.operation_type() == OperationType::CREATE_UPDATE_SWITCH) {
-        endpoint_in.hosted_interface = EMPTY_STRING;
-      } else // it must be OperationType::CREATE
-      {
-        strncpy(peer_name, peer_name_string.c_str(), strlen(peer_name_string.c_str()) + 1);
-        endpoint_in.hosted_interface = peer_name;
-      }
+      strncpy(peer_name, peer_name_string.c_str(), strlen(peer_name_string.c_str()) + 1);
+      endpoint_in.hosted_interface = peer_name;
 
       // TODO: cache the subnet information to a dictionary to provide
       // a faster look up for the next run, only use the below loop for
