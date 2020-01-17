@@ -719,12 +719,12 @@ TEST(net_config_test_cases, port_CREATE_integrated)
   string mac_address = "fa:16:3e:d7:f2:6c";
   string gateway_ip = "10.0.0.1";
   string gateway_mac = "fa:16:3e:d7:f2:00";
+  string veth_name = "veth0";
   string cmd_string;
   int rc;
 
   string truncated_port_id = port_name.substr(0, 11);
   string temp_name_string = "temp" + truncated_port_id;
-  string veth_name_string = "veth" + truncated_port_id;
   string peer_name_string = "peer" + truncated_port_id;
 
   GoalState GoalState_builder;
@@ -743,7 +743,7 @@ TEST(net_config_test_cases, port_CREATE_integrated)
   PortConfiguration_builder->set_name("FriendlyPortName");
   PortConfiguration_builder->set_network_ns(received_ns);
   PortConfiguration_builder->set_mac_address(mac_address);
-  PortConfiguration_builder->set_veth_name("veth0");
+  PortConfiguration_builder->set_veth_name(veth_name);
 
   PortConfiguration_HostInfo *portConfig_HostInfoBuilder(new PortConfiguration_HostInfo);
   portConfig_HostInfoBuilder->set_ip_address("172.0.0.2");
@@ -845,7 +845,7 @@ TEST(net_config_test_cases, port_CREATE_integrated)
   new_subnet_states->clear_configuration();
 
   // check to ensure the end point has been renamed to the final name
-  cmd_string = IP_NETNS_PREFIX + "exec " + received_ns + " ip link list | grep " + veth_name_string;
+  cmd_string = IP_NETNS_PREFIX + "exec " + received_ns + " ip link list | grep " + veth_name;
   rc = Aca_Net_Config::get_instance().execute_system_command(cmd_string);
   EXPECT_EQ(rc, EXIT_SUCCESS);
 

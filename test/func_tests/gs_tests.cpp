@@ -125,7 +125,7 @@ static void aca_signal_handler(int sig_num)
   exit(sig_num);
 }
 
-int parse_goalstate(GoalState parsed_struct, GoalState GoalState_builder)
+void parse_goalstate(GoalState parsed_struct, GoalState GoalState_builder)
 {
   assert(parsed_struct.port_states_size() == GoalState_builder.port_states_size());
   for (int i = 0; i < parsed_struct.port_states_size(); i++) {
@@ -336,11 +336,7 @@ int parse_goalstate(GoalState parsed_struct, GoalState GoalState_builder)
     }
   }
 
-  fprintf(stdout, "All content matched, sending the parsed_struct to update_goal_state...\n");
-
-  alcorcontroller::GoalStateOperationReply gsOperationalReply;
-  int rc = Aca_Comm_Manager::get_instance().update_goal_state(parsed_struct, gsOperationalReply);
-  return rc;
+  fprintf(stdout, "All content matched!\n");
 }
 int main(int argc, char *argv[])
 {
@@ -500,14 +496,7 @@ int main(int argc, char *argv[])
 
   if (rc == EXIT_SUCCESS) {
     fprintf(stdout, "Deserialize succeeded, comparing the content now...\n");
-    rc = parse_goalstate(parsed_struct, GoalState_builder);
-    if (rc == EXIT_SUCCESS) {
-      fprintf(stdout, "[Functional test] Successfully executed the network controller command\n");
-    } else {
-      fprintf(stdout, "[Funtional test] Unable to execute the network controller command: %d\n",
-              rc);
-    }
-
+    parse_goalstate(parsed_struct, GoalState_builder);
   } else {
     fprintf(stdout, "Deserialize failed with error code: %u\n", rc);
   }
@@ -516,6 +505,7 @@ int main(int argc, char *argv[])
   new_subnet_states->clear_configuration();
   new_vpc_states->clear_configuration();
 
+  // send the goal state to a local client via grpc for testing
   GoalStateProvisionerClient async_client(grpc::CreateChannel(
           "localhost:50001", grpc::InsecureChannelCredentials()));
 

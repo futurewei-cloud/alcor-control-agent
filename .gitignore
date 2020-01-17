@@ -72,7 +72,7 @@ __pycache__
 cppkafka/
 .DS_Store
 AlcorControlAgent
-old_aca_tests
+gs_tests
 aca_tests
 *.pb.h
 *.pb.cc
