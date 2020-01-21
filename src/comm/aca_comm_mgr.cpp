@@ -87,14 +87,14 @@ static inline void aca_truncate_device_name(string &device_name, uint truncation
   }
 }
 
-static inline bool aca_is_same_host_ip(const string ip)
+static inline bool aca_is_ep_on_same_host(const string ep_host_ip)
 {
-  if (ip.empty()) {
+  if (ep_host_ip.empty()) {
     return false;
   }
 
   const string IFCONFIG_PREFIX = "ifconfig ";
-  string cmd_string = IFCONFIG_PREFIX + PHYSICAL_IF + " | grep " + ip;
+  string cmd_string = IFCONFIG_PREFIX + PHYSICAL_IF + " | grep " + ep_host_ip;
   int rc = Aca_Net_Config::get_instance().execute_system_command(cmd_string);
 
   return (rc == EXIT_SUCCESS);
@@ -730,7 +730,7 @@ int Aca_Comm_Manager::update_port_state_workitem(const PortState current_PortSta
         // if the CREATE_UPDATE_SWITCH is called on the same EP host
         // also need to provide peer interface info for mizar programming
         // Mizar controller code: if (ep.host and self.ip == ep.host.ip):
-        if (aca_is_same_host_ip(
+        if (aca_is_ep_on_same_host(
                     current_PortConfiguration.host_info().ip_address().c_str())) {
           strncpy(peer_name, peer_name_string.c_str(),
                   strlen(peer_name_string.c_str()) + 1);
