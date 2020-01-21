@@ -87,6 +87,19 @@ static inline void aca_truncate_device_name(string &device_name, uint truncation
   }
 }
 
+static inline bool aca_is_same_host_ip(const string ip)
+{
+  if (ip.empty()) {
+    return false;
+  }
+
+  const string IFCONFIG_PREFIX = "ifconfig ";
+  string cmd_string = IFCONFIG_PREFIX + PHYSICAL_IF + " | grep " + ip;
+  int rc = Aca_Net_Config::get_instance().execute_system_command(cmd_string);
+
+  return (rc == EXIT_SUCCESS);
+}
+
 static inline void aca_fix_namespace_name(string &namespace_name, const string vpc_id)
 {
   if (!namespace_name.empty()) {
@@ -711,8 +724,24 @@ int Aca_Comm_Manager::update_port_state_workitem(const PortState current_PortSta
       strncpy(veth_name, veth_name_string.c_str(), strlen(veth_name_string.c_str()) + 1);
       endpoint_in.veth = veth_name;
 
-      strncpy(peer_name, peer_name_string.c_str(), strlen(peer_name_string.c_str()) + 1);
-      endpoint_in.hosted_interface = peer_name;
+      endpoint_in.hosted_interface = EMPTY_STRING;
+
+      if (current_PortState.operation_type() == OperationType::CREATE_UPDATE_SWITCH) {
+        // if the CREATE_UPDATE_SWITCH is called on the same EP host
+        // also need to provide peer interface info for mizar programming
+        // Mizar controller code: if (ep.host and self.ip == ep.host.ip):
+        if (aca_is_same_host_ip(
+                    current_PortConfiguration.host_info().ip_address().c_str())) {
+          strncpy(peer_name, peer_name_string.c_str(),
+                  strlen(peer_name_string.c_str()) + 1);
+          endpoint_in.hosted_interface = peer_name;
+          ACA_LOG_DEBUG("OperationType::CREATE_UPDATE_SWITCH called on the same EP host, adding peer_name based on mizar logic.\n");
+        }
+      } else // it must be OperationType::CREATE
+      {
+        strncpy(peer_name, peer_name_string.c_str(), strlen(peer_name_string.c_str()) + 1);
+        endpoint_in.hosted_interface = peer_name;
+      }
 
       // TODO: cache the subnet information to a dictionary to provide
       // a faster look up for the next run, only use the below loop for
