@@ -1,7 +1,7 @@
 #!/bin/bash
 
 echo "1--- installing mizar dependencies ---" && \
-    apt-get update && apt-get install -y \
+    apt-get update -y && apt-get install -y \
     rpcbind \
     rsyslog \
     build-essential \
@@ -23,7 +23,7 @@ pip3 install httpserver netaddr
 make -C ~/alcor-control-agent/mizar
 
 echo "2--- installing librdkafka ---" && \
-    apt-get update && apt-get install -y --no-install-recommends\
+    apt-get update -y && apt-get install -y --no-install-recommends\
     librdkafka-dev \
     doxygen \
     libssl-dev \
@@ -33,7 +33,7 @@ echo "2--- installing librdkafka ---" && \
     && apt-get clean
 
 echo "3--- installing cppkafka ---" && \
-    apt-get update && apt-get install cmake 
+    apt-get update -y && apt-get install -y cmake 
     git clone https://github.com/mfontanini/cppkafka.git /var/local/git/cppkafka && \
     cd /var/local/git/cppkafka && \
     mkdir build && \
@@ -45,7 +45,7 @@ echo "3--- installing cppkafka ---" && \
     rm -rf /var/local/git/cppkafka
 
 echo "4--- installing grpc dependencies ---" && \
-    apt-get update && apt-get install -y \
+    apt-get update -y && apt-get install -y \
     cmake libssl-dev \
     autoconf git pkg-config \
     automake libtool make g++ unzip 
