@@ -1,7 +1,7 @@
 #!/bin/bash
 
-echo "--- installing mizar dependencies ---" && \
-    apt-get update -y && apt-get install -y \
+echo "1--- installing mizar dependencies ---" && \
+    apt-get update && apt-get install -y \
     rpcbind \
     rsyslog \
     build-essential \
@@ -22,8 +22,8 @@ echo "--- installing mizar dependencies ---" && \
 pip3 install httpserver netaddr
 make -C ~/alcor-control-agent/mizar
 
-echo "--- installing librdkafka ---" && \
-    apt-get install -y --no-install-recommends\
+echo "2--- installing librdkafka ---" && \
+    apt-get update && apt-get install -y --no-install-recommends\
     librdkafka-dev \
     doxygen \
     libssl-dev \
@@ -32,7 +32,8 @@ echo "--- installing librdkafka ---" && \
     libboost-all-dev \
     && apt-get clean
 
-echo "--- installing cppkafka ---" && \
+echo "3--- installing cppkafka ---" && \
+    apt-get update && apt-get install cmake 
     git clone https://github.com/mfontanini/cppkafka.git /var/local/git/cppkafka && \
     cd /var/local/git/cppkafka && \
     mkdir build && \
@@ -43,15 +44,16 @@ echo "--- installing cppkafka ---" && \
     ldconfig && \
     rm -rf /var/local/git/cppkafka
 
-echo "--- installing grpc dependencies ---" && \
-    apt-get install -y \
+echo "4--- installing grpc dependencies ---" && \
+    apt-get update && apt-get install -y \
     cmake libssl-dev \
     autoconf git pkg-config \
     automake libtool make g++ unzip 
+    cd ~
 
 # installing grpc and its dependencies
 GRPC_RELEASE_TAG="v1.24.x"
-echo "--- cloning grpc repo ---" && \
+echo "5--- cloning grpc repo ---" && \
     git clone -b $GRPC_RELEASE_TAG https://github.com/grpc/grpc /var/local/git/grpc && \
     cd /var/local/git/grpc && \
     git submodule update --init && \
@@ -86,6 +88,7 @@ echo "--- cloning grpc repo ---" && \
     make install && \
     rm -rf /var/local/git/grpc
 
+echo "6--- "
 # building alcor-control-agent
 cd ~/alcor-control-agent && cmake . && make
 ln -snf ~/alcor-control-agent/build/ /aca_build
