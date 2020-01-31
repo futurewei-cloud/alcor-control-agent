@@ -106,7 +106,7 @@ static inline int
 aca_fix_namespace_name(string &namespace_name, const string vpc_id, bool create_namespace,
                        ulong &culminative_network_configuration_time)
 {
-  int rc;
+  int rc = EXIT_SUCCESS;
   bool need_to_create_namespace;
   size_t last_slash_pos;
   string cmd_string;
@@ -172,8 +172,6 @@ aca_fix_namespace_name(string &namespace_name, const string vpc_id, bool create_
   if (need_to_create_namespace) {
     rc = Aca_Net_Config::get_instance().create_namespace(
             namespace_name, culminative_network_configuration_time);
-  } else {
-    rc = EXIT_SUCCESS;
   }
 
   return rc;
