@@ -126,9 +126,7 @@ aca_fix_namespace_name(string &namespace_name, const string vpc_id, bool create_
         throw std::invalid_argument("Remaining namespace name contains '/'");
       }
       ACA_LOG_INFO("Using namespace string: %s\n", namespace_name.c_str());
-      if (create_namespace) {
-        need_to_create_namespace = true;
-      }
+      need_to_create_namespace = create_namespace;
     }
 
     else if (namespace_name.rfind("/run/netns/", 0) == 0) {
@@ -142,9 +140,7 @@ aca_fix_namespace_name(string &namespace_name, const string vpc_id, bool create_
         throw std::invalid_argument("Remaining namespace name contains '/'");
       }
       ACA_LOG_INFO("Using namespace string: %s\n", namespace_name.c_str());
-      if (create_namespace) {
-        need_to_create_namespace = true;
-      }
+      need_to_create_namespace = create_namespace;
     }
 
     else {
@@ -169,9 +165,7 @@ aca_fix_namespace_name(string &namespace_name, const string vpc_id, bool create_
   } else {
     namespace_name = VPC_NS_PREFIX + vpc_id;
     ACA_LOG_INFO("Namespace string empty, using: %s instead\n", namespace_name.c_str());
-    if (create_namespace) {
-      need_to_create_namespace = true;
-    }
+    need_to_create_namespace = create_namespace;
   }
 
   // create the namespace using ip netns if needed
