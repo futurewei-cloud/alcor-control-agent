@@ -107,7 +107,7 @@ aca_fix_namespace_name(string &namespace_name, const string vpc_id, bool create_
                        ulong &culminative_network_configuration_time)
 {
   int rc = EXIT_SUCCESS;
-  bool need_to_create_namespace;
+  bool need_to_create_namespace = false;
   size_t last_slash_pos;
   string cmd_string;
 
@@ -115,8 +115,10 @@ aca_fix_namespace_name(string &namespace_name, const string vpc_id, bool create_
     ACA_LOG_INFO("Namespace string from GS not empty: %s\n", namespace_name.c_str());
     string ProvidedNamespacePath = namespace_name;
 
+    // TODO: make "/var/run/netns/" as constant
     if (namespace_name.rfind("/var/run/netns/", 0) == 0) {
-      // if namespace start with /var/run/netns/, strip that out
+      // if namespace start with /var/run/netns/, e.g. for arktos
+      // container runtime, strip that out
       // substr can throw out_of_range and bad_alloc exceptions
       namespace_name = namespace_name.substr(15);
 
