@@ -22,6 +22,7 @@
 #include <future>
 #include <errno.h>
 #include <arpa/inet.h>
+#include <algorithm>
 
 using namespace std;
 using namespace alcorcontroller;
@@ -32,6 +33,7 @@ std::mutex rpc_client_call_mutex; // mutex to protect the RPC client and call
 
 #define cast_to_nanoseconds(x) chrono::duration_cast<chrono::nanoseconds>(x)
 
+static char ACA_PREFIX[] = "aca_";
 static char PHYSICAL_IF[] = "eth0";
 static char VPC_NS_PREFIX[] = "vpc-ns-";
 static uint PORT_ID_TRUNCATION_LEN = 11;
@@ -100,30 +102,81 @@ static inline bool aca_is_ep_on_same_host(const string ep_host_ip)
   return (rc == EXIT_SUCCESS);
 }
 
-static inline void aca_fix_namespace_name(string &namespace_name, const string vpc_id)
+static inline int
+aca_fix_namespace_name(string &namespace_name, const string vpc_id, bool create_namespace,
+                       ulong &culminative_network_configuration_time)
 {
+  int rc = EXIT_SUCCESS;
+  bool need_to_create_namespace = false;
+  size_t last_slash_pos;
+  string cmd_string;
+
   if (!namespace_name.empty()) {
-    ACA_LOG_INFO("Namespace string not empty: %s\n", namespace_name.c_str());
+    ACA_LOG_INFO("Namespace string from GS not empty: %s\n", namespace_name.c_str());
+    string ProvidedNamespacePath = namespace_name;
 
-    // TODO: workaround the current ip netns limitation where it can only deal with
-    // namespace under path /var/run/netns. It will not be able to handle other paths
-    // used by container runtime like docker.
-    //
-    // The workaround is to only take the last part of the path string after '/' to
-    // use with ip netns. Will need to switch to another method e.g. netlink in order
-    // to deal with full namespace path in the future.
-    size_t last_slash_pos = namespace_name.rfind('/');
-    if (last_slash_pos != string::npos) {
+    // TODO: make "/var/run/netns/" as constant
+    if (namespace_name.rfind("/var/run/netns/", 0) == 0) {
+      // if namespace start with /var/run/netns/, e.g. for arktos
+      // container runtime, strip that out
       // substr can throw out_of_range and bad_alloc exceptions
-      namespace_name = namespace_name.substr(last_slash_pos + 1);
+      namespace_name = namespace_name.substr(15);
 
-      ACA_LOG_INFO("Using namespace string (workarounded applied): %s\n",
-                   namespace_name.c_str());
+      // throw except if there is '/' in the remaining string
+      last_slash_pos = namespace_name.rfind('/');
+      if (last_slash_pos != string::npos) {
+        throw std::invalid_argument("Remaining namespace name contains '/'");
+      }
+      ACA_LOG_INFO("Using namespace string: %s\n", namespace_name.c_str());
+      need_to_create_namespace = create_namespace;
+    }
+
+    else if (namespace_name.rfind("/run/netns/", 0) == 0) {
+      // else if namespace start with /run/netns/, strip that out
+      // substr can throw out_of_range and bad_alloc exceptions
+      namespace_name = namespace_name.substr(11);
+
+      // throw except if there is '/' in the remaining string
+      last_slash_pos = namespace_name.rfind('/');
+      if (last_slash_pos != string::npos) {
+        throw std::invalid_argument("Remaining namespace name contains '/'");
+      }
+      ACA_LOG_INFO("Using namespace string: %s\n", namespace_name.c_str());
+      need_to_create_namespace = create_namespace;
+    }
+
+    else {
+      // generate a string based on namespace name
+      std::replace(namespace_name.begin(), namespace_name.end(), '/', '_');
+      namespace_name = ACA_PREFIX + namespace_name;
+
+      if (create_namespace) {
+        // touch /var/run/netns/uniqueName
+        cmd_string = "touch /var/run/netns/" + namespace_name;
+        rc = Aca_Net_Config::get_instance().execute_system_command(cmd_string);
+
+        if (rc == EXIT_SUCCESS) {
+          // mount --bind $ProvidedNamespacePath  /var/run/netns/uniqueName
+          cmd_string = "mount --bind " + ProvidedNamespacePath +
+                       " /var/run/netns/" + namespace_name;
+          rc = Aca_Net_Config::get_instance().execute_system_command(cmd_string);
+        }
+        need_to_create_namespace = false;
+      }
     }
   } else {
     namespace_name = VPC_NS_PREFIX + vpc_id;
     ACA_LOG_INFO("Namespace string empty, using: %s instead\n", namespace_name.c_str());
+    need_to_create_namespace = create_namespace;
   }
+
+  // create the namespace using ip netns if needed
+  if (need_to_create_namespace) {
+    rc = Aca_Net_Config::get_instance().create_namespace(
+            namespace_name, culminative_network_configuration_time);
+  }
+
+  return rc;
 }
 
 static void aca_convert_to_mac_array(const char *mac_string, u_char *mac)
@@ -998,10 +1051,9 @@ int Aca_Comm_Manager::update_port_state_workitem(const PortState current_PortSta
     // use the namespace string if available
     namespace_name = current_PortConfiguration.network_ns();
 
-    aca_fix_namespace_name(namespace_name, vpc_id);
+    net_config_rc = aca_fix_namespace_name(
+            namespace_name, vpc_id, true, culminative_network_configuration_time);
 
-    net_config_rc = Aca_Net_Config::get_instance().create_namespace(
-            namespace_name, culminative_network_configuration_time);
     if (net_config_rc == EXIT_SUCCESS) {
       ACA_LOG_INFO("Successfully created namespace: %s\n", namespace_name.c_str());
     } else {
@@ -1195,7 +1247,9 @@ int Aca_Comm_Manager::update_port_state_workitem(const PortState current_PortSta
 
             namespace_name = current_PortConfiguration.network_ns();
 
-            aca_fix_namespace_name(namespace_name, vpc_id);
+            // aca_fix_namespace_name always return true when not creating a namespace
+            aca_fix_namespace_name(namespace_name, vpc_id, false,
+                                   culminative_network_configuration_time);
 
             net_config_rc = Aca_Net_Config::get_instance().rename_veth_device(
                     namespace_name, temp_name_string, veth_name_string,
