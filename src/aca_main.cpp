@@ -134,7 +134,7 @@ int main(int argc, char *argv[])
   signal(SIGINT, aca_signal_handler);
   signal(SIGTERM, aca_signal_handler);
 
-  while ((option = getopt(argc, argv, "b:h:g:s:p:df")) != -1) {
+  while ((option = getopt(argc, argv, "b:h:g:s:p:md")) != -1) {
     switch (option) {
     case 'b':
       g_broker_list = optarg;
