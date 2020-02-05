@@ -3,6 +3,7 @@ name: Agent Build CI
 on:
   push:
     paths:
+      - '**'
       - '!docs/**'
 
 jobs:
