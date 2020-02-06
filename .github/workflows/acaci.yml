@@ -14,8 +14,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
-      - name: submodules-init
-        uses: snickerbockers/submodules-init@v4
+      - name: Checkout submodules
+        uses: textbook/git-checkout-submodule-action@master
       - name: Build Alcor Control Agent
         run: ./build/build.sh
         working-directory: .
