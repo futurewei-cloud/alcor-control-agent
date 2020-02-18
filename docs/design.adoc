@@ -107,7 +107,7 @@ Responsible to configure and update the security policies on veths/vPorts.
 
 This will interface with user mode Transit daemon to program the transit router/switch/endpoint. Using the below APIs:
 
-*Transit/src/rpcgen/trn_rpc_protocol.x*
+*mizar/src/rpcgen/trn_rpc_protocol.x*
 
 [source,c]
 ------------------------------------------------------------
@@ -140,8 +140,6 @@ Note: XDP programs are preloaded on physical NIC when system is booted up. For X
 
 === Log Manager
 
-It will create the log file, manage the log configuration and maintain the ACA logs. Need to decide on how many days to keep the logs, e.g. 7 days.
-
 The log should at least contain a timestamp, source file name and line number, message. The ACA code should be able to specify the log level and can configure the targetted log level at runtime.
 Syslog is a good target framework, it is a proven mechanism in linux and it is https://askubuntu.com/questions/184949/how-do-i-limit-the-size-of-my-syslog[configurable for our needs]. See reference session for more information.
 
@@ -150,7 +148,7 @@ Syslog is a good target framework, it is a proven mechanism in linux and it is h
 . Goal State object: +
 Alcor VPC Controller sends down goal state object to ACA in the format of protobuf 3 messages to support cross language and cross machine model. The goal state object contains 0 to n vpc_states/subnet_states/port_state/security_group_states configurations. When ACA receives the goal state object, it will loop through each configuration to determine the intent update by looking at the OperationType. ACA will then parse the configuration and execute the needed change on the host machine, including XDP programming using transit daemon. Below is the highlevel GoalState definition:
 
-*AliothController/src/schema/proto3/goalstate.proto*
+*AlcorController/src/schema/proto3/goalstate.proto*
 
 [source,java]
 ------------------------------------------------------------
@@ -158,7 +156,7 @@ syntax = "proto3";
 
 package aliothcontroller;
 
-option java_package = "com.futurewei.alioth.controller.schema";
+option java_package = "com.futurewei.alcor.controller.schema";
 
 import "vpc.proto";
 import "subnet.proto";
@@ -191,8 +189,8 @@ There will be one thread for Kafka consumer to receive Alcor VPC controller goal
 
 There will be another thread for async gRPC server to handle goal state update request for control fast path (currently targetting serverless scenario for fast provisioning). The gRPC async library will handle the client call from Alcor VPC controller, put the work item into its own completion queue, and reponds to the client call quickly. It will transparently create new threads to process the work items in its completion queue. Once a work item is completed, it will create a gRPC response to the original client call with the goal state update result.
 
-== Interface with Alkaid
-The below diagrams shows the interaction between component and the work flow between Alkaid, Alcor and Mizar.
+== Interface with Arktos
+The below diagrams shows the interaction between component and the work flow between Arktos, Alcor and Mizar.
 
 image::images/Agent_diagram.JPG["Component diagram", width=800, link="images/Agent_diagram.JPG"]
 
@@ -240,15 +238,3 @@ Gtest framework is used for unit testing and some functional testing. Completed 
 . https://github.com/futurewei-cloud/Transit/blob/master/docs/modules/ROOT/pages/design/monitoring.adoc[Alcor Control Agent and SN Agent will work independently]
 . https://stackoverflow.com/questions/158457/daemon-logging-in-linux[Logging in Linux]
 
-[width="100%",options="header"]
-|====================
-| Parameter | Description | Example Value
-| Protocol | Specifies the network protocol for which the security group rule takes effect. The value can be **TCP**, **UDP**, **ICMP**, **HTTP**, or others.
- | TCP
-| Port | Specifies the port or port range for which the security group rule takes effect. The value ranges from **0** to **65535**. | 22 or 22-30
-| Source | Specifies the source for which the security group rule takes effect. This parameter is required when **Transfer Direction** is set to **Inbound**. The value can be an IP address or a security group.
- | 0.0.0.0/0
-default
-| Destination | Specifies the destination for which the security group rule takes effect. This parameter is required when **Transfer Direction** is set to **Outbound**. The value can be an IP address or a security group. | 0.0.0.0/0
-default
-|====================
