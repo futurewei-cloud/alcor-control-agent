@@ -24,10 +24,10 @@ git submodule update --init --recursive
 ```
 
 ## Run the build script to set up the build container and compile the alcor-control-agent
-Assuming alcor-control-agent was cloned into ~/dev directory:
+Assuming alcor-control-agent was cloned into ~/dev/AlcorControlAgent directory:
 ```Shell
-cd ~/dev
-./AlcorControlAgent/build/build.sh
+cd ~/dev/AlcorControlAgent
+./build/build.sh
 ```
 ## Running alcor-control-agent and tests
 You can run the test (optional):
