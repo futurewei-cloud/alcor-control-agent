@@ -19,23 +19,23 @@ The Alcor Control Agent includes the Alcor controller and Transit submodules to 
 
 ```Shell
 cd ~/dev
-git clone --recurse-submodules https://github.com/futurewei-cloud/alcor-control-agent.git
+git clone --recurse-submodules https://github.com/futurewei-cloud/alcor-control-agent.git AlcorControlAgent
 git submodule update --init --recursive
 ```
 
 ## Run the build script to set up the build container and compile the alcor-control-agent
-Assuming alcor-control-agent was cloned into ~/dev directory:
+Assuming alcor-control-agent was cloned into ~/dev/AlcorControlAgent directory:
 ```Shell
-cd build
-./build.sh
+cd ~/dev/AlcorControlAgent
+./build/build.sh
 ```
 ## Running alcor-control-agent and tests
 You can run the test (optional):
 ```Shell
-root@ca62b6feec63:/mnt/host/code/alcor-control-agent# ./build/tests/aca_tests
+root@ca62b6feec63:/mnt/host/code/AlcorControlAgent# ./build/tests/aca_tests
 ```
 
 You should be ready to run the executable:
 ```Shell
-root@ca62b6feec63:/mnt/host/code/alcor-control-agent# ./build/bin/AlcorControlAgent
+root@ca62b6feec63:/mnt/host/code/AlcorControlAgent# ./build/bin/AlcorControlAgent
 ```

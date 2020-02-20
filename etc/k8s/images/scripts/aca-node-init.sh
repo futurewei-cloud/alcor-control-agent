@@ -20,7 +20,7 @@ echo "1--- installing mizar dependencies ---" && \
     libcmocka-dev \
     lcov
 pip3 install httpserver netaddr
-make -C ~/alcor-control-agent/mizar
+make -C ~/mizar-mp/AlcorControlAgent/mizar
 
 echo "2--- installing librdkafka ---" && \
     apt-get update -y && apt-get install -y --no-install-recommends\
@@ -90,5 +90,5 @@ echo "5--- cloning grpc repo ---" && \
 
 echo "6--- "
 # building alcor-control-agent
-cd ~/alcor-control-agent && cmake . && make
-ln -snf ~/alcor-control-agent/build/ /aca_build
+cd ~/mizar-mp/AlcorControlAgent && cmake . && make
+ln -snf ~/mizar-mp/AlcorControlAgent/build/ /aca_build
