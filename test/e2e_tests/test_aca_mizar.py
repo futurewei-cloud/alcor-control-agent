@@ -21,10 +21,11 @@ class test_aca_mizar(unittest.TestCase):
         groupID = "test5"
         prefix = "-d -h es7"
         self.aca_droplets = {}
-        self.aca_droplets["d50001"] = aca_droplet("routerhost_0", prefix + "-vpc1-transit-router1 -g " + groupID)
-        self.aca_droplets["d50002"] = aca_droplet("switchhost_0", prefix + "-subnet1-transit-switch1 -g " + groupID)
-        self.aca_droplets["d50003"] = aca_droplet("switchhost_1", prefix + "-subnet1-transit-switch2 -g " + groupID)
-        self.aca_droplets["d50004"] = aca_droplet("switchhost_2", prefix + "-subnet1-transit-switch3 -g " + groupID)
+        # uncomment below if dedicated switch or router host is used 
+        #self.aca_droplets["d50001"] = aca_droplet("routerhost_0", prefix + "-vpc1-transit-router1 -g " + groupID)
+        #self.aca_droplets["d50002"] = aca_droplet("switchhost_0", prefix + "-subnet1-transit-switch1 -g " + groupID)
+        #self.aca_droplets["d50003"] = aca_droplet("switchhost_1", prefix + "-subnet1-transit-switch2 -g " + groupID)
+        #self.aca_droplets["d50004"] = aca_droplet("switchhost_2", prefix + "-subnet1-transit-switch3 -g " + groupID)
         n_aca_droplets = 10
         for i in range(n_aca_droplets):
             id = "d" + str(i)
@@ -38,7 +39,7 @@ class test_aca_mizar(unittest.TestCase):
         output.write("{ ")
         output.write("\"Hosts\": [ ")
         for d in self.aca_droplets.values():
-            if (d.id != "routerhost_0"):
+            if (d.id != "ephost_0"):
                 output.write(", ")
             output.write(d.get_net_state())
             # Run alcor control agent in the background
