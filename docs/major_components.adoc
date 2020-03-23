@@ -1,0 +1,39 @@
+= Alcor Control Agent Major Components
+Eric Li <sze.li@futurewei.com>
+v0.1, 2020-03-20
+:toc: right
+
+== Communication Manager
+
+This is the interface between Alcor VPC controller and Alcor Control Agent running on each compute host. It uses Kafka or gRPC (for controller fast path) to process goal state messages from Alcor Controllers. It subscribes to topics published by Alcor VPC Controller in Kafka in order to receive targetted message to specific ACA. ACA can also publish (response/health/error) information back to Alcor Controllers through Kafka.
+
+== Goal State Handler
+
+== Work Item Scheduler
+
+For VPC/Subnet/Port Configuration
+For L3, DHCP, Security Policy
+
+Parallel vs serial
+
+== Dataplane Programming Interface
+OVS and Mizar support
+
+== L3 Programming Interface
+
+== DHCP Programming Interface
+
+== Security Policy Handler
+
+Responsible to configure and update the security policies on vPorts.
+
+== Network Health Monitor
+
+== Log Manager
+
+The log should at least contain a timestamp, source file name and line number, message. The ACA code should be able to specify the log level and can configure the targetted log level at runtime.
+Syslog is a good target framework, it is a proven mechanism in linux and it is https://askubuntu.com/questions/184949/how-do-i-limit-the-size-of-my-syslog[configurable for our needs]. See reference session for more information.
+
+== Reference
+
+. https://stackoverflow.com/questions/158457/daemon-logging-in-linux[Logging in Linux]

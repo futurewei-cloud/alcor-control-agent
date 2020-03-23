@@ -1,9 +1,11 @@
 = Cloud Fabric Alcor Control Agent
+Eric Li <sze.li@futurewei.com>
+v0.2, 2020-03-01
+:toc: right
 
 == Summary
 
 The Cloud Fabric Alcor Control Agent (ACA) runs on each host machine. It serves as a stateless proxy between network controller and host machine networking components for control plane operations.
-
 
 == Requirements
 
@@ -28,120 +30,6 @@ ACA will have the following responsibilities, the code will live in one binary.
 .. Mizar (dataplane)
 .. Openstack/OVS 
 . Network Component upgrade manager
-
-== Communication between ACA and kernel mode Transit Agent
-
-                    +--------------------+
-                    |  Alcor Control     |
-                    |     Agent          |
-                    +--------------------+
-                    |  Transit Daemon    |
-                    +------------------ -+   User Mode
-         +--------------------------------------------------+
-                    +--------------------+   Kernel Mode
-                    |  Transit Agent     |
-                    |     xdp program    |
-                    +--------------------+
-
-== Workflow with Mizar
-
-. Customer creates a new VPC
-	.. Allocate transit router
-		... Smart placement [router1, router2]
-		... Go to router1, router2 and add VPC to the VPC table (Call “Update VPC”) (VPC table)
-. Customer creates new network(subnet)
-	.. Allocate transit switch
-		... Smart placement [Switch1, Switch2]
-		... Go to router1, and router2 and “Update net” (net table)
-		... Go to s1, s2 and call “Update net" (net table)
-. Customer create a VM with endpoint 1 at net0
-	.. Allocate endpoint
-		... Go to all switches (s1,s2) update endpoint
-			.... make sure at least one or more transit switch ready before the next step
-			.... TODO: need to be able to notify network controller that a particular transit switch programming is completed
-		... Go to VM Host create endpoint and update the transit switch info in endpoint table
-
-== Network Configuration
-
-[width="100%",options="header"]
-|====================
-| VPC table  |
-| VPC0 | {10.0.0.0/16,[172.3,172.4]}
-|====================
-
-[width="100%",options="header"]
-|====================
-|Network Table   |
-|Net0   |{10.0.0.0/25,[172.1,172.2]}
-|====================
-
-[width="100%",options="header"]
-|====================
-|Endpoint Table   |  |  |
-|10.0.0.1  |Net0  |VPC0  |[172.1,...]
-|10.0.0.2    |Net0  |VPC0  |[172.2,...]
-|====================
-
-
-== Highlevel Components
-
-=== Communication Manager
-
-This will interface with Kafka or gRPC (for controller fast path) to process goal state updates from Alcor Controllers. It will subscribe to topics published by Alcor VPC Controller in Kafka. ACA can also publish (health/error) information back to Alcor Controllers through gRPC.
-
-=== Network Configurator
-
-1. In order to help Network Controller to determine the host machine network setup. It will collect the network configuration from the host machine and send to Network Controller through Kafka, including:
-. SRIOV support
-. DPDK support
-. Bandwidth (10G/25G/40G)
-. IP of the host machine (is it DHCP or assigned?)
-2. Network Controller will decide what network configuration to be applied on the host machine, and send it to ACA through Kafka.
-3. Connect vNICs to the vPorts once the VM/Container is running.
-
-=== Security policy Manager
-
-Responsible to configure and update the security policies on veths/vPorts.
-
-=== Transit Agent Manager
-
-This will interface with user mode Transit daemon to program the transit router/switch/endpoint. Using the below APIs:
-
-*mizar/src/rpcgen/trn_rpc_protocol.x*
-
-[source,c]
-------------------------------------------------------------
-int UPDATE_VPC(rpc_trn_vpc_t) = 1;
-int UPDATE_NET(rpc_trn_network_t) = 2;
-int UPDATE_EP(rpc_trn_endpoint_t) = 3;
-int UPDATE_AGENT_EP(rpc_trn_endpoint_t) = 4;
-int UPDATE_AGENT_MD(rpc_trn_agent_metadata_t) = 5;
-
-int DELETE_VPC(rpc_trn_vpc_key_t) = 6;
-int DELETE_NET(rpc_trn_network_key_t) = 7;
-int DELETE_EP(rpc_trn_endpoint_key_t) = 8;
-int DELETE_AGENT_EP(rpc_trn_endpoint_key_t) = 9;
-int DELETE_AGENT_MD(void) = 10;
-
-rpc_trn_vpc_t      GET_VPC(rpc_trn_vpc_key_t) = 11;
-rpc_trn_network_t  GET_NET(rpc_trn_network_key_t) = 12;
-rpc_trn_endpoint_t GET_EP(rpc_trn_endpoint_key_t) = 13;
-rpc_trn_endpoint_t GET_AGENT_EP(rpc_trn_endpoint_key_t) = 14;
-rpc_trn_agent_metadata_t GET_AGENT_MD(void) = 15;
-
-int LOAD_TRANSIT_XDP(rpc_trn_xdp_intf_t) = 16;
-int LOAD_TRANSIT_AGENT_XDP(rpc_trn_xdp_intf_t) = 17;
-
-int UNLOAD_TRANSIT_XDP(rpc_intf_t) = 18;
-int UNLOAD_TRANSIT_AGENT_XDP(rpc_intf_t) = 19;
-------------------------------------------------------------
-
-Note: XDP programs are preloaded on physical NIC when system is booted up. For XDP programs attached to virtual interfaces, they will be loaded on demand by ACA when new ports are created on VMs or containers.
-
-=== Log Manager
-
-The log should at least contain a timestamp, source file name and line number, message. The ACA code should be able to specify the log level and can configure the targetted log level at runtime.
-Syslog is a good target framework, it is a proven mechanism in linux and it is https://askubuntu.com/questions/184949/how-do-i-limit-the-size-of-my-syslog[configurable for our needs]. See reference session for more information.
 
 
 == Interface with Alcor VPC Controller
@@ -189,15 +77,6 @@ There will be one thread for Kafka consumer to receive Alcor VPC controller goal
 
 There will be another thread for async gRPC server to handle goal state update request for control fast path (currently targetting serverless scenario for fast provisioning). The gRPC async library will handle the client call from Alcor VPC controller, put the work item into its own completion queue, and reponds to the client call quickly. It will transparently create new threads to process the work items in its completion queue. Once a work item is completed, it will create a gRPC response to the original client call with the goal state update result.
 
-== Interface with Arktos
-The below diagrams shows the interaction between component and the work flow between Arktos, Alcor and Mizar.
-
-image::images/Agent_diagram.JPG["Component diagram", width=800, link="images/Agent_diagram.JPG"]
-
-image::images/Agent_flow1.JPG["Agent flow 1", width=800, link="images/Agent_flow1.JPG"]
-
-image::images/Agent_flow2.JPG["Agent flow 2", width=800, link="images/Agent_flow2.JPG"]
-
 == API Versioning of Alcor Control Agent and Alcor VPC Controller
 
 ==== Motivation
@@ -229,12 +108,10 @@ For example, say there is a new update to support SR-IOV.
 == Testing strategy
 Gtest framework is used for unit testing and some functional testing. Completed end to end and functional testing will be developed by plugging in controller, agent and Mizar together under Jenkins CI/CD framework. We are planning to leverage gcov+lcov for code coverage analysis.
 
-== Reference
+== References
 
 . https://docs.openstack.org/neutron/pike/contributor/internals/openvswitch_agent.html
 . https://github.com/kubernetes/community/blob/master/contributors/design-proposals/release/versioning.md
 . https://dzone.com/articles/backward-compatibility-check-for-rest-apis
 . https://stackoverflow.com/questions/29871744/how-do-you-manage-the-underlying-codebase-for-a-versioned-api
-. https://github.com/futurewei-cloud/Transit/blob/master/docs/modules/ROOT/pages/design/monitoring.adoc[Alcor Control Agent and SN Agent will work independently]
-. https://stackoverflow.com/questions/158457/daemon-logging-in-linux[Logging in Linux]
 
