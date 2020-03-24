@@ -1,4 +1,4 @@
-= Working with Mizar
+= Communication Protocol with Mizar
 Eric Li <sze.li@futurewei.com>
 v0.1, 2020-03-20
 :toc: right

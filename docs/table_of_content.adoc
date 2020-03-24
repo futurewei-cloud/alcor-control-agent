@@ -7,9 +7,9 @@
 * Key System Flows
 * https://github.com/futurewei-cloud/alcor/blob/docs/design/docs/visionary_design/table_of_content.adoc[Alcor Controller Design]
 // * xref:comm.adoc[Controller and Control Agent Communication]
-* xref:compute.adoc [Communication Protocol with Arktos Compute]
+* xref:compute_communication.adoc [Communication Protocol with Arktos Compute]
 * https://github.com/futurewei-cloud/alcor/blob/docs/design/docs/visionary_design/dataplane_abstraction.adoc[Dataplane Abstraction]
-** xref:mizar.adoc[Working with Mizar]
+** xref:mizar_communication.adoc[Communication Protocol with Mizar Dataplane]
 
 ### Development and Testing
 * xref:../src/README.md[Getting Started]

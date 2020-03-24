@@ -5,7 +5,9 @@ v0.2, 2020-03-01
 
 == Summary
 
-The Cloud Fabric Alcor Control Agent (ACA) runs on each host machine. It serves as a stateless proxy between network controller and host machine networking components for control plane operations.
+The Cloud Fabric Alcor Control Agent (ACA) runs on each host machine. It serves as a stateless proxy between Alcor controller and host machine networking components for control plane operations.
+
+image::images/Agent_components.JPG["Component diagram", width=800, link="images/Agent_components.JPG"]
 
 == Requirements
 
@@ -18,19 +20,6 @@ The Cloud Fabric Alcor Control Agent (ACA) runs on each host machine. It serves 
 	.. Attached transit agent to the corresponding vNIC(veth) and transit switch/router on the physical NIC
 
 . It will also update VPC Configuration (VPC, Subnet, Security Group, Routing) including CRUD (Create/Read/Update/Delete) VPC/Subnet/Endpoint.
-
-== Roles
-
-ACA will have the following responsibilities, the code will live in one binary.
-
-. Local Host Networking configuration
-. ACA Health management, transit daemon and agents health, VM/Container networking health monitoring
-.. TODO: need to expand this, will likely live in a seperate doc
-. Dataplane adaptors to program various dataplane implementations, including:
-.. Mizar (dataplane)
-.. Openstack/OVS 
-. Network Component upgrade manager
-
 
 == Interface with Alcor VPC Controller
 . Goal State object: +

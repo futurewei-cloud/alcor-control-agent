@@ -5,29 +5,44 @@ v0.1, 2020-03-20
 
 == Communication Manager
 
-This is the interface between Alcor VPC controller and Alcor Control Agent running on each compute host. It uses Kafka or gRPC (for controller fast path) to process goal state messages from Alcor Controllers. It subscribes to topics published by Alcor VPC Controller in Kafka in order to receive targetted message to specific ACA. ACA can also publish (response/health/error) information back to Alcor Controllers through Kafka.
+This is the interface between Alcor VPC Controller and Alcor Control Agent(ACA). Kafka or gRPC (for control fast path) was used to send goal state messages from Alcor VPC Controllers to ACA running on each compute host. ACA subscribes to topics published by Alcor VPC Controller in Kafka in order to receive targetted message to specific ACA. ACA can also publish (response/health/error) information back to Alcor VPC Controllers through Kafka or gRPC.
 
 == Goal State Handler
 
-== Work Item Scheduler
-
-For VPC/Subnet/Port Configuration
-For L3, DHCP, Security Policy
-
-Parallel vs serial
+This module deserializes the Kafka message from Alcor VPC Controller, determine the action(s) needed from the content of the goal state message and then involve the corresponding interface(s) to handle the requests.
 
 == Dataplane Programming Interface
-OVS and Mizar support
+
+This interface is used to program VPC/Subnet/Port configurations on compute hosts. To support different dataplane implementations (e.g. OVS and Mizar), abstraction layer was implemented in ACA. Dataplane Programming Interface is the same for all dataplane. Based on the ACA startup configuration, it will also determine the network type like VxLAN or VLAN and default to VxLAN. 
+
+=== Work Item Scheduler
+
+The work item scheduler is part of Dataplane Programming Interface and it is used to execute the VPC/Subnet/Port configuration updates in parallel by default. There is a huge performance improvement when updating thousands of ports in parallel instead of updating serially based on data. The key to the dataplane abstraction is implementated here by scheduling the correct dataplane programming modules based on ACA startup configuration.
 
 == L3 Programming Interface
 
+This interface is used to program L3 routing information. The current neutron implementation uses NAT with iptables on the traffic before going out to br-ex bridge. We can consider other solutions like flow based traffic handling and even offload it to hardware.
+
 == DHCP Programming Interface
 
-== Security Policy Handler
+This interface is used to program DHCP service needed for VM/Container that requests dynamic IP address. It talks to a dhcp service, likely dnsmasq, and programmed it with known mac address to IP mapping as new ports were assigned by Alcor server.
 
-Responsible to configure and update the security policies on vPorts.
+== Security Policy Interface
+
+This interface is responsible to configure and update the security group policy on vPorts connected to VM/Container. The current neutron implementation uses linux brige and iptable rule. We can consider other solutions like flow based or label based traffic marking to apply the policy at the lower layer or even offload to hardware.
+
+== QoS (Metering) Interface
+
+Responsible to manage Networking QoS, to be done in software or hardware. Out of scope for the current design.
 
 == Network Health Monitor
+
+We like to use netdata as our monitoring solution which provides many of the important matrix tracking by default installation. On top of that, we want to provide additional Alcor specific matrix collection to monitor:
+
+. Network Health - can network traffic go through?
+. Network Component/agent Health - is OVS running?
+. Network Usage - are we bottlenecked on the 40G physical NIC?
+. Network Performance - is the customer traffic going though with no latency?
 
 == Log Manager
 
