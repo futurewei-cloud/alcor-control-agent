@@ -7,11 +7,11 @@ v0.1, 2020-03-20
 
 This is the interface between Alcor VPC Controller and Alcor Control Agent(ACA). Kafka or gRPC (for control fast path) was used to send goal state messages from Alcor VPC Controllers to ACA running on each compute host. ACA subscribes to topics published by Alcor VPC Controller in Kafka in order to receive targetted message to specific ACA. ACA can also publish (response/health/error) information back to Alcor VPC Controllers through Kafka or gRPC.
 
-== Goal State Handler
+== Network State Handler
 
 This module deserializes the Kafka message from Alcor VPC Controller, determine the action(s) needed from the content of the goal state message and then involve the corresponding interface(s) to handle the requests.
 
-== Dataplane Programming Interface
+== Core Network Programming Interface
 
 This interface is used to program VPC/Subnet/Port configurations on compute hosts. To support different dataplane implementations (e.g. OVS and Mizar), abstraction layer was implemented in ACA. Dataplane Programming Interface is the same for all dataplane. Based on the ACA startup configuration, it will also determine the network type like VxLAN or VLAN and default to VxLAN. 
 
@@ -21,7 +21,7 @@ The work item scheduler is part of Dataplane Programming Interface and it is use
 
 == L3 Programming Interface
 
-This interface is used to program L3 routing information. The current neutron implementation uses NAT with iptables on the traffic before going out to br-ex bridge. We can consider other solutions like flow based traffic handling and even offload it to hardware.
+This interface is used to program L3 routing information, it also including programming of network ACLs on routers. The current neutron implementation uses NAT with iptables on connection between br-int and br-ex bridges. We can consider other solutions like flow based traffic handling or even offload it to hardware.
 
 == DHCP Programming Interface
 
@@ -34,6 +34,10 @@ This interface is responsible to configure and update the security group policy 
 == QoS (Metering) Interface
 
 Responsible to manage Networking QoS, to be done in software or hardware. Out of scope for the current design.
+
+== Unified Flow Manager
+
+As physical NIC reached 40G and targetting for 100G/200G speed, we cannot rely on host CPU power to process network packets as it would become bottleneck for network performance. With many components (Router/NACL/Security Policy) needed to inspect and modify network packages based on flows, we need to have a unified flow manager to centralize all the flow rules with the plan to offload the processing of it in NIC hardware. This is needed to support the performance and latency requirement for next generation SDN datacenter. Note that this is need to support the current network offload feature like SRIOV.
 
 == Network Health Monitor
 
