@@ -3,6 +3,8 @@ Eric Li <sze.li@futurewei.com>
 v0.1, 2020-03-20
 :toc: right
 
+image::images/Agent_components.JPG["Component diagram", width=800, link="images/Agent_components.JPG"]
+
 == Communication Manager
 
 This is the interface between Alcor VPC Controller and Alcor Control Agent(ACA). Kafka or gRPC (for control fast path) was used to send goal state messages from Alcor VPC Controllers to ACA running on each compute host. ACA subscribes to topics published by Alcor VPC Controller in Kafka in order to receive targetted message to specific ACA. ACA can also publish (response/health/error) information back to Alcor VPC Controllers through Kafka or gRPC.
@@ -11,33 +13,39 @@ This is the interface between Alcor VPC Controller and Alcor Control Agent(ACA).
 
 This module deserializes the Kafka message from Alcor VPC Controller, determine the action(s) needed from the content of the goal state message and then involve the corresponding interface(s) to handle the requests.
 
-== Core Network Programming Interface
+== Dataplane Abstraction Layer
 
-This interface is used to program VPC/Subnet/Port configurations on compute hosts. To support different dataplane implementations (e.g. OVS and Mizar), abstraction layer was implemented in ACA. Dataplane Programming Interface is the same for all dataplane. Based on the ACA startup configuration, it will also determine the network type like VxLAN or VLAN and default to VxLAN. 
+To support different dataplane implementations (e.g. OVS and Mizar), abstraction layer was implemented in ACA. All the interfaces here are the same for all dataplane. 
 
-=== Work Item Scheduler
+=== Core Network Programming Interface
 
-The work item scheduler is part of Dataplane Programming Interface and it is used to execute the VPC/Subnet/Port configuration updates in parallel by default. There is a huge performance improvement when updating thousands of ports in parallel instead of updating serially based on data. The key to the dataplane abstraction is implementated here by scheduling the correct dataplane programming modules based on ACA startup configuration.
+This interface is used to program VPC/Subnet/Port configurations on compute hosts. Based on the ACA startup configuration, it will also determine the network type like VxLAN or VLAN and default to VxLAN. 
 
-== L3 Programming Interface
+=== L3 Programming Interface
 
 This interface is used to program L3 routing information, it also including programming of network ACLs on routers. The current neutron implementation uses NAT with iptables on connection between br-int and br-ex bridges. We can consider other solutions like flow based traffic handling or even offload it to hardware.
 
-== DHCP Programming Interface
+=== DHCP Programming Interface
 
 This interface is used to program DHCP service needed for VM/Container that requests dynamic IP address. It talks to a dhcp service, likely dnsmasq, and programmed it with known mac address to IP mapping as new ports were assigned by Alcor server.
 
-== Security Policy Interface
+=== Security Policy Interface
 
 This interface is responsible to configure and update the security group policy on vPorts connected to VM/Container. The current neutron implementation uses linux brige and iptable rule. We can consider other solutions like flow based or label based traffic marking to apply the policy at the lower layer or even offload to hardware.
 
-== QoS (Metering) Interface
+=== QoS (Metering) Interface
 
 Responsible to manage Networking QoS, to be done in software or hardware. Out of scope for the current design.
 
+=== Work Item Scheduler
+
+Work item scheduler is used to execute the configuration updates for different dataplane implementation. It runs the workitems in parallel by default. There is a huge performance improvement when updating thousands of ports in parallel instead of updating serially based on data.
+
 == Unified Flow Manager
 
-As physical NIC reached 40G and targetting for 100G/200G speed, we cannot rely on host CPU power to process network packets as it would become bottleneck for network performance. With many components (Router/NACL/Security Policy) needed to inspect and modify network packages based on flows, we need to have a unified flow manager to centralize all the flow rules with the plan to offload the processing of it in NIC hardware. This is needed to support the performance and latency requirement for next generation SDN datacenter. Note that this is need to support the current network offload feature like SRIOV.
+As physical NIC reached 40G and targetting for 100G/200G speed, we cannot rely on host CPU power to process network packets as it would become bottleneck for network performance. With many components (Router/NACL/Security Policy) needed to inspect and modify network packages based on flows, we need to have a unified flow manager to centralize all the flow rules with the plan to offload the processing of it in NIC hardware. This is needed to support the performance and latency requirement for next generation SDN datacenter. Note that this is need to support the current network offload features like SRIOV.
+
+image::images/Agent_unified_flow_manager.JPG["unified flow manager diagram", width=800, link="images/Agent_unified_flow_manager.JPG"]
 
 == Network Health Monitor
 
