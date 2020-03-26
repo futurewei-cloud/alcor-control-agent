@@ -37,9 +37,9 @@ This interface is responsible to configure and update the security group policy 
 
 Responsible to manage Networking QoS, to be done in software or hardware. Out of scope for the current design.
 
-=== Work Item Scheduler
+=== Work Item Executor
 
-Work item scheduler is used to execute the configuration updates for different dataplane implementation. It runs the workitems in parallel by default. There is a huge performance improvement when updating thousands of ports in parallel instead of updating serially based on data.
+Work item executor is used to execute the configuration updates for different dataplane implementation. It runs the workitems in parallel by default. There is a huge performance improvement when updating thousands of ports in parallel instead of updating serially based on data.
 
 == Unified Flow Manager
 
