@@ -714,7 +714,7 @@ TEST(net_config_test_cases, port_CREATE_integrated)
 {
   string port_name = "11111111-2222-3333-4444-555555555555";
   string vpc_id = "99d9d709-8478-4b46-9f3f-2206b1023fd3";
-  string received_ns = "received-ns-" + vpc_id;
+  string vpc_ns = "vpc-ns-" + vpc_id;
   string ip_address = "10.0.0.2";
   string mac_address = "fa:16:3e:d7:f2:6c";
   string gateway_ip = "10.0.0.1";
@@ -741,7 +741,7 @@ TEST(net_config_test_cases, port_CREATE_integrated)
   PortConfiguration_builder->set_network_id("superSubnetID");
   PortConfiguration_builder->set_id(port_name);
   PortConfiguration_builder->set_name("FriendlyPortName");
-  PortConfiguration_builder->set_network_ns(received_ns);
+  PortConfiguration_builder->set_network_ns("");
   PortConfiguration_builder->set_mac_address(mac_address);
   PortConfiguration_builder->set_veth_name(veth_name);
 
@@ -809,23 +809,23 @@ TEST(net_config_test_cases, port_CREATE_integrated)
   // check to ensure the endpoint is created and setup correctly
 
   // the temp veth should be in the new namespace now
-  cmd_string = IP_NETNS_PREFIX + "exec " + received_ns + " ip link list | grep " + temp_name_string;
+  cmd_string = IP_NETNS_PREFIX + "exec " + vpc_ns + " ip link list | grep " + temp_name_string;
   rc = Aca_Net_Config::get_instance().execute_system_command(cmd_string);
   EXPECT_EQ(rc, EXIT_SUCCESS);
 
   // was the ip set correctly?
-  cmd_string = IP_NETNS_PREFIX + "exec " + received_ns + " ifconfig " +
+  cmd_string = IP_NETNS_PREFIX + "exec " + vpc_ns + " ifconfig " +
                temp_name_string + " | grep " + ip_address;
   rc = Aca_Net_Config::get_instance().execute_system_command(cmd_string);
   EXPECT_EQ(rc, EXIT_SUCCESS);
 
   // was the default gw set correctly?
-  cmd_string = IP_NETNS_PREFIX + "exec " + received_ns + " ip route" + " | grep " + gateway_ip;
+  cmd_string = IP_NETNS_PREFIX + "exec " + vpc_ns + " ip route" + " | grep " + gateway_ip;
   rc = Aca_Net_Config::get_instance().execute_system_command(cmd_string);
   EXPECT_EQ(rc, EXIT_SUCCESS);
 
   // was the mac set correctly?
-  cmd_string = IP_NETNS_PREFIX + "exec " + received_ns + " ifconfig " +
+  cmd_string = IP_NETNS_PREFIX + "exec " + vpc_ns + " ifconfig " +
                temp_name_string + " | grep " + mac_address;
   rc = Aca_Net_Config::get_instance().execute_system_command(cmd_string);
   EXPECT_EQ(rc, EXIT_SUCCESS);
@@ -845,7 +845,7 @@ TEST(net_config_test_cases, port_CREATE_integrated)
   new_subnet_states->clear_configuration();
 
   // check to ensure the end point has been renamed to the final name
-  cmd_string = IP_NETNS_PREFIX + "exec " + received_ns + " ip link list | grep " + veth_name;
+  cmd_string = IP_NETNS_PREFIX + "exec " + vpc_ns + " ip link list | grep " + veth_name;
   rc = Aca_Net_Config::get_instance().execute_system_command(cmd_string);
   EXPECT_EQ(rc, EXIT_SUCCESS);
 
@@ -870,7 +870,7 @@ TEST(net_config_test_cases, port_CREATE_integrated)
   EXPECT_EQ(rc, EXIT_SUCCESS);
 
   // delete the newly created ns
-  cmd_string = IP_NETNS_PREFIX + "delete " + received_ns;
+  cmd_string = IP_NETNS_PREFIX + "delete " + vpc_ns;
 
   rc = Aca_Net_Config::get_instance().execute_system_command(cmd_string);
   EXPECT_EQ(rc, EXIT_SUCCESS);
