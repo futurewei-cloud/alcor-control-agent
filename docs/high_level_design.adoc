@@ -3,6 +3,12 @@ Eric Li <sze.li@futurewei.com>
 v0.2, 2020-03-01
 :toc: right
 
+[width="100%",options="header"]
+|====================
+|Title|Authors|Version
+|Cloud Fabric Alcor Control Agent|@erictheone|0.2
+|====================
+
 == Summary
 
 The Cloud Fabric Alcor Control Agent (ACA) runs on each host machine. It serves as a stateless proxy between Alcor controller and host machine networking components for control plane operations.
@@ -69,7 +75,7 @@ There will be another thread for async gRPC server to handle goal state update r
 == API Versioning of Alcor Control Agent and Alcor VPC Controller
 
 ==== Motivation
-When making major changes to code, the components need to be versioned in such a way so that old clients have time to upgrade, and new clients can use the new features without issues.
+When making major changes to code, the components need to be versioned in such a way so that old clients have time to upgrade, and new clients can use the new features without issues. <<api1>> <<api2>>
 
 ==== Strategy
 The strategy is to have the two components, agent and controller, explicitly state the API version in their messages.
@@ -82,7 +88,7 @@ upgraded, and deprecated.
 For major version upgrades, the strategy will be to
 
 . Deploy changes to all ACA first
-. Deploy changes to Network Controller once all Agents have been upgraded
+. Deploy changes to Alcor Controller once all Agents have been upgraded
 
 ==== Example
 For example, say there is a new update to support SR-IOV.
@@ -99,8 +105,6 @@ Gtest framework is used for unit testing and some functional testing. Completed 
 
 == References
 
-. https://docs.openstack.org/neutron/pike/contributor/internals/openvswitch_agent.html
-. https://github.com/kubernetes/community/blob/master/contributors/design-proposals/release/versioning.md
-. https://dzone.com/articles/backward-compatibility-check-for-rest-apis
-. https://stackoverflow.com/questions/29871744/how-do-you-manage-the-underlying-codebase-for-a-versioned-api
+- [[[api1,1]]] https://dzone.com/articles/backward-compatibility-check-for-rest-apis
+- [[[api2,2]]] https://stackoverflow.com/questions/29871744/how-do-you-manage-the-underlying-codebase-for-a-versioned-api
 

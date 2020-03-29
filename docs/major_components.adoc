@@ -3,6 +3,12 @@ Eric Li <sze.li@futurewei.com>
 v0.1, 2020-03-20
 :toc: right
 
+[width="100%",options="header"]
+|====================
+|Title|Authors|Version
+|Alcor Control Agent Major Components|@erictheone|0.1
+|====================
+
 image::images/Agent_components.JPG["Component diagram", width=800, link="images/Agent_components.JPG"]
 
 == Communication Manager
@@ -59,8 +65,8 @@ We like to use netdata as our monitoring solution which provides many of the imp
 == Log Manager
 
 The log should at least contain a timestamp, source file name and line number, message. The ACA code should be able to specify the log level and can configure the targetted log level at runtime.
-Syslog is a good target framework, it is a proven mechanism in linux and it is https://askubuntu.com/questions/184949/how-do-i-limit-the-size-of-my-syslog[configurable for our needs]. See reference session for more information.
+Syslog is a good target framework, it is a proven mechanism in linux and it is https://askubuntu.com/questions/184949/how-do-i-limit-the-size-of-my-syslog[configurable for our needs]. See reference session for more information. <<logging>>
 
-== Reference
+== References
 
-. https://stackoverflow.com/questions/158457/daemon-logging-in-linux[Logging in Linux]
+- [[[logging,1]]] Logging in Linux: https://stackoverflow.com/questions/158457/daemon-logging-in-linux
