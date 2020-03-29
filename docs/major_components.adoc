@@ -67,6 +67,7 @@ We like to use netdata as our monitoring solution which provides many of the imp
 The log should at least contain a timestamp, source file name and line number, message. The ACA code should be able to specify the log level and can configure the targetted log level at runtime.
 Syslog is a good target framework, it is a proven mechanism in linux and it is https://askubuntu.com/questions/184949/how-do-i-limit-the-size-of-my-syslog[configurable for our needs]. See reference session for more information. <<logging>>
 
+[bibliography]
 == References
 
 - [[[logging,1]]] Logging in Linux: https://stackoverflow.com/questions/158457/daemon-logging-in-linux

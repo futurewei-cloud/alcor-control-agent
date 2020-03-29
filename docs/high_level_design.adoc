@@ -103,6 +103,7 @@ For example, say there is a new update to support SR-IOV.
 == Testing strategy
 Gtest framework is used for unit testing and some functional testing. Completed end to end and functional testing will be developed by plugging in controller, agent and Mizar together under Jenkins CI/CD framework. We are planning to leverage gcov+lcov for code coverage analysis.
 
+[bibliography]
 == References
 
 - [[[api1,1]]] https://dzone.com/articles/backward-compatibility-check-for-rest-apis
