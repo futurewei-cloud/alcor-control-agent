@@ -42,7 +42,7 @@ root@ca62b6feec63:/mnt/host/code/AlcorControlAgent# ./build/bin/AlcorControlAgen
 
 # Build the container while behind a proxy
 
-If the docker installation environment is behind proxy the Docker.proxy file needs
+If the docker installation environment is behind proxy the Dockerfile.proxy file needs
 to be used to build the container.
 
 The proxy imposes the following constrains to the build.
