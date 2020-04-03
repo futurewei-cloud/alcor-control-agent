@@ -61,11 +61,10 @@ In order to have a scalable, high performance and highly reliable communication 
 We need an ultra low latency Alcor control path to support customer scenarios like serverless where it has very low latency budget (<100ms) for end to end. An async gRPC server was added into ACA in conjunction with the Kakfa cosumer to process goal state updates faster. See the "Thread modeling" session below for more information the threading implementation.
 
 . Security Group API: +
-https://github.com/openstack/neutron/blob/master/neutron/agent/securitygroups_rpc.py
+We plan to provide OpenStack-compatible security group feature<<securitygroups>> either through linux bridge and iptable, or our new unified flow manager so that it can be offloaded to hardware.
 
 . Authentication and Authorization: +
-Openstack documentation on using authentication token: +
-https://docs.openstack.org/ocata/config-reference/common-configurations/auth.html
+TBD. For reference, Openstack common configuration uses authentication token<<auth>>. +
 
 == Thread modeling
 There will be one thread for Kafka consumer to receive Alcor VPC controller goal state update. Another thread should be used to post the respond on the goal state update result to Kakfa so that the controller can process it.
@@ -108,4 +107,5 @@ Gtest framework is used for unit testing and some functional testing. Completed 
 
 - [[[api1,1]]] https://dzone.com/articles/backward-compatibility-check-for-rest-apis
 - [[[api2,2]]] https://stackoverflow.com/questions/29871744/how-do-you-manage-the-underlying-codebase-for-a-versioned-api
-
+- [[[securitygroups,3]]] https://github.com/openstack/neutron/blob/master/neutron/agent/securitygroups_rpc.py
+- [[[auth,4]]] https://docs.openstack.org/ocata/config-reference/common-configurations/auth.html
