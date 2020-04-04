@@ -1,0 +1,92 @@
+= Communication Protocol with Mizar
+Eric Li <sze.li@futurewei.com>
+v0.1, 2020-03-20
+:toc: right
+
+== Communication between ACA and kernel mode Transit Agent
+
+                    +--------------------+
+                    |  Alcor Control     |
+                    |     Agent          |
+                    +--------------------+
+                    |  Transit Daemon    |
+                    +------------------ -+   User Mode
+         +--------------------------------------------------+
+                    +--------------------+   Kernel Mode
+                    |  Transit Agent     |
+                    |     xdp program    |
+                    +--------------------+
+
+== Workflow with Mizar
+
+. Customer creates a new VPC
+	.. Allocate transit router
+		... Smart placement [router1, router2]
+		... Go to router1, router2 and add VPC to the VPC table (Call “Update VPC”) (VPC table)
+. Customer creates new network(subnet)
+	.. Allocate transit switch
+		... Smart placement [Switch1, Switch2]
+		... Go to router1, and router2 and “Update net” (net table)
+		... Go to s1, s2 and call “Update net" (net table)
+. Customer create a VM with endpoint 1 at net0
+	.. Allocate endpoint
+		... Go to all switches (s1,s2) update endpoint
+			.... make sure at least one or more transit switch ready before the next step
+			.... TODO: need to be able to notify network controller that a particular transit switch programming is completed
+		... Go to VM Host create endpoint and update the transit switch info in endpoint table
+
+== Mizar Network Configuration
+
+[width="100%",options="header"]
+|====================
+| VPC table  |
+| VPC0 | {10.0.0.0/16,[172.3,172.4]}
+|====================
+
+[width="100%",options="header"]
+|====================
+|Network Table   |
+|Net0   |{10.0.0.0/25,[172.1,172.2]}
+|====================
+
+[width="100%",options="header"]
+|====================
+|Endpoint Table   |  |  |
+|10.0.0.1  |Net0  |VPC0  |[172.1,...]
+|10.0.0.2    |Net0  |VPC0  |[172.2,...]
+|====================
+
+== Transit Agent Manager
+
+This will interface with user mode Transit daemon to program the transit router/switch/endpoint. Using the below APIs:
+
+*mizar/src/rpcgen/trn_rpc_protocol.x*
+
+[source,c]
+------------------------------------------------------------
+int UPDATE_VPC(rpc_trn_vpc_t) = 1;
+int UPDATE_NET(rpc_trn_network_t) = 2;
+int UPDATE_EP(rpc_trn_endpoint_t) = 3;
+int UPDATE_AGENT_EP(rpc_trn_endpoint_t) = 4;
+int UPDATE_AGENT_MD(rpc_trn_agent_metadata_t) = 5;
+
+int DELETE_VPC(rpc_trn_vpc_key_t) = 6;
+int DELETE_NET(rpc_trn_network_key_t) = 7;
+int DELETE_EP(rpc_trn_endpoint_key_t) = 8;
+int DELETE_AGENT_EP(rpc_trn_endpoint_key_t) = 9;
+int DELETE_AGENT_MD(void) = 10;
+
+rpc_trn_vpc_t      GET_VPC(rpc_trn_vpc_key_t) = 11;
+rpc_trn_network_t  GET_NET(rpc_trn_network_key_t) = 12;
+rpc_trn_endpoint_t GET_EP(rpc_trn_endpoint_key_t) = 13;
+rpc_trn_endpoint_t GET_AGENT_EP(rpc_trn_endpoint_key_t) = 14;
+rpc_trn_agent_metadata_t GET_AGENT_MD(void) = 15;
+
+int LOAD_TRANSIT_XDP(rpc_trn_xdp_intf_t) = 16;
+int LOAD_TRANSIT_AGENT_XDP(rpc_trn_xdp_intf_t) = 17;
+
+int UNLOAD_TRANSIT_XDP(rpc_intf_t) = 18;
+int UNLOAD_TRANSIT_AGENT_XDP(rpc_intf_t) = 19;
+------------------------------------------------------------
+
+Note: XDP programs are preloaded on physical NIC when system is booted up. For XDP programs attached to virtual interfaces, they will be loaded on demand by ACA when new ports are created on VMs or containers.
