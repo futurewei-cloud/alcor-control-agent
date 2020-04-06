@@ -1,0 +1,217 @@
+= DHCP Programming Design
+Eric Li <sze.li@futurewei.com>
+v0.1, 2020-04-06
+:toc: right
+
+== Communication between ACA and DHCP Service
+
+                    +--------------------+
+                    |  Alcor Control     |
+                    |     Agent          |
+                    +--------------------+
+                    |  DHCP Programming  |
+                    |     Interface      |
+                    +------------------ -+
+         +--------------------------------------------------+
+                    +--------------------+
+                    |  DHCP Service      |
+                    |     e.g. dnsmasq   |
+                    +--------------------+
+
+== Extreme Performance, High efficient and Redundent Design
+
+Our design is to have DHCP server running on each compute node, just to handle DHCP request for VMs/Controllers running on that particular compute node only so that the provisioning message is kept minimal. The local DHCP server will provide very fast response because the DHCP messages are all handled within the internal OVS bridge (br-int) without even going out to the physical NIC. The number of DHCP entries are smalls which provide the most efficient look up time.
+
+In the event if the local DHCP server is down or slow to response. The DHCP request can be handled by the central DHCP server running on network node. This path is consider as the non-optimized path but it will still work.
+
+== Workflow with Alcor
+
+. Nova will call Alcor to allocation a port object in Alcor database
+    .. Virtual MAC and IP will be assigned
+. A port is created by Nova agent in a compute host for VM/Container usage
+	.. Network State message will be sent from Alcor to Alcor Control Agent
+        ... it will contain the endpoint informaiton to program the new port
+        ... it will also contain DHCP information to program the local DHCP server about this particular port
+. Alcor controller will also send network state message to program the central DHCP server(s) running on network node(s)
+	.. that can handle any DHCP requests within a tenent network
+    .. need to worry about scaling and performance issue
+        ... one DHCP server has 1000s enties
+        ... one network node handling 1000s DHCP servers when handling 1000s of networks
+        ... the good news is most of the DHCP requests should be handled by the local DHCP server already
+
+== DHCP Configuration on Local Host
+
+[width="100%",options="header"]
+|====================
+| Timestamp  | MAC | Assigned IPv4 | Hostname
+| 1586192434 | fa:16:3e:66:72:1f | 192.168.222.45  | host-192-168-222-45
+| 1586190665 | fa:16:3e:28:19:8d | 192.168.222.166 | host-192-168-222-166
+|====================
+
+== Alcor Network State Update
+
+The Alcor Network State message will be updated to include DHCP configuration state.
+
+=== Option 1 (prefered)
+
+Adding a new DHCP configuration into our Network State message to allow flexibility of updating DHCP configuration independently.
+
+*alcor/src/schema/proto3/goalstate.proto* // ***UPDATED***
+
+[source,java]
+------------------------------------------------------------
+syntax = "proto3";
+
+package alcorcontroller;
+
+option java_package = "com.futurewei.alcor.controller.schema";
+
+import "vpc.proto";
+import "subnet.proto";
+import "port.proto";
+import "securitygroup.proto";
+import "dhcp.proto";  // ***NEW***
+
+message GoalState {
+   repeated VpcState vpc_states = 1;
+   repeated SubnetState subnet_states = 2;
+   repeated PortState port_states = 3;
+   repeated SecurityGroupState security_group_states = 4;
+   repeated DHCPState dhcp_states = 5;  // ***NEW***
+}
+------------------------------------------------------------
+
+*alcor/src/schema/proto3/dhcp.proto* // ***NEW***
+
+[source,java]
+------------------------------------------------------------
+syntax = "proto3";
+
+package alcorcontroller;
+
+option java_package = "com.futurewei.alcor.controller.schema";
+option java_outer_classname = "DHCP";
+
+import "common.proto";
+
+message DHCPConfiguration {
+    int32 version = 1;
+
+    string mac_address = 2;
+    string ip_address = 3;    
+    string ep_host_name = 4;
+}
+
+message DHCPState {
+    OperationType operation_type = 1;
+    DHCPConfiguration configuration = 2;
+}
+------------------------------------------------------------
+
+=== Option 2
+
+Leverage the exiting Port configuration message to program DHCP at the same time, not that this option will be tricky to program DHCP only on the network node when EP is not privisioned there.
+
+*alcor/src/schema/proto3/port.proto* // ***NEW***
+
+[source,java]
+------------------------------------------------------------
+syntax = "proto3";
+
+package alcorcontroller;
+
+option java_package = "com.futurewei.alcor.controller.schema";
+option java_outer_classname = "Port";
+
+import "common.proto";
+
+message PortConfiguration {
+    int32 version = 1;
+
+    string project_id = 2;
+    string network_id = 3;
+    string id = 4;
+    string name = 5;
+    string network_ns = 6;
+    string mac_address = 7;
+    string veth_name = 8;
+
+    message HostInfo {
+        string ip_address = 1;
+        string mac_address = 2;
+    }
+
+    message FixedIp {
+        string subnet_id = 1;
+        string ip_address = 2;
+    }
+
+    message SecurityGroupId {
+        string id = 1;
+    }
+
+    message AllowAddressPair {
+        string ip_address = 1;
+        string mac_address = 2;
+    }
+
+    message ExtraDhcpOption {
+        string name = 1;
+        string value = 2;
+    }
+
+    HostInfo host_info = 9;
+    string ep_host_name = 10; // ***NEW***
+    repeated FixedIp fixed_ips = 10;
+    repeated SecurityGroupId security_group_ids = 11;
+    repeated AllowAddressPair allow_address_pairs = 12;
+    repeated ExtraDhcpOption extra_dhcp_options = 13;
+}
+
+message PortState {
+    OperationType operation_type = 1; // ***UPDATE*** have an operation for DHCP entry add/delete?
+    PortConfiguration configuration = 2;
+}
+------------------------------------------------------------
+
+== DHCP Programming Interface
+
+The Alcor Network State message will be updated to include DHCP configuration state.
+
+[source,c++]
+------------------------------------------------------------
+// DHCP programming interface class
+class Dhcp_Programming_Interface {
+   public:
+      // pure virtual function providing interface framework.
+      virtual int initialize() = 0;
+
+      virtual int add_dhcp_entry(string mac_address, string ip_address,
+                                    string ep_host_name) = 0;
+
+      virtual int delete_dhcp_entry(string mac_address) = 0;
+};
+ 
+// dnsmasq implementation classes
+class Rectangle: public Dhcp_Programming_Interface {
+   public:
+      int initialize() { 
+          // initialize the dnsmasq service
+          . . .
+          return status;
+      }
+
+      int add_dhcp_entry(string mac_address, string ip_address,
+                                    string ep_host_name) { 
+          // add dhcp entry into dnsmasq
+          . . .
+          return status;
+      }
+
+      int delete_dhcp_entry(string mac_address) { 
+          // delete dhcp entry in dnsmasq
+          . . .
+          return status;
+      }
+};
+------------------------------------------------------------
