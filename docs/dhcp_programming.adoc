@@ -193,7 +193,7 @@ class Dhcp_Programming_Interface {
 };
  
 // dnsmasq implementation classes
-class Rectangle: public Dhcp_Programming_Interface {
+class Dnsmasq_service: public Dhcp_Programming_Interface {
    public:
       int initialize() { 
           // initialize the dnsmasq service
