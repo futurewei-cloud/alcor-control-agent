@@ -11,7 +11,7 @@ v0.1, 2020-04-06
                     +--------------------+
                     |  DHCP Programming  |
                     |     Interface      |
-                    +------------------ -+
+                    +--------------------+
          +--------------------------------------------------+
                     +--------------------+
                     |  DHCP Service      |
@@ -162,10 +162,10 @@ message PortConfiguration {
 
     HostInfo host_info = 9;
     string ep_host_name = 10; // ***NEW***
-    repeated FixedIp fixed_ips = 10;
-    repeated SecurityGroupId security_group_ids = 11;
-    repeated AllowAddressPair allow_address_pairs = 12;
-    repeated ExtraDhcpOption extra_dhcp_options = 13;
+    repeated FixedIp fixed_ips = 11;
+    repeated SecurityGroupId security_group_ids = 12;
+    repeated AllowAddressPair allow_address_pairs = 13;
+    repeated ExtraDhcpOption extra_dhcp_options = 14;
 }
 
 message PortState {
