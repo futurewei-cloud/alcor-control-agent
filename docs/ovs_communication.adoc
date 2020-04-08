@@ -1,0 +1,81 @@
+= DHCP Programming Design
+Eric Li <sze.li@futurewei.com>
+Xiaodong Zhang <xzhang2@futurewei.com>
+v0.1, 2020-04-07
+:toc: right
+
+== Communication between ACA and OVS
+
+TBD:
+
+                    +--------------------+
+                    |  Alcor Control     |
+                    |     Agent          |
+                    +--------------------+
+                    |  ovs-vsctl and     |
+                    |   ovs-ofctl only?  |
+                    +--------------------+
+         +--------------------------------------------------+
+                    +--------------------+
+                    |  OVS-db?           |
+                    +--------------------+
+
+== Highlevel Architecture, Why is it so special?
+
+TBD - Eric/XiaoDong
+
+
+== OVS Implementation
+
+TBD - what is OVS, why are we using it, what is the nice thing about OVS?
+
+
+== Workflow with Alcor for port programming
+
+TBD - Eric
+
+
+== Programming OVS
+
+TBD - XiaoDong
+
+How do we call into OVS, what is the exact command we use to program a new port? What is the port configuration info needed?
+
+
+== OVS-db entries on Local Host
+
+TBD - will this be interesting?
+
+
+== Alcor Network State Update
+
+TBD - do we need to modify the current network state message? 
+
+
+== Dataplane Programming Interface
+
+TBD - Eric 
+
+
+== OVS Implementation
+
+TBD - XiaoDong
+
+. when and who will initialize OVS? What is the initialization steps
+. when and who will create the main br-int bridge?
+. what happen when there are multiple physical NICs on the system, which NIC do we pick to hook up br-int?
+. Do we create the br-tun bridge when we see it is vxlan/gre? we decided to default to vxlan if it is not specified
+.. what is the exact command to connect the new port to the new br-tun?
+.. what is the exact command to program the new br-tun to do encap and decap
+. what happen if host crashed, do we save the OVS config locally and restore it? Or we ask the Alcor controller for the whole set of cofiguration upon restart
+
+
+== Compare to Neutron Implementation
+
+TBD. How is the perf, latency and availablity etc compare to Neutron?
+
+
+[bibliography]
+== References
+
+- [[[ovs,1]]] http://www.thekelleys.org.uk/dnsmasq/doc.html - need a OVS reference

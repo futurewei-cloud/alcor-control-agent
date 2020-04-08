@@ -9,7 +9,7 @@
 // * xref:comm.adoc[Controller and Control Agent Communication]
 * xref:compute_communication.adoc [Communication Protocol with Arktos Compute]
 * https://github.com/xieus/alcor/blob/docs/design/docs/visionary_design/dataplane_abstraction.adoc[Dataplane Abstraction]
-** Integration with OVS
+** xref:ovs_communication.adoc[Integration with OVS]
 ** xref:mizar_communication.adoc[Integration with Mizar]
 * xref:dhcp_programming.adoc [DHCP Programming Design]
 
