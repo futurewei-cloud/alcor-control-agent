@@ -38,6 +38,7 @@ In the event if the local DHCP server is down or slow to response. The DHCP requ
         ... one DHCP server has 1000s enties
         ... one network node handling 1000s DHCP servers when handling 1000s of networks
         ... the good news is most of the DHCP requests should be handled by the local DHCP server already
+    .. [TODO] need to figure out the number of central DHCP server needed and its placement in the network nodes
 
 == DHCP Configuration on Local Host
 
@@ -47,6 +48,7 @@ In the event if the local DHCP server is down or slow to response. The DHCP requ
 | 1586192434 | fa:16:3e:66:72:1f | 192.168.222.45  | host-192-168-222-45
 | 1586190665 | fa:16:3e:28:19:8d | 192.168.222.166 | host-192-168-222-166
 |====================
+[TODO] Do we need entry for stateless DHCPv6 support?
 
 == Alcor Network State Update
 
@@ -191,7 +193,28 @@ class Dhcp_Programming_Interface {
 
       virtual int delete_dhcp_entry(string mac_address) = 0;
 };
- 
+------------------------------------------------------------
+
+== DNSMASQ Implementation
+
+Dnsmasq is a lightweight program that is included in most Linux distributions. It is used by neutron to provide DHCP and DNS services. It supports IPv6, along with stateless mode in DHCPv6.<<dnsmasq>>
+
+The way for agent to control dnsmasq is by changing the following files:
+
+. dhcp-hostsfile - contains a list of host to IP mappings
+. dhcp-optsfile  - contains a list of dhcp option to use
+. dhcp-leasefile - record the list of DHCP lease already given out 
+
+Highlevel workflow:
+
+. Control Agent received DHCP configuration from Alcor Controller
+. Control Agent update one or more dnsmasq files
+. Control Agent send SIGHUP signal to dnsmasq program to force it to re-read the dnsmasq file and take in the new configuration
+
+Below is the sample implementation:
+
+[source,c++]
+------------------------------------------------------------
 // dnsmasq implementation classes
 class Dnsmasq_service: public Dhcp_Programming_Interface {
    public:
@@ -215,3 +238,17 @@ class Dnsmasq_service: public Dhcp_Programming_Interface {
       }
 };
 ------------------------------------------------------------
+
+== DNS support
+
+TBD
+
+== Compare to Neutron Implementation
+
+TBD. How is the perf, latency and availablity etc compare to Neutron?
+
+
+[bibliography]
+== References
+
+- [[[dnsmasq,1]]] http://www.thekelleys.org.uk/dnsmasq/doc.html
