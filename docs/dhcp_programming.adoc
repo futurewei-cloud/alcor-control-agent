@@ -201,9 +201,42 @@ Dnsmasq is a lightweight program that is included in most Linux distributions. I
 
 The way for agent to control dnsmasq is by changing the following files:
 
-. dhcp-hostsfile - contains a list of host to IP mappings
-. dhcp-optsfile  - contains a list of dhcp option to use
-. dhcp-leasefile - record the list of DHCP lease already given out 
+--dhcp-hostsfile - contains a list of host to IP mappings
+[source,c++]
+------------------------------------------------------------
+fa:16:3e:da:31:c6,host-192-168-222-1.openstacklocal,192.168.222.1
+fa:16:3e:6d:a5:02,host-192-168-222-2.openstacklocal,192.168.222.2
+fa:16:3e:28:19:8d,host-192-168-222-166.openstacklocal,192.168.222.166
+fa:16:3e:66:72:1f,host-192-168-222-45.openstacklocal,192.168.222.45
+fa:16:3e:08:b7:0e,host-192-168-222-195.openstacklocal,192.168.222.195
+fa:16:3e:cf:83:b6,host-192-168-222-16.openstacklocal,192.168.222.16
+------------------------------------------------------------
+--addn-hosts - contains a list of IP to hostname mappings
+[source,c++]
+------------------------------------------------------------
+192.168.222.1	host-192-168-222-1.openstacklocal host-192-168-222-1
+192.168.222.2	host-192-168-222-2.openstacklocal host-192-168-222-2
+192.168.222.166	host-192-168-222-166.openstacklocal host-192-168-222-166
+192.168.222.45	host-192-168-222-45.openstacklocal host-192-168-222-45
+192.168.222.195	host-192-168-222-195.openstacklocal host-192-168-222-195
+192.168.222.16	host-192-168-222-16.openstacklocal host-192-168-222-16
+------------------------------------------------------------
+--dhcp-optsfile - contains a list of dhcp option to use
+[source,c++]
+------------------------------------------------------------
+tag:subnet-c06d31cc-2c40-466d-b9e5-ed020c1a1e2d,option:classless-static-route,169.254.169.254/32,192.168.222.1,0.0.0.0/0,192.168.2
+22.1
+tag:subnet-c06d31cc-2c40-466d-b9e5-ed020c1a1e2d,249,169.254.169.254/32,192.168.222.1,0.0.0.0/0,192.168.222.1
+tag:subnet-c06d31cc-2c40-466d-b9e5-ed020c1a1e2d,option:router,192.168.222.1
+------------------------------------------------------------
+--dhcp-leasefile - record the list of DHCP lease already given out 
+[source,c++]
+------------------------------------------------------------
+1586498437 fa:16:3e:cf:83:b6 192.168.222.16 host-192-168-222-16 01:fa:16:3e:cf:83:b6
+1586495302 fa:16:3e:08:b7:0e 192.168.222.195 host-192-168-222-195 01:fa:16:3e:08:b7:0e
+1586494831 fa:16:3e:66:72:1f 192.168.222.45 host-192-168-222-45 01:fa:16:3e:66:72:1f
+1586493064 fa:16:3e:28:19:8d 192.168.222.166 host-192-168-222-166 01:fa:16:3e:28:19:8d
+------------------------------------------------------------
 
 Highlevel workflow:
 
