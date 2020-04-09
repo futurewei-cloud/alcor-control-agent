@@ -5,7 +5,7 @@ v0.1, 2020-04-07
 
 == Communication between ACA and OVS
 
-TBD:
+TBD: XiaoDong to update the picture below, it will be good to add some text here also
 
                     +--------------------+
                     |  Alcor Control     |
@@ -25,11 +25,11 @@ The Alcor Control Agent (ACA) running on the compute host provides the support o
 
 Unlike openstack neutron which uses at least 5 RPC messages to simply configure a new port and have a notification to agent model from different sources. Alcor design should have only one message send from Alcor Controller to ACA, and that message would contain all the necessary network/port/security group/DHCP configuration to complete the configuration. The message can contain one or more (batching) configuration. ACA will parse the message and send the work item(s) to different ACA components for processing, with ability to execute multiple work items in parallel to greatly reduce the configuration time. Once all the work items are completed, it will provide the feedback to Alcor controller about success/fail status and elapse time stamps for record tracking. To summerize, we are looking at just one message send to ACA and one reply back to Alcor control to configure one or 1000s of new port(s).
 
-TBD - need to provide more design info
+TBD - Eric - to provide more design info
 
 == OVS Implementation
 
-TBD - what is OVS, why are we using it, what is the nice thing about OVS?
+TBD - Eric - what is OVS, why are we using it, what is the nice thing about OVS?
 
 
 == Workflow with Alcor for port programming
@@ -46,12 +46,12 @@ How do we call into OVS, what is the exact command we use to program a new port?
 
 == OVS-db entries on Local Host
 
-TBD - will this be interesting?
+TBD - XiaoDong, I think it will be good to show how an entry looks like in ovs-db here
 
 
 == Alcor Network State Update
 
-TBD - do we need to modify the current network state message? 
+TBD - Eric - do we need to modify the current network state message? 
 
 
 == Dataplane Programming Interface
@@ -68,12 +68,14 @@ TBD - XiaoDong
 .. need to determine the minimal initialization steps
 . what happen when there are multiple physical NICs on the system, which NIC do we pick to hook up to br-tun, br-vlan, br-ex (if needed)?
 .. what is the exact command to connect the new port to the new br-tun, and enable encap/decap?
-. what happen if host crashed, do we save the OVS config locally and restore it? Or we ask the Alcor controller for the whole set of cofiguration upon restart
-
 
 == Compare to Neutron Implementation
 
 TBD. How is the perf, latency and availablity etc compare to Neutron?
+
+== Outstanding Items:
+
+. what happen if host crashed, do we save the OVS config locally and restore it? Or we ask the Alcor controller for the whole set of cofiguration upon restart
 
 
 [bibliography]
