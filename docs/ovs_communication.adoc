@@ -40,15 +40,35 @@ TBD - Eric
 
 == Programming OVS
 
-TBD - XiaoDong
+. ovs-vsctl
+. idl binding like this http://docs.openvswitch.org/en/latest/topics/idl-compound-indexes/
+. ofctl.api.send_msg (packet) (OSKen)
 
-How do we call into OVS, what is the exact command we use to program a new port? What is the port configuration info needed?
+TBD - XiaoDong, we want to get to the next level of detail. Imagine we are going to start writing the code next week, let's give an example of the calls to make to configuration a port for vxlan. We want to understand the options/parameters needed so that we can check to make the network state message from Alcor Controller contains that information.
 
 
-== OVS-db entries on Local Host
+== OVS-db sample entries on Local Host
 
-TBD - XiaoDong, I think it will be good to show how an entry looks like in ovs-db here
-
+[source,c++]
+------------------------------------------------------------
+e72c1206-4e56-47fc-83b9-5c986af5ba8a
+    Bridge "ovs0"
+        Port "b8afb0bd725b4_l"
+            tag: 100
+            Interface "b8afb0bd725b4_l"
+        Port "2fe20f38124d4_l"
+            tag: 100
+            Interface "2fe20f38124d4_l"
+        Port "4a41eb1cac8c4_l"
+            tag: 200
+            Interface "4a41eb1cac8c4_l"
+        Port "ovs0"
+            Interface "ovs0"
+                type: internal
+        Port "vxlan1"
+            Interface "vxlan1"
+            options: {key=flow, remote_ip="x.x.x.x"}
+------------------------------------------------------------
 
 == Alcor Network State Update
 
@@ -82,11 +102,30 @@ class Dataplane_Programming_Interface {
 
 == OVS Implementation
 
-TBD - XiaoDong
+Initialization - ACA will initialize OVS during its startup time. There are several ways to initialize ovs, one is start openvswith service directly or we could do the following:
 
-. when and who will initialize OVS? What are the initialization steps
-.. br-int, br-tun are created during init time, and recreated later in RPC loop if needed
-.. need to determine the minimal initialization steps
+[source,c++]
+------------------------------------------------------------
+a. start ovsdb-server: ovsdb-server --remote=punix:/usr/local/var/run/openvswitch/db.sock  \
+  --remote=db:Open_vSwitch,Open_vSwitch,manager_options \
+  --private-key=db:Open_vSwitch,SSL,private_key  \
+  --certificate=db:Open_vSwitch,SSL,certificate     \
+  --bootstrap-ca-cert=db:Open_vSwitch,SSL,ca_cert  \
+  --log-file=/var/log/openvswitch/ovs-vswitchd.log \
+  -vsyslog:dbg -vfile:dbg  --pidfile --detach
+
+b. start vswitchd: ovs-vswitchd -v --pidfile --detach \
+ --log-file=/var/log/openvswitch/ovs-vswitchd.log \
+ -vconsole:err -vsyslog:info -vfile:info
+
+c. use cmd to init: ovs-vsctl --no-wait init
+------------------------------------------------------------
+
+TBD - XiaoDong, which way are we going use?
+
+. br-int, br-tun are created during init time, and recreated later in RPC loop if needed
+.. TBD - XiaoDong, are we going to follow the same?
+
 . what happen when there are multiple physical NICs on the system, which NIC do we pick to hook up to br-tun, br-vlan, br-ex (if needed)?
 .. what is the exact command to connect the new port to the new br-tun, and enable encap/decap?
 
@@ -96,7 +135,7 @@ TBD. How is the perf, latency and availablity etc compare to Neutron?
 
 == Outstanding Items:
 
-. what happen if host crashed, do we save the OVS config locally and restore it? Or we ask the Alcor controller for the whole set of cofiguration upon restart
+. what happen if host crashed, do we save the OVS config locally and restore it? Or we ask the Alcor controller for the whole set of cofiguration upon restart?
 
 
 [bibliography]
