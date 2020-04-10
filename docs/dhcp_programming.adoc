@@ -178,14 +178,14 @@ message PortState {
 
 == DHCP Programming Interface
 
-The Alcor Network State message will be updated to include DHCP configuration state.
+Here is the proposed implementation for DHCP Programming Interface:
 
 [source,c++]
 ------------------------------------------------------------
 // DHCP programming interface class
 class Dhcp_Programming_Interface {
    public:
-      // pure virtual function providing interface framework.
+      // pure virtual functions providing interface framework.
       virtual int initialize() = 0;
 
       virtual int add_dhcp_entry(string mac_address, string ip_address,

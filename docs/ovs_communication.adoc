@@ -21,16 +21,17 @@ TBD: XiaoDong to update the picture below, it will be good to add some text here
 
 == Highlevel Architecture
 
-The Alcor Control Agent (ACA) running on the compute host provides the support of OVS dataplane programming through its dataplane abstraction layer interface. ACA will be configured to which dataplace to use (OVS - default or Mizar) during startup time and then execute the corresponding code through the dataplane abstraction layer.
+The Alcor Control Agent (ACA) running on the compute host provides the support of OVS dataplane programming through its dataplane abstraction layer interface. During startup time, ACA will be configured to which dataplace to use (OVS - default or Mizar), and then execute the corresponding code through the dataplane abstraction layer.
 
-Unlike openstack neutron which uses at least 5 RPC messages to simply configure a new port and have a notification to agent model from different sources. Alcor design should have only one message send from Alcor Controller to ACA, and that message would contain all the necessary network/port/security group/DHCP configuration to complete the configuration. The message can contain one or more (batching) configuration. ACA will parse the message and send the work item(s) to different ACA components for processing, with ability to execute multiple work items in parallel to greatly reduce the configuration time. Once all the work items are completed, it will provide the feedback to Alcor controller about success/fail status and elapse time stamps for record tracking. To summerize, we are looking at just one message send to ACA and one reply back to Alcor control to configure one or 1000s of new port(s).
+Unlike openstack neutron which uses at least 5 RPC messages to simply configure a new port and have chatty model between neutron server and neutron agents. Alcor design have only one message send from Alcor Controller to ACA, and that message would contain all the necessary network/port/security group/DHCP configuration to complete the configuration on compute/network host machine. 
 
-TBD - Eric - to provide more design info
+The message can contain one or more (batching) configuration (e.g. 1000s new ports). ACA will parse the message in the Network State Handler module and then send the work item(s) to different ACA components for processing. It has with ability to execute multiple work items in parallel by default to greatly reduce the configuration time. Our previous data showed that parallel process would provide 7 times gain compare do serial processing 100s of configurations. Once all the work items are completed, ACA will provide the one response message back to Alcor controller on success/fail status and also elapse time stamps for record tracking. To summerize, we are looking at just one message send to ACA and one reply back to Alcor control to configure one to 1000s of new ports.
 
-== OVS Implementation
+== OVS Dataplane
 
-TBD - Eric - what is OVS, why are we using it, what is the nice thing about OVS?
+"Open vSwitch is a production quality, multilayer virtual switch licensed under the open source Apache 2.0 license.  It is designed to enable massive network automation through programmatic extension, while still supporting standard management interfaces and protocols."<<ovs>>
 
+We decided to support OVS dataplace not only because it is the main dataplane for OpenStack, it is also because its extensive features support as a software network switch implementation meeting our Alcor Cloud Native SDN requirements. 
 
 == Workflow with Alcor for port programming
 
@@ -56,7 +57,27 @@ TBD - Eric - do we need to modify the current network state message?
 
 == Dataplane Programming Interface
 
-TBD - Eric 
+Here is the proposed implementation for Dataplane Programming Interface:
+
+[source,c++]
+------------------------------------------------------------
+// Dataplane programming interface class
+class Dataplane_Programming_Interface {
+   public:
+      // pure virtual functions providing interface framework.
+      virtual int initialize() = 0;
+
+      virtual int update_vpc_state_workitem(const VpcState current_VpcState,
+                                            GoalStateOperationReply &gsOperationReply) = 0;
+
+      virtual int update_subnet_state_workitem(const SubnetState current_SubnetState,
+                                               GoalStateOperationReply &gsOperationReply) = 0;
+
+      virtual int update_port_state_workitem(const PortState current_PortState,
+                                             const alcorcontroller::GoalState &parsed_struct,
+                                             GoalStateOperationReply &gsOperationReply) = 0;
+};
+------------------------------------------------------------
 
 
 == OVS Implementation
@@ -81,4 +102,5 @@ TBD. How is the perf, latency and availablity etc compare to Neutron?
 [bibliography]
 == References
 
-- [[[ovs,1]]] http://www.thekelleys.org.uk/dnsmasq/doc.html - need a OVS reference
+- [[[ovs,1]]] https://www.openvswitch.org/
+- [[[cidl,2]]] http://docs.openvswitch.org/en/latest/topics/idl-compound-indexes/
