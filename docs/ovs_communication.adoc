@@ -3,7 +3,43 @@ Eric Li <sze.li@futurewei.com>, Xiaodong Zhang <xzhang2@futurewei.com>
 v0.1, 2020-04-07
 :toc: right
 
-== Communication between ACA and OVS
+== Architecture Overview
+
+The Alcor Control Agent (ACA) running on the compute host provides the support of OVS dataplane programming through its dataplane abstraction layer interface. During startup time, ACA will be configured to which dataplace to use (OVS - default or Mizar), and then execute the corresponding code through the dataplane abstraction layer.
+
+Unlike openstack neutron which uses at least 5 RPC messages to simply configure a new port and have chatty model between neutron server and neutron agents. Alcor design have only one message send from Alcor Controller to ACA, and that message would contain all the necessary network/port/security group/DHCP configuration to complete the configuration on compute/network host machine. 
+
+The message can contain one or more (batching) configuration (e.g. 1000s new ports). ACA will parse the message in the Network State Handler module and then send the work item(s) to different ACA components for processing. It has with ability to execute multiple work items in parallel by default to greatly reduce the configuration time. Our previous data showed that parallel process would provide 7 times gain compare do serial processing 100s of configurations. Once all the work items are completed, ACA will provide the one response message back to Alcor controller on success/fail status and also elapse time stamps for record tracking. To summerize, we are looking at just one message send to ACA and one reply back to Alcor control to configure one to 1000s of new ports.
+
+=== Agent APIs for Network Configuration Programming
+
+Here is the proposed implementation for network configuration programming interface:
+
+[source,c++]
+------------------------------------------------------------
+// Dataplane programming interface class
+class Dataplane_Programming_Interface {
+   public:
+      // pure virtual functions providing interface framework.
+      virtual int initialize() = 0;
+
+      virtual int update_vpc_state_workitem(const VpcState current_VpcState,
+                                            GoalStateOperationReply &gsOperationReply) = 0;
+
+      virtual int update_subnet_state_workitem(const SubnetState current_SubnetState,
+                                               GoalStateOperationReply &gsOperationReply) = 0;
+
+      virtual int update_port_state_workitem(const PortState current_PortState,
+                                             const alcorcontroller::GoalState &parsed_struct,
+                                             GoalStateOperationReply &gsOperationReply) = 0;
+};
+------------------------------------------------------------
+
+=== Communication with Alcor Controllers
+
+TBD - Eric - do we need to modify the current network state message?
+
+=== Communication with OVS
 
 TBD: XiaoDong to update the picture below, it will be good to add some text here also
 
@@ -19,26 +55,86 @@ TBD: XiaoDong to update the picture below, it will be good to add some text here
                     |  ovs-db?           |
                     +--------------------+
 
+== Workflow of Network Configuration Programming
 
-== Highlevel Architecture
+. ovs-vsctl
+. idl binding like this http://docs.openvswitch.org/en/latest/topics/idl-compound-indexes/
+. ofctl.api.send_msg (packet) (OSKen)
 
-The Alcor Control Agent (ACA) running on the compute host provides the support of OVS dataplane programming through its dataplane abstraction layer interface. During startup time, ACA will be configured to which dataplace to use (OVS - default or Mizar), and then execute the corresponding code through the dataplane abstraction layer.
-
-Unlike openstack neutron which uses at least 5 RPC messages to simply configure a new port and have chatty model between neutron server and neutron agents. Alcor design have only one message send from Alcor Controller to ACA, and that message would contain all the necessary network/port/security group/DHCP configuration to complete the configuration on compute/network host machine. 
-
-The message can contain one or more (batching) configuration (e.g. 1000s new ports). ACA will parse the message in the Network State Handler module and then send the work item(s) to different ACA components for processing. It has with ability to execute multiple work items in parallel by default to greatly reduce the configuration time. Our previous data showed that parallel process would provide 7 times gain compare do serial processing 100s of configurations. Once all the work items are completed, ACA will provide the one response message back to Alcor controller on success/fail status and also elapse time stamps for record tracking. To summerize, we are looking at just one message send to ACA and one reply back to Alcor control to configure one to 1000s of new ports.
+TBD - XiaoDong, we want to get to the next level of detail. Imagine we are going to start writing the code next week, let's give an example of the calls to make to configuration a port for vxlan. We want to understand the options/parameters needed so that we can check to make the network state message from Alcor Controller contains that information.
 
 
-== Background of OVS Dataplane (interface, components etc.)
+=== Workflow of Basic Port Programming
+
+TBD - Eric
+
+=== Workflow of Router Programming
+
+TBD
+
+=== Workflow of Security Group Programming
+
+TBD
+
+=== Workflow of Network ACL
+
+TBD
+
+=== Programming Protocol
+
+TBD
+
+== ACA Implementation Details
+
+Initialization - ACA will initialize OVS during its startup time. There are several ways to initialize ovs, one is start openvswith service directly or we could do the following:
+
+[source,c++]
+------------------------------------------------------------
+a. start ovsdb-server: ovsdb-server --remote=punix:/usr/local/var/run/openvswitch/db.sock  \
+  --remote=db:Open_vSwitch,Open_vSwitch,manager_options \
+  --private-key=db:Open_vSwitch,SSL,private_key  \
+  --certificate=db:Open_vSwitch,SSL,certificate     \
+  --bootstrap-ca-cert=db:Open_vSwitch,SSL,ca_cert  \
+  --log-file=/var/log/openvswitch/ovs-vswitchd.log \
+  -vsyslog:dbg -vfile:dbg  --pidfile --detach
+
+b. start vswitchd: ovs-vswitchd -v --pidfile --detach \
+ --log-file=/var/log/openvswitch/ovs-vswitchd.log \
+ -vconsole:err -vsyslog:info -vfile:info
+
+c. use cmd to init: ovs-vsctl --no-wait init
+------------------------------------------------------------
+
+TBD - XiaoDong, which way are we going use?
+
+. br-int, br-tun are created during agent init time, and recreated later in RPC loop if needed
+.. TBD - XiaoDong, are we going to follow the same? Eric is thinking yes.
+
+. what happen when there are multiple physical NICs on the system, which NIC do we pick to hook up to br-tun, br-vlan, br-ex (if needed)?
+.. what is the exact command to connect the new port to the new br-tun, and enable encap/decap?
+
+
+== Comparison with Neutron OVS Agent
+
+TBD. How is the perf, latency and availablity etc compare to Neutron?
+
+== Background of OVS Dataplane
 
 "Open vSwitch is a production quality, multilayer virtual switch licensed under the open source Apache 2.0 license.  It is designed to enable massive network automation through programmatic extension, while still supporting standard management interfaces and protocols."<<ovs>>
 
-We decided to support OVS dataplace not only because it is the main dataplane for OpenStack, it is also because its extensive features support as a software network switch implementation meeting our Alcor Cloud Native SDN requirements. 
+We decided to support OVS dataplace not only because it is the main dataplane for OpenStack, it is also because its extensive features support as a software network switch implementation meeting our Alcor Cloud Native SDN requirements.
 
 TBD - Eric to add more info
 
+=== OVS Interfaces
 
-== OVS-db sample entries on openstack compute Host
+TBD - Xiaodong
+
+=== OVS Major Components
+
+TBD - Xiaodong
+
+=== OVS-db sample entries on openstack compute Host
 
 [source,c++]
 ------------------------------------------------------------
@@ -136,86 +232,6 @@ d90ab833-7620-43aa-a026-409cc6a270c3
                 options: {df_default="true", egress_pkt_mark="0", in_key=flow, local_ip="10.213.43.158", out_key=flow, remote_ip="10.213.43.188"}
     ovs_version: "2.11.1"
 ------------------------------------------------------------
-
-== Communication between ACA and OVS
-
-. ovs-vsctl
-. idl binding like this http://docs.openvswitch.org/en/latest/topics/idl-compound-indexes/
-. ofctl.api.send_msg (packet) (OSKen)
-
-TBD - XiaoDong, we want to get to the next level of detail. Imagine we are going to start writing the code next week, let's give an example of the calls to make to configuration a port for vxlan. We want to understand the options/parameters needed so that we can check to make the network state message from Alcor Controller contains that information.
-
-
-== Programming workflow with Alcor for port configuration
-
-TBD - Eric
-
-
-
-== Alcor Network State Update
-
-TBD - Eric - do we need to modify the current network state message? 
-
-
-== Dataplane Programming Interface
-
-Here is the proposed implementation for Dataplane Programming Interface:
-
-[source,c++]
-------------------------------------------------------------
-// Dataplane programming interface class
-class Dataplane_Programming_Interface {
-   public:
-      // pure virtual functions providing interface framework.
-      virtual int initialize() = 0;
-
-      virtual int update_vpc_state_workitem(const VpcState current_VpcState,
-                                            GoalStateOperationReply &gsOperationReply) = 0;
-
-      virtual int update_subnet_state_workitem(const SubnetState current_SubnetState,
-                                               GoalStateOperationReply &gsOperationReply) = 0;
-
-      virtual int update_port_state_workitem(const PortState current_PortState,
-                                             const alcorcontroller::GoalState &parsed_struct,
-                                             GoalStateOperationReply &gsOperationReply) = 0;
-};
-------------------------------------------------------------
-
-
-== ACA Implementation Details
-
-Initialization - ACA will initialize OVS during its startup time. There are several ways to initialize ovs, one is start openvswith service directly or we could do the following:
-
-[source,c++]
-------------------------------------------------------------
-a. start ovsdb-server: ovsdb-server --remote=punix:/usr/local/var/run/openvswitch/db.sock  \
-  --remote=db:Open_vSwitch,Open_vSwitch,manager_options \
-  --private-key=db:Open_vSwitch,SSL,private_key  \
-  --certificate=db:Open_vSwitch,SSL,certificate     \
-  --bootstrap-ca-cert=db:Open_vSwitch,SSL,ca_cert  \
-  --log-file=/var/log/openvswitch/ovs-vswitchd.log \
-  -vsyslog:dbg -vfile:dbg  --pidfile --detach
-
-b. start vswitchd: ovs-vswitchd -v --pidfile --detach \
- --log-file=/var/log/openvswitch/ovs-vswitchd.log \
- -vconsole:err -vsyslog:info -vfile:info
-
-c. use cmd to init: ovs-vsctl --no-wait init
-------------------------------------------------------------
-
-TBD - XiaoDong, which way are we going use?
-
-. br-int, br-tun are created during agent init time, and recreated later in RPC loop if needed
-.. TBD - XiaoDong, are we going to follow the same? Eric is thinking yes.
-
-. what happen when there are multiple physical NICs on the system, which NIC do we pick to hook up to br-tun, br-vlan, br-ex (if needed)?
-.. what is the exact command to connect the new port to the new br-tun, and enable encap/decap?
-
-
-== Compare to Neutron Implementation
-
-TBD. How is the perf, latency and availablity etc compare to Neutron?
-
 
 == Outstanding Items:
 
