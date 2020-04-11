@@ -55,6 +55,10 @@ TBD: XiaoDong to update the picture below, it will be good to add some text here
                     |  ovs-db?           |
                     +--------------------+
 
+=== Communication Protocol
+
+TBD
+
 == Workflow of Network Configuration Programming
 
 . ovs-vsctl
@@ -64,27 +68,23 @@ TBD: XiaoDong to update the picture below, it will be good to add some text here
 TBD - XiaoDong, we want to get to the next level of detail. Imagine we are going to start writing the code next week, let's give an example of the calls to make to configuration a port for vxlan. We want to understand the options/parameters needed so that we can check to make the network state message from Alcor Controller contains that information.
 
 
-=== Workflow of Basic Port Programming
+=== Basic Port Programming
 
 TBD - Eric
 
-=== Workflow of Router Programming
+=== Router Programming
 
 TBD
 
-=== Workflow of Security Group Programming
+=== Security Group Programming
 
 TBD
 
-=== Workflow of Network ACL
+=== Network ACL Programming
 
 TBD
 
-=== Programming Protocol
-
-TBD
-
-== ACA Implementation Details
+== Implementation Details
 
 Initialization - ACA will initialize OVS during its startup time. There are several ways to initialize ovs, one is start openvswith service directly or we could do the following:
 
@@ -113,7 +113,6 @@ TBD - XiaoDong, which way are we going use?
 . what happen when there are multiple physical NICs on the system, which NIC do we pick to hook up to br-tun, br-vlan, br-ex (if needed)?
 .. what is the exact command to connect the new port to the new br-tun, and enable encap/decap?
 
-
 == Comparison with Neutron OVS Agent
 
 TBD. How is the perf, latency and availablity etc compare to Neutron?
@@ -132,9 +131,15 @@ TBD - Xiaodong
 
 === OVS Major Components
 
-TBD - Xiaodong
+TBD - Eric/Xiaodong
 
-=== OVS-db sample entries on openstack compute Host
+Need a good diagram here.
+
+=== OVS-db Sample Entries on OpenStack Compute Host
+
+Q1: Why this is important to show here?
+
+Q2: Could we add a short paragraph to explain the key fields.
 
 [source,c++]
 ------------------------------------------------------------
