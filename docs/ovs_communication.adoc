@@ -238,7 +238,7 @@ d90ab833-7620-43aa-a026-409cc6a270c3
     ovs_version: "2.11.1"
 ------------------------------------------------------------
 
-== Outstanding Items:
+== Outstanding Items
 
 . what happen if host crashed, do we save the OVS config locally and restore it? Or we ask the Alcor controller for the whole set of cofiguration upon restart?
 
