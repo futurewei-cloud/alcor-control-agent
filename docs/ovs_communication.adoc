@@ -3,6 +3,7 @@ Eric Li <sze.li@futurewei.com>, Xiaodong Zhang <xzhang2@futurewei.com>
 v0.1, 2020-04-07
 :toc: right
 
+
 == Architecture Overview
 
 The Alcor Control Agent (ACA) running on the compute host provides the support of OVS dataplane programming through its dataplane abstraction layer interface. During startup time, ACA will be configured to which dataplace to use (OVS - default or Mizar), and then execute the corresponding code through the dataplane abstraction layer.
@@ -10,6 +11,7 @@ The Alcor Control Agent (ACA) running on the compute host provides the support o
 Unlike openstack neutron which uses at least 5 RPC messages to simply configure a new port and have chatty model between neutron server and neutron agents. Alcor design have only one message send from Alcor Controller to ACA, and that message would contain all the necessary network/port/security group/DHCP configuration to complete the configuration on compute/network host machine. 
 
 The message can contain one or more (batching) configuration (e.g. 1000s new ports). ACA will parse the message in the Network State Handler module and then send the work item(s) to different ACA components for processing. It has with ability to execute multiple work items in parallel by default to greatly reduce the configuration time. Our previous data showed that parallel process would provide 7 times gain compare do serial processing 100s of configurations. Once all the work items are completed, ACA will provide the one response message back to Alcor controller on success/fail status and also elapse time stamps for record tracking. To summerize, we are looking at just one message send to ACA and one reply back to Alcor control to configure one to 1000s of new ports.
+
 
 === Agent APIs for Core Network Programming
 
@@ -35,9 +37,6 @@ class Core_Network_Programming_Interface {
 };
 ------------------------------------------------------------
 
-=== Communication with Alcor Controllers
-
-TBD - Eric - do we need to modify the current network state message? How do Alcor controller tell us which OVS port to configure (using device ID)?
 
 === Communication with OVS
 
@@ -55,9 +54,11 @@ TBD: XiaoDong to update the picture below, it will be good to add some text here
                     |  ovs-db?           |
                     +--------------------+
 
+
 === Communication Protocol
 
-TBD
+TBD - XiaoDong
+
 
 == Workflow of Network Configuration Programming
 
@@ -82,11 +83,13 @@ TBD
 
 === Network ACL Programming
 
-TBD - Eric - we are using a direct request and response model
+TBD
 
 == Implementation Details
 
-Initialization - ACA will initialize OVS during its startup time. We will likely start OVS service directly. TBD - XiaoDong, can you share the corresponding neutron code?
+TBD - XiaoDong/Eric
+
+Initialization - ACA will initialize OVS during its startup time. We will likely start OVS service directly. <<start-ovs>>
 
 Another option is to initialize OVS through command line:
 
@@ -109,12 +112,19 @@ c. use cmd to init: ovs-vsctl --no-wait init
 
 ACA will create the required br-int, br-tun bridges during agent init time, and recreated later during core network programming if needed.
 
-. what happen when there are multiple physical NICs on the system, which NIC do we pick to hook up to br-ex (if needed)?
 .. what is the exact command to connect the new port to the new br-tun, and enable encap/decap?
+... A: ovs-vsctl add-port set interface type=vxlan is the one which would do encap/decap
 
 == Comparison with Neutron OVS Agent
 
-TBD. How is the perf, latency and availablity etc compare to Neutron?
+TBD - XiaoDong/Eric
+
+ How is the perf, latency and availablity etc compare to Neutron?
+
+. need to measure the perf for large VPC - 64,000 EP?
+. need to measure the perf for a lot of VPCs
+. How are the OVS bridge performance when it is at scale? Is that the reason why it use multiple bridges (br-int, br-tun, br-ex)?
+
 
 == Background of OVS Dataplane
 
@@ -124,122 +134,24 @@ We decided to support OVS dataplace not only because it is the main dataplane fo
 
 TBD - Eric to add more info
 
+
 === OVS Interfaces
 
 TBD - Xiaodong
 
+
 === OVS Major Components
 
-TBD - Eric/Xiaodong
+TBD - Eric
 
 Need a good diagram here.
 
-=== OVS-db Sample Entries on OpenStack Compute Host
 
-Q1: Why this is important to show here?
+== Pending Items
 
-Q2: Could we add a short paragraph to explain the key fields.
+. TBD - Eric: How do Alcor controller tell us which OVS port to configure (using device ID)? The information is already passed by Nova to Neutron today, we just need to figure out the port ID format and confirm we can use it.
 
-Eric: I will reduce the output and try to explain in a picture if possible
-
-[source,c++]
-------------------------------------------------------------
-d90ab833-7620-43aa-a026-409cc6a270c3
-    Manager "ptcp:6640:127.0.0.1"
-        is_connected: true
-    Bridge br-int
-        Controller "tcp:127.0.0.1:6633"
-            is_connected: true
-        fail_mode: secure
-        Port br-int
-            Interface br-int
-                type: internal
-        Port "qg-1085ac86-7e"
-            tag: 2
-            Interface "qg-1085ac86-7e"
-                type: internal
-        Port patch-tun
-            Interface patch-tun
-                type: patch
-                options: {peer=patch-int}
-        Port int-br-ex
-            Interface int-br-ex
-                type: patch
-                options: {peer=phy-br-ex}
-        Port "tapdbdeda94-fb"
-            tag: 3
-            Interface "tapdbdeda94-fb"
-                type: internal
-        Port "qr-c970f4c2-7f"
-            tag: 1
-            Interface "qr-c970f4c2-7f"
-                type: internal
-        Port "tapff42a4e9-f5"
-            tag: 1
-            Interface "tapff42a4e9-f5"
-                type: internal
-    Bridge br-ex
-        Controller "tcp:127.0.0.1:6633"
-            is_connected: true
-        fail_mode: secure
-        Port br-ex
-            Interface br-ex
-                type: internal
-        Port phy-br-ex
-            Interface phy-br-ex
-                type: patch
-                options: {peer=int-br-ex}
-    Bridge br-tun
-        Controller "tcp:127.0.0.1:6633"
-            is_connected: true
-        fail_mode: secure
-        Port br-tun
-            Interface br-tun
-                type: internal
-        Port "gre-0ad52b9f"
-            Interface "gre-0ad52b9f"
-                type: gre
-                options: {df_default="true", egress_pkt_mark="0", in_key=flow, local_ip="10.213.43.158", out_key=flow, remote_ip="10.213.43.159"}
-        Port "vxlan-0ad52b9f"
-            Interface "vxlan-0ad52b9f"
-                type: vxlan
-                options: {df_default="true", egress_pkt_mark="0", in_key=flow, local_ip="10.213.43.158", out_key=flow, remote_ip="10.213.43.159"}
-        Port "vxlan-0ad52bbb"
-            Interface "vxlan-0ad52bbb"
-                type: vxlan
-                options: {df_default="true", egress_pkt_mark="0", in_key=flow, local_ip="10.213.43.158", out_key=flow, remote_ip="10.213.43.187"}
-        Port "gre-0ad52bbc"
-            Interface "gre-0ad52bbc"
-                type: gre
-                options: {df_default="true", egress_pkt_mark="0", in_key=flow, local_ip="10.213.43.158", out_key=flow, remote_ip="10.213.43.188"}
-        Port "geneve-0ad52bbb"
-            Interface "geneve-0ad52bbb"
-                type: geneve
-                options: {df_default="true", egress_pkt_mark="0", in_key=flow, local_ip="10.213.43.158", out_key=flow, remote_ip="10.213.43.187"}
-        Port "vxlan-0ad52bbc"
-            Interface "vxlan-0ad52bbc"
-                type: vxlan
-                options: {df_default="true", egress_pkt_mark="0", in_key=flow, local_ip="10.213.43.158", out_key=flow, remote_ip="10.213.43.188"}
-        Port "geneve-0ad52b9f"
-            Interface "geneve-0ad52b9f"
-                type: geneve
-                options: {df_default="true", egress_pkt_mark="0", in_key=flow, local_ip="10.213.43.158", out_key=flow, remote_ip="10.213.43.159"}
-        Port patch-int
-            Interface patch-int
-                type: patch
-                options: {peer=patch-tun}
-        Port "gre-0ad52bbb"
-            Interface "gre-0ad52bbb"
-                type: gre
-                options: {df_default="true", egress_pkt_mark="0", in_key=flow, local_ip="10.213.43.158", out_key=flow, remote_ip="10.213.43.187"}
-        Port "geneve-0ad52bbc"
-            Interface "geneve-0ad52bbc"
-                type: geneve
-                options: {df_default="true", egress_pkt_mark="0", in_key=flow, local_ip="10.213.43.158", out_key=flow, remote_ip="10.213.43.188"}
-    ovs_version: "2.11.1"
-------------------------------------------------------------
-
-== Outstanding Items
+. what happen when there are multiple physical NICs on the system, which NIC do we pick to hook up to br-ex (if needed)?
 
 . what happen if host crashed, do we save the OVS config locally and restore it? Or we ask the Alcor controller for the whole set of cofiguration upon restart?
 
@@ -248,4 +160,5 @@ d90ab833-7620-43aa-a026-409cc6a270c3
 == References
 
 - [[[ovs,1]]] https://www.openvswitch.org/
-- [[[cidl,2]]] http://docs.openvswitch.org/en/latest/topics/idl-compound-indexes/
+- [[[start-ovs,2]]] https://github.com/openstack/neutron/blob/c2d18cda6f3716965f0843da213985b4b7c6bb41/devstack/lib/ovs#L153
+- [[[cidl,3]]] http://docs.openvswitch.org/en/latest/topics/idl-compound-indexes/

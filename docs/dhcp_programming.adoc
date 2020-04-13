@@ -252,19 +252,19 @@ Below is the sample implementation:
 class Dnsmasq_service: public Dhcp_Programming_Interface {
    public:
       int initialize() { 
-          // initialize the dnsmasq service
+          // initialize the dnsmasq system
           . . .
           return status;
       }
 
-      int add_dhcp_entry(string mac_address, string ip_address,
-                                    string ep_host_name) { 
+      int add_dhcp_entry(string network_id, string mac_address, 
+                         string ip_address, string ep_host_name) { 
           // add dhcp entry into dnsmasq
           . . .
           return status;
       }
 
-      int delete_dhcp_entry(string mac_address) { 
+      int delete_dhcp_entry(string network_id, string mac_address) { 
           // delete dhcp entry in dnsmasq
           . . .
           return status;
