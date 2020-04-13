@@ -11,14 +11,14 @@ Unlike openstack neutron which uses at least 5 RPC messages to simply configure 
 
 The message can contain one or more (batching) configuration (e.g. 1000s new ports). ACA will parse the message in the Network State Handler module and then send the work item(s) to different ACA components for processing. It has with ability to execute multiple work items in parallel by default to greatly reduce the configuration time. Our previous data showed that parallel process would provide 7 times gain compare do serial processing 100s of configurations. Once all the work items are completed, ACA will provide the one response message back to Alcor controller on success/fail status and also elapse time stamps for record tracking. To summerize, we are looking at just one message send to ACA and one reply back to Alcor control to configure one to 1000s of new ports.
 
-=== Agent APIs for Network Configuration Programming
+=== Agent APIs for Core Network Programming
 
-Here is the proposed implementation for network configuration programming interface:
+Here is the proposed implementation for Core Network programming interface:
 
 [source,c++]
 ------------------------------------------------------------
-// Dataplane programming interface class
-class Dataplane_Programming_Interface {
+// Core Network Programming Interface class
+class Core_Network_Programming_Interface {
    public:
       // pure virtual functions providing interface framework.
       virtual int initialize() = 0;
@@ -37,7 +37,7 @@ class Dataplane_Programming_Interface {
 
 === Communication with Alcor Controllers
 
-TBD - Eric - do we need to modify the current network state message?
+TBD - Eric - do we need to modify the current network state message? How do Alcor controller tell us which OVS port to configure (using device ID)?
 
 === Communication with OVS
 
@@ -82,11 +82,13 @@ TBD
 
 === Network ACL Programming
 
-TBD
+TBD - Eric - we are using a direct request and response model
 
 == Implementation Details
 
-Initialization - ACA will initialize OVS during its startup time. There are several ways to initialize ovs, one is start openvswith service directly or we could do the following:
+Initialization - ACA will initialize OVS during its startup time. We will likely start OVS service directly. TBD - XiaoDong, can you share the corresponding neutron code?
+
+Another option is to initialize OVS through command line:
 
 [source,c++]
 ------------------------------------------------------------
@@ -105,12 +107,9 @@ b. start vswitchd: ovs-vswitchd -v --pidfile --detach \
 c. use cmd to init: ovs-vsctl --no-wait init
 ------------------------------------------------------------
 
-TBD - XiaoDong, which way are we going use?
+ACA will create the required br-int, br-tun bridges during agent init time, and recreated later during core network programming if needed.
 
-. br-int, br-tun are created during agent init time, and recreated later in RPC loop if needed
-.. TBD - XiaoDong, are we going to follow the same? Eric is thinking yes.
-
-. what happen when there are multiple physical NICs on the system, which NIC do we pick to hook up to br-tun, br-vlan, br-ex (if needed)?
+. what happen when there are multiple physical NICs on the system, which NIC do we pick to hook up to br-ex (if needed)?
 .. what is the exact command to connect the new port to the new br-tun, and enable encap/decap?
 
 == Comparison with Neutron OVS Agent
@@ -140,6 +139,8 @@ Need a good diagram here.
 Q1: Why this is important to show here?
 
 Q2: Could we add a short paragraph to explain the key fields.
+
+Eric: I will reduce the output and try to explain in a picture if possible
 
 [source,c++]
 ------------------------------------------------------------

@@ -281,6 +281,11 @@ TBD
 TBD. How is the perf, latency and availablity etc compare to Neutron?
 
 
+== Outstanding Items
+
+. How can DHCP server scale, how many network can one network node support if we are going to put all the DHCP servers there? How many dnsmasq process can we run on a machine?
+
+
 [bibliography]
 == References
 
