@@ -69,9 +69,27 @@ TBD - XiaoDong
 TBD - XiaoDong, we want to get to the next level of detail. Imagine we are going to start writing the code next week, let's give an example of the calls to make to configuration a port for vxlan. We want to understand the options/parameters needed so that we can check to make the network state message from Alcor Controller contains that information.
 
 
-=== Basic Port Programming
+=== Basic Port Programming (VXLAN)
 
-TBD - Eric
+New Port Configuration on the compute host:
+
+. ensure the br-int and br-tun bridges are properly created, if not, re-create them
+. ensure the patch cable between br-int and br-tun is connected correctly
+. configure the new port created by nova agent that's attached to br-int
+.. can add more detail
+. provision vlan tags for the new port for tenent network isolation within this host
+. program the br-tun about this new port, so that encap/decap can be done there
+.. "ovs-vsctl add-port set interface type=vxlan"
+. program the openflow rule on br-tun so that matching VNI traffic can be sent from physical NIC to this new port
+. reply to Alcor controller saying this port configuration is done
+
+Peer compute host programming:
+
+. in parallel of the new port configuration on its host, we also need to configuration all the peer compute host in the network about this new host that's part of vxlan network.
+. each will reply to Alcor controller when done
+
+The new port is consider as up when both configuration on its compute host and its peer compute host is completed.
+
 
 === Router Programming
 
@@ -112,8 +130,6 @@ c. use cmd to init: ovs-vsctl --no-wait init
 
 ACA will create the required br-int, br-tun bridges during agent init time, and recreated later during core network programming if needed.
 
-The command to enable encap/decap is - "ovs-vsctl add-port set interface type=vxlan"
-
 
 == Comparison with Neutron OVS Agent
 
@@ -132,7 +148,7 @@ How is the perf, latency and availablity etc compare to Neutron?
 
 We decided to support OVS dataplane not only because it is the main dataplane for OpenStack, it is also because its extensive features support as a software network switch implementation meeting our Alcor Cloud Native SDN requirements.
 
-Some of the major OVS feature needed by Alcor network control plan includes: <<why-ovs>>
+Some of the major OVS features needed by Alcor network control plan includes: <<why-ovs>>
 
 . VXLAN/VLAN for tenet network isolation
 . OpenFlow for L3 routing and flow inspection/maniplulation
@@ -169,3 +185,4 @@ image::images/ovs_components.png["OVS Component diagram", width=800, link="image
 - [[[why-ovs,3]]] https://github.com/openvswitch/ovs/blob/master/Documentation/intro/why-ovs.rst
 - [[[ovs-components,4]]] https://www.researchgate.net/publication/311338103_A_Survey_on_the_Contributions_of_Software-Defined_Networking_to_Traffic_Engineering
 - [[[cidl,5]]] http://docs.openvswitch.org/en/latest/topics/idl-compound-indexes/
+- [[[rfc7047,6]]] https://tools.ietf.org/html/rfc7047
