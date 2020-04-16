@@ -40,33 +40,31 @@ class Core_Network_Programming_Interface {
 
 === Communication with OVS
 
-TBD: XiaoDong to update the picture below, it will be good to add some text here also
-
                     +--------------------+
                     |  Alcor Control     |
                     |     Agent          |
                     +--------------------+
-                    |  ovs-vsctl and     |
-                    |   ofctl_api?       |
+                    |  ovsdb Management  |
+                    |   Protocol         |
                     +--------------------+
-         +--------------------------------------------------+
+         +----------------------------------------------+
                     +--------------------+
-                    |  ovs-db?           |
+                    |  ovsdb-server      |
                     +--------------------+
 
 
 === Communication Protocol
 
-TBD - XiaoDong
+TBD - XiaoDong - Note that we are closing on ovs-vsctl type of calls, we have not closed on how to do ovs-ofctl yet. Eric has not looked into that yet. One example is to do "ofctl.api.send_msg (packet) (OSKen)"
+
+For ovs-vsctl type of commands like adding an OVS bridge or adding a new port etc, we will adapt the Open vSwitch Database Management Protocol (RFC 7047) <<rfc7047>>. ACA will be an OVSDB client and have full control of OVSDB usage using the protocol, including granular control of locking mechanism to the database table level. 
+
+Since ACA is the only OVSDB client for the current design, we can do performance tuning by changing how ACA access ovsdb database. For example, ACA can perform manipulation of special database table serially, because it doesn't help to do it parallelly with lock, and then ACA can do other network configuration parallelly to achieve optimal performance.
 
 
 == Workflow of Network Configuration Programming
 
-. ovs-vsctl
-. idl binding like this http://docs.openvswitch.org/en/latest/topics/idl-compound-indexes/
-. ofctl.api.send_msg (packet) (OSKen)
-
-TBD - XiaoDong, we want to get to the next level of detail. Imagine we are going to start writing the code next week, let's give an example of the calls to make to configuration a port for vxlan. We want to understand the options/parameters needed so that we can check to make the network state message from Alcor Controller contains that information.
+TBD - XiaoDong
 
 
 === Basic Port Programming (VXLAN)
@@ -80,7 +78,6 @@ New Port Configuration on the compute host:
 . provision vlan tags for the new port for tenent network isolation within this host
 . program the br-tun about this new port, so that encap/decap can be done there
 .. "ovs-vsctl add-port set interface type=vxlan"
-. program the openflow rule on br-tun so that matching VNI traffic can be sent from physical NIC to this new port
 . reply to Alcor controller saying this port configuration is done
 
 Peer compute host programming:
@@ -156,11 +153,6 @@ Some of the major OVS features needed by Alcor network control plan includes: <<
 . Remote access of network state database (OVSDB)
 
 
-=== OVS Interfaces
-
-TBD - Xiaodong
-
-
 === OVS Major Components
 
 The below diagram show the major OVS components.<<ovs-components>>
@@ -170,9 +162,7 @@ image::images/ovs_components.png["OVS Component diagram", width=800, link="image
 
 == Pending Items
 
-. TBD - Eric: How do Alcor controller tell us which OVS port to configure (using device ID)? The information is already passed by Nova to Neutron today, we just need to figure out the port ID format and confirm we can use it.
-
-. what happen when there are multiple physical NICs on the system, which NIC do we pick to hook up to br-ex (if needed)?
+. what happen when there are multiple physical NICs on the system, which NIC do we pick to hook up to br-ex?
 
 . what happen if host crashed, do we save the OVS config locally and restore it? Or we ask the Alcor controller for the whole set of cofiguration upon restart?
 
@@ -184,5 +174,4 @@ image::images/ovs_components.png["OVS Component diagram", width=800, link="image
 - [[[ovs,2]]] https://www.openvswitch.org/
 - [[[why-ovs,3]]] https://github.com/openvswitch/ovs/blob/master/Documentation/intro/why-ovs.rst
 - [[[ovs-components,4]]] https://www.researchgate.net/publication/311338103_A_Survey_on_the_Contributions_of_Software-Defined_Networking_to_Traffic_Engineering
-- [[[cidl,5]]] http://docs.openvswitch.org/en/latest/topics/idl-compound-indexes/
-- [[[rfc7047,6]]] https://tools.ietf.org/html/rfc7047
+- [[[rfc7047,7]]] https://tools.ietf.org/html/rfc7047
