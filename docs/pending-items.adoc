@@ -1,0 +1,40 @@
+= OVS Programming Design — Pending Items
+Eric Li <sze.li@futurewei.com>, Xiaodong Zhang <xzhang2@futurewei.com>
+v0.1, 2020-04-17
+:toc: right
+
+
+== Workflow of Network Configuration Programming
+
+=== Router Programming
+
+Scenario A:
+Routing workflow between different EPs in the same subnet on different hosts
+
+1. The packet from virtual machine 1 on the left reaches the br-int via the Linux bridge and is tagged with VLAN ID Tag
+2. Reach br-tun, convert VLAN ID to Tunnel ID, send from VxLAN Tunnel, and reach another compute node
+3. Go through the reverse process on another compute node to reach the virtual machine on the right
+
+================================
+Scenario B:
+Routing workflow for accessing internet
+1. Packet leaves the virtual machine, passes the Linux bridge, arrives at br-int, and is tagged with VLAN ID
+2. Reach br-tun, convert VLAN ID to Tunnel ID
+3. Enter the VxLAN channel from the physical network card
+4. Network card from the VxLAN channel to the Neutron node
+5. Reach the br-tun connected to the physical network card and convert the Tunnel ID to VLAN ID
+6. Reach br-int, then router, router's NAT table will convert fixed IP address to floatiing IP address, and then route to br-ex
+7. Go out from the physical network card connected to br-ex to the external network
+================================
+Scenario C:
+
+Accessing an EP from an external network IP is the opposite process.
+
+=== Security Group Programming
+
+image::images/sg1.jpg["OVS Component diagram", width=800, link="images/sg1.jpg"]
+
+
+=== Network ACL Programming
+
+image::images/sg-filter.jpg["OVS Component diagram", width=800, link="images/sg-filter.jpg"]
