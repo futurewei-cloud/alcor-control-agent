@@ -40,7 +40,7 @@ class Core_Network_Programming_Interface {
 
 === Communication with OVS
 
-image::images/ovs_all2.jpg["OVS Component diagram", width=800, link="images/ovs_all2.jpg"]
+image::images/ovs-all2.jpg["OVS Component diagram", width=800, link="images/ovs-all2.jpg"]
 click here <<original-pptx>> for the orginal file
 
 
@@ -148,10 +148,10 @@ image::images/ovs_components.png["OVS Component diagram", width=800, link="image
 [bibliography]
 == References
 
-- [[[original-pptx,-1]]] https://github.com/er1cthe0ne/alcor-control-agent/blob/docs/design/docs/images/ovs-all.pptx
-- [[[pending-items,1]]] https://github.com/er1cthe0ne/alcor-control-agent/blob/docs/design/docs/pending-items.adoc
-- [[[start-ovs,1]]] https://github.com/openstack/neutron/blob/c2d18cda6f3716965f0843da213985b4b7c6bb41/devstack/lib/ovs#L153
-- [[[ovs,2]]] https://www.openvswitch.org/
-- [[[why-ovs,3]]] https://github.com/openvswitch/ovs/blob/master/Documentation/intro/why-ovs.rst
-- [[[ovs-components,4]]] https://www.researchgate.net/publication/311338103_A_Survey_on_the_Contributions_of_Software-Defined_Networking_to_Traffic_Engineering
+- [[[original-pptx,1]]] https://github.com/er1cthe0ne/alcor-control-agent/blob/docs/design/docs/images/ovs-all.pptx
+- [[[pending-items,2]]] https://github.com/er1cthe0ne/alcor-control-agent/blob/docs/design/docs/pending-items.adoc
+- [[[start-ovs,3]]] https://github.com/openstack/neutron/blob/c2d18cda6f3716965f0843da213985b4b7c6bb41/devstack/lib/ovs#L153
+- [[[ovs,4]]] https://www.openvswitch.org/
+- [[[why-ovs,5]]] https://github.com/openvswitch/ovs/blob/master/Documentation/intro/why-ovs.rst
+- [[[ovs-components,6]]] https://www.researchgate.net/publication/311338103_A_Survey_on_the_Contributions_of_Software-Defined_Networking_to_Traffic_Engineering
 - [[[rfc7047,7]]] https://tools.ietf.org/html/rfc7047
