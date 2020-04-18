@@ -41,16 +41,17 @@ class Core_Network_Programming_Interface {
 === Communication with OVS
 
 image::images/ovs-all2.jpg["OVS Component diagram", width=800, link="images/ovs-all2.jpg"]
-click here <<original-pptx>> for the orginal file
 
 
 === Communication Protocol
 
 TBD - XiaoDong - Note that we are closing on ovs-vsctl type of calls, we have not closed on how to do ovs-ofctl yet. Eric has not looked into that yet. One example is to do "ofctl.api.send_msg (packet) (OSKen)"
 
-For ovs-vsctl type of commands like adding an OVS bridge or adding a new port etc, we will adapt the Open vSwitch Database Management Protocol (RFC 7047) <<rfc7047>>. ACA will be an OVSDB client and have full control of OVSDB usage using the protocol, including granular control of locking mechanism to the database table level. 
+For ovs-vsctl Open vSwitch commands like adding an OVS bridge or adding a new port etc, we will adapt the Open vSwitch Database Management Protocol (RFC 7047) <<rfc7047>>. ACA will be an OVSDB client and have full control of OVSDB usage using the protocol, including granular control of locking mechanism to the database table level. 
 
 Since ACA is the only OVSDB client for the current design, we can do performance tuning by changing how ACA access ovsdb database. For example, ACA can perform manipulation of special database table serially, because it doesn't help to do it parallelly with lock, and then ACA can do other network configuration parallelly to achieve optimal performance.
+
+For ovs-ofctl OpenFlow commands like adding or remove flow rules. [TODO]
 
 
 == Workflow of Network Configuration Programming
@@ -76,11 +77,8 @@ Peer compute host programming:
 
 The new port is consider as up when both configuration on its compute host and its peer compute host is completed.
 
-Pending items here  <<pending-items>>
 
 == Implementation Details
-
-TBD - XiaoDong/Eric
 
 Initialization - ACA will initialize OVS during its startup time. We will likely start OVS service directly. <<start-ovs>>
 
@@ -116,6 +114,7 @@ How is the perf, latency and availablity etc compare to Neutron?
 . need to measure the perf for a lot of VPCs
 . How are the OVS bridge performance when it is at scale? Is that the reason why it use multiple bridges (br-int, br-tun, br-ex)?
 
+[TODO] flow picutre with neutron vs ACA
 
 == Background of OVS Dataplane
 
@@ -148,10 +147,8 @@ image::images/ovs_components.png["OVS Component diagram", width=800, link="image
 [bibliography]
 == References
 
-- [[[original-pptx,1]]] https://github.com/er1cthe0ne/alcor-control-agent/blob/docs/design/docs/images/ovs-all.pptx
-- [[[pending-items,2]]] https://github.com/er1cthe0ne/alcor-control-agent/blob/docs/design/docs/pending-items.adoc
+- [[[rfc7047,1]]] https://tools.ietf.org/html/rfc7047
 - [[[start-ovs,3]]] https://github.com/openstack/neutron/blob/c2d18cda6f3716965f0843da213985b4b7c6bb41/devstack/lib/ovs#L153
 - [[[ovs,4]]] https://www.openvswitch.org/
 - [[[why-ovs,5]]] https://github.com/openvswitch/ovs/blob/master/Documentation/intro/why-ovs.rst
 - [[[ovs-components,6]]] https://www.researchgate.net/publication/311338103_A_Survey_on_the_Contributions_of_Software-Defined_Networking_to_Traffic_Engineering
-- [[[rfc7047,7]]] https://tools.ietf.org/html/rfc7047

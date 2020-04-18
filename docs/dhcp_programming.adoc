@@ -24,6 +24,8 @@ Our design is to have DHCP server running on each compute node, just to handle D
 
 In the event if the local DHCP server is down or slow to response. The DHCP request can be handled by the central DHCP server running on network node. This path is consider as the non-optimized path but it will still work.
 
+[TODO] a good picture
+
 == Workflow with Alcor
 
 . Nova will call Alcor to allocation a port object in Alcor database
@@ -38,7 +40,7 @@ In the event if the local DHCP server is down or slow to response. The DHCP requ
         ... one DHCP server has 1000s enties
         ... one network node handling 1000s DHCP servers when handling 1000s of networks
         ... the good news is most of the DHCP requests should be handled by the local DHCP server already
-    .. [TODO] need to figure out the number of central DHCP server needed and its placement in the network nodes
+    .. [TBD] need to figure out the number of central DHCP server needed and its placement in the network nodes
 
 == DHCP Configuration on Local Host
 
@@ -114,7 +116,7 @@ message DHCPState {
 
 Leverage the exiting Port configuration message to program DHCP at the same time, not that this option will be tricky to program DHCP only on the network node when EP is not privisioned there.
 
-*alcor/src/schema/proto3/port.proto* // ***NEW***
+*alcor/src/schema/proto3/port.proto* // ***UPDATED***
 
 [source,java]
 ------------------------------------------------------------
@@ -171,7 +173,7 @@ message PortConfiguration {
 }
 
 message PortState {
-    OperationType operation_type = 1; // ***UPDATE*** have an operation for DHCP entry add/delete?
+    OperationType operation_type = 1; // ***UPDATE*** have an operation for DHCP entry add/delete only?
     PortConfiguration configuration = 2;
 }
 ------------------------------------------------------------
@@ -182,16 +184,24 @@ Here is the proposed implementation for DHCP Programming Interface:
 
 [source,c++]
 ------------------------------------------------------------
+struct dhcp_config {
+  string network_id;
+  string mac_address;
+  string ip_address;
+  string ep_host_name;
+}
+
 // DHCP programming interface class
 class Dhcp_Programming_Interface {
    public:
       // pure virtual functions providing interface framework.
       virtual int initialize() = 0;
 
-      virtual int add_dhcp_entry(string mac_address, string ip_address,
-                                    string ep_host_name) = 0;
+      virtual int add_dhcp_entry(dhcp_config* dhcp_config_in) = 0;
 
-      virtual int delete_dhcp_entry(string mac_address) = 0;
+      virtual int update_dhcp_entry(dhcp_config* dhcp_config_in) = 0;
+
+      virtual int delete_dhcp_entry(string network_id, string mac_address) = 0;
 };
 ------------------------------------------------------------
 
@@ -249,24 +259,37 @@ Below is the sample implementation:
 [source,c++]
 ------------------------------------------------------------
 // dnsmasq implementation classes
+// this class needs to manage multiple dnsmasq service
+// one dnsmasq per network
 class Dnsmasq_service: public Dhcp_Programming_Interface {
    public:
       int initialize() { 
-          // initialize the dnsmasq system
+          // initialize the system to manage one or more dnsmasq service
           . . .
           return status;
       }
 
-      int add_dhcp_entry(string network_id, string mac_address, 
-                         string ip_address, string ep_host_name) { 
-          // add dhcp entry into dnsmasq
+      int add_dhcp_entry(dhcp_config* dhcp_config_in) { 
+          // confirm dnsmasq for this network is running, else start one
+          . . .
+          // add dhcp entry into the corresponding dnsmasq
+          . . .
+          return status;
+      }
+
+      int update_dhcp_entry(dhcp_config* dhcp_config_in) { 
+          // confirm dnsmasq for this network is running, else start one
+          . . .
+          // update dhcp entry in the corresponding dnsmasq
           . . .
           return status;
       }
 
       int delete_dhcp_entry(string network_id, string mac_address) { 
-          // delete dhcp entry in dnsmasq
+          // delete dhcp entry in the corresponding dnsmasq
           . . .
+          // stop dnsmasq service if it has no more entry
+          . . .          
           return status;
       }
 };
@@ -283,7 +306,7 @@ TBD. How is the perf, latency and availablity etc compare to Neutron?
 
 == Outstanding Items
 
-. How can DHCP server scale, how many network can one network node support if we are going to put all the DHCP servers there? How many dnsmasq process can we run on a machine?
+. [TODO] How can DHCP server scale, how many network can one network node support if we are going to put all the DHCP servers there? How many dnsmasq process can we run on a machine?
 
 
 [bibliography]
