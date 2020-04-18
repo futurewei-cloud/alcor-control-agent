@@ -40,17 +40,8 @@ class Core_Network_Programming_Interface {
 
 === Communication with OVS
 
-                    +--------------------+
-                    |  Alcor Control     |
-                    |     Agent          |
-                    +--------------------+
-                    |  ovsdb Management  |
-                    |   Protocol         |
-                    +--------------------+
-         +----------------------------------------------+
-                    +--------------------+
-                    |  ovsdb-server      |
-                    +--------------------+
+image::images/ovs_all2.jpg["OVS Component diagram", width=800, link="images/ovs_all2.jpg"]
+click here <<original-pptx>> for the orginal file
 
 
 === Communication Protocol
@@ -157,7 +148,8 @@ image::images/ovs_components.png["OVS Component diagram", width=800, link="image
 [bibliography]
 == References
 
-- [[[pending-items,0]]] https://github.com/er1cthe0ne/alcor-control-agent/blob/docs/design/docs/pending-items.adoc
+- [[[original-pptx,-1]]] https://github.com/er1cthe0ne/alcor-control-agent/blob/docs/design/docs/images/ovs-all.pptx
+- [[[pending-items,1]]] https://github.com/er1cthe0ne/alcor-control-agent/blob/docs/design/docs/pending-items.adoc
 - [[[start-ovs,1]]] https://github.com/openstack/neutron/blob/c2d18cda6f3716965f0843da213985b4b7c6bb41/devstack/lib/ovs#L153
 - [[[ovs,2]]] https://www.openvswitch.org/
 - [[[why-ovs,3]]] https://github.com/openvswitch/ovs/blob/master/Documentation/intro/why-ovs.rst
