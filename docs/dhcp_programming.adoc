@@ -22,9 +22,9 @@ v0.1, 2020-04-06
 
 Our design is to have DHCP server running on each compute node, just to handle DHCP request for VMs/Controllers running on that particular compute node only so that the provisioning message is kept minimal. The local DHCP server will provide very fast response because the DHCP messages are all handled within the internal OVS bridge (br-int) without even going out to the physical NIC. The number of DHCP entries are smalls which provide the most efficient look up time.
 
-In the event if the local DHCP server is down or slow to response. The DHCP request can be handled by the central DHCP server running on network node. This path is consider as the non-optimized path but it will still work.
+In the event if the local DHCP server is down or slow to response. The DHCP request can be handled by the central DHCP server running on network node. This redundent path is considered as the non-optimized path but it will still work.
 
-[TODO] a good picture
+image::images/Agent_dhcp.jpg["dhcp diagram", width=800, link="images/Agent_dhcp.jpg"]
 
 == Workflow with Alcor
 
