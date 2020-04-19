@@ -205,9 +205,14 @@ class Dhcp_Programming_Interface {
 };
 ------------------------------------------------------------
 
-== DNSMASQ Implementation
+== Open-Flow based DHCP Server Implementation (Preferred solution)
 
-Dnsmasq is a lightweight program that is included in most Linux distributions. It is used by neutron to provide DHCP and DNS services. It supports IPv6, along with stateless mode in DHCPv6.<<dnsmasq>>
+We want to have an efficient DHCP server implementation, which support both DHCPv6 stateful and stateless mode, and has ability to perform the work in software or hardware. While hardware offloading is not needed on the compute node where DHCP is all happening within the OVS but hardware offload will be very useful in network node for the redundent DHCP server. Open-Flow based DHCP implementation is a great option to satisfy all the requirements. A sample implementation can be found in dragonflow.<<dragonflow-code>><<dragonflow-pic>>
+
+
+== DNSMASQ DHCP Server Implementation (Alternate solution)
+
+Dnsmasq is a lightweight program that is included in most Linux distributions. It is used by neutron to provide DHCP and DNS services. It supports DHCPv6 stateless mode only but stateful mode is not supported.<<dnsmasq>>
 
 The way for agent to control dnsmasq is by changing the following files:
 
@@ -313,3 +318,5 @@ TBD. How is the perf, latency and availablity etc compare to Neutron?
 == References
 
 - [[[dnsmasq,1]]] http://www.thekelleys.org.uk/dnsmasq/doc.html
+- [[[dragonflow-code,2]]] https://raw.githubusercontent.com/openstack/dragonflow/master/dragonflow/controller/apps/dhcp.py
+- [[[dragonflow-pic,3]]] https://github.com/openstack/dragonflow/blob/master/doc/images/dhcp2.jpg
