@@ -12,10 +12,9 @@ v0.1, 2020-04-06
                     |  DHCP Programming  |
                     |     Interface      |
                     +--------------------+
-         +--------------------------------------------------+
+         +-----------------------------------------------+
                     +--------------------+
-                    |  DHCP Service      |
-                    |     e.g. dnsmasq   |
+                    |  DHCP Handler      |
                     +--------------------+
 
 == Extreme Performance, High efficient and Redundent Design
@@ -40,7 +39,7 @@ image::images/Agent_dhcp.jpg["dhcp diagram", width=800, link="images/Agent_dhcp.
         ... one DHCP server has 1000s enties
         ... one network node handling 1000s DHCP servers when handling 1000s of networks
         ... the good news is most of the DHCP requests should be handled by the local DHCP server already
-    .. [TBD] need to figure out the number of central DHCP server needed and its placement in the network nodes
+    .. [TBD] need to figure out the performance and scale limit of central DHCP handler and its placement in the network nodes
 
 == DHCP Configuration on Local Host
 
@@ -50,7 +49,7 @@ image::images/Agent_dhcp.jpg["dhcp diagram", width=800, link="images/Agent_dhcp.
 | 1586192434 | fa:16:3e:66:72:1f | 192.168.222.45  | host-192-168-222-45
 | 1586190665 | fa:16:3e:28:19:8d | 192.168.222.166 | host-192-168-222-166
 |====================
-[TODO] Do we need entry for stateless DHCPv6 support?
+[TODO] Need entries for DHCPv6 support
 
 == Alcor Network State Update
 
@@ -112,7 +111,7 @@ message DHCPState {
 }
 ------------------------------------------------------------
 
-=== Option 2
+=== Option 2 (Rejected)
 
 Leverage the exiting Port configuration message to program DHCP at the same time, not that this option will be tricky to program DHCP only on the network node when EP is not privisioned there.
 
@@ -205,9 +204,13 @@ class Dhcp_Programming_Interface {
 };
 ------------------------------------------------------------
 
-== Open-Flow based DHCP Server Implementation (Preferred solution)
+== Open-Flow assisted DHCP Server Implementation (Preferred solution)
 
-We want to have an efficient DHCP server implementation, which support both DHCPv6 stateful and stateless mode, and has ability to perform the work in software or hardware. While hardware offloading is not needed on the compute node where DHCP is all happening within the OVS but hardware offload will be very useful in network node for the redundent DHCP server. Open-Flow based DHCP implementation is a great option to satisfy all the requirements. A sample implementation can be found in dragonflow.<<dragonflow-code>><<dragonflow-pic>>
+We want to have an efficient DHCP server implementation, which support both DHCPv6 stateful and stateless mode. Open-Flow assisted DHCP implementation is a great option to satisfy all the requirements. Where DHCP requests are directed to our efficient DHCP handler, where we will craft the corresponding responses.
+
+The DHCP handler will need to have a database to manage the MAC to IP (v4/v6) mappings. We will look into leverage ovsdb if the information is already there, or add a new table to ovsdb to store that information.
+
+A sample implementation can be found in dragonflow.<<dragonflow-code>><<dragonflow-pic>>
 
 
 == DNSMASQ DHCP Server Implementation (Alternate solution)
@@ -308,10 +311,14 @@ TBD
 
 TBD. How is the perf, latency and availablity etc compare to Neutron?
 
+Neutron uses dnsmasq which does not support DHCPv6 stateless address assignment. 
+
+Since the MAC address assignment by Neutron is only unique per network, dnsmasq has to work around the issue by having multiple dhcp servers per neutron network. It has to run each dnsmasq process in its own network namespace on a seperate dhcp port in the network. With Alcor, MAC address assignment are unique at least on the region level. Our dhcp design can then handle all the DHCP requests from different networks using just one handler running within ACA.
+
 
 == Outstanding Items
 
-. [TODO] How can DHCP server scale, how many network can one network node support if we are going to put all the DHCP servers there? How many dnsmasq process can we run on a machine?
+. [TODO] How can DHCP server scale, how many network can one network node support.
 
 
 [bibliography]

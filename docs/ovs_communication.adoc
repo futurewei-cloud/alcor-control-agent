@@ -45,13 +45,13 @@ image::images/ovs-all2.jpg["OVS Component diagram", width=800, link="images/ovs-
 
 === Communication Protocol
 
-TBD - XiaoDong - Note that we are closing on ovs-vsctl type of calls, we have not closed on how to do ovs-ofctl yet. Eric has not looked into that yet. One example is to do "ofctl.api.send_msg (packet) (OSKen)"
-
 For ovs-vsctl Open vSwitch commands like adding an OVS bridge or adding a new port etc, we will adapt the Open vSwitch Database Management Protocol (RFC 7047) <<rfc7047>>. ACA will be an OVSDB client and have full control of OVSDB usage using the protocol, including granular control of locking mechanism to the database table level. 
 
 Since ACA is the only OVSDB client for the current design, we can do performance tuning by changing how ACA access ovsdb database. For example, ACA can perform manipulation of special database table serially, because it doesn't help to do it parallelly with lock, and then ACA can do other network configuration parallelly to achieve optimal performance.
 
-For ovs-ofctl OpenFlow commands like adding or remove flow rules. [TODO]
+For ovs-ofctl OpenFlow commands like adding or remove flow rules, we will adapt the standard OpenFlow protocol<<openflow>>. ACA will act as OpenFlow controller managing OVS as an OpenFlow switch. An OpenFlow switch has one or more flow table and perform packet matching and action. 
+
+OpenFlow protocol is the standard communication method between OpenFlow controller and network switch (virtual/physical). With the popularity of hardware offloading, it is very likey that we can offload the flow table rules into NIC hardware.
 
 
 == Workflow of Network Configuration Programming
@@ -148,6 +148,7 @@ image::images/ovs_components.png["OVS Component diagram", width=800, link="image
 == References
 
 - [[[rfc7047,1]]] https://tools.ietf.org/html/rfc7047
+- [[[openflow,2]]] https://www.opennetworking.org/images/stories/downloads/sdn-resources/onf-specifications/openflow/openflow-spec-v1.4.0.pdf
 - [[[start-ovs,3]]] https://github.com/openstack/neutron/blob/c2d18cda6f3716965f0843da213985b4b7c6bb41/devstack/lib/ovs#L153
 - [[[ovs,4]]] https://www.openvswitch.org/
 - [[[why-ovs,5]]] https://github.com/openvswitch/ovs/blob/master/Documentation/intro/why-ovs.rst
