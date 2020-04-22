@@ -114,7 +114,14 @@ How is the perf, latency and availablity etc compare to Neutron?
 . need to measure the perf for a lot of VPCs
 . How are the OVS bridge performance when it is at scale? Is that the reason why it use multiple bridges (br-int, br-tun, br-ex)?
 
-[TODO] flow picutre with neutron vs ACA
+Neutron communication protocol is quite chatty, note that DHCP and smart NIC is not included below:
+
+image::images/communication_neutron.jpg["communication model with neutron", width=800, link="images/communication_neutron.jpg"]
+
+Alcor communication protocol is much simply, it supports VPC/Subnet/Port/Security group/DHCP in a single network state message:
+
+image::images/communication_alcor.jpg["communication model with alcor", width=800, link="images/communication_alcor.jpg"]
+
 
 == Background of OVS Dataplane
 
