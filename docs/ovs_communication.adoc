@@ -6,11 +6,22 @@ v0.1, 2020-04-07
 
 == Architecture Overview
 
-The Alcor Control Agent (ACA) running on the compute host provides the support of OVS dataplane programming through its dataplane abstraction layer interface. During startup time, ACA will be configured to which dataplace to use (OVS - default or Mizar), and then execute the corresponding code through the dataplane abstraction layer.
+The Alcor Control Agent (ACA) running on the compute host provides the support of OVS dataplane programming through its dataplane abstraction layer interface.
+During startup time, ACA will be configured to which dataplane to use (OVS - default or Mizar), and then execute the corresponding code through the dataplane abstraction layer.
 
-Unlike openstack neutron which uses at least 5 RPC messages to simply configure a new port and have chatty model between neutron server and neutron agents. Alcor design have only one message send from Alcor Controller to ACA, and that message would contain all the necessary network/port/security group/DHCP configuration to complete the configuration on compute/network host machine. 
 
-The message can contain one or more (batching) configuration (e.g. 1000s new ports). ACA will parse the message in the Network State Handler module and then send the work item(s) to different ACA components for processing. It has the ability to execute multiple work items in parallel by default to greatly reduce the configuration time. Our previous data showed that parallel processing would provide 7 times gain compare do serial processing 100s of configurations. Once all the work items are completed, ACA will provide the one response message back to Alcor controller on success/fail status and also elapse time stamps for record tracking. To summerize, we are looking at just one message send to ACA and one reply back to Alcor control to configure one to 1000s of new ports.
+=== Simplified Communication & Parallel Processing Capability
+
+Unlike Openstack neutron which uses at least 5 RPC messages to simply configure a new port and have chatty model between neutron server and neutron agents.
+Alcor design have only one message send from Alcor Controller to ACA,
+and that message would contain all the necessary network/port/security group/DHCP configuration to complete the configuration on compute/network host machine.
+
+The message can contain one or more (batching) configuration (e.g. 1000s new ports).
+ACA will parse the message in the Network State Handler module and then send the work item(s) to different ACA components for processing.
+It has the ability to execute multiple work items in parallel by default to greatly reduce the configuration time.
+Our previous data showed that parallel processing would provide 7 times gain compare do serial processing 100s of configurations.
+Once all the work items are completed, ACA will provide the one response message back to Alcor controller on success/fail status and also elapse time stamps for record tracking.
+To summarize, we are looking at just one message send to ACA and one reply back to Alcor control to configure one to 1000s of new ports.
 
 
 === Agent APIs for Core Network Programming
@@ -45,13 +56,18 @@ image::images/ovs-all2.jpg["OVS Component diagram", width=800, link="images/ovs-
 
 === Communication Protocol
 
-For ovs-vsctl Open vSwitch commands like adding an OVS bridge or adding a new port etc, we will adapt the Open vSwitch Database Management Protocol (RFC 7047) <<rfc7047>>. ACA will be an OVSDB client and have full control of OVSDB usage using the protocol, including granular control of locking mechanism to the database table level. 
+For ovs-vsctl Open vSwitch commands like adding an OVS bridge or adding a new port etc, we will adapt the Open vSwitch Database Management Protocol (RFC 7047) <<rfc7047>>.
+ACA will be an OVSDB client and have full control of OVSDB usage using the protocol, including granular control of locking mechanism to the database table level.
 
-Since ACA is the only OVSDB client for the current design, we can do performance tuning by changing how ACA access ovsdb database. For example, ACA can perform manipulation of special database table serially, because it doesn't help to do it parallelly with lock, and then ACA can do other network configuration parallelly to achieve optimal performance.
+Since ACA is the only OVSDB client for the current design, we can do performance tuning by changing how ACA access OVSDB database.
+For example, ACA can perform manipulation of special database table serially, because it doesn't help to do it in parallel with lock,
+and then ACA can do other network configuration parallelly to achieve optimal performance.
 
-For ovs-ofctl OpenFlow commands like adding or remove flow rules, we will adapt the standard OpenFlow protocol<<openflow>>. ACA will act as OpenFlow controller managing OVS as an OpenFlow switch. An OpenFlow switch has one or more flow table and perform packet matching and action. 
+For ovs-ofctl OpenFlow commands like adding or remove flow rules, we will adapt the standard OpenFlow protocol<<openflow>>.
+ACA will act as OpenFlow controller managing OVS as an OpenFlow switch. An OpenFlow switch has one or more flow table and perform packet matching and action.
 
-OpenFlow protocol is the standard communication method between OpenFlow controller and network switch (virtual/physical). With the popularity of hardware offloading, it is very likey that we can offload the flow table rules into NIC hardware.
+OpenFlow protocol is the standard communication method between OpenFlow controller and network switch (virtual/physical).
+With the popularity of hardware offloading, it is very likey that we can offload the flow table rules into NIC hardware.
 
 
 == Workflow of Network Configuration Programming
@@ -65,15 +81,15 @@ New Port Configuration on the compute host:
 . ensure the patch cable between br-int and br-tun is connected correctly
 . configure the new port created by nova agent that's attached to br-int
 .. can add more detail
-. provision vlan tags for the new port for tenent network isolation within this host
+. provision vlan tags for the new port for tenant network isolation within this host
 . program the br-tun about this new port, so that encap/decap can be done there
 .. "ovs-vsctl add-port set interface type=vxlan"
 . reply to Alcor controller saying this port configuration is done
 
 Peer compute host programming:
 
-. in parallel of the new port configuration on its host, we also need to configuration all the peer compute host in the network about this new host that's part of vxlan network.
-. each will reply to Alcor controller when done
+. In parallel of the new port configuration on its host, we also need to configuration all the peer compute host in the network about this new host that's part of vxlan network.
+. Each will reply to Alcor controller when done
 
 The new port is consider as up when both configuration on its compute host and its peer compute host is completed.
 
@@ -108,10 +124,10 @@ ACA will create the required br-int, br-tun bridges during agent init time, and 
 
 TBD - XiaoDong/Eric
 
-How is the perf, latency and availablity etc compare to Neutron?
+How is the perf, latency and availability etc compare to Neutron?
 
-. need to measure the perf for large VPC - 64,000 EP?
-. need to measure the perf for a lot of VPCs
+. Need to measure the perf for large VPC - 64,000 EP?
+. Need to measure the perf for a lot of VPCs
 . How are the OVS bridge performance when it is at scale? Is that the reason why it use multiple bridges (br-int, br-tun, br-ex)?
 
 Neutron communication protocol is quite chatty, note that DHCP and smart NIC is not included below:
@@ -125,14 +141,16 @@ image::images/communication_alcor.jpg["communication model with alcor", width=80
 
 == Background of OVS Dataplane
 
-"Open vSwitch is a production quality, multilayer virtual switch licensed under the open source Apache 2.0 license.  It is designed to enable massive network automation through programmatic extension, while still supporting standard management interfaces and protocols."<<ovs>>
+"Open vSwitch is a production quality, multilayer virtual switch licensed under the open source Apache 2.0 license.
+It is designed to enable massive network automation through programmatic extension, while still supporting standard management interfaces and protocols."<<ovs>>
 
-We decided to support OVS dataplane not only because it is the main dataplane for OpenStack, it is also because its extensive features support as a software network switch implementation meeting our Alcor Cloud Native SDN requirements.
+We decided to support OVS dataplane not only because it is the main dataplane for OpenStack,
+it is also because its extensive features support as a software network switch implementation meeting our Alcor Cloud Native SDN requirements.
 
 Some of the major OVS features needed by Alcor network control plan includes: <<why-ovs>>
 
 . VXLAN/VLAN for tenet network isolation
-. OpenFlow for L3 routing and flow inspection/maniplulation
+. OpenFlow for L3 routing and flow inspection/manipulation
 . Hardware offloading to reduce on host CPU load  
 . Remote access of network state database (OVSDB)
 
@@ -148,7 +166,7 @@ image::images/ovs_components.png["OVS Component diagram", width=800, link="image
 
 . what happen when there are multiple physical NICs on the system, which NIC do we pick to hook up to br-ex?
 
-. what happen if host crashed, do we save the OVS config locally and restore it? Or we ask the Alcor controller for the whole set of cofiguration upon restart?
+. what happen if host crashed, do we save the OVS config locally and restore it? Or we ask the Alcor controller for the whole set of configuration upon restart?
 
 
 [bibliography]
