@@ -12,22 +12,22 @@ During startup time, ACA will be configured to which dataplane to use (OVS - def
 
 === Simplified Communication & Parallel Processing Capability
 
-Unlike Openstack neutron which uses at least 5 RPC messages to simply configure a new port and have chatty model between neutron server and neutron agents.
+Unlike Openstack neutron which uses at least five RPC messages to simply configure a new port and have chatty model between neutron server and neutron agents.
 Alcor design have only one message send from Alcor Controller to ACA,
 and that message would contain all the necessary network/port/security group/DHCP configuration to complete the configuration on compute/network host machine.
 
-The message can contain one or more (batching) configuration (e.g. 1000s new ports).
+The message can contain one or more (batching) configuration (e.g. thousands of new ports).
 ACA will parse the message in the Network State Handler module and then send the work item(s) to different ACA components for processing.
 It has the ability to execute multiple work items in parallel by default to greatly reduce the configuration time.
-Our preliminary data showed that parallel processing would provide 7 times gain compare to serial processing 100s of configurations.
+Our preliminary data showed that parallel processing would provide 7 times gain compare to serial processing hundreds of configurations.
 Once all the work items are completed, ACA will provide the one response message back to Alcor controller on success/fail status and also elapse time stamps for record tracking.
-To summarize, we are looking at just one message send to ACA and one reply back to Alcor control to configure one to 1000s of new ports.
+To summarize, we are looking at just one message send to ACA and one reply back to Alcor control to configure one to thousands of new ports.
 
 Neutron communication protocol is quite chatty, note that DHCP and smart NIC is not included below:
 
 image::images/communication_neutron.jpg["communication model with neutron", width=800, link="images/communication_neutron.jpg"]
 
-Alcor communication protocol is much simply, it supports VPC/Subnet/Port/Security group/DHCP in a single network state message:
+Alcor communication protocol is much simpler, it supports one or more VPC/Subnet/Port/Security group/DHCP configurations in a single network state message:
 
 image::images/communication_alcor.jpg["communication model with alcor", width=800, link="images/communication_alcor.jpg"]
 

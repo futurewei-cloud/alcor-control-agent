@@ -183,25 +183,28 @@ Here is the proposed implementation for DHCP Programming Interface:
 
 [source,c++]
 ------------------------------------------------------------
+namespace aca_dhcp_programming_if
+{
 struct dhcp_config {
   string network_id;
   string mac_address;
   string ip_address;
   string ep_host_name;
-}
+};
 
 // DHCP programming interface class
 class Dhcp_Programming_Interface {
-   public:
-      // pure virtual functions providing interface framework.
-      virtual int initialize() = 0;
+  public:
+  // pure virtual functions providing interface framework.
+  virtual int initialize() = 0;
 
-      virtual int add_dhcp_entry(dhcp_config* dhcp_config_in) = 0;
+  virtual int add_dhcp_entry(dhcp_config *dhcp_config_in) = 0;
 
-      virtual int update_dhcp_entry(dhcp_config* dhcp_config_in) = 0;
+  virtual int update_dhcp_entry(dhcp_config *dhcp_config_in) = 0;
 
-      virtual int delete_dhcp_entry(string network_id, string mac_address) = 0;
+  virtual int delete_dhcp_entry(string network_id, string mac_address) = 0;
 };
+} // namespace aca_dhcp_programming_if
 ------------------------------------------------------------
 
 == Open-Flow assisted DHCP Server Implementation (Preferred solution)
@@ -315,10 +318,11 @@ Neutron uses dnsmasq which does not support DHCPv6 stateless address assignment.
 
 Since the MAC address assignment by Neutron is only unique per network, dnsmasq has to work around the issue by having multiple dhcp servers per neutron network. It has to run each dnsmasq process in its own network namespace on a seperate dhcp port in the network. With Alcor, MAC address assignment are unique at least on the region level. Our dhcp design can then handle all the DHCP requests from different networks using just one handler running within ACA.
 
+Neutron uses one dnsmasq process running on its own network namespace for each subnet, with more tenants and subnet grows, so does the resource requirement on the network node. While it is possible to run different dhcp agent and dnsmasq process in different network/compute nodes, but that would add on to management complexity.<<neutron-dhcp>>
 
 == Outstanding Items
 
-. [TODO] How can DHCP server scale, how many network can one network node support.
+. [TODO] How can DHCP server scale, how many networks can one network node support?
 
 
 [bibliography]
@@ -327,3 +331,4 @@ Since the MAC address assignment by Neutron is only unique per network, dnsmasq 
 - [[[dnsmasq,1]]] http://www.thekelleys.org.uk/dnsmasq/doc.html
 - [[[dragonflow-code,2]]] https://raw.githubusercontent.com/openstack/dragonflow/master/dragonflow/controller/apps/dhcp.py
 - [[[dragonflow-pic,3]]] https://github.com/openstack/dragonflow/blob/master/doc/images/dhcp2.jpg
+- [[[neutron-dhcp,4]]] https://github.com/openstack/dragonflow/blob/master/doc/images/dhcp2.jpg
