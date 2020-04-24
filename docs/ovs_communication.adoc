@@ -1,5 +1,5 @@
 = OVS Programming Design
-Eric Li <sze.li@futurewei.com>, Xiaodong Zhang <xzhang2@futurewei.com>
+Eric Li <sze.li@futurewei.com>, Xiaodong Zhang <xzhang2@futurewei.com>, Liguang Xie <lxie@futurewei.com>
 v0.1, 2020-04-07
 :toc: right
 
@@ -19,9 +19,17 @@ and that message would contain all the necessary network/port/security group/DHC
 The message can contain one or more (batching) configuration (e.g. 1000s new ports).
 ACA will parse the message in the Network State Handler module and then send the work item(s) to different ACA components for processing.
 It has the ability to execute multiple work items in parallel by default to greatly reduce the configuration time.
-Our previous data showed that parallel processing would provide 7 times gain compare do serial processing 100s of configurations.
+Our preliminary data showed that parallel processing would provide 7 times gain compare to serial processing 100s of configurations.
 Once all the work items are completed, ACA will provide the one response message back to Alcor controller on success/fail status and also elapse time stamps for record tracking.
 To summarize, we are looking at just one message send to ACA and one reply back to Alcor control to configure one to 1000s of new ports.
+
+Neutron communication protocol is quite chatty, note that DHCP and smart NIC is not included below:
+
+image::images/communication_neutron.jpg["communication model with neutron", width=800, link="images/communication_neutron.jpg"]
+
+Alcor communication protocol is much simply, it supports VPC/Subnet/Port/Security group/DHCP in a single network state message:
+
+image::images/communication_alcor.jpg["communication model with alcor", width=800, link="images/communication_alcor.jpg"]
 
 
 === Agent APIs for Core Network Programming
@@ -31,21 +39,27 @@ Here is the proposed implementation for Core Network programming interface:
 [source,c++]
 ------------------------------------------------------------
 // Core Network Programming Interface class
+namespace aca_net_programming_if
+{
 class Core_Network_Programming_Interface {
-   public:
-      // pure virtual functions providing interface framework.
-      virtual int initialize() = 0;
+  public:
+  // pure virtual functions providing interface framework.
+  virtual int initialize() = 0;
 
-      virtual int update_vpc_state_workitem(const VpcState current_VpcState,
-                                            GoalStateOperationReply &gsOperationReply) = 0;
+  virtual int
+  update_vpc_state_workitem(const alcorcontroller::VpcState current_VpcState,
+                            const alcorcontroller::GoalStateOperationReply &gsOperationReply) = 0;
 
-      virtual int update_subnet_state_workitem(const SubnetState current_SubnetState,
-                                               GoalStateOperationReply &gsOperationReply) = 0;
+  virtual int
+  update_subnet_state_workitem(const alcorcontroller::SubnetState current_SubnetState,
+                               const alcorcontroller::GoalStateOperationReply &gsOperationReply) = 0;
 
-      virtual int update_port_state_workitem(const PortState current_PortState,
-                                             const alcorcontroller::GoalState &parsed_struct,
-                                             GoalStateOperationReply &gsOperationReply) = 0;
+  virtual int
+  update_port_state_workitem(const alcorcontroller::PortState current_PortState,
+                             const alcorcontroller::GoalState &parsed_struct,
+                             const alcorcontroller::GoalStateOperationReply &gsOperationReply) = 0;
 };
+} // namespace aca_net_programming_if
 ------------------------------------------------------------
 
 
@@ -69,6 +83,8 @@ ACA will act as OpenFlow controller managing OVS as an OpenFlow switch. An OpenF
 OpenFlow protocol is the standard communication method between OpenFlow controller and network switch (virtual/physical).
 With the popularity of hardware offloading, it is very likey that we can offload the flow table rules into NIC hardware.
 
+TBD: XiaoDong to see if we can simply use OVS DB management protocol to directly inside OpenFlow rules into OVSDB.
+
 
 == Workflow of Network Configuration Programming
 
@@ -80,7 +96,6 @@ New Port Configuration on the compute host:
 . ensure the br-int and br-tun bridges are properly created, if not, re-create them
 . ensure the patch cable between br-int and br-tun is connected correctly
 . configure the new port created by nova agent that's attached to br-int
-.. can add more detail
 . provision vlan tags for the new port for tenant network isolation within this host
 . program the br-tun about this new port, so that encap/decap can be done there
 .. "ovs-vsctl add-port set interface type=vxlan"
@@ -130,14 +145,6 @@ How is the perf, latency and availability etc compare to Neutron?
 . Need to measure the perf for a lot of VPCs
 . How are the OVS bridge performance when it is at scale? Is that the reason why it use multiple bridges (br-int, br-tun, br-ex)?
 
-Neutron communication protocol is quite chatty, note that DHCP and smart NIC is not included below:
-
-image::images/communication_neutron.jpg["communication model with neutron", width=800, link="images/communication_neutron.jpg"]
-
-Alcor communication protocol is much simply, it supports VPC/Subnet/Port/Security group/DHCP in a single network state message:
-
-image::images/communication_alcor.jpg["communication model with alcor", width=800, link="images/communication_alcor.jpg"]
-
 
 == Background of OVS Dataplane
 
@@ -164,9 +171,9 @@ image::images/ovs_components.png["OVS Component diagram", width=800, link="image
 
 == Pending Items
 
-. what happen when there are multiple physical NICs on the system, which NIC do we pick to hook up to br-ex?
+. what happen when there are multiple physical NICs on the system, which NIC do we pick to hook up to external and internal traffic?
 
-. what happen if host crashed, do we save the OVS config locally and restore it? Or we ask the Alcor controller for the whole set of configuration upon restart?
+. what happen if host crashed, do we just leverage the ovsdb storedd data? Or we ask the Alcor controller for the whole set of configuration upon restart?
 
 
 [bibliography]
