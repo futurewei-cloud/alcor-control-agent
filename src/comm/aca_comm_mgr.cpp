@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "aca_dataplane_mizar.h"
 #include "aca_comm_mgr.h"
 #include "aca_net_config.h"
 #include "aca_util.h"
@@ -207,6 +208,20 @@ static void aca_convert_to_mac_array(const char *mac_string, u_char *mac)
 
 namespace aca_comm_manager
 {
+Aca_Comm_Manager::Aca_Comm_Manager()
+{
+  ACA_LOG_INFO("Communication manager initialize\n");
+
+  // default to dataplane_mizar for now
+  ACA_LOG_INFO("Communication manager: using mizar dataplane\n");
+  this->core_net_programming_if = new aca_dataplane_mizar::ACA_Dataplane_Mizar;
+}
+
+Aca_Comm_Manager::~Aca_Comm_Manager()
+{
+  // TODO: do we need to delete the allocated core_net_programming_if?
+}
+
 Aca_Comm_Manager &Aca_Comm_Manager::get_instance()
 {
   // instance is destroyed when program exits.
@@ -251,6 +266,7 @@ int Aca_Comm_Manager::deserialize(const cppkafka::Buffer *kafka_buffer, GoalStat
 int Aca_Comm_Manager::update_vpc_state_workitem(const VpcState current_VpcState,
                                                 GoalStateOperationReply &gsOperationReply)
 {
+  /*
   int transitd_command;
   void *transitd_input;
   int exec_command_rc;
@@ -395,6 +411,10 @@ int Aca_Comm_Manager::update_vpc_state_workitem(const VpcState current_VpcState,
           culminative_network_configuration_time, operation_total_time);
 
   return overall_rc;
+  */
+
+  return this->core_net_programming_if->update_vpc_state_workitem(
+          current_VpcState, std::ref(gsOperationReply));
 }
 
 int Aca_Comm_Manager::update_vpc_states(const GoalState &parsed_struct,

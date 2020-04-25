@@ -15,6 +15,7 @@
 #ifndef ACA_COMM_MGR_H
 #define ACA_COMM_MGR_H
 
+#include "aca_dataplane_mizar.h"
 #include "cppkafka/buffer.h"
 #include "goalstateprovisioner.grpc.pb.h"
 
@@ -69,8 +70,10 @@ class Aca_Comm_Manager {
   void operator=(Aca_Comm_Manager const &) = delete;
 
   private:
-  Aca_Comm_Manager(){};
-  ~Aca_Comm_Manager(){};
+  Aca_Comm_Manager();
+  ~Aca_Comm_Manager();
+
+  aca_net_programming_if::ACA_Core_Network_Programming_Interface *core_net_programming_if;
 
   void
   add_goal_state_operation_status(alcorcontroller::GoalStateOperationReply &gsOperationReply,

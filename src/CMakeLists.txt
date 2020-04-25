@@ -5,6 +5,7 @@ set(SOURCES
     ./comm/messageconsumer.cpp
     ./comm/aca_comm_mgr.cpp
     ./comm/aca_async_grpc_server.cpp
+    ./dp_abstraction/aca_dataplane_mizar.cpp
     ./net_config/aca_net_config.cpp
 )
 FIND_LIBRARY(RDKAFKA rdkafka /usr/lib/x86_64-linux-gnu NO_DEFAULT_PATH)

@@ -14,7 +14,8 @@
 
 #include "aca_log.h"
 #include "aca_util.h"
-#include "aca_comm_mgr.h"
+// #include "aca_comm_mgr.h"
+// #include "aca_dataplane_mizar.h"
 #include "messageconsumer.h"
 #include "aca_async_grpc_server.h"
 #include "goalstateprovisioner.grpc.pb.h"
@@ -34,7 +35,7 @@ static char KAFKA_GROUP_ID[] = "test-group-id";
 static char LOCALHOST[] = "localhost";
 static char UDP_PROTOCOL[] = "udp";
 
-using aca_comm_manager::Aca_Comm_Manager;
+// using aca_comm_manager::Aca_Comm_Manager;
 using namespace std;
 
 // Global variables
