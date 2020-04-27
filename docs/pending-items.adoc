@@ -34,11 +34,3 @@ Scenario C:
 
 Accessing an EP from an external network IP is the opposite process.
 
-=== Security Group Programming
-
-image::images/sg1.jpg["OVS Component diagram", width=800, link="images/sg1.jpg"]
-
-
-=== Network ACL Programming
-
-image::images/sg-filter.jpg["OVS Component diagram", width=800, link="images/sg-filter.jpg"]
