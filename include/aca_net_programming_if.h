@@ -20,23 +20,23 @@
 // Core Network Programming Interface class
 namespace aca_net_programming_if
 {
-class ACA_Core_Network_Programming_Interface {
+class ACA_Core_Net_Programming_Interface {
   public:
   // pure virtual functions providing interface framework.
   virtual int initialize() = 0;
 
   virtual int
   update_vpc_state_workitem(const alcorcontroller::VpcState current_VpcState,
-                            const alcorcontroller::GoalStateOperationReply &gsOperationReply) = 0;
+                            alcorcontroller::GoalStateOperationReply &gsOperationReply) = 0;
 
   virtual int
   update_subnet_state_workitem(const alcorcontroller::SubnetState current_SubnetState,
-                               const alcorcontroller::GoalStateOperationReply &gsOperationReply) = 0;
+                               alcorcontroller::GoalStateOperationReply &gsOperationReply) = 0;
 
   virtual int
   update_port_state_workitem(const alcorcontroller::PortState current_PortState,
-                             const alcorcontroller::GoalState &parsed_struct,
-                             const alcorcontroller::GoalStateOperationReply &gsOperationReply) = 0;
+                             alcorcontroller::GoalState &parsed_struct,
+                             alcorcontroller::GoalStateOperationReply &gsOperationReply) = 0;
 };
 } // namespace aca_net_programming_if
 #endif // #ifndef ACA_NET_PROGRAMMING_IF_H

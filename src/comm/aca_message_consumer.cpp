@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "messageconsumer.h"
+#include "aca_message_consumer.h"
 #include "goalstate.pb.h"
 #include "cppkafka/utils/consumer_dispatcher.h"
 #include "aca_comm_mgr.h"

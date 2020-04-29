@@ -20,19 +20,26 @@
 // mizar dataplane implementation class
 namespace aca_dataplane_mizar
 {
-class ACA_Dataplane_Mizar : public aca_net_programming_if::ACA_Core_Network_Programming_Interface {
+class ACA_Dataplane_Mizar : public aca_net_programming_if::ACA_Core_Net_Programming_Interface {
   public:
   int initialize();
 
   int update_vpc_state_workitem(const alcorcontroller::VpcState current_VpcState,
-                                const alcorcontroller::GoalStateOperationReply &gsOperationReply);
+                                alcorcontroller::GoalStateOperationReply &gsOperationReply);
 
   int update_subnet_state_workitem(const alcorcontroller::SubnetState current_SubnetState,
-                                   const alcorcontroller::GoalStateOperationReply &gsOperationReply);
+                                   alcorcontroller::GoalStateOperationReply &gsOperationReply);
 
   int update_port_state_workitem(const alcorcontroller::PortState current_PortState,
-                                 const alcorcontroller::GoalState &parsed_struct,
-                                 const alcorcontroller::GoalStateOperationReply &gsOperationReply);
+                                 alcorcontroller::GoalState &parsed_struct,
+                                 alcorcontroller::GoalStateOperationReply &gsOperationReply);
+
+  int unload_agent_xdp(std::string interface, ulong &culminative_time);
+
+  private:
+  int load_agent_xdp(std::string interface, ulong &culminative_time);
+
+  int execute_command(int command, void *input_struct, ulong &culminative_time);
 };
 } // namespace aca_dataplane_mizar
 #endif // #ifndef ACA_DATAPLANCE_MIZAR_H
