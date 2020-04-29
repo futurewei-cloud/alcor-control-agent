@@ -97,17 +97,23 @@ New Port Configuration on the compute host:
 . ensure the patch cable between br-int and br-tun is connected correctly
 . configure the new port created by nova agent that's attached to br-int
 . provision vlan tags for the new port for tenant network isolation within this host
-. program the br-tun about this new port, so that encap/decap can be done there
-.. "ovs-vsctl add-port set interface type=vxlan"
+. program the br-tun about this new port, so that encap/decap can be done there:
+.. e.g. "ovs-vsctl add-port set interface type=vxlan"
+. setup DHCP flow rule so that new VM port can get DHCP address
+. setup security group rule for the new port, more detail to come
+. update DVR if needed
 . reply to Alcor controller saying this port configuration is done
 
 Peer compute host programming:
 
-. In parallel of the new port configuration on its host, we also need to configuration all the peer compute host in the network about this new host that's part of vxlan network.
+. In parallel of the new port configuration on its host, we also need to configuration all the peer compute hosts in the same vxlan network so that they can send traffic to this new port
 . Each will reply to Alcor controller when done
 
-The new port is consider as up when both configuration on its compute host and its peer compute host is completed.
+The new port is consider as up when both configuration on its compute host and its peer compute hosts are completed.
 
+Here is the highlevel view of how ACA communicate with different components for new port programming:
+
+image::images/Agent_ovs_communication.jpg["ACA programming for new port", width=800, link="images/Agent_ovs_communication.jpg"]
 
 == Implementation Details
 
