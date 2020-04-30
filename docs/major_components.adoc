@@ -9,7 +9,7 @@ v0.1, 2020-03-20
 |Alcor Control Agent Major Components|@erictheone|0.1
 |====================
 
-image::images/Agent_components.JPG["Component diagram", width=800, link="images/Agent_components.JPG"]
+image::images/Agent_components.jpg["Component diagram", width=800, link="images/Agent_components.jpg"]
 
 == Communication Manager
 
@@ -51,7 +51,7 @@ Work item executor is used to execute the configuration updates for different da
 
 As physical NIC reached 40G and targetting for 100G/200G speed, we cannot rely on host CPU power to process network packets as it would become bottleneck for network performance. With many components (Router/NACL/Security Policy) needed to inspect and modify network packages based on flows, we need to have a unified flow manager to centralize all the flow rules with the plan to offload the processing of it in NIC hardware. This is needed to support the performance and latency requirement for next generation SDN datacenter. Note that this is need to support the current network offload features like SRIOV.
 
-image::images/Agent_unified_flow_manager.JPG["unified flow manager diagram", width=800, link="images/Agent_unified_flow_manager.JPG"]
+image::images/Agent_unified_flow_manager.jpg["unified flow manager diagram", width=800, link="images/Agent_unified_flow_manager.jpg"]
 
 == Network Health Monitor
 

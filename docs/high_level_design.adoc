@@ -13,7 +13,7 @@ v0.2, 2020-03-01
 
 The Cloud Fabric Alcor Control Agent (ACA) runs on each host machine. It serves as a stateless proxy between Alcor controller and host machine networking components for control plane operations.
 
-image::images/Agent_components.JPG["Component diagram", width=800, link="images/Agent_components.JPG"]
+image::images/Agent_components.jpg["Component diagram", width=800, link="images/Agent_components.jpg"]
 
 == Requirements
 
@@ -31,13 +31,13 @@ image::images/Agent_components.JPG["Component diagram", width=800, link="images/
 . Goal State object: +
 Alcor VPC Controller sends down goal state object to ACA in the format of protobuf 3 messages to support cross language and cross machine model. The goal state object contains 0 to n vpc_states/subnet_states/port_state/security_group_states configurations. When ACA receives the goal state object, it will loop through each configuration to determine the intent update by looking at the OperationType. ACA will then parse the configuration and execute the needed change on the host machine, including XDP programming using transit daemon. Below is the highlevel GoalState definition:
 
-*AlcorController/src/schema/proto3/goalstate.proto*
+*alcor/src/schema/proto3/goalstate.proto*
 
 [source,java]
 ------------------------------------------------------------
 syntax = "proto3";
 
-package aliothcontroller;
+package alcorcontroller;
 
 option java_package = "com.futurewei.alcor.controller.schema";
 

@@ -14,30 +14,66 @@ Source code folder:
 # Build and Execution Instructions using Dockerfile
 Since the Alcor Control Agent relies on a few external dependencies, Dockerfile was used for fast build and test environment setup.
 
-## Cloning alcor-control-agent Repo
-The Alcor Control Agent includes the Alcor controller and Transit submodules to consume the needed proto3 schemas and RPC definitions. Therefore, the below commands are needed when cloning:
+## Setting up a Development Environment
+The Alcor Control Agent project currently uses cmake for building. It includes the Alcor controller and Transit submodules to consume the needed proto3 schemas and RPC definitions.
 
-```Shell
-cd ~/dev
-git clone --recurse-submodules https://github.com/futurewei-cloud/alcor-control-agent.git AlcorControlAgent
-git submodule update --init --recursive
-```
+To set up your local development environment, we recommend to use fork-and-branch git workflow.
+
+1. Fork Alcor Control Agent Github repository by clicking the Fork button on the upper right-hand side of Alcor Control Agent home page.
+2. Make a local clone:
+    ```
+    cd ~/dev
+    $ git clone --recurse-submodules https://github.com/<your_github_username>/alcor-control-agent.git ~/alcor-control-agent
+    $ cd ~/alcor-control-agent
+    $ git submodule update --init --recursive
+    ```
+3. Add a remote pointing back to the Alcor Official repository
+    ```
+    $ git remote add upstream https://github.com/futurewei-cloud/alcor-control-agent.git 
+    ```
+4. Always keep your forked repo (both local and remote) in sync with upstream. Try to run the following commands daily:
+    ```
+    $ git checkout master
+    $ git pull upstream master
+    $ git push origin master
+    ```
+5. Work in a feature branch
+    ```
+    $ git checkout -b <new_branch_name>
+    $ ... (make changes in your branch)
+    $ git add .
+    & git commit -m "commit message"
+    ```
+6. Push changes to your remote fork
+    ```
+    $ git push origin <new_branch_name>
+    ```
+7. Open a Pull Request on Alcor home page, notify community on [Alcor Slack](https://alcor-networking.slack.com/) channels.
+You will need approval from at least one maintainer, who will merge your codes to Alcor master.
+8. Clean up after a merged Pull Request
+    ```
+    $ git checkout master
+    $ git pull upstream master
+    $ git push origin master
+    $ git branch -d <branch_name>
+    $ git push --delete origin <branch_name>
+    ```
 
 ## Run the build script to set up the build container and compile the alcor-control-agent
-Assuming alcor-control-agent was cloned into ~/dev/AlcorControlAgent directory:
+Assuming alcor-control-agent was cloned into ~/dev/alcor-control-agent directory:
 ```Shell
-cd ~/dev/AlcorControlAgent
+cd ~/dev/alcor-control-agent
 ./build/build.sh
 ```
 ## Running alcor-control-agent and tests
 You can run the test (optional):
 ```Shell
-root@ca62b6feec63:/mnt/host/code/AlcorControlAgent# ./build/tests/aca_tests
+root@ca62b6feec63:/mnt/host/code/alcor-control-agent# ./build/tests/aca_tests
 ```
 
 You should be ready to run the executable:
 ```Shell
-root@ca62b6feec63:/mnt/host/code/AlcorControlAgent# ./build/bin/AlcorControlAgent
+root@ca62b6feec63:/mnt/host/code/alcor-control-agent# ./build/bin/AlcorControlAgent
 ```
 
 # Build the container while behind a proxy
