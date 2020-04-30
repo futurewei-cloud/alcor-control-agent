@@ -179,7 +179,7 @@ image::images/ovs_components.png["OVS Component diagram", width=800, link="image
 
 . what happen when there are multiple physical NICs on the system, which NIC do we pick to hook up to external and internal traffic?
 
-. what happen if host crashed, do we just leverage the ovsdb storedd data? Or we ask the Alcor controller for the whole set of configuration upon restart?
+. what happen if host crashed, do we just leverage the ovsdb stored data? Or we ask the Alcor controller for the whole set of configuration upon restart?
 
 
 [bibliography]
