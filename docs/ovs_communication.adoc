@@ -41,23 +41,23 @@ Here is the proposed implementation for Core Network programming interface:
 // Core Network Programming Interface class
 namespace aca_net_programming_if
 {
-class Core_Network_Programming_Interface {
+class ACA_Core_Net_Programming_Interface {
   public:
   // pure virtual functions providing interface framework.
   virtual int initialize() = 0;
 
   virtual int
   update_vpc_state_workitem(const alcorcontroller::VpcState current_VpcState,
-                            const alcorcontroller::GoalStateOperationReply &gsOperationReply) = 0;
+                            alcorcontroller::GoalStateOperationReply &gsOperationReply) = 0;
 
   virtual int
   update_subnet_state_workitem(const alcorcontroller::SubnetState current_SubnetState,
-                               const alcorcontroller::GoalStateOperationReply &gsOperationReply) = 0;
+                               alcorcontroller::GoalStateOperationReply &gsOperationReply) = 0;
 
   virtual int
   update_port_state_workitem(const alcorcontroller::PortState current_PortState,
-                             const alcorcontroller::GoalState &parsed_struct,
-                             const alcorcontroller::GoalStateOperationReply &gsOperationReply) = 0;
+                             alcorcontroller::GoalState &parsed_struct,
+                             alcorcontroller::GoalStateOperationReply &gsOperationReply) = 0;
 };
 } // namespace aca_net_programming_if
 ------------------------------------------------------------
@@ -65,7 +65,7 @@ class Core_Network_Programming_Interface {
 
 === Communication with OVS
 
-image::images/ovs-all2.jpg["OVS Component diagram", width=800, link="images/ovs-all2.jpg"]
+image::images/ovs-all.jpg["OVS Component diagram", width=800, link="images/ovs-all.jpg"]
 
 
 === Communication Protocol
@@ -114,6 +114,9 @@ The new port is consider as up when both configuration on its compute host and i
 Here is the highlevel view of how ACA communicate with different components for new port programming:
 
 image::images/Agent_ovs_communication.jpg["ACA programming for new port", width=800, link="images/Agent_ovs_communication.jpg"]
+
+Note that newer neutron implementation uses OpenFlow rules for security group implementation<<neutron-sg>>, ACA may go with similar approach as OpenFlow rules can be offloaded to physical NIC.
+
 
 == Implementation Details
 
@@ -187,7 +190,8 @@ image::images/ovs_components.png["OVS Component diagram", width=800, link="image
 
 - [[[rfc7047,1]]] https://tools.ietf.org/html/rfc7047
 - [[[openflow,2]]] https://www.opennetworking.org/images/stories/downloads/sdn-resources/onf-specifications/openflow/openflow-spec-v1.4.0.pdf
-- [[[start-ovs,3]]] https://github.com/openstack/neutron/blob/c2d18cda6f3716965f0843da213985b4b7c6bb41/devstack/lib/ovs#L153
-- [[[ovs,4]]] https://www.openvswitch.org/
-- [[[why-ovs,5]]] https://github.com/openvswitch/ovs/blob/master/Documentation/intro/why-ovs.rst
-- [[[ovs-components,6]]] https://www.researchgate.net/publication/311338103_A_Survey_on_the_Contributions_of_Software-Defined_Networking_to_Traffic_Engineering
+- [[[neutron-sg,3]]] https://docs.openstack.org/neutron/pike/contributor/internals/openvswitch_firewall.html
+- [[[start-ovs,4]]] https://github.com/openstack/neutron/blob/c2d18cda6f3716965f0843da213985b4b7c6bb41/devstack/lib/ovs#L153
+- [[[ovs,5]]] https://www.openvswitch.org/
+- [[[why-ovs,6]]] https://github.com/openvswitch/ovs/blob/master/Documentation/intro/why-ovs.rst
+- [[[ovs-components,7]]] https://www.researchgate.net/publication/311338103_A_Survey_on_the_Contributions_of_Software-Defined_Networking_to_Traffic_Engineering
