@@ -331,4 +331,4 @@ Neutron uses one dnsmasq process running on its own network namespace for each s
 - [[[dnsmasq,1]]] http://www.thekelleys.org.uk/dnsmasq/doc.html
 - [[[dragonflow-code,2]]] https://raw.githubusercontent.com/openstack/dragonflow/master/dragonflow/controller/apps/dhcp.py
 - [[[dragonflow-pic,3]]] https://github.com/openstack/dragonflow/blob/master/doc/images/dhcp2.jpg
-- [[[neutron-dhcp,4]]] https://github.com/openstack/dragonflow/blob/master/doc/images/dhcp2.jpg
+- [[[neutron-dhcp,4]]] http://blog.gampel.net/2015/09/dragonflow-distributed-dhcp-for.html
