@@ -27,6 +27,7 @@ using std::string;
 
 // Defines
 #define ACALOGNAME "AlcorControlAgent"
+static char EMPTY_STRING[] = "";
 static char BROKER_LIST[] = "172.17.0.1:9092";
 static char KAFKA_TOPIC[] = "Host-ts-1";
 static char KAFKA_GROUP_ID[] = "test-group-id";

@@ -12,17 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "aca_log.h"
+#include "aca_util.h"
 #include "aca_comm_mgr.h"
 #include "aca_net_state_handler.h"
-#include "aca_dataplane_mizar.h"
-#include "aca_log.h"
 #include "goalstateprovisioner.grpc.pb.h"
 
 using namespace std;
 using namespace alcorcontroller;
 using namespace aca_net_state_handler;
-
-#define cast_to_nanoseconds(x) chrono::duration_cast<chrono::nanoseconds>(x)
 
 extern string g_rpc_server;
 extern string g_rpc_protocol;

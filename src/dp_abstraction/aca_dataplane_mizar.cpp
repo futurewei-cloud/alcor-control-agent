@@ -16,9 +16,9 @@
 #include "aca_net_state_handler.h"
 #include "aca_comm_mgr.h"
 #include "aca_net_config.h"
-// #include "aca_util.h"
 #include "aca_log.h"
 #include "goalstateprovisioner.grpc.pb.h"
+#include "aca_util.h"
 #include "trn_rpc_protocol.h"
 #include <chrono>
 #include <future>
@@ -26,7 +26,7 @@
 #include <arpa/inet.h>
 #include <algorithm>
 
-// copying the defines until it is defined in transit RPC interface
+// copying the defines until it is defined in mizar RPC interface
 #define TRAN_SUBSTRT_VNI 0
 #define TRAN_SUBSTRT_EP 0
 #define TRAN_SIMPLE_EP 1
@@ -35,10 +35,7 @@ using namespace std;
 using namespace alcorcontroller;
 using aca_net_config::Aca_Net_Config;
 
-// extern std::mutex gs_reply_mutex; // mutex for writing gs reply object
 std::mutex rpc_client_call_mutex; // mutex to protect the RPC client and call
-
-#define cast_to_nanoseconds(x) chrono::duration_cast<chrono::nanoseconds>(x)
 
 static char EMPTY_STRING[] = "";
 static char ACA_PREFIX[] = "aca_";
@@ -57,32 +54,6 @@ extern std::atomic_ulong g_total_rpc_call_time;
 extern std::atomic_ulong g_total_rpc_client_time;
 extern std::atomic_ulong g_total_update_GS_time;
 extern bool g_demo_mode;
-
-static inline const char *aca_get_operation_name(OperationType operation)
-{
-  switch (operation) {
-  case OperationType::CREATE:
-    return "CREATE";
-  case OperationType::UPDATE:
-    return "UPDATE";
-  case OperationType::GET:
-    return "GET";
-  case OperationType::DELETE:
-    return "DELETE";
-  case OperationType::INFO:
-    return "INFO";
-  case OperationType::FINALIZE:
-    return "FINALIZE";
-  case OperationType::CREATE_UPDATE_SWITCH:
-    return "CREATE_UPDATE_SWITCH";
-  case OperationType::CREATE_UPDATE_ROUTER:
-    return "CREATE_UPDATE_ROUTER";
-  case OperationType::CREATE_UPDATE_GATEWAY:
-    return "CREATE_UPDATE_GATEWAY";
-  default:
-    return "ERROR: unknown operation type!";
-  }
-}
 
 static inline void aca_truncate_device_name(string &device_name, uint truncation_len)
 {

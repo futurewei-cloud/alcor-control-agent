@@ -12,25 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "aca_net_state_handler.h"
-#include "aca_dataplane_mizar.h"
-#include "aca_comm_mgr.h"
-#include "aca_net_config.h"
-// #include "aca_util.h"
 #include "aca_log.h"
-
-// TODO: clean up
+#include "aca_dataplane_mizar.h"
+#include "aca_net_state_handler.h"
 #include "goalstateprovisioner.grpc.pb.h"
-#include "trn_rpc_protocol.h"
-#include <chrono>
 #include <future>
-#include <errno.h>
-#include <arpa/inet.h>
-#include <algorithm>
 
-using namespace std;
 using namespace alcorcontroller;
-using aca_net_config::Aca_Net_Config;
 
 std::mutex gs_reply_mutex; // mutex for writing gs reply object
 
@@ -183,9 +171,10 @@ int Aca_Net_State_Handler::update_port_states(GoalState &parsed_struct,
 }
 
 void Aca_Net_State_Handler::add_goal_state_operation_status(
-        alcorcontroller::GoalStateOperationReply &gsOperationReply, string id,
-        alcorcontroller::ResourceType resource_type, alcorcontroller::OperationType operation_type,
-        int operation_rc, ulong culminative_dataplane_programming_time,
+        alcorcontroller::GoalStateOperationReply &gsOperationReply,
+        std::string id, alcorcontroller::ResourceType resource_type,
+        alcorcontroller::OperationType operation_type, int operation_rc,
+        ulong culminative_dataplane_programming_time,
         ulong culminative_network_configuration_time, ulong state_elapse_time)
 {
   OperationStatus overall_operation_status;

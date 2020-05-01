@@ -17,15 +17,10 @@
 #include "aca_comm_mgr.h"
 #include "aca_net_config.h"
 #include "gtest/gtest.h"
-
 #include "goalstate.pb.h"
 #include <unistd.h> /* for getopt */
 #include <iostream>
 #include <string>
-
-// #include <grpcpp/grpcpp.h>
-// #include <grpc/support/log.h>
-// #include "goalstateprovisioner.grpc.pb.h"
 
 using namespace std;
 using namespace alcorcontroller;
@@ -36,6 +31,7 @@ using aca_comm_manager::Aca_Comm_Manager;
 static char LOCALHOST[] = "localhost";
 static char UDP_PROTOCOL[] = "udp";
 
+static char EMPTY_STRING[] = "";
 static char VALID_STRING[] = "VALID_STRING";
 static char DEFAULT_MTU[] = "9000";
 

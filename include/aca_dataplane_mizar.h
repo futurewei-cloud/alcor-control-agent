@@ -34,10 +34,10 @@ class ACA_Dataplane_Mizar : public aca_net_programming_if::ACA_Core_Net_Programm
                                  alcorcontroller::GoalState &parsed_struct,
                                  alcorcontroller::GoalStateOperationReply &gsOperationReply);
 
-  int unload_agent_xdp(std::string interface, ulong &culminative_time);
-
   private:
   int load_agent_xdp(std::string interface, ulong &culminative_time);
+
+  int unload_agent_xdp(std::string interface, ulong &culminative_time);
 
   int execute_command(int command, void *input_struct, ulong &culminative_time);
 };
