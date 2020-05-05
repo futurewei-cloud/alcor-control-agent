@@ -12,17 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Note: mizar dataplane end to end support is no longer maintained going forward
-
-#ifndef ACA_DATAPLANCE_MIZAR_H
-#define ACA_DATAPLANCE_MIZAR_H
+#ifndef ACA_DATAPLANCE_OVS_H
+#define ACA_DATAPLANCE_OVS_H
 
 #include "aca_net_programming_if.h"
 
-// mizar dataplane implementation class
-namespace aca_dataplane_mizar
+// OVS dataplane implementation class
+namespace aca_dataplane_OVS
 {
-class ACA_Dataplane_Mizar : public aca_net_programming_if::ACA_Core_Net_Programming_Interface {
+class ACA_Dataplane_OVS : public aca_net_programming_if::ACA_Core_Net_Programming_Interface {
   public:
   int initialize();
 
@@ -35,13 +33,6 @@ class ACA_Dataplane_Mizar : public aca_net_programming_if::ACA_Core_Net_Programm
   int update_port_state_workitem(const alcorcontroller::PortState current_PortState,
                                  alcorcontroller::GoalState &parsed_struct,
                                  alcorcontroller::GoalStateOperationReply &gsOperationReply);
-
-  private:
-  int load_agent_xdp(std::string interface, ulong &culminative_time);
-
-  int unload_agent_xdp(std::string interface, ulong &culminative_time);
-
-  int execute_command(int command, void *input_struct, ulong &culminative_time);
 };
-} // namespace aca_dataplane_mizar
-#endif // #ifndef ACA_DATAPLANCE_MIZAR_H
+} // namespace aca_dataplane_OVS
+#endif // #ifndef ACA_DATAPLANCE_OVS_H

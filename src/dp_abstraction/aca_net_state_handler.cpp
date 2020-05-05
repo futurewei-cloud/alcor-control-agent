@@ -31,6 +31,16 @@ Aca_Net_State_Handler::Aca_Net_State_Handler()
   // default to dataplane_mizar for now
   ACA_LOG_INFO("Network State Handler: using mizar dataplane\n");
   this->core_net_programming_if = new aca_dataplane_mizar::ACA_Dataplane_Mizar;
+
+  int rc = this->core_net_programming_if->initialize();
+
+  if (rc == EXIT_SUCCESS) {
+    ACA_LOG_INFO("Core Network Programming initialization succeed\n");
+  } else {
+    ACA_LOG_ERROR("Core Network Programming initialization failed\n");
+    throw std::system_error(ENXIO, std::generic_category(),
+                            "Core Network Programming initialization failed\n");
+  }
 }
 
 Aca_Net_State_Handler::~Aca_Net_State_Handler()

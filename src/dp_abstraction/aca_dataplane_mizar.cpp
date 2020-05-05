@@ -12,16 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Note: mizar dataplane end to end support is no longer maintained going forward
+
 #include "aca_dataplane_mizar.h"
 #include "aca_net_state_handler.h"
-#include "aca_comm_mgr.h"
+// #include "aca_comm_mgr.h"
 #include "aca_net_config.h"
 #include "aca_log.h"
 #include "goalstateprovisioner.grpc.pb.h"
 #include "aca_util.h"
 #include "trn_rpc_protocol.h"
 #include <chrono>
-#include <future>
 #include <errno.h>
 #include <arpa/inet.h>
 #include <algorithm>
