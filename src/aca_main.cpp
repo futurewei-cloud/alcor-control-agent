@@ -14,8 +14,7 @@
 
 #include "aca_log.h"
 #include "aca_util.h"
-#include "aca_comm_mgr.h"
-#include "messageconsumer.h"
+#include "aca_message_consumer.h"
 #include "aca_async_grpc_server.h"
 #include "goalstateprovisioner.grpc.pb.h"
 #include "cppkafka/utils/consumer_dispatcher.h"
@@ -28,13 +27,13 @@ using std::string;
 
 // Defines
 #define ACALOGNAME "AlcorControlAgent"
+static char EMPTY_STRING[] = "";
 static char BROKER_LIST[] = "172.17.0.1:9092";
 static char KAFKA_TOPIC[] = "Host-ts-1";
 static char KAFKA_GROUP_ID[] = "test-group-id";
 static char LOCALHOST[] = "localhost";
 static char UDP_PROTOCOL[] = "udp";
 
-using aca_comm_manager::Aca_Comm_Manager;
 using namespace std;
 
 // Global variables

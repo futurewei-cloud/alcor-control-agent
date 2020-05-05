@@ -13,9 +13,9 @@
 // limitations under the License.
 
 // c includes
-#include "aca_comm_mgr.h"
 #include "aca_log.h"
 #include "aca_util.h"
+#include "aca_comm_mgr.h"
 #include "goalstateprovisioner.grpc.pb.h"
 #include "goalstate.pb.h"
 #include "cppkafka/buffer.h"
@@ -30,6 +30,7 @@
 #include <grpc/support/log.h>
 
 #define ACALOGNAME "AlcorControlAgentTest"
+static char EMPTY_STRING[] = "";
 static char LOCALHOST[] = "localhost";
 static char UDP_PROTOCOL[] = "udp";
 

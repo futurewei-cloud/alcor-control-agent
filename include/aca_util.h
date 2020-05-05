@@ -15,13 +15,35 @@
 #ifndef ACA_UTIL_H
 #define ACA_UTIL_H
 
-#include <stdlib.h>
+#include "aca_log.h"
+#include "goalstateprovisioner.grpc.pb.h"
 
-static char EMPTY_STRING[] = "";
+#define cast_to_nanoseconds(x) chrono::duration_cast<chrono::nanoseconds>(x)
 
-// copying the defines until it is defined in transit RPC interface
-#define TRAN_SUBSTRT_VNI 0
-#define TRAN_SUBSTRT_EP 0
-#define TRAN_SIMPLE_EP 1
+static inline const char *aca_get_operation_name(alcorcontroller::OperationType operation)
+{
+  switch (operation) {
+  case alcorcontroller::OperationType::CREATE:
+    return "CREATE";
+  case alcorcontroller::OperationType::UPDATE:
+    return "UPDATE";
+  case alcorcontroller::OperationType::GET:
+    return "GET";
+  case alcorcontroller::OperationType::DELETE:
+    return "DELETE";
+  case alcorcontroller::OperationType::INFO:
+    return "INFO";
+  case alcorcontroller::OperationType::FINALIZE:
+    return "FINALIZE";
+  case alcorcontroller::OperationType::CREATE_UPDATE_SWITCH:
+    return "CREATE_UPDATE_SWITCH";
+  case alcorcontroller::OperationType::CREATE_UPDATE_ROUTER:
+    return "CREATE_UPDATE_ROUTER";
+  case alcorcontroller::OperationType::CREATE_UPDATE_GATEWAY:
+    return "CREATE_UPDATE_GATEWAY";
+  default:
+    return "ERROR: unknown operation type!";
+  }
+}
 
 #endif

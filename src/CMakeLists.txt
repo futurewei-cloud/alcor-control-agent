@@ -1,10 +1,13 @@
 set(EXECUTABLE_OUTPUT_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../build/bin)
 
 set(SOURCES
-    ./comm/messageproducer.cpp
-    ./comm/messageconsumer.cpp
+    ./comm/aca_message_producer.cpp
+    ./comm/aca_message_consumer.cpp
     ./comm/aca_comm_mgr.cpp
     ./comm/aca_async_grpc_server.cpp
+    ./dp_abstraction/aca_net_state_handler.cpp
+    ./dp_abstraction/aca_dataplane_OVS.cpp
+    ./dp_abstraction/aca_dataplane_mizar.cpp
     ./net_config/aca_net_config.cpp
 )
 FIND_LIBRARY(RDKAFKA rdkafka /usr/lib/x86_64-linux-gnu NO_DEFAULT_PATH)

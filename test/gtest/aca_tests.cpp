@@ -17,15 +17,10 @@
 #include "aca_comm_mgr.h"
 #include "aca_net_config.h"
 #include "gtest/gtest.h"
-
 #include "goalstate.pb.h"
 #include <unistd.h> /* for getopt */
 #include <iostream>
 #include <string>
-
-// #include <grpcpp/grpcpp.h>
-// #include <grpc/support/log.h>
-// #include "goalstateprovisioner.grpc.pb.h"
 
 using namespace std;
 using namespace alcorcontroller;
@@ -36,6 +31,7 @@ using aca_comm_manager::Aca_Comm_Manager;
 static char LOCALHOST[] = "localhost";
 static char UDP_PROTOCOL[] = "udp";
 
+static char EMPTY_STRING[] = "";
 static char VALID_STRING[] = "VALID_STRING";
 static char DEFAULT_MTU[] = "9000";
 
@@ -854,15 +850,6 @@ TEST(net_config_test_cases, port_CREATE_integrated)
   // TODO: should the test wait before cleaning things up?
 
   ulong culminative_network_configuration_time = 0;
-  ulong culminative_dataplane_programming_time = 0;
-
-  // unload transit agent XDP on the peer device
-  rc = Aca_Comm_Manager::get_instance().unload_agent_xdp(
-          peer_name_string, culminative_dataplane_programming_time);
-  // rc can be error if transitd is not loaded
-  if (g_transitd_loaded) {
-    EXPECT_EQ(rc, EXIT_SUCCESS);
-  }
 
   // delete the newly created veth pair
   rc = Aca_Net_Config::get_instance().delete_veth_pair(
@@ -887,7 +874,6 @@ TEST(net_config_test_cases, port_CREATE_10)
   string gateway_ip = "10.0.0.1";
   string gateway_mac = "fa:16:3e:d7:f2:00";
   string cmd_string;
-  ulong culminative_dataplane_programming_time = 0;
   ulong culminative_network_configuration_time = 0;
   int rc;
 
@@ -986,14 +972,6 @@ TEST(net_config_test_cases, port_CREATE_10)
 
     string truncated_port_id = port_name.substr(0, 11);
     string peer_name_string = "peer" + truncated_port_id;
-
-    // unload transit agent XDP on the peer device
-    rc = Aca_Comm_Manager::get_instance().unload_agent_xdp(
-            peer_name_string, culminative_dataplane_programming_time);
-    // rc can be error if transitd is not loaded
-    if (g_transitd_loaded) {
-      EXPECT_EQ(rc, EXIT_SUCCESS);
-    }
 
     // delete the newly created veth pair
     rc = Aca_Net_Config::get_instance().delete_veth_pair(

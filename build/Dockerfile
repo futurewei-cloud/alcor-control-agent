@@ -1,4 +1,4 @@
-FROM ubuntu:latest
+FROM ubuntu:18.04
 RUN echo "--- installing mizar dependencies ---" && \
     apt-get update -y && apt-get install -y \
     rpcbind \
