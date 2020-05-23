@@ -27,11 +27,10 @@ class Aca_Comm_Manager {
   public:
   static Aca_Comm_Manager &get_instance();
 
-  int deserialize(const cppkafka::Buffer *kafka_buffer,
-                  alcorcontroller::GoalState &parsed_struct);
+  int deserialize(const cppkafka::Buffer *kafka_buffer, alcor::schema::GoalState &parsed_struct);
 
-  int update_goal_state(alcorcontroller::GoalState &parsed_struct,
-                        alcorcontroller::GoalStateOperationReply &gsOperationReply);
+  int update_goal_state(alcor::schema::GoalState &parsed_struct,
+                        alcor::schema::GoalStateOperationReply &gsOperationReply);
 
   // compiler will flag error when below is called
   Aca_Comm_Manager(Aca_Comm_Manager const &) = delete;
@@ -43,7 +42,7 @@ class Aca_Comm_Manager {
   Aca_Comm_Manager(){};
   ~Aca_Comm_Manager(){};
 
-  void print_goal_state(alcorcontroller::GoalState parsed_struct);
+  void print_goal_state(alcor::schema::GoalState parsed_struct);
 };
 } // namespace aca_comm_manager
 #endif

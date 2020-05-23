@@ -16,7 +16,6 @@
 
 #include "aca_dataplane_mizar.h"
 #include "aca_net_state_handler.h"
-// #include "aca_comm_mgr.h"
 #include "aca_net_config.h"
 #include "aca_log.h"
 #include "goalstateprovisioner.grpc.pb.h"
@@ -33,7 +32,7 @@
 #define TRAN_SIMPLE_EP 1
 
 using namespace std;
-using namespace alcorcontroller;
+using namespace alcor::schema;
 using aca_net_config::Aca_Net_Config;
 
 std::mutex rpc_client_call_mutex; // mutex to protect the RPC client and call
@@ -574,7 +573,7 @@ int ACA_Dataplane_Mizar::update_subnet_state_workitem(const SubnetState current_
 }
 
 int ACA_Dataplane_Mizar::update_port_state_workitem(const PortState current_PortState,
-                                                    alcorcontroller::GoalState &parsed_struct,
+                                                    alcor::schema::GoalState &parsed_struct,
                                                     GoalStateOperationReply &gsOperationReply)
 {
   int transitd_command;

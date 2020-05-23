@@ -35,7 +35,7 @@ static char LOCALHOST[] = "localhost";
 static char UDP_PROTOCOL[] = "udp";
 
 using namespace std;
-using namespace alcorcontroller;
+using namespace alcor::schema;
 using aca_comm_manager::Aca_Comm_Manager;
 
 // Global variables
@@ -203,23 +203,6 @@ void parse_goalstate(GoalState parsed_struct, GoalState GoalState_builder)
                      .configuration()
                      .allow_address_pairs(j)
                      .mac_address());
-    }
-
-    assert(parsed_struct.port_states(i).configuration().extra_dhcp_options_size() ==
-           GoalState_builder.port_states(i).configuration().extra_dhcp_options_size());
-    for (int j = 0;
-         j < parsed_struct.port_states(i).configuration().extra_dhcp_options_size(); j++) {
-      assert(parsed_struct.port_states(i).configuration().extra_dhcp_options(j).name() ==
-             GoalState_builder.port_states(i)
-                     .configuration()
-                     .extra_dhcp_options(j)
-                     .name());
-
-      assert(parsed_struct.port_states(i).configuration().extra_dhcp_options(j).value() ==
-             GoalState_builder.port_states(i)
-                     .configuration()
-                     .extra_dhcp_options(j)
-                     .value());
     }
   }
   assert(parsed_struct.subnet_states_size() == GoalState_builder.subnet_states_size());
@@ -421,11 +404,6 @@ int main(int argc, char *argv[])
           PortConfiguration_builder->add_allow_address_pairs();
   AddressPair_builder->set_ip_address("10.0.0.5");
   AddressPair_builder->set_mac_address("fa:16:3e:d7:f2:9f");
-  // this will allocate new PortConfiguration_ExtraDhcpOption may need to free later
-  PortConfiguration_ExtraDhcpOption *ExtraDhcp_builder =
-          PortConfiguration_builder->add_extra_dhcp_options();
-  ExtraDhcp_builder->set_name("opt_1");
-  ExtraDhcp_builder->set_value("12");
 
   // fill in the subnet state structs
   new_subnet_states->set_operation_type(OperationType::INFO);

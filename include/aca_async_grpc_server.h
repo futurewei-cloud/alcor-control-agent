@@ -35,17 +35,17 @@ class Aca_Async_GRPC_Server final {
   private:
   class CallData {
 public:
-    CallData(alcorcontroller::GoalStateProvisioner::AsyncService *service,
+    CallData(alcor::schema::GoalStateProvisioner::AsyncService *service,
              ServerCompletionQueue *cq);
     void Proceed();
 
 private:
-    alcorcontroller::GoalStateProvisioner::AsyncService *service_;
+    alcor::schema::GoalStateProvisioner::AsyncService *service_;
     ServerCompletionQueue *cq_;
     ServerContext ctx_;
-    alcorcontroller::GoalState request_;
-    alcorcontroller::GoalStateOperationReply reply_;
-    ServerAsyncResponseWriter<alcorcontroller::GoalStateOperationReply> responder_;
+    alcor::schema::GoalState request_;
+    alcor::schema::GoalStateOperationReply reply_;
+    ServerAsyncResponseWriter<alcor::schema::GoalStateOperationReply> responder_;
 
     enum CallStatus { CREATE, PROCESS, FINISH };
     CallStatus status_;
@@ -53,6 +53,6 @@ private:
 
   void HandleRpcs();
   std::unique_ptr<ServerCompletionQueue> cq_;
-  alcorcontroller::GoalStateProvisioner::AsyncService service_;
+  alcor::schema::GoalStateProvisioner::AsyncService service_;
   std::unique_ptr<Server> server_;
 };

@@ -25,38 +25,37 @@ class Aca_Net_State_Handler {
   static Aca_Net_State_Handler &get_instance();
 
   // process ONE VPC state
-  int update_vpc_state_workitem(const alcorcontroller::VpcState current_VpcState,
-                                alcorcontroller::GoalStateOperationReply &gsOperationReply);
+  int update_vpc_state_workitem(const alcor::schema::VpcState current_VpcState,
+                                alcor::schema::GoalStateOperationReply &gsOperationReply);
 
   // process 0 to N VPC states
-  int update_vpc_states(alcorcontroller::GoalState &parsed_struct,
-                        alcorcontroller::GoalStateOperationReply &gsOperationReply);
+  int update_vpc_states(alcor::schema::GoalState &parsed_struct,
+                        alcor::schema::GoalStateOperationReply &gsOperationReply);
 
   // process ONE subnet state
-  int update_subnet_state_workitem(const alcorcontroller::SubnetState current_SubnetState,
-                                   alcorcontroller::GoalStateOperationReply &gsOperationReply);
+  int update_subnet_state_workitem(const alcor::schema::SubnetState current_SubnetState,
+                                   alcor::schema::GoalStateOperationReply &gsOperationReply);
 
   // process 0 to N subnet states
-  int update_subnet_states(alcorcontroller::GoalState &parsed_struct,
-                           alcorcontroller::GoalStateOperationReply &gsOperationReply);
+  int update_subnet_states(alcor::schema::GoalState &parsed_struct,
+                           alcor::schema::GoalStateOperationReply &gsOperationReply);
 
   // process ONE port state
-  int update_port_state_workitem(const alcorcontroller::PortState current_PortState,
-                                 alcorcontroller::GoalState &parsed_struct,
-                                 alcorcontroller::GoalStateOperationReply &gsOperationReply);
+  int update_port_state_workitem(const alcor::schema::PortState current_PortState,
+                                 alcor::schema::GoalState &parsed_struct,
+                                 alcor::schema::GoalStateOperationReply &gsOperationReply);
 
   // process 0 to N port states
-  int update_port_states(alcorcontroller::GoalState &parsed_struct,
-                         alcorcontroller::GoalStateOperationReply &gsOperationReply);
+  int update_port_states(alcor::schema::GoalState &parsed_struct,
+                         alcor::schema::GoalStateOperationReply &gsOperationReply);
 
-  int update_goal_state(alcorcontroller::GoalState &parsed_struct,
-                        alcorcontroller::GoalStateOperationReply &gsOperationReply);
+  int update_goal_state(alcor::schema::GoalState &parsed_struct,
+                        alcor::schema::GoalStateOperationReply &gsOperationReply);
 
   void add_goal_state_operation_status(
-          alcorcontroller::GoalStateOperationReply &gsOperationReply,
-          std::string id, alcorcontroller::ResourceType resource_type,
-          alcorcontroller::OperationType operation_type, int operation_rc,
-          ulong culminative_dataplane_programming_time,
+          alcor::schema::GoalStateOperationReply &gsOperationReply, std::string id,
+          alcor::schema::ResourceType resource_type, alcor::schema::OperationType operation_type,
+          int operation_rc, ulong culminative_dataplane_programming_time,
           ulong culminative_network_configuration_time, ulong state_elapse_time);
 
   // compiler will flag error when below is called

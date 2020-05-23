@@ -26,15 +26,15 @@ class ACA_Dataplane_Mizar : public aca_net_programming_if::ACA_Core_Net_Programm
   public:
   int initialize();
 
-  int update_vpc_state_workitem(const alcorcontroller::VpcState current_VpcState,
-                                alcorcontroller::GoalStateOperationReply &gsOperationReply);
+  int update_vpc_state_workitem(const alcor::schema::VpcState current_VpcState,
+                                alcor::schema::GoalStateOperationReply &gsOperationReply);
 
-  int update_subnet_state_workitem(const alcorcontroller::SubnetState current_SubnetState,
-                                   alcorcontroller::GoalStateOperationReply &gsOperationReply);
+  int update_subnet_state_workitem(const alcor::schema::SubnetState current_SubnetState,
+                                   alcor::schema::GoalStateOperationReply &gsOperationReply);
 
-  int update_port_state_workitem(const alcorcontroller::PortState current_PortState,
-                                 alcorcontroller::GoalState &parsed_struct,
-                                 alcorcontroller::GoalStateOperationReply &gsOperationReply);
+  int update_port_state_workitem(const alcor::schema::PortState current_PortState,
+                                 alcor::schema::GoalState &parsed_struct,
+                                 alcor::schema::GoalStateOperationReply &gsOperationReply);
 
   private:
   int load_agent_xdp(std::string interface, ulong &culminative_time);

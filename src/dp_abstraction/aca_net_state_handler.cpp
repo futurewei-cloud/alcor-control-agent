@@ -18,7 +18,7 @@
 #include "goalstateprovisioner.grpc.pb.h"
 #include <future>
 
-using namespace alcorcontroller;
+using namespace alcor::schema;
 
 std::mutex gs_reply_mutex; // mutex for writing gs reply object
 
@@ -139,7 +139,7 @@ int Aca_Net_State_Handler::update_subnet_states(GoalState &parsed_struct,
 }
 
 int Aca_Net_State_Handler::update_port_state_workitem(const PortState current_PortState,
-                                                      alcorcontroller::GoalState &parsed_struct,
+                                                      GoalState &parsed_struct,
                                                       GoalStateOperationReply &gsOperationReply)
 {
   return this->core_net_programming_if->update_port_state_workitem(
@@ -181,10 +181,9 @@ int Aca_Net_State_Handler::update_port_states(GoalState &parsed_struct,
 }
 
 void Aca_Net_State_Handler::add_goal_state_operation_status(
-        alcorcontroller::GoalStateOperationReply &gsOperationReply,
-        std::string id, alcorcontroller::ResourceType resource_type,
-        alcorcontroller::OperationType operation_type, int operation_rc,
-        ulong culminative_dataplane_programming_time,
+        GoalStateOperationReply &gsOperationReply, std::string id,
+        ResourceType resource_type, OperationType operation_type,
+        int operation_rc, ulong culminative_dataplane_programming_time,
         ulong culminative_network_configuration_time, ulong state_elapse_time)
 {
   OperationStatus overall_operation_status;

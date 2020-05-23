@@ -26,7 +26,7 @@
 
 static char GRPC_SERVER_ADDRESS[] = "0.0.0.0:50001";
 
-using namespace alcorcontroller;
+using namespace alcor::schema;
 using aca_comm_manager::Aca_Comm_Manager;
 using grpc::Server;
 using grpc::ServerAsyncResponseWriter;

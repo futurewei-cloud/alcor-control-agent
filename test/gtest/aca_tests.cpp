@@ -23,7 +23,7 @@
 #include <string>
 
 using namespace std;
-using namespace alcorcontroller;
+using namespace alcor::schema;
 using aca_comm_manager::Aca_Comm_Manager;
 
 // Defines
@@ -502,7 +502,7 @@ TEST(net_config_test_cases, subnet_CREATE_UPDATE_ROUTER)
   TransitSwitch_builder->set_ip_address("172.0.0.1");
   TransitSwitch_builder->set_mac_address("cc:dd:ee:aa:bb:cc");
 
-  alcorcontroller::GoalStateOperationReply gsOperationalReply;
+  GoalStateOperationReply gsOperationalReply;
 
   rc = Aca_Comm_Manager::get_instance().update_goal_state(GoalState_builder, gsOperationalReply);
   // rc can be error if transitd is not loaded
@@ -548,7 +548,7 @@ TEST(net_config_test_cases, subnet_CREATE_UPDATE_GATEWAY)
   TransitSwitch_builder->set_ip_address("172.0.0.1");
   TransitSwitch_builder->set_mac_address("cc:dd:ee:aa:bb:cc");
 
-  alcorcontroller::GoalStateOperationReply gsOperationalReply;
+  GoalStateOperationReply gsOperationalReply;
   rc = Aca_Comm_Manager::get_instance().update_goal_state(GoalState_builder, gsOperationalReply);
   // rc can be error if transitd is not loaded
   if (g_transitd_loaded) {
@@ -597,7 +597,7 @@ TEST(net_config_test_cases, subnet_CREATE_UPDATE_GATEWAY_100)
     TransitSwitch_builder->set_mac_address("cc:dd:ee:aa:bb:cc");
   }
 
-  alcorcontroller::GoalStateOperationReply gsOperationalReply;
+  GoalStateOperationReply gsOperationalReply;
   rc = Aca_Comm_Manager::get_instance().update_goal_state(GoalState_builder, gsOperationalReply);
   // rc can be error if transitd is not loaded
   if (g_transitd_loaded) {
@@ -662,11 +662,6 @@ TEST(net_config_test_cases, port_CREATE_UPDATE_SWITCH_100)
             PortConfiguration_builder->add_allow_address_pairs();
     AddressPair_builder->set_ip_address("10.0.0.5");
     AddressPair_builder->set_mac_address("fa:16:3e:d7:f2:9f");
-    // this will allocate new PortConfiguration_ExtraDhcpOption may need to free later
-    PortConfiguration_ExtraDhcpOption *ExtraDhcp_builder =
-            PortConfiguration_builder->add_extra_dhcp_options();
-    ExtraDhcp_builder->set_name("opt_1");
-    ExtraDhcp_builder->set_value("12");
   }
 
   // fill in the subnet state structs
@@ -694,7 +689,7 @@ TEST(net_config_test_cases, port_CREATE_UPDATE_SWITCH_100)
   TransitSwitch_builder->set_ip_address("172.0.0.1");
   TransitSwitch_builder->set_mac_address("cc:dd:ee:aa:bb:cc");
 
-  alcorcontroller::GoalStateOperationReply gsOperationalReply;
+  GoalStateOperationReply gsOperationalReply;
   rc = Aca_Comm_Manager::get_instance().update_goal_state(GoalState_builder, gsOperationalReply);
   // rc can be error if transitd is not loaded
   if (g_transitd_loaded) {
@@ -759,11 +754,6 @@ TEST(net_config_test_cases, port_CREATE_integrated)
           PortConfiguration_builder->add_allow_address_pairs();
   AddressPair_builder->set_ip_address("10.0.0.5");
   AddressPair_builder->set_mac_address("fa:16:3e:d7:f2:9f");
-  // this will allocate new PortConfiguration_ExtraDhcpOption may need to free later
-  PortConfiguration_ExtraDhcpOption *ExtraDhcp_builder =
-          PortConfiguration_builder->add_extra_dhcp_options();
-  ExtraDhcp_builder->set_name("opt_1");
-  ExtraDhcp_builder->set_value("12");
 
   // fill in the subnet state structs
   new_subnet_states->set_operation_type(OperationType::INFO);
@@ -793,7 +783,7 @@ TEST(net_config_test_cases, port_CREATE_integrated)
   bool previous_demo_mode = g_demo_mode;
   g_demo_mode = true;
 
-  alcorcontroller::GoalStateOperationReply gsOperationalReply;
+  GoalStateOperationReply gsOperationalReply;
   rc = Aca_Comm_Manager::get_instance().update_goal_state(GoalState_builder, gsOperationalReply);
   // rc can be error if transitd is not loaded
   if (g_transitd_loaded) {
@@ -921,11 +911,6 @@ TEST(net_config_test_cases, port_CREATE_10)
             PortConfiguration_builder->add_allow_address_pairs();
     AddressPair_builder->set_ip_address("10.0.0.5");
     AddressPair_builder->set_mac_address("fa:16:3e:d7:f2:9f");
-    // this will allocate new PortConfiguration_ExtraDhcpOption may need to free later
-    PortConfiguration_ExtraDhcpOption *ExtraDhcp_builder =
-            PortConfiguration_builder->add_extra_dhcp_options();
-    ExtraDhcp_builder->set_name("opt_1");
-    ExtraDhcp_builder->set_value("12");
   }
 
   // fill in the subnet state structs
@@ -956,7 +941,7 @@ TEST(net_config_test_cases, port_CREATE_10)
   bool previous_demo_mode = g_demo_mode;
   g_demo_mode = false;
 
-  alcorcontroller::GoalStateOperationReply gsOperationalReply;
+  GoalStateOperationReply gsOperationalReply;
   rc = Aca_Comm_Manager::get_instance().update_goal_state(GoalState_builder, gsOperationalReply);
   // rc can be error if transitd is not loaded
   if (g_transitd_loaded) {

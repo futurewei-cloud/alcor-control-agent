@@ -26,17 +26,17 @@ class ACA_Core_Net_Programming_Interface {
   virtual int initialize() = 0;
 
   virtual int
-  update_vpc_state_workitem(const alcorcontroller::VpcState current_VpcState,
-                            alcorcontroller::GoalStateOperationReply &gsOperationReply) = 0;
+  update_vpc_state_workitem(const alcor::schema::VpcState current_VpcState,
+                            alcor::schema::GoalStateOperationReply &gsOperationReply) = 0;
 
   virtual int
-  update_subnet_state_workitem(const alcorcontroller::SubnetState current_SubnetState,
-                               alcorcontroller::GoalStateOperationReply &gsOperationReply) = 0;
+  update_subnet_state_workitem(const alcor::schema::SubnetState current_SubnetState,
+                               alcor::schema::GoalStateOperationReply &gsOperationReply) = 0;
 
   virtual int
-  update_port_state_workitem(const alcorcontroller::PortState current_PortState,
-                             alcorcontroller::GoalState &parsed_struct,
-                             alcorcontroller::GoalStateOperationReply &gsOperationReply) = 0;
+  update_port_state_workitem(const alcor::schema::PortState current_PortState,
+                             alcor::schema::GoalState &parsed_struct,
+                             alcor::schema::GoalStateOperationReply &gsOperationReply) = 0;
 };
 } // namespace aca_net_programming_if
 #endif // #ifndef ACA_NET_PROGRAMMING_IF_H

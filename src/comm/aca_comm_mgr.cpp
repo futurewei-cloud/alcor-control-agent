@@ -19,7 +19,7 @@
 #include "goalstateprovisioner.grpc.pb.h"
 
 using namespace std;
-using namespace alcorcontroller;
+using namespace alcor::schema;
 using namespace aca_net_state_handler;
 
 extern string g_rpc_server;
@@ -179,11 +179,6 @@ void Aca_Comm_Manager::print_goal_state(GoalState parsed_struct)
               current_PortConfiguration.allow_address_pairs(j).mac_address().c_str());
     }
 
-    for (int j = 0; j < current_PortConfiguration.extra_dhcp_options_size(); j++) {
-      fprintf(stdout, "current_PortConfiguration.extra_dhcp_options(%d): name %s, value %s \n",
-              j, current_PortConfiguration.extra_dhcp_options(j).name().c_str(),
-              current_PortConfiguration.extra_dhcp_options(j).value().c_str());
-    }
     printf("\n");
   }
 

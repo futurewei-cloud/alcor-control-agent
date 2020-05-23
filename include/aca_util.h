@@ -20,26 +20,26 @@
 
 #define cast_to_nanoseconds(x) chrono::duration_cast<chrono::nanoseconds>(x)
 
-static inline const char *aca_get_operation_name(alcorcontroller::OperationType operation)
+static inline const char *aca_get_operation_name(alcor::schema::OperationType operation)
 {
   switch (operation) {
-  case alcorcontroller::OperationType::CREATE:
+  case alcor::schema::OperationType::CREATE:
     return "CREATE";
-  case alcorcontroller::OperationType::UPDATE:
+  case alcor::schema::OperationType::UPDATE:
     return "UPDATE";
-  case alcorcontroller::OperationType::GET:
+  case alcor::schema::OperationType::GET:
     return "GET";
-  case alcorcontroller::OperationType::DELETE:
+  case alcor::schema::OperationType::DELETE:
     return "DELETE";
-  case alcorcontroller::OperationType::INFO:
+  case alcor::schema::OperationType::INFO:
     return "INFO";
-  case alcorcontroller::OperationType::FINALIZE:
+  case alcor::schema::OperationType::FINALIZE:
     return "FINALIZE";
-  case alcorcontroller::OperationType::CREATE_UPDATE_SWITCH:
+  case alcor::schema::OperationType::CREATE_UPDATE_SWITCH:
     return "CREATE_UPDATE_SWITCH";
-  case alcorcontroller::OperationType::CREATE_UPDATE_ROUTER:
+  case alcor::schema::OperationType::CREATE_UPDATE_ROUTER:
     return "CREATE_UPDATE_ROUTER";
-  case alcorcontroller::OperationType::CREATE_UPDATE_GATEWAY:
+  case alcor::schema::OperationType::CREATE_UPDATE_GATEWAY:
     return "CREATE_UPDATE_GATEWAY";
   default:
     return "ERROR: unknown operation type!";

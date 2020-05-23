@@ -20,7 +20,7 @@
 #include <errno.h>
 
 using namespace std;
-using namespace alcorcontroller;
+using namespace alcor::schema;
 // using aca_net_config::Aca_Net_Config;
 
 namespace aca_dataplane_OVS
@@ -49,7 +49,7 @@ int ACA_Dataplane_OVS::update_subnet_state_workitem(const SubnetState current_Su
 }
 
 int ACA_Dataplane_OVS::update_port_state_workitem(const PortState current_PortState,
-                                                  alcorcontroller::GoalState &parsed_struct,
+                                                  GoalState &parsed_struct,
                                                   GoalStateOperationReply &gsOperationReply)
 {
   // TO BE IMPLEMENTED
