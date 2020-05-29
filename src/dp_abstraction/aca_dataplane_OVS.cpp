@@ -14,6 +14,7 @@
 
 #include "aca_dataplane_OVS.h"
 #include "aca_net_state_handler.h"
+#include "aca_ovs_config.h"
 // #include "aca_net_config.h"
 #include "aca_log.h"
 #include "goalstateprovisioner.grpc.pb.h"
@@ -23,7 +24,7 @@ using namespace std;
 using namespace alcor::schema;
 // using aca_net_config::Aca_Net_Config;
 
-namespace aca_dataplane_OVS
+namespace aca_dataplane_ovs
 {
 int ACA_Dataplane_OVS::initialize()
 {
@@ -56,4 +57,4 @@ int ACA_Dataplane_OVS::update_port_state_workitem(const PortState current_PortSt
   return ENOSYS;
 }
 
-} // namespace aca_dataplane_OVS
+} // namespace aca_dataplane_ovs

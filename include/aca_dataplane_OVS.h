@@ -18,7 +18,7 @@
 #include "aca_net_programming_if.h"
 
 // OVS dataplane implementation class
-namespace aca_dataplane_OVS
+namespace aca_dataplane_ovs
 {
 class ACA_Dataplane_OVS : public aca_net_programming_if::ACA_Core_Net_Programming_Interface {
   public:
@@ -34,5 +34,5 @@ class ACA_Dataplane_OVS : public aca_net_programming_if::ACA_Core_Net_Programmin
                                  alcor::schema::GoalState &parsed_struct,
                                  alcor::schema::GoalStateOperationReply &gsOperationReply);
 };
-} // namespace aca_dataplane_OVS
+} // namespace aca_dataplane_ovs
 #endif // #ifndef ACA_DATAPLANCE_OVS_H

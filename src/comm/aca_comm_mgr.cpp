@@ -27,7 +27,6 @@ extern string g_rpc_protocol;
 extern std::atomic_ulong g_total_rpc_call_time;
 extern std::atomic_ulong g_total_rpc_client_time;
 extern std::atomic_ulong g_total_update_GS_time;
-extern bool g_demo_mode;
 
 namespace aca_comm_manager
 {

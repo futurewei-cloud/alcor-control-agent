@@ -53,7 +53,6 @@ extern string g_rpc_protocol;
 extern std::atomic_ulong g_total_rpc_call_time;
 extern std::atomic_ulong g_total_rpc_client_time;
 extern std::atomic_ulong g_total_update_GS_time;
-extern bool g_demo_mode;
 
 static inline void aca_truncate_device_name(string &device_name, uint truncation_len)
 {
@@ -333,10 +332,10 @@ int ACA_Dataplane_Mizar::update_vpc_state_workitem(const VpcState current_VpcSta
   auto operation_total_time =
           cast_to_nanoseconds(operation_end - operation_start).count();
 
-  // add_goal_state_operation_status(
-  //         gsOperationReply, current_VpcConfiguration.id(), VPC,
-  //         current_VpcState.operation_type(), overall_rc, culminative_dataplane_programming_time,
-  //         culminative_network_configuration_time, operation_total_time);
+  aca_net_state_handler::Aca_Net_State_Handler::get_instance().add_goal_state_operation_status(
+          gsOperationReply, current_VpcConfiguration.id(), VPC,
+          current_VpcState.operation_type(), overall_rc, culminative_dataplane_programming_time,
+          culminative_network_configuration_time, operation_total_time);
 
   return overall_rc;
 }
@@ -564,10 +563,10 @@ int ACA_Dataplane_Mizar::update_subnet_state_workitem(const SubnetState current_
   auto operation_total_time =
           cast_to_nanoseconds(operation_end - operation_start).count();
 
-  // add_goal_state_operation_status(
-  //         gsOperationReply, current_SubnetConfiguration.id(), SUBNET,
-  //         current_SubnetState.operation_type(), overall_rc, culminative_dataplane_programming_time,
-  //         culminative_network_configuration_time, operation_total_time);
+  aca_net_state_handler::Aca_Net_State_Handler::get_instance().add_goal_state_operation_status(
+          gsOperationReply, current_SubnetConfiguration.id(), SUBNET,
+          current_SubnetState.operation_type(), overall_rc, culminative_dataplane_programming_time,
+          culminative_network_configuration_time, operation_total_time);
 
   return overall_rc;
 }
