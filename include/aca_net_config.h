@@ -33,11 +33,6 @@ namespace aca_net_config
 {
 class Aca_Net_Config {
   public:
-  // constructor and destructor purposely omitted to use the default one
-  // provided by the compiler
-  // Aca_Net_Config();
-  // ~Aca_Net_Config();
-
   static Aca_Net_Config &get_instance();
 
   int create_namespace(string ns_name, ulong &culminative_time);

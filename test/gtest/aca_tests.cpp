@@ -14,6 +14,7 @@
 
 #include "aca_log.h"
 #include "aca_util.h"
+#include "aca_ovs_config.h"
 #include "aca_comm_mgr.h"
 #include "aca_net_config.h"
 #include "gtest/gtest.h"
@@ -47,6 +48,7 @@ bool g_demo_mode = false;
 bool g_transitd_loaded = false;
 
 using aca_net_config::Aca_Net_Config;
+using aca_ovs_config::ACA_OVS_Config;
 
 static void aca_cleanup()
 {
@@ -69,6 +71,109 @@ static void aca_cleanup()
   google::protobuf::ShutdownProtobufLibrary();
 
   ACA_LOG_CLOSE();
+}
+
+TEST(ovs_config_test_cases, create_local_two_ports_test_traffic)
+{
+  // ulong culminative_network_configuration_time = 0;
+  ulong not_care_culminative_time;
+  int overall_rc = EXIT_SUCCESS;
+
+  // delete br-int and br-tun bridges
+  ACA_OVS_Config::get_instance().execute_ovsdb_command(
+          "del-br br-int", not_care_culminative_time, overall_rc);
+
+  ACA_OVS_Config::get_instance().execute_ovsdb_command(
+          "del-br br-tun", not_care_culminative_time, overall_rc);
+
+  // confirm br-int and br-tun bridges are not there
+  ACA_OVS_Config::get_instance().execute_ovsdb_command(
+          "br-exists br-int", not_care_culminative_time, overall_rc);
+  EXPECT_NE(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
+
+  ACA_OVS_Config::get_instance().execute_ovsdb_command(
+          "br-exists br-tun", not_care_culminative_time, overall_rc);
+  EXPECT_NE(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
+
+  // create and setup br-int and br-tun bridges, and their patch ports
+  overall_rc = ACA_OVS_Config::get_instance().setup_bridges();
+  ASSERT_EQ(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
+
+  // are the newly created bridges there?
+  ACA_OVS_Config::get_instance().execute_ovsdb_command(
+          "br-exists br-int", not_care_culminative_time, overall_rc);
+  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
+
+  ACA_OVS_Config::get_instance().execute_ovsdb_command(
+          "br-exists br-tun", not_care_culminative_time, overall_rc);
+  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
+
+  // set demo mode
+  bool previous_demo_mode = g_demo_mode;
+  g_demo_mode = true;
+
+  string port_name_1 = "int1";
+  string port_name_2 = "int2";
+  string virtual_ip_1 = "192.168.0.101";
+  string virtual_ip_2 = "192.168.0.102";
+  string prefix_len = "/24";
+
+  // create two ports (using demo mode) and configure them
+  overall_rc = ACA_OVS_Config::get_instance().port_configure(
+          port_name_1, 1, virtual_ip_1 + prefix_len, 20, not_care_culminative_time);
+  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
+
+  overall_rc = ACA_OVS_Config::get_instance().port_configure(
+          port_name_2, 1, virtual_ip_2 + prefix_len, 20, not_care_culminative_time);
+  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
+
+  // restore demo mode
+  g_demo_mode = previous_demo_mode;
+
+  // are the newly created ports there?
+  ACA_OVS_Config::get_instance().execute_ovsdb_command(
+          "get Interface " + port_name_1 + " ofport", not_care_culminative_time, overall_rc);
+  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
+
+  ACA_OVS_Config::get_instance().execute_ovsdb_command(
+          "get Interface " + port_name_2 + " ofport", not_care_culminative_time, overall_rc);
+  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
+
+  // test traffic between the two newly created ports
+  string cmd_string = "ping -I " + virtual_ip_1 + " -c1 " + virtual_ip_2;
+  overall_rc = Aca_Net_Config::get_instance().execute_system_command(cmd_string);
+  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
+
+  // delete br-int and br-tun bridges
+  ACA_OVS_Config::get_instance().execute_ovsdb_command(
+          "del-br br-int", not_care_culminative_time, overall_rc);
+  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
+
+  ACA_OVS_Config::get_instance().execute_ovsdb_command(
+          "del-br br-tun", not_care_culminative_time, overall_rc);
+  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
+
+  // confirm br-int and br-tun bridges are not there
+  ACA_OVS_Config::get_instance().execute_ovsdb_command(
+          "br-exists br-int", not_care_culminative_time, overall_rc);
+  EXPECT_NE(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
+
+  ACA_OVS_Config::get_instance().execute_ovsdb_command(
+          "br-exists br-tun", not_care_culminative_time, overall_rc);
+  EXPECT_NE(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
 }
 
 TEST(net_config_test_cases, create_namespace_invalid)

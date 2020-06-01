@@ -23,21 +23,31 @@ namespace aca_ovs_config
 {
 class ACA_OVS_Config {
   public:
+  static ACA_OVS_Config &get_instance();
+
   int setup_bridges();
 
   int port_configure(const std::string port_name, uint internal_vlan_id,
                      const std::string virtual_ip, uint tunnel_id, ulong &culminative_time);
 
-  int port_neighbor_create_update(alcor::schema::NetworkType network_type,
+  int port_neighbor_create_update(const std::string vpc_id,
+                                  alcor::schema::NetworkType network_type,
                                   const std::string remote_ip, uint internal_vlan_id,
                                   uint tunnel_id, ulong &culminative_time);
 
-  private:
+  // compiler will flag the error when below is called.
+  ACA_OVS_Config(ACA_OVS_Config const &) = delete;
+  void operator=(ACA_OVS_Config const &) = delete;
+
   void execute_ovsdb_command(const std::string cmd_string,
                              ulong &culminative_time, int &overall_rc);
 
   void execute_openflow_command(const std::string cmd_string,
                                 ulong &culminative_time, int &overall_rc);
+
+  private:
+  ACA_OVS_Config(){};
+  ~ACA_OVS_Config(){};
 };
 } // namespace aca_ovs_config
 #endif // #ifndef ACA_OVS_CONFIG_H

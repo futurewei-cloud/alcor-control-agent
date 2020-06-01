@@ -58,9 +58,17 @@ aca_get_outport_name(alcor::schema::NetworkType network_type, string port_name)
   return aca_get_operation_name(network_type) + "-" + to_string(hash_value);
 }
 
+ACA_OVS_Config &ACA_OVS_Config::get_instance()
+{
+  // Instance is destroyed when program exits.
+  // It is instantiated on first use.
+  static ACA_OVS_Config instance;
+  return instance;
+}
+
 int ACA_OVS_Config::setup_bridges()
 {
-  ACA_LOG_DEBUG("ACA_OVS_Config::setup_bridges ---> Entering");
+  ACA_LOG_DEBUG("ACA_OVS_Config::setup_bridges ---> Entering\n");
 
   ulong not_care_culminative_time;
   int overall_rc = EXIT_SUCCESS;
@@ -86,6 +94,8 @@ int ACA_OVS_Config::setup_bridges()
   execute_ovsdb_command("set interface patch-tun options:peer=patch-int",
                         not_care_culminative_time, overall_rc);
 
+  execute_ovsdb_command("add-port br-tun patch-int", not_care_culminative_time, overall_rc);
+
   execute_ovsdb_command("set interface patch-int type=patch",
                         not_care_culminative_time, overall_rc);
 
@@ -99,7 +109,7 @@ int ACA_OVS_Config::setup_bridges()
   execute_openflow_command("add-flow br-tun \"table=2, priority=0 actions=resubmit(,22)\"",
                            not_care_culminative_time, overall_rc);
 
-  ACA_LOG_DEBUG("ACA_OVS_Config::setup_bridges <--- Exiting, overall_rc = %d", overall_rc);
+  ACA_LOG_DEBUG("ACA_OVS_Config::setup_bridges <--- Exiting, overall_rc = %d\n", overall_rc);
 
   return overall_rc;
 }
@@ -108,14 +118,14 @@ int ACA_OVS_Config::port_configure(const string port_name, uint internal_vlan_id
                                    const string virtual_ip, uint tunnel_id,
                                    ulong &culminative_time)
 {
-  ACA_LOG_DEBUG("ACA_OVS_Config::port_configure ---> Entering");
+  ACA_LOG_DEBUG("ACA_OVS_Config::port_configure ---> Entering\n");
 
   int overall_rc = EXIT_SUCCESS;
 
   // TODO: validate input parameters
 
   if (g_demo_mode) {
-    string cmd_string = "add-port br-int" + port_name +
+    string cmd_string = "add-port br-int " + port_name +
                         " tag=" + to_string(internal_vlan_id) +
                         " -- set Interface " + port_name + " type=internal";
 
@@ -136,20 +146,20 @@ int ACA_OVS_Config::port_configure(const string port_name, uint internal_vlan_id
 
   execute_openflow_command(
           "add-flow br-tun \"table=4, priority=1,tun_id=" + to_string(tunnel_id) +
-                  " actions=mod_vlan_vid:" + to_string(internal_vlan_id) + ",output:\"patch-int\"",
+                  " actions=mod_vlan_vid:" + to_string(internal_vlan_id) + ",output:\"patch-int\"\"",
           culminative_time, overall_rc);
 
-  ACA_LOG_DEBUG("ACA_OVS_Config::port_configure <--- Exiting, overall_rc = %d", overall_rc);
+  ACA_LOG_DEBUG("ACA_OVS_Config::port_configure <--- Exiting, overall_rc = %d\n", overall_rc);
 
   return overall_rc;
 }
 
-int ACA_OVS_Config::port_neighbor_create_update(alcor::schema::NetworkType network_type,
-                                                const std::string remote_ip,
-                                                uint internal_vlan_id, uint tunnel_id,
-                                                ulong &culminative_time)
+int ACA_OVS_Config::port_neighbor_create_update(const string vpc_id,
+                                                alcor::schema::NetworkType network_type,
+                                                const string remote_ip, uint internal_vlan_id,
+                                                uint tunnel_id, ulong &culminative_time)
 {
-  ACA_LOG_DEBUG("ACA_OVS_Config::port_neighbor_create_update ---> Entering");
+  ACA_LOG_DEBUG("ACA_OVS_Config::port_neighbor_create_update ---> Entering\n");
 
   int overall_rc = EXIT_SUCCESS;
 
@@ -164,6 +174,11 @@ int ACA_OVS_Config::port_neighbor_create_update(alcor::schema::NetworkType netwo
 
   execute_ovsdb_command(cmd_string, culminative_time, overall_rc);
 
+  // TODO: look up using the vpc_id to see if there is existing tunnels in this vpc
+  // if yes, add this new tunnel into the list and use the full tunnel list to construct
+  // the new flow rule
+
+  // if no, construct the brand new flow rule below
   cmd_string = "add-flow br-tun \"table=22, priority=1,dl_vlan=" + to_string(internal_vlan_id) +
                " actions=strip_vlan,load:" + to_string(tunnel_id) +
                "->NXM_NX_TUN_ID[],output:\"" + outport_name + "\"\"";
@@ -175,7 +190,7 @@ int ACA_OVS_Config::port_neighbor_create_update(alcor::schema::NetworkType netwo
 
   execute_openflow_command(cmd_string, culminative_time, overall_rc);
 
-  ACA_LOG_DEBUG("ACA_OVS_Config::port_neighbor_create_update <--- Exiting, overall_rc = %d",
+  ACA_LOG_DEBUG("ACA_OVS_Config::port_neighbor_create_update <--- Exiting, overall_rc = %d\n",
                 overall_rc);
 
   return overall_rc;
@@ -184,7 +199,7 @@ int ACA_OVS_Config::port_neighbor_create_update(alcor::schema::NetworkType netwo
 void ACA_OVS_Config::execute_ovsdb_command(const std::string cmd_string,
                                            ulong &culminative_time, int &overall_rc)
 {
-  ACA_LOG_DEBUG("ACA_OVS_Config::execute_ovsdb_command ---> Entering");
+  ACA_LOG_DEBUG("ACA_OVS_Config::execute_ovsdb_command ---> Entering\n");
 
   auto ovsdb_client_start = chrono::steady_clock::now();
 
@@ -205,13 +220,13 @@ void ACA_OVS_Config::execute_ovsdb_command(const std::string cmd_string,
   ACA_LOG_INFO("Elapsed time for ovsdb client call took: %ld nanoseconds or %ld milliseconds. rc: %d\n",
                ovsdb_client_time_total_time, ovsdb_client_time_total_time / 1000000, rc);
 
-  ACA_LOG_DEBUG("ACA_OVS_Config::execute_ovsdb_command <--- Exiting, rc = %d", rc);
+  ACA_LOG_DEBUG("ACA_OVS_Config::execute_ovsdb_command <--- Exiting, rc = %d\n", rc);
 }
 
 void ACA_OVS_Config::execute_openflow_command(const std::string cmd_string,
                                               ulong &culminative_time, int &overall_rc)
 {
-  ACA_LOG_DEBUG("ACA_OVS_Config::execute_openflow_command ---> Entering");
+  ACA_LOG_DEBUG("ACA_OVS_Config::execute_openflow_command ---> Entering\n");
 
   auto openflow_client_start = chrono::steady_clock::now();
 
@@ -233,7 +248,7 @@ void ACA_OVS_Config::execute_openflow_command(const std::string cmd_string,
                openflow_client_time_total_time,
                openflow_client_time_total_time / 1000000, rc);
 
-  ACA_LOG_DEBUG("ACA_OVS_Config::execute_openflow_command <--- Exiting, rc = %d", rc);
+  ACA_LOG_DEBUG("ACA_OVS_Config::execute_openflow_command <--- Exiting, rc = %d\n", rc);
 }
 
 } // namespace aca_ovs_config
