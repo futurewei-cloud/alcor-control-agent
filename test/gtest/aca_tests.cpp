@@ -588,7 +588,7 @@ TEST(net_config_test_cases, subnet_CREATE_UPDATE_ROUTER)
   // this will allocate new SubnetConfiguration, will need to free it later
   SubnetConfiguration *SubnetConiguration_builder =
           new_subnet_states->mutable_configuration();
-  SubnetConiguration_builder->set_version(1);
+  SubnetConiguration_builder->set_format_version(1);
   SubnetConiguration_builder->set_project_id("dbf72700-5106-4a7a-918f-111111111111");
   SubnetConiguration_builder->set_vpc_id(vpc_id);
   SubnetConiguration_builder->set_id("superSubnetID");
@@ -634,7 +634,7 @@ TEST(net_config_test_cases, subnet_CREATE_UPDATE_GATEWAY)
   // this will allocate new SubnetConfiguration, will need to free it later
   SubnetConfiguration *SubnetConiguration_builder =
           new_subnet_states->mutable_configuration();
-  SubnetConiguration_builder->set_version(1);
+  SubnetConiguration_builder->set_format_version(1);
   SubnetConiguration_builder->set_project_id("dbf72700-5106-4a7a-918f-111111111111");
   SubnetConiguration_builder->set_vpc_id(vpc_id);
   SubnetConiguration_builder->set_id("superSubnetID");
@@ -682,7 +682,7 @@ TEST(net_config_test_cases, subnet_CREATE_UPDATE_GATEWAY_100)
     // this will allocate new SubnetConfiguration, will need to free it later
     SubnetConfiguration *SubnetConiguration_builder =
             new_subnet_states->mutable_configuration();
-    SubnetConiguration_builder->set_version(1);
+    SubnetConiguration_builder->set_format_version(1);
     SubnetConiguration_builder->set_project_id("dbf72700-5106-4a7a-918f-111111111111");
     SubnetConiguration_builder->set_vpc_id(vpc_id);
     SubnetConiguration_builder->set_id("superSubnetID" + i_string);
@@ -739,9 +739,8 @@ TEST(net_config_test_cases, port_CREATE_UPDATE_SWITCH_100)
     // this will allocate new PortConfiguration, may need to free it later
     PortConfiguration *PortConfiguration_builder =
             new_port_states->mutable_configuration();
-    PortConfiguration_builder->set_version(1);
+    PortConfiguration_builder->set_format_version(1);
     PortConfiguration_builder->set_project_id("dbf72700-5106-4a7a-918f-111111111111");
-    PortConfiguration_builder->set_network_id("superSubnetID");
     PortConfiguration_builder->set_id(port_name);
     PortConfiguration_builder->set_name("FriendlyPortName");
     PortConfiguration_builder->set_network_ns("");
@@ -757,7 +756,7 @@ TEST(net_config_test_cases, port_CREATE_UPDATE_SWITCH_100)
     PortConfiguration_FixedIp *PortIp_builder =
             PortConfiguration_builder->add_fixed_ips();
     PortIp_builder->set_ip_address(ip_address);
-    PortIp_builder->set_subnet_id("2");
+    PortIp_builder->set_subnet_id("superSubnetID");
     // this will allocate new PortConfiguration_SecurityGroupId may need to free later
     PortConfiguration_SecurityGroupId *SecurityGroup_builder =
             PortConfiguration_builder->add_security_group_ids();
@@ -775,7 +774,7 @@ TEST(net_config_test_cases, port_CREATE_UPDATE_SWITCH_100)
   // this will allocate new SubnetConfiguration, will need to free it later
   SubnetConfiguration *SubnetConiguration_builder =
           new_subnet_states->mutable_configuration();
-  SubnetConiguration_builder->set_version(1);
+  SubnetConiguration_builder->set_format_version(1);
   SubnetConiguration_builder->set_project_id("dbf72700-5106-4a7a-918f-111111111111");
   SubnetConiguration_builder->set_vpc_id(vpc_id);
   SubnetConiguration_builder->set_id("superSubnetID");
@@ -832,9 +831,8 @@ TEST(net_config_test_cases, port_CREATE_integrated)
 
   // this will allocate new PortConfiguration, will need to free it later
   PortConfiguration *PortConfiguration_builder = new_port_states->mutable_configuration();
-  PortConfiguration_builder->set_version(1);
+  PortConfiguration_builder->set_format_version(1);
   PortConfiguration_builder->set_project_id("dbf72700-5106-4a7a-918f-111111111111");
-  PortConfiguration_builder->set_network_id("superSubnetID");
   PortConfiguration_builder->set_id(port_name);
   PortConfiguration_builder->set_name("FriendlyPortName");
   PortConfiguration_builder->set_network_ns("");
@@ -849,7 +847,7 @@ TEST(net_config_test_cases, port_CREATE_integrated)
   // this will allocate new PortConfiguration_FixedIp may need to free later
   PortConfiguration_FixedIp *PortIp_builder = PortConfiguration_builder->add_fixed_ips();
   PortIp_builder->set_ip_address(ip_address);
-  PortIp_builder->set_subnet_id("2");
+  PortIp_builder->set_subnet_id("superSubnetID");
   // this will allocate new PortConfiguration_SecurityGroupId may need to free later
   PortConfiguration_SecurityGroupId *SecurityGroup_builder =
           PortConfiguration_builder->add_security_group_ids();
@@ -866,7 +864,7 @@ TEST(net_config_test_cases, port_CREATE_integrated)
   // this will allocate new SubnetConfiguration, will need to free it later
   SubnetConfiguration *SubnetConiguration_builder =
           new_subnet_states->mutable_configuration();
-  SubnetConiguration_builder->set_version(1);
+  SubnetConiguration_builder->set_format_version(1);
   SubnetConiguration_builder->set_project_id("dbf72700-5106-4a7a-918f-111111111111");
   SubnetConiguration_builder->set_vpc_id(vpc_id);
   SubnetConiguration_builder->set_id("superSubnetID");
@@ -988,9 +986,8 @@ TEST(net_config_test_cases, port_CREATE_10)
     // this will allocate new PortConfiguration, may need to free it later
     PortConfiguration *PortConfiguration_builder =
             new_port_states->mutable_configuration();
-    PortConfiguration_builder->set_version(1);
+    PortConfiguration_builder->set_format_version(1);
     PortConfiguration_builder->set_project_id("dbf72700-5106-4a7a-918f-111111111111");
-    PortConfiguration_builder->set_network_id(network_id);
     PortConfiguration_builder->set_id(port_name);
     PortConfiguration_builder->set_name("FriendlyPortName");
     PortConfiguration_builder->set_network_ns("");
@@ -1006,7 +1003,7 @@ TEST(net_config_test_cases, port_CREATE_10)
     PortConfiguration_FixedIp *PortIp_builder =
             PortConfiguration_builder->add_fixed_ips();
     PortIp_builder->set_ip_address(ip_address_prefix + i_string);
-    PortIp_builder->set_subnet_id("2");
+    PortIp_builder->set_subnet_id("superSubnetID");
     // this will allocate new PortConfiguration_SecurityGroupId may need to free later
     PortConfiguration_SecurityGroupId *SecurityGroup_builder =
             PortConfiguration_builder->add_security_group_ids();
@@ -1024,7 +1021,7 @@ TEST(net_config_test_cases, port_CREATE_10)
   // this will allocate new SubnetConfiguration, will need to free it later
   SubnetConfiguration *SubnetConiguration_builder =
           new_subnet_states->mutable_configuration();
-  SubnetConiguration_builder->set_version(1);
+  SubnetConiguration_builder->set_format_version(1);
   SubnetConiguration_builder->set_project_id("dbf72700-5106-4a7a-918f-111111111111");
   SubnetConiguration_builder->set_vpc_id(vpc_id);
   SubnetConiguration_builder->set_id(network_id);

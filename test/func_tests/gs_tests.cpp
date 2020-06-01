@@ -133,14 +133,11 @@ void parse_goalstate(GoalState parsed_struct, GoalState GoalState_builder)
     assert(parsed_struct.port_states(i).operation_type() ==
            GoalState_builder.port_states(i).operation_type());
 
-    assert(parsed_struct.port_states(i).configuration().version() ==
-           GoalState_builder.port_states(i).configuration().version());
+    assert(parsed_struct.port_states(i).configuration().format_version() ==
+           GoalState_builder.port_states(i).configuration().format_version());
 
     assert(parsed_struct.port_states(i).configuration().project_id() ==
            GoalState_builder.port_states(i).configuration().project_id());
-
-    assert(parsed_struct.port_states(i).configuration().network_id() ==
-           GoalState_builder.port_states(i).configuration().network_id());
 
     assert(parsed_struct.port_states(i).configuration().id() ==
            GoalState_builder.port_states(i).configuration().id());
@@ -211,8 +208,8 @@ void parse_goalstate(GoalState parsed_struct, GoalState GoalState_builder)
     assert(parsed_struct.subnet_states(i).operation_type() ==
            GoalState_builder.subnet_states(i).operation_type());
 
-    assert(parsed_struct.subnet_states(i).configuration().version() ==
-           GoalState_builder.subnet_states(i).configuration().version());
+    assert(parsed_struct.subnet_states(i).configuration().format_version() ==
+           GoalState_builder.subnet_states(i).configuration().format_version());
 
     assert(parsed_struct.subnet_states(i).configuration().project_id() ==
            GoalState_builder.subnet_states(i).configuration().project_id());
@@ -266,8 +263,8 @@ void parse_goalstate(GoalState parsed_struct, GoalState GoalState_builder)
     assert(parsed_struct.vpc_states(i).operation_type() ==
            GoalState_builder.vpc_states(i).operation_type());
 
-    assert(parsed_struct.vpc_states(i).configuration().version() ==
-           GoalState_builder.vpc_states(i).configuration().version());
+    assert(parsed_struct.vpc_states(i).configuration().format_version() ==
+           GoalState_builder.vpc_states(i).configuration().format_version());
 
     assert(parsed_struct.vpc_states(i).configuration().project_id() ==
            GoalState_builder.vpc_states(i).configuration().project_id());
@@ -377,9 +374,8 @@ int main(int argc, char *argv[])
 
   // this will allocate new PortConfiguration, will need to free it later
   PortConfiguration *PortConfiguration_builder = new_port_states->mutable_configuration();
-  PortConfiguration_builder->set_version(1);
+  PortConfiguration_builder->set_format_version(1);
   PortConfiguration_builder->set_project_id("dbf72700-5106-4a7a-918f-111111111111");
-  PortConfiguration_builder->set_network_id("superSubnetID");
   PortConfiguration_builder->set_id("dd12d1dadad2g4h");
   PortConfiguration_builder->set_name("Peer1");
   PortConfiguration_builder->set_network_ns("Final_ns_dd12d1dadad2g4h");
@@ -394,7 +390,7 @@ int main(int argc, char *argv[])
   // this will allocate new PortConfiguration_FixedIp may need to free later
   PortConfiguration_FixedIp *PortIp_builder = PortConfiguration_builder->add_fixed_ips();
   PortIp_builder->set_ip_address("10.0.0.2");
-  PortIp_builder->set_subnet_id("2");
+  PortIp_builder->set_subnet_id("superSubnetID");
   // this will allocate new PortConfiguration_SecurityGroupId may need to free later
   PortConfiguration_SecurityGroupId *SecurityGroup_builder =
           PortConfiguration_builder->add_security_group_ids();
@@ -411,7 +407,7 @@ int main(int argc, char *argv[])
   // this will allocate new SubnetConfiguration, will need to free it later
   SubnetConfiguration *SubnetConiguration_builder =
           new_subnet_states->mutable_configuration();
-  SubnetConiguration_builder->set_version(1);
+  SubnetConiguration_builder->set_format_version(1);
   SubnetConiguration_builder->set_project_id("dbf72700-5106-4a7a-918f-111111111111");
   // VpcConiguration_builder->set_id("99d9d709-8478-4b46-9f3f-2206b1023fd3");
   SubnetConiguration_builder->set_vpc_id("99d9d709-8478-4b46-9f3f-2206b1023fd3");
@@ -434,7 +430,7 @@ int main(int argc, char *argv[])
 
   // this will allocate new VpcConfiguration, will need to free it later
   VpcConfiguration *VpcConiguration_builder = new_vpc_states->mutable_configuration();
-  VpcConiguration_builder->set_version(1);
+  VpcConiguration_builder->set_format_version(1);
   VpcConiguration_builder->set_project_id("dbf72700-5106-4a7a-918f-a016853911f8");
   // VpcConiguration_builder->set_id("99d9d709-8478-4b46-9f3f-2206b1023fd3");
   VpcConiguration_builder->set_id("1");

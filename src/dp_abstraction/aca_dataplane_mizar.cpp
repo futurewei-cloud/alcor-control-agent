@@ -683,7 +683,8 @@ int ACA_Dataplane_Mizar::update_port_state_workitem(const PortState current_Port
                       current_SubnetConfiguration.id().c_str());
 
         if (parsed_struct.subnet_states(j).operation_type() == OperationType::INFO) {
-          if (current_SubnetConfiguration.id() == current_PortConfiguration.network_id()) {
+          if (current_SubnetConfiguration.id() ==
+              current_PortConfiguration.fixed_ips(0).subnet_id()) {
             if (current_PortState.operation_type() == OperationType::CREATE) {
               if (current_SubnetConfiguration.vpc_id().empty()) {
                 throw std::invalid_argument("vpc_id is empty");
@@ -723,7 +724,7 @@ int ACA_Dataplane_Mizar::update_port_state_workitem(const PortState current_Port
       }
       if (!subnet_info_found) {
         ACA_LOG_ERROR("Not able to find the info for port with subnet ID: %s.\n",
-                      current_PortConfiguration.network_id().c_str());
+                      current_PortConfiguration.fixed_ips(0).subnet_id().c_str());
         overall_rc = -EXIT_FAILURE;
       } else {
         overall_rc = EXIT_SUCCESS;
@@ -818,7 +819,8 @@ int ACA_Dataplane_Mizar::update_port_state_workitem(const PortState current_Port
                       current_SubnetConfiguration.id().c_str());
 
         if (parsed_struct.subnet_states(j).operation_type() == OperationType::INFO) {
-          if (current_SubnetConfiguration.id() == current_PortConfiguration.network_id()) {
+          if (current_SubnetConfiguration.id() ==
+              current_PortConfiguration.fixed_ips(0).subnet_id()) {
             if (current_SubnetConfiguration.vpc_id().empty()) {
               throw std::invalid_argument("vpc_id is empty");
             }
@@ -884,7 +886,7 @@ int ACA_Dataplane_Mizar::update_port_state_workitem(const PortState current_Port
       }
       if (!subnet_info_found) {
         ACA_LOG_ERROR("Not able to find the tunnel ID for port subnet ID: %s.\n",
-                      current_PortConfiguration.network_id().c_str());
+                      current_PortConfiguration.fixed_ips(0).subnet_id().c_str());
         overall_rc = -EXIT_FAILURE;
         // TODO: Notify the Network Controller the goal state configuration
         //       has invalid data
@@ -1072,7 +1074,8 @@ int ACA_Dataplane_Mizar::update_port_state_workitem(const PortState current_Port
                       current_SubnetConfiguration.id().c_str());
 
         if (parsed_struct.subnet_states(j).operation_type() == OperationType::INFO) {
-          if (current_SubnetConfiguration.id() == current_PortConfiguration.network_id()) {
+          if (current_SubnetConfiguration.id() ==
+              current_PortConfiguration.fixed_ips(0).subnet_id()) {
             for (int k = 0; k < current_SubnetConfiguration.transit_switches_size(); k++) {
               ACA_LOG_DEBUG("port operation: FINALIZE, update substrate, IP: %s, mac: %s\n",
                             current_SubnetConfiguration.transit_switches(k)
