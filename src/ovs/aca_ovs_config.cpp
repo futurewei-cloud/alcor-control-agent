@@ -21,43 +21,12 @@
 #include <chrono>
 #include <errno.h>
 
-#define MAX_OUTPORT_NAME_POSTFIX 99999999
-
 using namespace std;
 
 extern bool g_demo_mode;
 
 namespace aca_ovs_config
 {
-static inline string aca_get_operation_name(alcor::schema::NetworkType network_type)
-{
-  switch (network_type) {
-  case alcor::schema::NetworkType::VXLAN:
-    return "vxlan";
-  case alcor::schema::NetworkType::VLAN:
-    return "vlan";
-  case alcor::schema::NetworkType::GRE:
-    return "gre";
-  case alcor::schema::NetworkType::GENEVE:
-    return "geneve";
-  case alcor::schema::NetworkType::VXLAN_GPE:
-    return "vxlan_gpe";
-
-  default:
-    return "ERROR: unknown operation type!";
-  }
-}
-
-static inline string
-aca_get_outport_name(alcor::schema::NetworkType network_type, string port_name)
-{
-  std::hash<std::string> str_hash;
-
-  auto hash_value = str_hash(port_name) % MAX_OUTPORT_NAME_POSTFIX;
-
-  return aca_get_operation_name(network_type) + "-" + to_string(hash_value);
-}
-
 ACA_OVS_Config &ACA_OVS_Config::get_instance()
 {
   // Instance is destroyed when program exits.
@@ -167,14 +136,15 @@ int ACA_OVS_Config::port_neighbor_create_update(const string vpc_id,
 
   string outport_name = aca_get_outport_name(network_type, remote_ip);
 
-  string cmd_string = "add-port br-tun " + outport_name +
-                      " type=" + aca_get_operation_name(network_type) +
-                      " options:df_default=true options:egress_pkt_mark=0 options:in_key=flow options:out_key=flow options:remote_ip=" +
-                      remote_ip;
+  string cmd_string =
+          "add-port br-tun " + outport_name + " -- set interface " +
+          outport_name + " type=" + aca_get_network_type_string(network_type) +
+          " options:df_default=true options:egress_pkt_mark=0 options:in_key=flow options:out_key=flow options:remote_ip=" +
+          remote_ip;
 
   execute_ovsdb_command(cmd_string, culminative_time, overall_rc);
 
-  // TODO: look up using the vpc_id to see if there is existing tunnels in this vpc
+  // TODO: look up using the vpc_id to see if there is existing tunnels ports in this vpc
   // if yes, add this new tunnel into the list and use the full tunnel list to construct
   // the new flow rule
 
@@ -186,7 +156,7 @@ int ACA_OVS_Config::port_neighbor_create_update(const string vpc_id,
   execute_openflow_command(cmd_string, culminative_time, overall_rc);
 
   cmd_string = "add-flow br-tun \"table=0, priority=1,in_port=\"" +
-               outport_name + " actions=resubmit(,4)";
+               outport_name + "\" actions=resubmit(,4)\"";
 
   execute_openflow_command(cmd_string, culminative_time, overall_rc);
 

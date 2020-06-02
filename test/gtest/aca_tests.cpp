@@ -153,6 +153,23 @@ TEST(ovs_config_test_cases, create_local_two_ports_test_traffic)
   overall_rc = Aca_Net_Config::get_instance().execute_system_command(cmd_string);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
 
+  string vpc_id = "6df03ab0-9bb1-11ea-bb37-0242ac130002";
+  NetworkType vxlan_type = NetworkType::VXLAN;
+  string remote_ip = "10.0.0.2";
+  string outport_name = aca_get_outport_name(vxlan_type, remote_ip);
+
+  // insert neighbor info
+  overall_rc = ACA_OVS_Config::get_instance().port_neighbor_create_update(
+          vpc_id, vxlan_type, remote_ip, 1, 20, not_care_culminative_time);
+  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
+
+  // check if the outport has been created on br-tun
+  ACA_OVS_Config::get_instance().execute_ovsdb_command(
+          " list-ports br-tun | grep " + outport_name, not_care_culminative_time, overall_rc);
+  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
+
   // delete br-int and br-tun bridges
   ACA_OVS_Config::get_instance().execute_ovsdb_command(
           "del-br br-int", not_care_culminative_time, overall_rc);

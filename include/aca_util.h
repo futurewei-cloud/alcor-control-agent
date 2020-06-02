@@ -17,10 +17,42 @@
 
 #include "aca_log.h"
 #include "goalstateprovisioner.grpc.pb.h"
+#include <string>
+
+#define MAX_OUTPORT_NAME_POSTFIX 99999999
 
 #define cast_to_nanoseconds(x) chrono::duration_cast<chrono::nanoseconds>(x)
 
-static inline const char *aca_get_operation_name(alcor::schema::OperationType operation)
+static inline std::string aca_get_network_type_string(alcor::schema::NetworkType network_type)
+{
+  switch (network_type) {
+  case alcor::schema::NetworkType::VXLAN:
+    return "vxlan";
+  case alcor::schema::NetworkType::VLAN:
+    return "vlan";
+  case alcor::schema::NetworkType::GRE:
+    return "gre";
+  case alcor::schema::NetworkType::GENEVE:
+    return "geneve";
+  case alcor::schema::NetworkType::VXLAN_GPE:
+    return "vxlan_gpe";
+
+  default:
+    return "ERROR: unknown network type!";
+  }
+}
+
+static inline std::string
+aca_get_outport_name(alcor::schema::NetworkType network_type, std::string remote_ip)
+{
+  std::hash<std::string> str_hash;
+
+  auto hash_value = str_hash(remote_ip) % MAX_OUTPORT_NAME_POSTFIX;
+
+  return aca_get_network_type_string(network_type) + "-" + std::to_string(hash_value);
+}
+
+static inline const char *aca_get_operation_string(alcor::schema::OperationType operation)
 {
   switch (operation) {
   case alcor::schema::OperationType::CREATE:
@@ -33,14 +65,22 @@ static inline const char *aca_get_operation_name(alcor::schema::OperationType op
     return "DELETE";
   case alcor::schema::OperationType::INFO:
     return "INFO";
+  case alcor::schema::OperationType::NEIGHBOR_CREATE_UPDATE:
+    return "NEIGHBOR_CREATE_UPDATE";
+  case alcor::schema::OperationType::NEIGHBOR_GET:
+    return "NEIGHBOR_GET";
+  case alcor::schema::OperationType::NEIGHBOR_DELETE:
+    return "NEIGHBOR_DELETE";
+  case alcor::schema::OperationType::CREATE_UPDATE_GATEWAY:
+    return "CREATE_UPDATE_GATEWAY";
+
   case alcor::schema::OperationType::FINALIZE:
     return "FINALIZE";
   case alcor::schema::OperationType::CREATE_UPDATE_SWITCH:
     return "CREATE_UPDATE_SWITCH";
   case alcor::schema::OperationType::CREATE_UPDATE_ROUTER:
     return "CREATE_UPDATE_ROUTER";
-  case alcor::schema::OperationType::CREATE_UPDATE_GATEWAY:
-    return "CREATE_UPDATE_GATEWAY";
+
   default:
     return "ERROR: unknown operation type!";
   }

@@ -241,7 +241,7 @@ int ACA_Dataplane_Mizar::update_vpc_state_workitem(const VpcState current_VpcSta
       overall_rc = EXIT_SUCCESS;
 
       ACA_LOG_DEBUG("VPC Operation: %s: interface: %s, transit_routers_size: %d, tunid:%ld\n",
-                    aca_get_operation_name(current_VpcState.operation_type()),
+                    aca_get_operation_string(current_VpcState.operation_type()),
                     vpc_in.interface,
                     current_VpcConfiguration.transit_routers_size(), vpc_in.tunid);
     } catch (const std::invalid_argument &e) {
@@ -416,7 +416,7 @@ int ACA_Dataplane_Mizar::update_subnet_state_workitem(const SubnetState current_
 
       ACA_LOG_DEBUG(
               "Subnet Operation: %s: interface: %s, cidr: %s, transit switch size: %d, tunid:%ld\n",
-              aca_get_operation_name(current_SubnetState.operation_type()),
+              aca_get_operation_string(current_SubnetState.operation_type()),
               network_in.interface, current_SubnetConfiguration.cidr().c_str(),
               current_SubnetConfiguration.transit_switches_size(), network_in.tunid);
     } catch (const std::invalid_argument &e) {
@@ -465,7 +465,7 @@ int ACA_Dataplane_Mizar::update_subnet_state_workitem(const SubnetState current_
       overall_rc = EXIT_SUCCESS;
 
       ACA_LOG_DEBUG("Subnet Operation: %s: interface: %s, gw_ip: %s, gw_mac: %s, hosted_interface: %s, veth_name:%s, tunid:%ld\n",
-                    aca_get_operation_name(current_SubnetState.operation_type()),
+                    aca_get_operation_string(current_SubnetState.operation_type()),
                     endpoint_in.interface,
                     current_SubnetConfiguration.gateway().ip_address().c_str(),
                     current_SubnetConfiguration.gateway().mac_address().c_str(),
@@ -731,7 +731,7 @@ int ACA_Dataplane_Mizar::update_port_state_workitem(const PortState current_Port
       }
 
       ACA_LOG_DEBUG("Endpoint Operation: %s: interface: %s, ep_ip: %s, mac: %s, hosted_interface: %s, veth_name:%s, tunid:%ld\n",
-                    aca_get_operation_name(current_PortState.operation_type()),
+                    aca_get_operation_string(current_PortState.operation_type()),
                     endpoint_in.interface, my_ep_ip_address.c_str(),
                     current_PortConfiguration.mac_address().c_str(),
                     endpoint_in.hosted_interface, endpoint_in.veth, endpoint_in.tunid);
@@ -894,7 +894,7 @@ int ACA_Dataplane_Mizar::update_port_state_workitem(const PortState current_Port
         overall_rc = EXIT_SUCCESS;
       }
       ACA_LOG_DEBUG("Endpoint Operation: %s: interface: %s, ep_ip: %s, mac: %s, hosted_interface: %s, veth_name:%s, tunid:%ld\n",
-                    aca_get_operation_name(current_PortState.operation_type()),
+                    aca_get_operation_string(current_PortState.operation_type()),
                     agent_md_in.ep.interface, my_ep_ip_address.c_str(),
                     current_PortConfiguration.mac_address().c_str(),
                     agent_md_in.ep.hosted_interface, agent_md_in.ep.veth,
