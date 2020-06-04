@@ -83,7 +83,7 @@ int ACA_OVS_Config::setup_bridges()
   return overall_rc;
 }
 
-int ACA_OVS_Config::port_configure(const string port_name, uint internal_vlan_id,
+int ACA_OVS_Config::port_configure(const string vpc_id, const string port_name,
                                    const string virtual_ip, uint tunnel_id,
                                    ulong &culminative_time)
 {
@@ -91,7 +91,25 @@ int ACA_OVS_Config::port_configure(const string port_name, uint internal_vlan_id
 
   int overall_rc = EXIT_SUCCESS;
 
-  // TODO: validate input parameters
+  if (vpc_id.empty()) {
+    throw std::invalid_argument("vpc_id is empty");
+  }
+
+  if (port_name.empty()) {
+    throw std::invalid_argument("port_name is empty");
+  }
+
+  if (virtual_ip.empty()) {
+    throw std::invalid_argument("virtual_ip is empty");
+  }
+
+  if (tunnel_id == 0) {
+    throw std::invalid_argument("tunnel_id is 0");
+  }
+
+  // TODO: use vpc_id to query vlan manager to lookup and existing internal vlan ID
+  // or to generate a new one and remember it
+  int internal_vlan_id = 1;
 
   if (g_demo_mode) {
     string cmd_string = "add-port br-int " + port_name +
@@ -125,14 +143,24 @@ int ACA_OVS_Config::port_configure(const string port_name, uint internal_vlan_id
 
 int ACA_OVS_Config::port_neighbor_create_update(const string vpc_id,
                                                 alcor::schema::NetworkType network_type,
-                                                const string remote_ip, uint internal_vlan_id,
-                                                uint tunnel_id, ulong &culminative_time)
+                                                const string remote_ip, uint tunnel_id,
+                                                ulong &culminative_time)
 {
   ACA_LOG_DEBUG("ACA_OVS_Config::port_neighbor_create_update ---> Entering\n");
 
   int overall_rc = EXIT_SUCCESS;
 
-  // TODO: validate input parameters
+  if (vpc_id.empty()) {
+    throw std::invalid_argument("vpc_id is empty");
+  }
+
+  if (remote_ip.empty()) {
+    throw std::invalid_argument("remote_ip is empty");
+  }
+
+  if (tunnel_id == 0) {
+    throw std::invalid_argument("tunnel_id is 0");
+  }
 
   string outport_name = aca_get_outport_name(network_type, remote_ip);
 
@@ -144,7 +172,11 @@ int ACA_OVS_Config::port_neighbor_create_update(const string vpc_id,
 
   execute_ovsdb_command(cmd_string, culminative_time, overall_rc);
 
-  // TODO: look up using the vpc_id to see if there is existing tunnels ports in this vpc
+  // TODO: use vpc_id to query vlan manager to lookup and existing internal vlan ID
+  // or to generate a new one and remember it
+  int internal_vlan_id = 1;
+
+  // TODO: use vpc_id to query vlan manager to see if there is existing tunnels ports in this vpc
   // if yes, add this new tunnel into the list and use the full tunnel list to construct
   // the new flow rule
 

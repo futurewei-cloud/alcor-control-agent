@@ -27,13 +27,13 @@ class ACA_OVS_Config {
 
   int setup_bridges();
 
-  int port_configure(const std::string port_name, uint internal_vlan_id,
+  int port_configure(const std::string vpc_id, const std::string port_name,
                      const std::string virtual_ip, uint tunnel_id, ulong &culminative_time);
 
   int port_neighbor_create_update(const std::string vpc_id,
                                   alcor::schema::NetworkType network_type,
-                                  const std::string remote_ip, uint internal_vlan_id,
-                                  uint tunnel_id, ulong &culminative_time);
+                                  const std::string remote_ip, uint tunnel_id,
+                                  ulong &culminative_time);
 
   // compiler will flag the error when below is called.
   ACA_OVS_Config(ACA_OVS_Config const &) = delete;

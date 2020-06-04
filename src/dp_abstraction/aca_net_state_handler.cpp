@@ -13,7 +13,7 @@
 // limitations under the License.
 
 #include "aca_log.h"
-#include "aca_dataplane_mizar.h"
+#include "aca_dataplane_ovs.h"
 #include "aca_net_state_handler.h"
 #include "goalstateprovisioner.grpc.pb.h"
 #include <future>
@@ -28,9 +28,9 @@ Aca_Net_State_Handler::Aca_Net_State_Handler()
 {
   ACA_LOG_INFO("Network State Handler initialize\n");
 
-  // default to dataplane_mizar for now
-  ACA_LOG_INFO("Network State Handler: using mizar dataplane\n");
-  this->core_net_programming_if = new aca_dataplane_mizar::ACA_Dataplane_Mizar;
+  // default to dataplane_ovs
+  ACA_LOG_INFO("Network State Handler: using ovs dataplane\n");
+  this->core_net_programming_if = new aca_dataplane_ovs::ACA_Dataplane_OVS;
 
   int rc = this->core_net_programming_if->initialize();
 
