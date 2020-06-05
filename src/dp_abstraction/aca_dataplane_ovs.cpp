@@ -114,6 +114,7 @@ int ACA_Dataplane_OVS::update_port_state_workitem(const PortState current_PortSt
   size_t slash_pos;
   string virtual_ip_address;
   string virtual_mac_address;
+  string host_ip_address;
   string found_prefix_len;
   bool subnet_info_found = false;
   string port_cidr;
@@ -197,8 +198,9 @@ int ACA_Dataplane_OVS::update_port_state_workitem(const PortState current_PortSt
       port_cidr = virtual_ip_address + "/" + found_prefix_len;
 
       if (overall_rc == EXIT_SUCCESS) {
-        ACA_LOG_DEBUG("Port Operation: %s: vpc_id: %s, port_name: %s, port_cidr: %s, tunnel_id: %d\n",
+        ACA_LOG_DEBUG("Port Operation: %s: project_id: %s, vpc_id: %s, port_name: %s, port_cidr: %s, tunnel_id: %d\n",
                       aca_get_operation_string(current_PortState.operation_type()),
+                      current_PortConfiguration.project_id().c_str(),
                       current_PortConfiguration.vpc_id().c_str(),
                       current_PortConfiguration.name().c_str(),
                       port_cidr.c_str(), found_tunnel_id);
@@ -223,23 +225,19 @@ int ACA_Dataplane_OVS::update_port_state_workitem(const PortState current_PortSt
 
     break;
 
-  case OperationType::NEIGHBOR_CREATE_UPDATE: // TODO: needs to implement
+  case OperationType::NEIGHBOR_CREATE_UPDATE:
 
     assert(current_PortConfiguration.message_type() == MessageType::DELTA);
 
     try {
-      // TODO: add support for more than one fixed_ips in the future
       assert(current_PortConfiguration.fixed_ips_size() == 1);
-      virtual_ip_address = current_PortConfiguration.fixed_ips(0).ip_address();
+
+      host_ip_address = current_PortConfiguration.host_info().ip_address();
 
       // inet_pton returns 1 for success 0 for failure
-      if (inet_pton(AF_INET, virtual_ip_address.c_str(), &(sa.sin_addr)) != 1) {
-        throw std::invalid_argument("Virtual ip address is not in the expect format");
+      if (inet_pton(AF_INET, host_ip_address.c_str(), &(sa.sin_addr)) != 1) {
+        throw std::invalid_argument("Neighbor host ip address is not in the expect format");
       }
-
-      virtual_mac_address = current_PortConfiguration.mac_address();
-      // the below will throw invalid_argument exceptions if mac string is invalid
-      aca_validate_mac_address(virtual_mac_address.c_str());
 
       // TODO: cache the subnet information to a dictionary to provide
       // a faster look up for the next run, only use the below loop for
@@ -259,16 +257,6 @@ int ACA_Dataplane_OVS::update_port_state_workitem(const PortState current_PortSt
               throw std::invalid_argument("tunnel id is 0");
             }
             found_tunnel_id = current_SubnetConfiguration.tunnel_id();
-
-            found_cidr = current_SubnetConfiguration.cidr();
-
-            slash_pos = found_cidr.find('/');
-            if (slash_pos == string::npos) {
-              throw std::invalid_argument("'/' not found in cidr");
-            }
-
-            // substr can throw out_of_range and bad_alloc exceptions
-            found_prefix_len = found_cidr.substr(slash_pos + 1);
           }
           subnet_info_found = true;
           break;
@@ -282,6 +270,21 @@ int ACA_Dataplane_OVS::update_port_state_workitem(const PortState current_PortSt
       } else {
         overall_rc = EXIT_SUCCESS;
       }
+
+      if (overall_rc == EXIT_SUCCESS) {
+        ACA_LOG_DEBUG("Port Operation: %s: project_id: %s, vpc_id: %s, network_type: %d, neighbor_host_ip_address: %s, tunnel_id: %d\n",
+                      aca_get_operation_string(current_PortState.operation_type()),
+                      current_PortConfiguration.project_id().c_str(),
+                      current_PortConfiguration.vpc_id().c_str(),
+                      current_PortConfiguration.network_type(),
+                      host_ip_address.c_str(), found_tunnel_id);
+
+        overall_rc = ACA_OVS_Config::get_instance().port_neighbor_create_update(
+                current_PortConfiguration.vpc_id(),
+                current_PortConfiguration.network_type(), host_ip_address,
+                found_tunnel_id, culminative_dataplane_programming_time);
+      }
+
     } catch (const std::invalid_argument &e) {
       ACA_LOG_ERROR("Invalid argument exception caught while parsing port configuration, message: %s.\n",
                     e.what());
@@ -295,19 +298,6 @@ int ACA_Dataplane_OVS::update_port_state_workitem(const PortState current_PortSt
       throw; // rethrowing
     }
 
-    port_cidr = virtual_ip_address + "/" + found_prefix_len;
-
-    if (overall_rc == EXIT_SUCCESS) {
-      ACA_LOG_DEBUG("Port Operation: %s: vpc_id: %s, port_name: %s, port_cidr: %s, tunnel_id: %d\n",
-                    aca_get_operation_string(current_PortState.operation_type()),
-                    current_PortConfiguration.vpc_id().c_str(),
-                    current_PortConfiguration.name().c_str(), port_cidr.c_str(),
-                    found_tunnel_id);
-
-      overall_rc = ACA_OVS_Config::get_instance().port_configure(
-              current_PortConfiguration.vpc_id(), current_PortConfiguration.name(),
-              port_cidr, found_tunnel_id, culminative_dataplane_programming_time);
-    }
     break;
 
   default:

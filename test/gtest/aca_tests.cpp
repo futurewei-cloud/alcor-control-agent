@@ -36,6 +36,16 @@ static char EMPTY_STRING[] = "";
 static char VALID_STRING[] = "VALID_STRING";
 static char DEFAULT_MTU[] = "9000";
 
+static string project_id = "99d9d709-8478-4b46-9f3f-000000000000";
+static string vpc_id = "99d9d709-8478-4b46-9f3f-111111111111";
+static string subnet_id = "99d9d709-8478-4b46-9f3f-222222222222";
+static string port_name_1 = "tap-33333333";
+static string port_name_2 = "tap-44444444";
+static string vmac_address_1 = "fa:16:3e:d7:f2:6c";
+static string vmac_address_2 = "fa:16:3e:d7:f2:6d";
+static string vip_address_1 = "10.0.0.1";
+static string vip_address_2 = "10.0.0.2";
+
 // Global variables
 string g_rpc_server = EMPTY_STRING;
 string g_rpc_protocol = EMPTY_STRING;
@@ -73,7 +83,7 @@ static void aca_cleanup()
   ACA_LOG_CLOSE();
 }
 
-TEST(ovs_config_test_cases, create_local_two_ports_test_traffic)
+TEST(ovs_config_test_cases, 2_ports_create_test_traffic)
 {
   // ulong culminative_network_configuration_time = 0;
   ulong not_care_culminative_time;
@@ -117,21 +127,16 @@ TEST(ovs_config_test_cases, create_local_two_ports_test_traffic)
   bool previous_demo_mode = g_demo_mode;
   g_demo_mode = true;
 
-  string vpc_id = "6df03ab0-9bb1-11ea-bb37-0242ac130002";
-  string port_name_1 = "int1";
-  string port_name_2 = "int2";
-  string virtual_ip_1 = "192.168.0.101";
-  string virtual_ip_2 = "192.168.0.102";
   string prefix_len = "/24";
 
   // create two ports (using demo mode) and configure them
   overall_rc = ACA_OVS_Config::get_instance().port_configure(
-          vpc_id, port_name_1, virtual_ip_1 + prefix_len, 20, not_care_culminative_time);
+          vpc_id, port_name_1, vip_address_1 + prefix_len, 20, not_care_culminative_time);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
 
   overall_rc = ACA_OVS_Config::get_instance().port_configure(
-          vpc_id, port_name_2, virtual_ip_2 + prefix_len, 20, not_care_culminative_time);
+          vpc_id, port_name_2, vip_address_2 + prefix_len, 20, not_care_culminative_time);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
 
@@ -150,7 +155,11 @@ TEST(ovs_config_test_cases, create_local_two_ports_test_traffic)
   overall_rc = EXIT_SUCCESS;
 
   // test traffic between the two newly created ports
-  string cmd_string = "ping -I " + virtual_ip_1 + " -c1 " + virtual_ip_2;
+  string cmd_string = "ping -I " + vip_address_1 + " -c1 " + vip_address_2;
+  overall_rc = Aca_Net_Config::get_instance().execute_system_command(cmd_string);
+  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
+
+  cmd_string = "ping -I " + vip_address_2 + " -c1 " + vip_address_1;
   overall_rc = Aca_Net_Config::get_instance().execute_system_command(cmd_string);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
 
@@ -193,27 +202,11 @@ TEST(ovs_config_test_cases, create_local_two_ports_test_traffic)
   overall_rc = EXIT_SUCCESS;
 }
 
-TEST(ovs_dataplane_test_cases, port_CREATE_integrated)
+static void aca_test_create_default_port_state(PortState *new_port_states)
 {
-  string project_id = "99d9d709-8478-4b46-9f3f-000000000000";
-  string vpc_id = "99d9d709-8478-4b46-9f3f-111111111111";
-  string subnet_id = "99d9d709-8478-4b46-9f3f-222222222222";
-  string port_name = "tap-33333333";
-  string mac_address = "fa:16:3e:d7:f2:6c";
-  string ip_address = "10.0.0.1";
-  ulong not_care_culminative_time = 0;
-
-  string cmd_string;
-  int overall_rc;
-
-  GoalState GoalState_builder;
-  PortState *new_port_states = GoalState_builder.add_port_states();
-  SubnetState *new_subnet_states = GoalState_builder.add_subnet_states();
-
-  // fill in port state structs
   new_port_states->set_operation_type(OperationType::CREATE);
 
-  // this will allocate new PortConfiguration, may need to free it later
+  // this will allocate new PortConfiguration, will need to free it later
   PortConfiguration *PortConfiguration_builder = new_port_states->mutable_configuration();
   PortConfiguration_builder->set_format_version(1);
   PortConfiguration_builder->set_revision_number(1);
@@ -222,33 +215,52 @@ TEST(ovs_dataplane_test_cases, port_CREATE_integrated)
 
   PortConfiguration_builder->set_project_id(project_id);
   PortConfiguration_builder->set_vpc_id(vpc_id);
-  PortConfiguration_builder->set_name(port_name);
-  PortConfiguration_builder->set_mac_address(mac_address);
+  PortConfiguration_builder->set_name(port_name_1);
+  PortConfiguration_builder->set_mac_address(vmac_address_1);
   PortConfiguration_builder->set_admin_state_up(true);
 
   // this will allocate new PortConfiguration_FixedIp may need to free later
   PortConfiguration_FixedIp *FixedIp_builder = PortConfiguration_builder->add_fixed_ips();
   FixedIp_builder->set_subnet_id(subnet_id);
-  FixedIp_builder->set_ip_address(ip_address);
+  FixedIp_builder->set_ip_address(vip_address_1);
 
   // this will allocate new PortConfiguration_SecurityGroupId may need to free later
   PortConfiguration_SecurityGroupId *SecurityGroup_builder =
           PortConfiguration_builder->add_security_group_ids();
   SecurityGroup_builder->set_id("1");
+}
 
-  // fill in the subnet state structs
+static void aca_test_create_default_subnet_state(SubnetState *new_subnet_states)
+{
   new_subnet_states->set_operation_type(OperationType::INFO);
 
   // this will allocate new SubnetConfiguration, will need to free it later
   SubnetConfiguration *SubnetConiguration_builder =
           new_subnet_states->mutable_configuration();
   SubnetConiguration_builder->set_format_version(1);
-  PortConfiguration_builder->set_revision_number(1);
+  SubnetConiguration_builder->set_revision_number(1);
   SubnetConiguration_builder->set_project_id(project_id);
   SubnetConiguration_builder->set_vpc_id(vpc_id);
   SubnetConiguration_builder->set_id(subnet_id);
   SubnetConiguration_builder->set_cidr("10.0.0.0/24");
   SubnetConiguration_builder->set_tunnel_id(20);
+}
+
+TEST(ovs_dataplane_test_cases, 1_port_CREATE)
+{
+  ulong not_care_culminative_time = 0;
+  string cmd_string;
+  int overall_rc;
+
+  GoalState GoalState_builder;
+  PortState *new_port_states = GoalState_builder.add_port_states();
+  SubnetState *new_subnet_states = GoalState_builder.add_subnet_states();
+
+  // fill in port state structs
+  aca_test_create_default_port_state(new_port_states);
+
+  // fill in subnet state structs
+  aca_test_create_default_subnet_state(new_subnet_states);
 
   // delete br-int and br-tun bridges
   ACA_OVS_Config::get_instance().execute_ovsdb_command(
@@ -256,11 +268,6 @@ TEST(ovs_dataplane_test_cases, port_CREATE_integrated)
 
   ACA_OVS_Config::get_instance().execute_ovsdb_command(
           "del-br br-tun", not_care_culminative_time, overall_rc);
-
-  // create and setup br-int and br-tun bridges, and their patch ports
-  //   overall_rc = ACA_OVS_Config::get_instance().setup_bridges();
-  //   ASSERT_EQ(overall_rc, EXIT_SUCCESS);
-  //   overall_rc = EXIT_SUCCESS;
 
   // set demo mode
   bool previous_demo_mode = g_demo_mode;
@@ -278,9 +285,125 @@ TEST(ovs_dataplane_test_cases, port_CREATE_integrated)
 
   // check to ensure the port is created and setup correctly
   ACA_OVS_Config::get_instance().execute_ovsdb_command(
-          "get Interface " + port_name + " ofport", not_care_culminative_time, overall_rc);
+          "get Interface " + port_name_1 + " ofport", not_care_culminative_time, overall_rc);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
+
+  // clean up
+
+  // free the allocated configurations since we are done with it now
+  new_port_states->clear_configuration();
+  new_subnet_states->clear_configuration();
+
+  // delete br-int and br-tun bridges
+  ACA_OVS_Config::get_instance().execute_ovsdb_command(
+          "del-br br-int", not_care_culminative_time, overall_rc);
+  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
+
+  ACA_OVS_Config::get_instance().execute_ovsdb_command(
+          "del-br br-tun", not_care_culminative_time, overall_rc);
+  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
+}
+
+// TEST for neighbor info only
+// TEST for new port 2 + neighbor info for port 1
+
+TEST(ovs_dataplane_test_cases, 2_ports_create_test_traffic)
+{
+  ulong not_care_culminative_time = 0;
+  string cmd_string;
+  int overall_rc;
+
+  GoalState GoalState_builder;
+  PortState *new_port_states = GoalState_builder.add_port_states();
+  SubnetState *new_subnet_states = GoalState_builder.add_subnet_states();
+
+  // fill in port state structs
+
+  // this will allocate new PortConfiguration, will need to free it later
+  PortConfiguration *PortConfiguration_builder = new_port_states->mutable_configuration();
+  PortConfiguration_builder->set_format_version(1);
+  PortConfiguration_builder->set_revision_number(1);
+  PortConfiguration_builder->set_message_type(MessageType::FULL);
+  // PortConfiguration_builder->set_network_type(NetworkType::VXLAN); // should default to VXLAN
+
+  PortConfiguration_builder->set_project_id(project_id);
+  PortConfiguration_builder->set_vpc_id(vpc_id);
+  PortConfiguration_builder->set_name(port_name_1);
+  PortConfiguration_builder->set_mac_address(vmac_address_1);
+  PortConfiguration_builder->set_admin_state_up(true);
+
+  // this will allocate new PortConfiguration_FixedIp may need to free later
+  PortConfiguration_FixedIp *FixedIp_builder = PortConfiguration_builder->add_fixed_ips();
+  FixedIp_builder->set_subnet_id(subnet_id);
+  FixedIp_builder->set_ip_address(vip_address_1);
+
+  // this will allocate new PortConfiguration_SecurityGroupId may need to free later
+  PortConfiguration_SecurityGroupId *SecurityGroup_builder =
+          PortConfiguration_builder->add_security_group_ids();
+  SecurityGroup_builder->set_id("1");
+
+  // fill in subnet state structs
+  aca_test_create_default_subnet_state(new_subnet_states);
+
+  // delete br-int and br-tun bridges
+  ACA_OVS_Config::get_instance().execute_ovsdb_command(
+          "del-br br-int", not_care_culminative_time, overall_rc);
+
+  ACA_OVS_Config::get_instance().execute_ovsdb_command(
+          "del-br br-tun", not_care_culminative_time, overall_rc);
+
+  // create and setup br-int and br-tun bridges, and their patch ports
+  overall_rc = ACA_OVS_Config::get_instance().setup_bridges();
+  ASSERT_EQ(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
+
+  // set demo mode
+  bool previous_demo_mode = g_demo_mode;
+  g_demo_mode = true;
+
+  // create a new port 1 in demo mode
+  GoalStateOperationReply gsOperationalReply;
+
+  overall_rc = Aca_Comm_Manager::get_instance().update_goal_state(
+          GoalState_builder, gsOperationalReply);
+  ASSERT_EQ(overall_rc, EXIT_SUCCESS);
+
+  // check to ensure the port 1 is created and setup correctly
+  ACA_OVS_Config::get_instance().execute_ovsdb_command(
+          "get Interface " + port_name_1 + " ofport", not_care_culminative_time, overall_rc);
+  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
+
+  // setup the configuration for port 2
+  PortConfiguration_builder->set_name(port_name_2);
+  PortConfiguration_builder->set_mac_address(vmac_address_2);
+  FixedIp_builder->set_ip_address(vip_address_2);
+
+  // create a new port 2 in demo mode
+  overall_rc = Aca_Comm_Manager::get_instance().update_goal_state(
+          GoalState_builder, gsOperationalReply);
+  ASSERT_EQ(overall_rc, EXIT_SUCCESS);
+
+  // restore demo mode
+  g_demo_mode = previous_demo_mode;
+
+  // check to ensure the port 1 is created and setup correctly
+  ACA_OVS_Config::get_instance().execute_ovsdb_command(
+          "get Interface " + port_name_2 + " ofport", not_care_culminative_time, overall_rc);
+  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
+
+  // test traffic between the two newly created ports
+  cmd_string = "ping -I " + vip_address_1 + " -c1 " + vip_address_2;
+  overall_rc = Aca_Net_Config::get_instance().execute_system_command(cmd_string);
+  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
+
+  cmd_string = "ping -I " + vip_address_2 + " -c1 " + vip_address_1;
+  overall_rc = Aca_Net_Config::get_instance().execute_system_command(cmd_string);
+  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
 
   // clean up
 

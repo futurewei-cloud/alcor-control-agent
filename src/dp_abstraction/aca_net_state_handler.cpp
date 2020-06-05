@@ -26,7 +26,7 @@ namespace aca_net_state_handler
 {
 Aca_Net_State_Handler::Aca_Net_State_Handler()
 {
-  ACA_LOG_INFO("Network State Handler initialize\n");
+  ACA_LOG_INFO("Network State Handler: initialize\n");
 
   // default to dataplane_ovs
   ACA_LOG_INFO("Network State Handler: using ovs dataplane\n");
