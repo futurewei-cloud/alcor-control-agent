@@ -242,6 +242,12 @@ TEST(ovs_dataplane_test_cases, 2_ports_config_test_traffic)
   overall_rc = EXIT_SUCCESS;
 }
 
+// TODO: invalid IP
+
+// TODO: invalid mac
+
+// TODO: subnet info not available
+
 TEST(ovs_dataplane_test_cases, 1_port_CREATE)
 {
   ulong not_care_culminative_time = 0;

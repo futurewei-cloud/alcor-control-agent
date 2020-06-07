@@ -71,7 +71,7 @@ int Aca_Comm_Manager::deserialize(const cppkafka::Buffer *kafka_buffer, GoalStat
   }
 }
 
-int Aca_Comm_Manager::update_goal_state(GoalState &parsed_struct,
+int Aca_Comm_Manager::update_goal_state(GoalState &goal_state_message,
                                         GoalStateOperationReply &gsOperationReply)
 {
   int exec_command_rc = -EXIT_FAILURE;
@@ -80,22 +80,24 @@ int Aca_Comm_Manager::update_goal_state(GoalState &parsed_struct,
 
   ACA_LOG_DEBUG("Starting to update goal state\n");
 
+  ACA_LOG_INFO("Goal state message size is: %lu bytes\n", goal_state_message.ByteSizeLong());
+
   exec_command_rc = Aca_Net_State_Handler::get_instance().update_vpc_states(
-          parsed_struct, gsOperationReply);
+          goal_state_message, gsOperationReply);
   if (exec_command_rc != EXIT_SUCCESS) {
     ACA_LOG_ERROR("Failed to update vpc state. Failed with error code %d\n", exec_command_rc);
     rc = exec_command_rc;
   }
 
   exec_command_rc = Aca_Net_State_Handler::get_instance().update_subnet_states(
-          parsed_struct, gsOperationReply);
+          goal_state_message, gsOperationReply);
   if (exec_command_rc != EXIT_SUCCESS) {
     ACA_LOG_ERROR("Failed to update subnet state. Failed with error code %d\n", exec_command_rc);
     rc = exec_command_rc;
   }
 
   exec_command_rc = Aca_Net_State_Handler::get_instance().update_port_states(
-          parsed_struct, gsOperationReply);
+          goal_state_message, gsOperationReply);
   if (exec_command_rc != EXIT_SUCCESS) {
     ACA_LOG_ERROR("Failed to update port state. Failed with error code %d\n", exec_command_rc);
     rc = exec_command_rc;

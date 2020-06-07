@@ -7,7 +7,6 @@ set(SOURCES
     ./comm/aca_async_grpc_server.cpp
     ./dp_abstraction/aca_net_state_handler.cpp
     ./dp_abstraction/aca_dataplane_ovs.cpp
-    ./dp_abstraction/aca_dataplane_mizar.cpp
     ./net_config/aca_net_config.cpp
     ./ovs/aca_ovs_config.cpp
 )
@@ -19,8 +18,6 @@ include_directories(${RDKAFKA_INCLUDE_DIR} ${CPPKAFKA_INCLUDE_DIR})
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../include)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/proto3)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/grpc)
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/mizar_rpc)
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../mizar/src/rpcgen)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../mizar/src/include)
 
 # Find Protobuf installation
@@ -45,11 +42,9 @@ target_link_libraries(AlcorControlAgent rdkafka)
 target_link_libraries(AlcorControlAgent AlcorControlAgentLib)
 target_link_libraries(AlcorControlAgent proto)
 target_link_libraries(AlcorControlAgent grpc)
-target_link_libraries(AlcorControlAgent MizarRPCLib)
 target_link_libraries(AlcorControlAgent ${PROTOBUF_LIBRARY})
 target_link_libraries(AlcorControlAgent ${_GRPC_GRPCPP_UNSECURE})
 
-add_dependencies(AlcorControlAgentLib proto grpc MizarRPCLib)
+add_dependencies(AlcorControlAgentLib proto grpc)
 add_subdirectory(proto3)
 add_subdirectory(grpc)
-add_subdirectory(mizar_rpc)

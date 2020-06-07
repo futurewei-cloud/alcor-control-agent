@@ -25,7 +25,6 @@
 using namespace std;
 using namespace alcor::schema;
 using aca_ovs_config::ACA_OVS_Config;
-// using aca_net_config::Aca_Net_Config;
 
 static void aca_validate_mac_address(const char *mac_string)
 {
