@@ -19,16 +19,34 @@
 #include <string>
 #include <chrono>
 #include <atomic>
+#include <errno.h>
+#include <unistd.h>
+#include <signal.h>
+#include <string.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <sys/socket.h>
 
 using namespace std;
 
 static char DEFAULT_MTU[] = "9000";
+
+// Default execution timeout and output buffer size
+// should the output be bigger than 512 it is truncated
+// to 512 - 1 with 0 added, the rest will be read in the
+// next loop
+#define ACA_SYSTEM_TIMEOUT 10
+#define ACA_BUFSIZ 512
+static int debug;
 
 extern std::atomic_ulong g_total_network_configuration_time;
 extern bool g_demo_mode;
 
 namespace aca_net_config
 {
+  // Execution routines static in this namespace
+  static int aca_system(const char *);
+
 Aca_Net_Config &Aca_Net_Config::get_instance()
 {
   // Instance is destroyed when program exits.
@@ -316,7 +334,10 @@ int Aca_Net_Config::execute_system_command(string cmd_string, ulong &culminative
 
   auto network_configuration_time_start = chrono::steady_clock::now();
 
-  rc = system(cmd_string.c_str());
+  if (0)
+    rc = system(cmd_string.c_str());
+  if (1)
+    rc = aca_system(cmd_string.c_str());
 
   auto network_configuration_time_end = chrono::steady_clock::now();
 
@@ -340,6 +361,100 @@ int Aca_Net_Config::execute_system_command(string cmd_string, ulong &culminative
   }
 
   return rc;
+}
+
+static int aca_system(const char *cmd)
+{
+  int s[2];
+  FILE *fp;
+  char *p;
+  char  buf[ACA_BUFSIZ];
+  int timeout;
+
+  debug = 0;
+  if ((getenv("ACA_SYSTEM_DEBUG")))
+      debug = 1;
+
+  timeout = ACA_SYSTEM_TIMEOUT;
+  if ((p = getenv("ACA_SYSTEM_TIMEOUT"))) {
+    timeout = atoi(p);
+    if (timeout <= 0)
+      timeout = ACA_SYSTEM_TIMEOUT;
+  }
+
+  if (socketpair(AF_UNIX, SOCK_STREAM, 0, s) < 0) {
+    perror("socketpair()");
+    return -1;
+  }
+
+  pid_t pid;
+  pid = fork();
+  if (pid < 0) {
+    perror("fork()");
+    close(s[0]);
+    close(s[1]);
+    return -1;
+  }
+
+  if (pid == 0) {
+    if (debug)
+      fprintf(stderr, "\
+%s: child %d to exec() cmd %s\n", __func__, getpid(), cmd);
+    /* child run command
+     */
+    close(s[0]);
+    dup2(s[1], 1);
+    execl("/bin/sh", "sh", "-c", cmd, NULL);
+    exit(-1);
+  }
+
+  fd_set rmask;
+  close(s[1]);
+  FD_ZERO(&rmask);
+  FD_SET(s[0], &rmask);
+
+  if (timeout < 0)
+    timeout = 10;
+
+  struct timeval tv;
+  tv.tv_sec = timeout;
+  tv.tv_usec = 0;
+
+  if (debug)
+    fprintf(stderr, "\
+%s: parent %d to select() timeout %d\n", __func__, getpid(), timeout);
+
+  int cc;
+  cc = select(s[0] + 1, &rmask, NULL, NULL, &tv);
+  if (cc < 0) {
+    perror("select()");
+    close(s[0]);
+    kill(pid, SIGTERM);
+    return -1;
+  }
+
+  if (cc == 0) {
+    if (debug)
+      fprintf(stderr, "%s: select() timed out kill %d\n", __func__, pid);
+    kill(pid, SIGTERM);
+    close(s[0]);
+    errno = ETIME;
+    return -1;
+  }
+
+  fp = fdopen(s[0], "r");
+  /* read and reap
+   */
+  while ((fgets(buf, sizeof(buf), fp)))
+    printf("%s", buf);
+
+  fclose(fp);
+  int wstatus;
+  if (waitpid(pid, &wstatus, 0) < 0) {
+    return -1;
+  }
+
+  return wstatus;
 }
 
 } // namespace aca_net_config

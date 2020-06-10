@@ -20,7 +20,12 @@
 #include "goalstate.pb.h"
 #include <unistd.h> /* for getopt */
 #include <iostream>
+#include <future>
 #include <string>
+#include <thread>
+#include <iostream>
+#include <chrono>
+#include <vector>
 
 using namespace std;
 using namespace alcorcontroller;
@@ -984,6 +989,38 @@ TEST(net_config_test_cases, port_CREATE_10)
 
   rc = Aca_Net_Config::get_instance().execute_system_command(cmd_string);
   EXPECT_EQ(rc, EXIT_SUCCESS);
+}
+
+TEST(system_test_cases, aca_system_call)
+{
+  printf("Now run serial test aca_System_call\n");
+  string cmd_string;
+  std::vector<std::future<size_t>> futures;
+
+  cmd_string = "/bin/ls / > /dev/null";
+  for (int i = 0; i < 100; i++) {
+    auto rc = Aca_Net_Config::get_instance().execute_system_command(cmd_string);
+    EXPECT_EQ(rc, EXIT_SUCCESS);
+  }
+  printf("Now stop serial test\n");
+
+  printf("Now run parallel test aca_System_call\n");
+
+  for (size_t i = 0; i < 100; ++i) {
+    futures.emplace_back(std::async(std::launch::async, [](size_t param){
+          string cmd = "/bin/ls / > /dev/null";
+          auto rc = Aca_Net_Config::get_instance().execute_system_command(cmd);
+          EXPECT_EQ(rc, EXIT_SUCCESS);
+          return param;
+        }, i));
+
+  }
+
+  for (auto &future : futures) {
+//    future.get();
+    std::cout << future.get() << std::endl;
+  }
+  printf("Now stop parallel test\n");
 }
 
 int main(int argc, char **argv)
