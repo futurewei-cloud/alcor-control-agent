@@ -14,7 +14,7 @@
 
 #include "aca_log.h"
 #include "aca_util.h"
-#include "aca_ovs_config.h"
+#include "aca_ovs_programmer.h"
 #include "aca_comm_mgr.h"
 #include "aca_net_config.h"
 #include "gtest/gtest.h"
@@ -60,7 +60,7 @@ bool g_demo_mode = false;
 bool g_transitd_loaded = false;
 
 using aca_net_config::Aca_Net_Config;
-using aca_ovs_config::ACA_OVS_Config;
+using aca_ovs_programmer::ACA_OVS_Programmer;
 
 static void aca_cleanup()
 {
@@ -132,35 +132,35 @@ TEST(ovs_dataplane_test_cases, 2_ports_config_test_traffic)
   int overall_rc = EXIT_SUCCESS;
 
   // delete br-int and br-tun bridges
-  ACA_OVS_Config::get_instance().execute_ovsdb_command(
+  ACA_OVS_Programmer::get_instance().execute_ovsdb_command(
           "del-br br-int", not_care_culminative_time, overall_rc);
 
-  ACA_OVS_Config::get_instance().execute_ovsdb_command(
+  ACA_OVS_Programmer::get_instance().execute_ovsdb_command(
           "del-br br-tun", not_care_culminative_time, overall_rc);
 
   // confirm br-int and br-tun bridges are not there
-  ACA_OVS_Config::get_instance().execute_ovsdb_command(
+  ACA_OVS_Programmer::get_instance().execute_ovsdb_command(
           "br-exists br-int", not_care_culminative_time, overall_rc);
   EXPECT_NE(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
 
-  ACA_OVS_Config::get_instance().execute_ovsdb_command(
+  ACA_OVS_Programmer::get_instance().execute_ovsdb_command(
           "br-exists br-tun", not_care_culminative_time, overall_rc);
   EXPECT_NE(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
 
   // create and setup br-int and br-tun bridges, and their patch ports
-  overall_rc = ACA_OVS_Config::get_instance().setup_bridges();
+  overall_rc = ACA_OVS_Programmer::get_instance().setup_bridges();
   ASSERT_EQ(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
 
   // are the newly created bridges there?
-  ACA_OVS_Config::get_instance().execute_ovsdb_command(
+  ACA_OVS_Programmer::get_instance().execute_ovsdb_command(
           "br-exists br-int", not_care_culminative_time, overall_rc);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
 
-  ACA_OVS_Config::get_instance().execute_ovsdb_command(
+  ACA_OVS_Programmer::get_instance().execute_ovsdb_command(
           "br-exists br-tun", not_care_culminative_time, overall_rc);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
@@ -172,12 +172,12 @@ TEST(ovs_dataplane_test_cases, 2_ports_config_test_traffic)
   string prefix_len = "/24";
 
   // create two ports (using demo mode) and configure them
-  overall_rc = ACA_OVS_Config::get_instance().port_configure(
+  overall_rc = ACA_OVS_Programmer::get_instance().configure_port(
           vpc_id, port_name_1, vip_address_1 + prefix_len, 20, not_care_culminative_time);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
 
-  overall_rc = ACA_OVS_Config::get_instance().port_configure(
+  overall_rc = ACA_OVS_Programmer::get_instance().configure_port(
           vpc_id, port_name_2, vip_address_2 + prefix_len, 20, not_care_culminative_time);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
@@ -186,12 +186,12 @@ TEST(ovs_dataplane_test_cases, 2_ports_config_test_traffic)
   g_demo_mode = previous_demo_mode;
 
   // are the newly created ports there?
-  ACA_OVS_Config::get_instance().execute_ovsdb_command(
+  ACA_OVS_Programmer::get_instance().execute_ovsdb_command(
           "get Interface " + port_name_1 + " ofport", not_care_culminative_time, overall_rc);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
 
-  ACA_OVS_Config::get_instance().execute_ovsdb_command(
+  ACA_OVS_Programmer::get_instance().execute_ovsdb_command(
           "get Interface " + port_name_2 + " ofport", not_care_culminative_time, overall_rc);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
@@ -208,35 +208,35 @@ TEST(ovs_dataplane_test_cases, 2_ports_config_test_traffic)
   string outport_name = aca_get_outport_name(vxlan_type, remote_ip_1);
 
   // insert neighbor info
-  overall_rc = ACA_OVS_Config::get_instance().port_neighbor_create_update(
+  overall_rc = ACA_OVS_Programmer::get_instance().create_update_neighbor_port(
           vpc_id, vxlan_type, remote_ip_1, 20, not_care_culminative_time);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
 
   // check if the outport has been created on br-tun
-  ACA_OVS_Config::get_instance().execute_ovsdb_command(
+  ACA_OVS_Programmer::get_instance().execute_ovsdb_command(
           " list-ports br-tun | grep " + outport_name, not_care_culminative_time, overall_rc);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
 
   // delete br-int and br-tun bridges
-  ACA_OVS_Config::get_instance().execute_ovsdb_command(
+  ACA_OVS_Programmer::get_instance().execute_ovsdb_command(
           "del-br br-int", not_care_culminative_time, overall_rc);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
 
-  ACA_OVS_Config::get_instance().execute_ovsdb_command(
+  ACA_OVS_Programmer::get_instance().execute_ovsdb_command(
           "del-br br-tun", not_care_culminative_time, overall_rc);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
 
   // confirm br-int and br-tun bridges are not there
-  ACA_OVS_Config::get_instance().execute_ovsdb_command(
+  ACA_OVS_Programmer::get_instance().execute_ovsdb_command(
           "br-exists br-int", not_care_culminative_time, overall_rc);
   EXPECT_NE(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
 
-  ACA_OVS_Config::get_instance().execute_ovsdb_command(
+  ACA_OVS_Programmer::get_instance().execute_ovsdb_command(
           "br-exists br-tun", not_care_culminative_time, overall_rc);
   EXPECT_NE(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
@@ -245,6 +245,8 @@ TEST(ovs_dataplane_test_cases, 2_ports_config_test_traffic)
 // TODO: invalid IP
 
 // TODO: invalid mac
+
+// TODO: tunnel ID
 
 // TODO: subnet info not available
 
@@ -265,10 +267,10 @@ TEST(ovs_dataplane_test_cases, 1_port_CREATE)
   aca_test_create_default_subnet_state(new_subnet_states);
 
   // delete br-int and br-tun bridges
-  ACA_OVS_Config::get_instance().execute_ovsdb_command(
+  ACA_OVS_Programmer::get_instance().execute_ovsdb_command(
           "del-br br-int", not_care_culminative_time, overall_rc);
 
-  ACA_OVS_Config::get_instance().execute_ovsdb_command(
+  ACA_OVS_Programmer::get_instance().execute_ovsdb_command(
           "del-br br-tun", not_care_culminative_time, overall_rc);
 
   // set demo mode
@@ -286,7 +288,7 @@ TEST(ovs_dataplane_test_cases, 1_port_CREATE)
   g_demo_mode = previous_demo_mode;
 
   // check to ensure the port is created and setup correctly
-  ACA_OVS_Config::get_instance().execute_ovsdb_command(
+  ACA_OVS_Programmer::get_instance().execute_ovsdb_command(
           "get Interface " + port_name_1 + " ofport", not_care_culminative_time, overall_rc);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
@@ -298,12 +300,12 @@ TEST(ovs_dataplane_test_cases, 1_port_CREATE)
   new_subnet_states->clear_configuration();
 
   // delete br-int and br-tun bridges
-  ACA_OVS_Config::get_instance().execute_ovsdb_command(
+  ACA_OVS_Programmer::get_instance().execute_ovsdb_command(
           "del-br br-int", not_care_culminative_time, overall_rc);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
 
-  ACA_OVS_Config::get_instance().execute_ovsdb_command(
+  ACA_OVS_Programmer::get_instance().execute_ovsdb_command(
           "del-br br-tun", not_care_culminative_time, overall_rc);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
@@ -343,14 +345,14 @@ TEST(ovs_dataplane_test_cases, 1_port_NEIGHBOR_CREATE_UPDATE)
   aca_test_create_default_subnet_state(new_subnet_states);
 
   // delete br-int and br-tun bridges
-  ACA_OVS_Config::get_instance().execute_ovsdb_command(
+  ACA_OVS_Programmer::get_instance().execute_ovsdb_command(
           "del-br br-int", not_care_culminative_time, overall_rc);
 
-  ACA_OVS_Config::get_instance().execute_ovsdb_command(
+  ACA_OVS_Programmer::get_instance().execute_ovsdb_command(
           "del-br br-tun", not_care_culminative_time, overall_rc);
 
   // create and setup br-int and br-tun bridges, and their patch ports
-  overall_rc = ACA_OVS_Config::get_instance().setup_bridges();
+  overall_rc = ACA_OVS_Programmer::get_instance().setup_bridges();
   ASSERT_EQ(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
 
@@ -364,7 +366,7 @@ TEST(ovs_dataplane_test_cases, 1_port_NEIGHBOR_CREATE_UPDATE)
   string outport_name = aca_get_outport_name(vxlan_type, remote_ip_1);
 
   // check if the outport has been created on br-tun
-  ACA_OVS_Config::get_instance().execute_ovsdb_command(
+  ACA_OVS_Programmer::get_instance().execute_ovsdb_command(
           " list-ports br-tun | grep " + outport_name, not_care_culminative_time, overall_rc);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
@@ -376,12 +378,12 @@ TEST(ovs_dataplane_test_cases, 1_port_NEIGHBOR_CREATE_UPDATE)
   new_subnet_states->clear_configuration();
 
   // delete br-int and br-tun bridges
-  ACA_OVS_Config::get_instance().execute_ovsdb_command(
+  ACA_OVS_Programmer::get_instance().execute_ovsdb_command(
           "del-br br-int", not_care_culminative_time, overall_rc);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
 
-  ACA_OVS_Config::get_instance().execute_ovsdb_command(
+  ACA_OVS_Programmer::get_instance().execute_ovsdb_command(
           "del-br br-tun", not_care_culminative_time, overall_rc);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
@@ -429,14 +431,14 @@ TEST(ovs_dataplane_test_cases, 1_port_CREATE_plus_NEIGHBOR_CREATE_UPDATE)
   FixedIp_builder2->set_subnet_id(subnet_id);
 
   // delete br-int and br-tun bridges
-  ACA_OVS_Config::get_instance().execute_ovsdb_command(
+  ACA_OVS_Programmer::get_instance().execute_ovsdb_command(
           "del-br br-int", not_care_culminative_time, overall_rc);
 
-  ACA_OVS_Config::get_instance().execute_ovsdb_command(
+  ACA_OVS_Programmer::get_instance().execute_ovsdb_command(
           "del-br br-tun", not_care_culminative_time, overall_rc);
 
   // create and setup br-int and br-tun bridges, and their patch ports
-  overall_rc = ACA_OVS_Config::get_instance().setup_bridges();
+  overall_rc = ACA_OVS_Programmer::get_instance().setup_bridges();
   ASSERT_EQ(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
 
@@ -455,7 +457,7 @@ TEST(ovs_dataplane_test_cases, 1_port_CREATE_plus_NEIGHBOR_CREATE_UPDATE)
   g_demo_mode = previous_demo_mode;
 
   // check to ensure the port 1 is created and setup correctly
-  ACA_OVS_Config::get_instance().execute_ovsdb_command(
+  ACA_OVS_Programmer::get_instance().execute_ovsdb_command(
           "get Interface " + port_name_1 + " ofport", not_care_culminative_time, overall_rc);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
@@ -463,7 +465,7 @@ TEST(ovs_dataplane_test_cases, 1_port_CREATE_plus_NEIGHBOR_CREATE_UPDATE)
   string outport_name = aca_get_outport_name(vxlan_type, remote_ip_1);
 
   // check if the outport has been created on br-tun
-  ACA_OVS_Config::get_instance().execute_ovsdb_command(
+  ACA_OVS_Programmer::get_instance().execute_ovsdb_command(
           " list-ports br-tun | grep " + outport_name, not_care_culminative_time, overall_rc);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
@@ -475,12 +477,12 @@ TEST(ovs_dataplane_test_cases, 1_port_CREATE_plus_NEIGHBOR_CREATE_UPDATE)
   new_subnet_states->clear_configuration();
 
   // delete br-int and br-tun bridges
-  ACA_OVS_Config::get_instance().execute_ovsdb_command(
+  ACA_OVS_Programmer::get_instance().execute_ovsdb_command(
           "del-br br-int", not_care_culminative_time, overall_rc);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
 
-  ACA_OVS_Config::get_instance().execute_ovsdb_command(
+  ACA_OVS_Programmer::get_instance().execute_ovsdb_command(
           "del-br br-tun", not_care_culminative_time, overall_rc);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
@@ -523,14 +525,14 @@ TEST(ovs_dataplane_test_cases, 2_ports_CREATE_test_traffic)
   aca_test_create_default_subnet_state(new_subnet_states);
 
   // delete br-int and br-tun bridges
-  ACA_OVS_Config::get_instance().execute_ovsdb_command(
+  ACA_OVS_Programmer::get_instance().execute_ovsdb_command(
           "del-br br-int", not_care_culminative_time, overall_rc);
 
-  ACA_OVS_Config::get_instance().execute_ovsdb_command(
+  ACA_OVS_Programmer::get_instance().execute_ovsdb_command(
           "del-br br-tun", not_care_culminative_time, overall_rc);
 
   // create and setup br-int and br-tun bridges, and their patch ports
-  overall_rc = ACA_OVS_Config::get_instance().setup_bridges();
+  overall_rc = ACA_OVS_Programmer::get_instance().setup_bridges();
   ASSERT_EQ(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
 
@@ -546,7 +548,7 @@ TEST(ovs_dataplane_test_cases, 2_ports_CREATE_test_traffic)
   ASSERT_EQ(overall_rc, EXIT_SUCCESS);
 
   // check to ensure the port 1 is created and setup correctly
-  ACA_OVS_Config::get_instance().execute_ovsdb_command(
+  ACA_OVS_Programmer::get_instance().execute_ovsdb_command(
           "get Interface " + port_name_1 + " ofport", not_care_culminative_time, overall_rc);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
@@ -565,7 +567,7 @@ TEST(ovs_dataplane_test_cases, 2_ports_CREATE_test_traffic)
   g_demo_mode = previous_demo_mode;
 
   // check to ensure the port 2 is created and setup correctly
-  ACA_OVS_Config::get_instance().execute_ovsdb_command(
+  ACA_OVS_Programmer::get_instance().execute_ovsdb_command(
           "get Interface " + port_name_2 + " ofport", not_care_culminative_time, overall_rc);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
@@ -586,12 +588,12 @@ TEST(ovs_dataplane_test_cases, 2_ports_CREATE_test_traffic)
   new_subnet_states->clear_configuration();
 
   // delete br-int and br-tun bridges
-  ACA_OVS_Config::get_instance().execute_ovsdb_command(
+  ACA_OVS_Programmer::get_instance().execute_ovsdb_command(
           "del-br br-int", not_care_culminative_time, overall_rc);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
 
-  ACA_OVS_Config::get_instance().execute_ovsdb_command(
+  ACA_OVS_Programmer::get_instance().execute_ovsdb_command(
           "del-br br-tun", not_care_culminative_time, overall_rc);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;

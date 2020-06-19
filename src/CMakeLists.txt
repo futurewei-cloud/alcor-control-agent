@@ -5,10 +5,10 @@ set(SOURCES
     ./comm/aca_message_consumer.cpp
     ./comm/aca_comm_mgr.cpp
     ./comm/aca_async_grpc_server.cpp
-    ./dp_abstraction/aca_net_state_handler.cpp
+    ./dp_abstraction/aca_goal_state_handler.cpp
     ./dp_abstraction/aca_dataplane_ovs.cpp
     ./net_config/aca_net_config.cpp
-    ./ovs/aca_ovs_config.cpp
+    ./ovs/aca_ovs_programmer.cpp
 )
 FIND_LIBRARY(RDKAFKA rdkafka /usr/lib/x86_64-linux-gnu NO_DEFAULT_PATH)
 FIND_LIBRARY(CPPKAFKA cppkafka /usr/local/lib NO_DEFAULT_PATH)

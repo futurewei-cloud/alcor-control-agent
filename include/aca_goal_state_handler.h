@@ -12,17 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef ACA_NET_STATE_HANDLER_H
-#define ACA_NET_STATE_HANDLER_H
+#ifndef ACA_GOAL_STATE_HANDLER_H
+#define ACA_GOAL_STATE_HANDLER_H
 
-#include "aca_dataplane_mizar.h"
+#include "aca_net_programming_if.h"
 #include "goalstateprovisioner.grpc.pb.h"
 
-namespace aca_net_state_handler
+namespace aca_goal_state_handler
 {
-class Aca_Net_State_Handler {
+class Aca_Goal_State_Handler {
   public:
-  static Aca_Net_State_Handler &get_instance();
+  static Aca_Goal_State_Handler &get_instance();
 
   // process ONE VPC state
   int update_vpc_state_workitem(const alcor::schema::VpcState current_VpcState,
@@ -59,16 +59,16 @@ class Aca_Net_State_Handler {
           ulong culminative_network_configuration_time, ulong state_elapse_time);
 
   // compiler will flag error when below is called
-  Aca_Net_State_Handler(Aca_Net_State_Handler const &) = delete;
-  void operator=(Aca_Net_State_Handler const &) = delete;
+  Aca_Goal_State_Handler(Aca_Goal_State_Handler const &) = delete;
+  void operator=(Aca_Goal_State_Handler const &) = delete;
 
   private:
   // constructor and destructor marked as private so that noone can call it
   // for the singleton implementation
-  Aca_Net_State_Handler();
-  ~Aca_Net_State_Handler();
+  Aca_Goal_State_Handler();
+  ~Aca_Goal_State_Handler();
 
   aca_net_programming_if::ACA_Core_Net_Programming_Interface *core_net_programming_if;
 };
-} // namespace aca_net_state_handler
-#endif // @ifndef ACA_NET_STATE_HANDLER_H
+} // namespace aca_goal_state_handler
+#endif // @ifndef ACA_GOAL_STATE_HANDLER_H

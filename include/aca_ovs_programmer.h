@@ -12,32 +12,28 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef ACA_OVS_CONFIG_H
-#define ACA_OVS_CONFIG_H
+#ifndef ACA_OVS_PROGRAMMER_H
+#define ACA_OVS_PROGRAMMER_H
 
 #include "goalstateprovisioner.grpc.pb.h"
 #include <string>
 
-// OVS Configuration implementation class
-namespace aca_ovs_config
+// OVS programmer implementation class
+namespace aca_ovs_programmer
 {
-class ACA_OVS_Config {
+class ACA_OVS_Programmer {
   public:
-  static ACA_OVS_Config &get_instance();
+  static ACA_OVS_Programmer &get_instance();
 
   int setup_bridges();
 
-  int port_configure(const std::string vpc_id, const std::string port_name,
+  int configure_port(const std::string vpc_id, const std::string port_name,
                      const std::string virtual_ip, uint tunnel_id, ulong &culminative_time);
 
-  int port_neighbor_create_update(const std::string vpc_id,
+  int create_update_neighbor_port(const std::string vpc_id,
                                   alcor::schema::NetworkType network_type,
                                   const std::string remote_ip, uint tunnel_id,
                                   ulong &culminative_time);
-
-  // compiler will flag the error when below is called.
-  ACA_OVS_Config(ACA_OVS_Config const &) = delete;
-  void operator=(ACA_OVS_Config const &) = delete;
 
   void execute_ovsdb_command(const std::string cmd_string,
                              ulong &culminative_time, int &overall_rc);
@@ -45,9 +41,13 @@ class ACA_OVS_Config {
   void execute_openflow_command(const std::string cmd_string,
                                 ulong &culminative_time, int &overall_rc);
 
+  // compiler will flag the error when below is called.
+  ACA_OVS_Programmer(ACA_OVS_Programmer const &) = delete;
+  void operator=(ACA_OVS_Programmer const &) = delete;
+
   private:
-  ACA_OVS_Config(){};
-  ~ACA_OVS_Config(){};
+  ACA_OVS_Programmer(){};
+  ~ACA_OVS_Programmer(){};
 };
-} // namespace aca_ovs_config
-#endif // #ifndef ACA_OVS_CONFIG_H
+} // namespace aca_ovs_programmer
+#endif // #ifndef ACA_OVS_PROGRAMMER_H

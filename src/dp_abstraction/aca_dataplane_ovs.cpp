@@ -13,8 +13,8 @@
 // limitations under the License.
 
 #include "aca_dataplane_ovs.h"
-#include "aca_net_state_handler.h"
-#include "aca_ovs_config.h"
+#include "aca_goal_state_handler.h"
+#include "aca_ovs_programmer.h"
 #include "aca_net_config.h"
 #include "aca_log.h"
 #include "goalstateprovisioner.grpc.pb.h"
@@ -24,7 +24,7 @@
 
 using namespace std;
 using namespace alcor::schema;
-using aca_ovs_config::ACA_OVS_Config;
+using aca_ovs_programmer::ACA_OVS_Programmer;
 
 static void aca_validate_mac_address(const char *mac_string)
 {
@@ -50,12 +50,26 @@ static void aca_validate_mac_address(const char *mac_string)
   throw std::invalid_argument("Input mac_string is not in the expect format");
 }
 
+static void aca_validate_tunnel_id(const uint tunnel_id)
+{
+  uint MAX_VALID_VNI = 16777215;
+
+  if (tunnel_id == 0) {
+    throw std::invalid_argument("Input tunnel_id is 0");
+  }
+
+  if (tunnel_id > MAX_VALID_VNI) {
+    throw std::invalid_argument("Input tunnel_id is greater than valid maximun " +
+                                to_string(MAX_VALID_VNI));
+  }
+}
+
 namespace aca_dataplane_ovs
 {
 int ACA_Dataplane_OVS::initialize()
 {
   // TODO: improve the logging system, and add logging to this module
-  return ACA_OVS_Config::get_instance().setup_bridges();
+  return ACA_OVS_Programmer::get_instance().setup_bridges();
 }
 
 int ACA_Dataplane_OVS::update_vpc_state_workitem(const VpcState current_VpcState,
@@ -83,7 +97,7 @@ int ACA_Dataplane_OVS::update_subnet_state_workitem(const SubnetState current_Su
     break;
 
   default:
-    ACA_LOG_DEBUG("Invalid subnet state operation type %d/n",
+    ACA_LOG_ERROR("Invalid subnet state operation type %d\n",
                   current_SubnetState.operation_type());
     overall_rc = -EXIT_FAILURE;
     break;
@@ -94,7 +108,7 @@ int ACA_Dataplane_OVS::update_subnet_state_workitem(const SubnetState current_Su
   auto operation_total_time =
           cast_to_nanoseconds(operation_end - operation_start).count();
 
-  aca_net_state_handler::Aca_Net_State_Handler::get_instance().add_goal_state_operation_status(
+  aca_goal_state_handler::Aca_Goal_State_Handler::get_instance().add_goal_state_operation_status(
           gsOperationReply, current_SubnetConfiguration.id(), SUBNET,
           current_SubnetState.operation_type(), overall_rc, culminative_dataplane_programming_time,
           culminative_network_configuration_time, operation_total_time);
@@ -166,10 +180,9 @@ int ACA_Dataplane_OVS::update_port_state_workitem(const PortState current_PortSt
         if (parsed_struct.subnet_states(j).operation_type() == OperationType::INFO) {
           if (current_SubnetConfiguration.id() ==
               current_PortConfiguration.fixed_ips(0).subnet_id()) {
-            if (current_SubnetConfiguration.tunnel_id() == 0) {
-              throw std::invalid_argument("tunnel id is 0");
-            }
             found_tunnel_id = current_SubnetConfiguration.tunnel_id();
+
+            aca_validate_tunnel_id(found_tunnel_id);
 
             found_cidr = current_SubnetConfiguration.cidr();
 
@@ -204,7 +217,7 @@ int ACA_Dataplane_OVS::update_port_state_workitem(const PortState current_PortSt
                       current_PortConfiguration.name().c_str(),
                       port_cidr.c_str(), found_tunnel_id);
 
-        overall_rc = ACA_OVS_Config::get_instance().port_configure(
+        overall_rc = ACA_OVS_Programmer::get_instance().configure_port(
                 current_PortConfiguration.vpc_id(), current_PortConfiguration.name(),
                 port_cidr, found_tunnel_id, culminative_dataplane_programming_time);
       }
@@ -252,10 +265,9 @@ int ACA_Dataplane_OVS::update_port_state_workitem(const PortState current_PortSt
         if (parsed_struct.subnet_states(j).operation_type() == OperationType::INFO) {
           if (current_SubnetConfiguration.id() ==
               current_PortConfiguration.fixed_ips(0).subnet_id()) {
-            if (current_SubnetConfiguration.tunnel_id() == 0) {
-              throw std::invalid_argument("tunnel id is 0");
-            }
             found_tunnel_id = current_SubnetConfiguration.tunnel_id();
+
+            aca_validate_tunnel_id(found_tunnel_id);
           }
           subnet_info_found = true;
           break;
@@ -278,7 +290,7 @@ int ACA_Dataplane_OVS::update_port_state_workitem(const PortState current_PortSt
                       current_PortConfiguration.network_type(),
                       host_ip_address.c_str(), found_tunnel_id);
 
-        overall_rc = ACA_OVS_Config::get_instance().port_neighbor_create_update(
+        overall_rc = ACA_OVS_Programmer::get_instance().create_update_neighbor_port(
                 current_PortConfiguration.vpc_id(),
                 current_PortConfiguration.network_type(), host_ip_address,
                 found_tunnel_id, culminative_dataplane_programming_time);
@@ -300,7 +312,7 @@ int ACA_Dataplane_OVS::update_port_state_workitem(const PortState current_PortSt
     break;
 
   default:
-    ACA_LOG_DEBUG("Invalid port state operation type %d/n",
+    ACA_LOG_ERROR("Invalid port state operation type %d\n",
                   current_PortState.operation_type());
     overall_rc = -EXIT_FAILURE;
     break;
@@ -311,7 +323,7 @@ int ACA_Dataplane_OVS::update_port_state_workitem(const PortState current_PortSt
   auto operation_total_time =
           cast_to_nanoseconds(operation_end - operation_start).count();
 
-  aca_net_state_handler::Aca_Net_State_Handler::get_instance().add_goal_state_operation_status(
+  aca_goal_state_handler::Aca_Goal_State_Handler::get_instance().add_goal_state_operation_status(
           gsOperationReply, current_PortConfiguration.id(), PORT,
           current_PortState.operation_type(), overall_rc, culminative_dataplane_programming_time,
           culminative_network_configuration_time, operation_total_time);

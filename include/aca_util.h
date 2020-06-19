@@ -19,6 +19,8 @@
 #include "goalstateprovisioner.grpc.pb.h"
 #include <string>
 
+// the hashed digits for the outport postfix string is based on remote IP string,
+// it should be more than enough for the number of hosts in a region
 #define MAX_OUTPORT_NAME_POSTFIX 99999999
 
 #define cast_to_nanoseconds(x) chrono::duration_cast<chrono::nanoseconds>(x)
@@ -35,7 +37,7 @@ static inline std::string aca_get_network_type_string(alcor::schema::NetworkType
   case alcor::schema::NetworkType::GENEVE:
     return "geneve";
   case alcor::schema::NetworkType::VXLAN_GPE:
-    return "vxlan_gpe";
+    return "vxlang";
 
   default:
     return "ERROR: unknown network type!";

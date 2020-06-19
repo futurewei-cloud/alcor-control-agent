@@ -15,12 +15,12 @@
 #include "aca_log.h"
 #include "aca_util.h"
 #include "aca_comm_mgr.h"
-#include "aca_net_state_handler.h"
+#include "aca_goal_state_handler.h"
 #include "goalstateprovisioner.grpc.pb.h"
 
 using namespace std;
 using namespace alcor::schema;
-using namespace aca_net_state_handler;
+using namespace aca_goal_state_handler;
 
 extern string g_rpc_server;
 extern string g_rpc_protocol;
@@ -82,21 +82,21 @@ int Aca_Comm_Manager::update_goal_state(GoalState &goal_state_message,
 
   ACA_LOG_INFO("Goal state message size is: %lu bytes\n", goal_state_message.ByteSizeLong());
 
-  exec_command_rc = Aca_Net_State_Handler::get_instance().update_vpc_states(
+  exec_command_rc = Aca_Goal_State_Handler::get_instance().update_vpc_states(
           goal_state_message, gsOperationReply);
   if (exec_command_rc != EXIT_SUCCESS) {
     ACA_LOG_ERROR("Failed to update vpc state. Failed with error code %d\n", exec_command_rc);
     rc = exec_command_rc;
   }
 
-  exec_command_rc = Aca_Net_State_Handler::get_instance().update_subnet_states(
+  exec_command_rc = Aca_Goal_State_Handler::get_instance().update_subnet_states(
           goal_state_message, gsOperationReply);
   if (exec_command_rc != EXIT_SUCCESS) {
     ACA_LOG_ERROR("Failed to update subnet state. Failed with error code %d\n", exec_command_rc);
     rc = exec_command_rc;
   }
 
-  exec_command_rc = Aca_Net_State_Handler::get_instance().update_port_states(
+  exec_command_rc = Aca_Goal_State_Handler::get_instance().update_port_states(
           goal_state_message, gsOperationReply);
   if (exec_command_rc != EXIT_SUCCESS) {
     ACA_LOG_ERROR("Failed to update port state. Failed with error code %d\n", exec_command_rc);
