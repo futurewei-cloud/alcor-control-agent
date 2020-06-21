@@ -49,6 +49,7 @@ aca_get_outport_name(alcor::schema::NetworkType network_type, std::string remote
 {
   std::hash<std::string> str_hash;
 
+  // TODO: change to hex encoding to get more possible combinations
   auto hash_value = str_hash(remote_ip) % MAX_OUTPORT_NAME_POSTFIX;
 
   return aca_get_network_type_string(network_type) + "-" + std::to_string(hash_value);
