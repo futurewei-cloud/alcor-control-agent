@@ -13,24 +13,24 @@
 // limitations under the License.
 
 #include "aca_log.h"
-#include "aca_dataplane_mizar.h"
-#include "aca_net_state_handler.h"
+#include "aca_dataplane_ovs.h"
+#include "aca_goal_state_handler.h"
 #include "goalstateprovisioner.grpc.pb.h"
 #include <future>
 
-using namespace alcorcontroller;
+using namespace alcor::schema;
 
 std::mutex gs_reply_mutex; // mutex for writing gs reply object
 
-namespace aca_net_state_handler
+namespace aca_goal_state_handler
 {
-Aca_Net_State_Handler::Aca_Net_State_Handler()
+Aca_Goal_State_Handler::Aca_Goal_State_Handler()
 {
-  ACA_LOG_INFO("Network State Handler initialize\n");
+  ACA_LOG_INFO("Goal State Handler: initialize\n");
 
-  // default to dataplane_mizar for now
-  ACA_LOG_INFO("Network State Handler: using mizar dataplane\n");
-  this->core_net_programming_if = new aca_dataplane_mizar::ACA_Dataplane_Mizar;
+  // default to dataplane_ovs
+  ACA_LOG_INFO("Network State Handler: using ovs dataplane\n");
+  this->core_net_programming_if = new aca_dataplane_ovs::ACA_Dataplane_OVS;
 
   int rc = this->core_net_programming_if->initialize();
 
@@ -43,28 +43,28 @@ Aca_Net_State_Handler::Aca_Net_State_Handler()
   }
 }
 
-Aca_Net_State_Handler::~Aca_Net_State_Handler()
+Aca_Goal_State_Handler::~Aca_Goal_State_Handler()
 {
   // allocated core_net_programming_if is destroyed when program exits.
 }
 
-Aca_Net_State_Handler &Aca_Net_State_Handler::get_instance()
+Aca_Goal_State_Handler &Aca_Goal_State_Handler::get_instance()
 {
   // It is instantiated on first use.
   // allocated instance is destroyed when program exits.
-  static Aca_Net_State_Handler instance;
+  static Aca_Goal_State_Handler instance;
   return instance;
 }
 
-int Aca_Net_State_Handler::update_vpc_state_workitem(const VpcState current_VpcState,
-                                                     GoalStateOperationReply &gsOperationReply)
+int Aca_Goal_State_Handler::update_vpc_state_workitem(const VpcState current_VpcState,
+                                                      GoalStateOperationReply &gsOperationReply)
 {
   return this->core_net_programming_if->update_vpc_state_workitem(
           current_VpcState, std::ref(gsOperationReply));
 }
 
-int Aca_Net_State_Handler::update_vpc_states(GoalState &parsed_struct,
-                                             GoalStateOperationReply &gsOperationReply)
+int Aca_Goal_State_Handler::update_vpc_states(GoalState &parsed_struct,
+                                              GoalStateOperationReply &gsOperationReply)
 {
   std::vector<std::future<int> > workitem_future;
   int rc;
@@ -79,7 +79,7 @@ int Aca_Net_State_Handler::update_vpc_states(GoalState &parsed_struct,
     VpcState current_VPCState = parsed_struct.vpc_states(i);
 
     workitem_future.push_back(std::async(
-            std::launch::async, &Aca_Net_State_Handler::update_vpc_state_workitem,
+            std::launch::async, &Aca_Goal_State_Handler::update_vpc_state_workitem,
             this, current_VPCState, std::ref(gsOperationReply)));
 
     // keeping below just in case if we want to call it serially
@@ -97,15 +97,15 @@ int Aca_Net_State_Handler::update_vpc_states(GoalState &parsed_struct,
   return overall_rc;
 }
 
-int Aca_Net_State_Handler::update_subnet_state_workitem(const SubnetState current_SubnetState,
-                                                        GoalStateOperationReply &gsOperationReply)
+int Aca_Goal_State_Handler::update_subnet_state_workitem(const SubnetState current_SubnetState,
+                                                         GoalStateOperationReply &gsOperationReply)
 {
   return this->core_net_programming_if->update_subnet_state_workitem(
           current_SubnetState, std::ref(gsOperationReply));
 }
 
-int Aca_Net_State_Handler::update_subnet_states(GoalState &parsed_struct,
-                                                GoalStateOperationReply &gsOperationReply)
+int Aca_Goal_State_Handler::update_subnet_states(GoalState &parsed_struct,
+                                                 GoalStateOperationReply &gsOperationReply)
 {
   std::vector<std::future<int> > workitem_future;
   int rc;
@@ -120,7 +120,7 @@ int Aca_Net_State_Handler::update_subnet_states(GoalState &parsed_struct,
     SubnetState current_SubnetState = parsed_struct.subnet_states(i);
 
     workitem_future.push_back(std::async(
-            std::launch::async, &Aca_Net_State_Handler::update_subnet_state_workitem,
+            std::launch::async, &Aca_Goal_State_Handler::update_subnet_state_workitem,
             this, current_SubnetState, std::ref(gsOperationReply)));
 
     // keeping below just in case if we want to call it serially
@@ -138,16 +138,16 @@ int Aca_Net_State_Handler::update_subnet_states(GoalState &parsed_struct,
   return overall_rc;
 }
 
-int Aca_Net_State_Handler::update_port_state_workitem(const PortState current_PortState,
-                                                      alcorcontroller::GoalState &parsed_struct,
-                                                      GoalStateOperationReply &gsOperationReply)
+int Aca_Goal_State_Handler::update_port_state_workitem(const PortState current_PortState,
+                                                       GoalState &parsed_struct,
+                                                       GoalStateOperationReply &gsOperationReply)
 {
   return this->core_net_programming_if->update_port_state_workitem(
           current_PortState, std::ref(parsed_struct), std::ref(gsOperationReply));
 }
 
-int Aca_Net_State_Handler::update_port_states(GoalState &parsed_struct,
-                                              GoalStateOperationReply &gsOperationReply)
+int Aca_Goal_State_Handler::update_port_states(GoalState &parsed_struct,
+                                               GoalStateOperationReply &gsOperationReply)
 {
   std::vector<std::future<int> > workitem_future;
   int rc;
@@ -162,7 +162,7 @@ int Aca_Net_State_Handler::update_port_states(GoalState &parsed_struct,
     PortState current_PortState = parsed_struct.port_states(i);
 
     workitem_future.push_back(std::async(
-            std::launch::async, &Aca_Net_State_Handler::update_port_state_workitem, this,
+            std::launch::async, &Aca_Goal_State_Handler::update_port_state_workitem, this,
             current_PortState, std::ref(parsed_struct), std::ref(gsOperationReply)));
 
     // keeping below just in case if we want to call it serially
@@ -180,11 +180,10 @@ int Aca_Net_State_Handler::update_port_states(GoalState &parsed_struct,
   return overall_rc;
 }
 
-void Aca_Net_State_Handler::add_goal_state_operation_status(
-        alcorcontroller::GoalStateOperationReply &gsOperationReply,
-        std::string id, alcorcontroller::ResourceType resource_type,
-        alcorcontroller::OperationType operation_type, int operation_rc,
-        ulong culminative_dataplane_programming_time,
+void Aca_Goal_State_Handler::add_goal_state_operation_status(
+        GoalStateOperationReply &gsOperationReply, std::string id,
+        ResourceType resource_type, OperationType operation_type,
+        int operation_rc, ulong culminative_dataplane_programming_time,
         ulong culminative_network_configuration_time, ulong state_elapse_time)
 {
   OperationStatus overall_operation_status;
@@ -222,4 +221,4 @@ void Aca_Net_State_Handler::add_goal_state_operation_status(
   // -----critical section ends-----
 }
 
-} // namespace aca_net_state_handler
+} // namespace aca_goal_state_handler

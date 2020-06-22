@@ -18,21 +18,21 @@
 #include "aca_net_programming_if.h"
 
 // OVS dataplane implementation class
-namespace aca_dataplane_OVS
+namespace aca_dataplane_ovs
 {
 class ACA_Dataplane_OVS : public aca_net_programming_if::ACA_Core_Net_Programming_Interface {
   public:
   int initialize();
 
-  int update_vpc_state_workitem(const alcorcontroller::VpcState current_VpcState,
-                                alcorcontroller::GoalStateOperationReply &gsOperationReply);
+  int update_vpc_state_workitem(const alcor::schema::VpcState current_VpcState,
+                                alcor::schema::GoalStateOperationReply &gsOperationReply);
 
-  int update_subnet_state_workitem(const alcorcontroller::SubnetState current_SubnetState,
-                                   alcorcontroller::GoalStateOperationReply &gsOperationReply);
+  int update_subnet_state_workitem(const alcor::schema::SubnetState current_SubnetState,
+                                   alcor::schema::GoalStateOperationReply &gsOperationReply);
 
-  int update_port_state_workitem(const alcorcontroller::PortState current_PortState,
-                                 alcorcontroller::GoalState &parsed_struct,
-                                 alcorcontroller::GoalStateOperationReply &gsOperationReply);
+  int update_port_state_workitem(const alcor::schema::PortState current_PortState,
+                                 alcor::schema::GoalState &parsed_struct,
+                                 alcor::schema::GoalStateOperationReply &gsOperationReply);
 };
-} // namespace aca_dataplane_OVS
+} // namespace aca_dataplane_ovs
 #endif // #ifndef ACA_DATAPLANCE_OVS_H

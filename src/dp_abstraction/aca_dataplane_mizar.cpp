@@ -16,7 +16,6 @@
 
 #include "aca_dataplane_mizar.h"
 #include "aca_net_state_handler.h"
-// #include "aca_comm_mgr.h"
 #include "aca_net_config.h"
 #include "aca_log.h"
 #include "goalstateprovisioner.grpc.pb.h"
@@ -33,7 +32,7 @@
 #define TRAN_SIMPLE_EP 1
 
 using namespace std;
-using namespace alcorcontroller;
+using namespace alcor::schema;
 using aca_net_config::Aca_Net_Config;
 
 std::mutex rpc_client_call_mutex; // mutex to protect the RPC client and call
@@ -54,7 +53,6 @@ extern string g_rpc_protocol;
 extern std::atomic_ulong g_total_rpc_call_time;
 extern std::atomic_ulong g_total_rpc_client_time;
 extern std::atomic_ulong g_total_update_GS_time;
-extern bool g_demo_mode;
 
 static inline void aca_truncate_device_name(string &device_name, uint truncation_len)
 {
@@ -243,7 +241,7 @@ int ACA_Dataplane_Mizar::update_vpc_state_workitem(const VpcState current_VpcSta
       overall_rc = EXIT_SUCCESS;
 
       ACA_LOG_DEBUG("VPC Operation: %s: interface: %s, transit_routers_size: %d, tunid:%ld\n",
-                    aca_get_operation_name(current_VpcState.operation_type()),
+                    aca_get_operation_string(current_VpcState.operation_type()),
                     vpc_in.interface,
                     current_VpcConfiguration.transit_routers_size(), vpc_in.tunid);
     } catch (const std::invalid_argument &e) {
@@ -334,10 +332,10 @@ int ACA_Dataplane_Mizar::update_vpc_state_workitem(const VpcState current_VpcSta
   auto operation_total_time =
           cast_to_nanoseconds(operation_end - operation_start).count();
 
-  // add_goal_state_operation_status(
-  //         gsOperationReply, current_VpcConfiguration.id(), VPC,
-  //         current_VpcState.operation_type(), overall_rc, culminative_dataplane_programming_time,
-  //         culminative_network_configuration_time, operation_total_time);
+  aca_net_state_handler::Aca_Net_State_Handler::get_instance().add_goal_state_operation_status(
+          gsOperationReply, current_VpcConfiguration.id(), VPC,
+          current_VpcState.operation_type(), overall_rc, culminative_dataplane_programming_time,
+          culminative_network_configuration_time, operation_total_time);
 
   return overall_rc;
 }
@@ -418,7 +416,7 @@ int ACA_Dataplane_Mizar::update_subnet_state_workitem(const SubnetState current_
 
       ACA_LOG_DEBUG(
               "Subnet Operation: %s: interface: %s, cidr: %s, transit switch size: %d, tunid:%ld\n",
-              aca_get_operation_name(current_SubnetState.operation_type()),
+              aca_get_operation_string(current_SubnetState.operation_type()),
               network_in.interface, current_SubnetConfiguration.cidr().c_str(),
               current_SubnetConfiguration.transit_switches_size(), network_in.tunid);
     } catch (const std::invalid_argument &e) {
@@ -467,7 +465,7 @@ int ACA_Dataplane_Mizar::update_subnet_state_workitem(const SubnetState current_
       overall_rc = EXIT_SUCCESS;
 
       ACA_LOG_DEBUG("Subnet Operation: %s: interface: %s, gw_ip: %s, gw_mac: %s, hosted_interface: %s, veth_name:%s, tunid:%ld\n",
-                    aca_get_operation_name(current_SubnetState.operation_type()),
+                    aca_get_operation_string(current_SubnetState.operation_type()),
                     endpoint_in.interface,
                     current_SubnetConfiguration.gateway().ip_address().c_str(),
                     current_SubnetConfiguration.gateway().mac_address().c_str(),
@@ -565,16 +563,16 @@ int ACA_Dataplane_Mizar::update_subnet_state_workitem(const SubnetState current_
   auto operation_total_time =
           cast_to_nanoseconds(operation_end - operation_start).count();
 
-  // add_goal_state_operation_status(
-  //         gsOperationReply, current_SubnetConfiguration.id(), SUBNET,
-  //         current_SubnetState.operation_type(), overall_rc, culminative_dataplane_programming_time,
-  //         culminative_network_configuration_time, operation_total_time);
+  aca_net_state_handler::Aca_Net_State_Handler::get_instance().add_goal_state_operation_status(
+          gsOperationReply, current_SubnetConfiguration.id(), SUBNET,
+          current_SubnetState.operation_type(), overall_rc, culminative_dataplane_programming_time,
+          culminative_network_configuration_time, operation_total_time);
 
   return overall_rc;
 }
 
 int ACA_Dataplane_Mizar::update_port_state_workitem(const PortState current_PortState,
-                                                    alcorcontroller::GoalState &parsed_struct,
+                                                    alcor::schema::GoalState &parsed_struct,
                                                     GoalStateOperationReply &gsOperationReply)
 {
   int transitd_command;
@@ -685,7 +683,8 @@ int ACA_Dataplane_Mizar::update_port_state_workitem(const PortState current_Port
                       current_SubnetConfiguration.id().c_str());
 
         if (parsed_struct.subnet_states(j).operation_type() == OperationType::INFO) {
-          if (current_SubnetConfiguration.id() == current_PortConfiguration.network_id()) {
+          if (current_SubnetConfiguration.id() ==
+              current_PortConfiguration.fixed_ips(0).subnet_id()) {
             if (current_PortState.operation_type() == OperationType::CREATE) {
               if (current_SubnetConfiguration.vpc_id().empty()) {
                 throw std::invalid_argument("vpc_id is empty");
@@ -725,14 +724,14 @@ int ACA_Dataplane_Mizar::update_port_state_workitem(const PortState current_Port
       }
       if (!subnet_info_found) {
         ACA_LOG_ERROR("Not able to find the info for port with subnet ID: %s.\n",
-                      current_PortConfiguration.network_id().c_str());
+                      current_PortConfiguration.fixed_ips(0).subnet_id().c_str());
         overall_rc = -EXIT_FAILURE;
       } else {
         overall_rc = EXIT_SUCCESS;
       }
 
       ACA_LOG_DEBUG("Endpoint Operation: %s: interface: %s, ep_ip: %s, mac: %s, hosted_interface: %s, veth_name:%s, tunid:%ld\n",
-                    aca_get_operation_name(current_PortState.operation_type()),
+                    aca_get_operation_string(current_PortState.operation_type()),
                     endpoint_in.interface, my_ep_ip_address.c_str(),
                     current_PortConfiguration.mac_address().c_str(),
                     endpoint_in.hosted_interface, endpoint_in.veth, endpoint_in.tunid);
@@ -820,7 +819,8 @@ int ACA_Dataplane_Mizar::update_port_state_workitem(const PortState current_Port
                       current_SubnetConfiguration.id().c_str());
 
         if (parsed_struct.subnet_states(j).operation_type() == OperationType::INFO) {
-          if (current_SubnetConfiguration.id() == current_PortConfiguration.network_id()) {
+          if (current_SubnetConfiguration.id() ==
+              current_PortConfiguration.fixed_ips(0).subnet_id()) {
             if (current_SubnetConfiguration.vpc_id().empty()) {
               throw std::invalid_argument("vpc_id is empty");
             }
@@ -886,7 +886,7 @@ int ACA_Dataplane_Mizar::update_port_state_workitem(const PortState current_Port
       }
       if (!subnet_info_found) {
         ACA_LOG_ERROR("Not able to find the tunnel ID for port subnet ID: %s.\n",
-                      current_PortConfiguration.network_id().c_str());
+                      current_PortConfiguration.fixed_ips(0).subnet_id().c_str());
         overall_rc = -EXIT_FAILURE;
         // TODO: Notify the Network Controller the goal state configuration
         //       has invalid data
@@ -894,7 +894,7 @@ int ACA_Dataplane_Mizar::update_port_state_workitem(const PortState current_Port
         overall_rc = EXIT_SUCCESS;
       }
       ACA_LOG_DEBUG("Endpoint Operation: %s: interface: %s, ep_ip: %s, mac: %s, hosted_interface: %s, veth_name:%s, tunid:%ld\n",
-                    aca_get_operation_name(current_PortState.operation_type()),
+                    aca_get_operation_string(current_PortState.operation_type()),
                     agent_md_in.ep.interface, my_ep_ip_address.c_str(),
                     current_PortConfiguration.mac_address().c_str(),
                     agent_md_in.ep.hosted_interface, agent_md_in.ep.veth,
@@ -1074,7 +1074,8 @@ int ACA_Dataplane_Mizar::update_port_state_workitem(const PortState current_Port
                       current_SubnetConfiguration.id().c_str());
 
         if (parsed_struct.subnet_states(j).operation_type() == OperationType::INFO) {
-          if (current_SubnetConfiguration.id() == current_PortConfiguration.network_id()) {
+          if (current_SubnetConfiguration.id() ==
+              current_PortConfiguration.fixed_ips(0).subnet_id()) {
             for (int k = 0; k < current_SubnetConfiguration.transit_switches_size(); k++) {
               ACA_LOG_DEBUG("port operation: FINALIZE, update substrate, IP: %s, mac: %s\n",
                             current_SubnetConfiguration.transit_switches(k)
