@@ -102,6 +102,13 @@ int Aca_Comm_Manager::update_goal_state(GoalState &parsed_struct,
     rc = exec_command_rc;
   }
 
+  exec_command_rc = Aca_Dhcp_State_Handler::get_instance().update_dhcp_states(
+          parsed_struct, gsOperationReply);
+  if (exec_command_rc != EXIT_SUCCESS) {
+    ACA_LOG_ERROR("Failed to update dhcp state. Failed with error code %d\n", exec_command_rc);
+    rc = exec_command_rc;
+  }
+
   auto end = chrono::steady_clock::now();
 
   auto message_total_operation_time = cast_to_nanoseconds(end - start).count();
