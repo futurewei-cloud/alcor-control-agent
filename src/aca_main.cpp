@@ -33,6 +33,7 @@ static char KAFKA_TOPIC[] = "Host-ts-1";
 static char KAFKA_GROUP_ID[] = "test-group-id";
 static char LOCALHOST[] = "localhost";
 static char UDP_PROTOCOL[] = "udp";
+static char INSPECT_BRIDGE[] = "br-int";
 
 using namespace std;
 
