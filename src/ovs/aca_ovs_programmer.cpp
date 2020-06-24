@@ -22,6 +22,8 @@
 
 using namespace std;
 
+std::mutex setup_ovs_bridges_mutex; // mutex for writing gs reply object
+
 extern bool g_demo_mode;
 
 namespace aca_ovs_programmer
@@ -34,51 +36,79 @@ ACA_OVS_Programmer &ACA_OVS_Programmer::get_instance()
   return instance;
 }
 
-int ACA_OVS_Programmer::setup_bridges()
+int ACA_OVS_Programmer::setup_ovs_bridges_if_need()
 {
-  ACA_LOG_DEBUG("ACA_OVS_Programmer::setup_bridges ---> Entering\n");
+  ACA_LOG_DEBUG("ACA_OVS_Programmer::setup_ovs_bridges_if_need ---> Entering\n");
 
   ulong not_care_culminative_time;
   int overall_rc = EXIT_SUCCESS;
 
-  // TODO: confirm OVS is up and running, if not, try to start it
+  // -----critical section starts-----
+  // (exclusive access to br-int and br-tun creation status signaled by locking setup_ovs_bridges_mutex):
+  setup_ovs_bridges_mutex.lock();
 
-  // TODO: see if br-int and br-tun is already there, one option is the delete
-  // them and start everything from scratch
+  // check to see if br-int and br-tun is already there
+  execute_ovsdb_command("br-exists br-int", not_care_culminative_time, overall_rc);
+  bool br_int_existed = (overall_rc == EXIT_SUCCESS);
 
-  // create br-int and br-tun bridges
-  execute_ovsdb_command("add-br br-int", not_care_culminative_time, overall_rc);
+  execute_ovsdb_command("br-exists br-tun", not_care_culminative_time, overall_rc);
+  bool br_tun_existed = (overall_rc == EXIT_SUCCESS);
 
-  execute_ovsdb_command("add-br br-tun", not_care_culminative_time, overall_rc);
+  overall_rc = EXIT_SUCCESS;
 
-  execute_openflow_command("del-flows br-tun", not_care_culminative_time, overall_rc);
+  // case 1: both br-int and br-tun exist
+  if (br_int_existed && br_int_existed) {
+    // nothing to do
+  }
 
-  // create and connect the patch ports between br-int and br-tun
-  execute_ovsdb_command("add-port br-int patch-tun", not_care_culminative_time, overall_rc);
+  // case 2: both br-int and br-tun not there, create them
+  else if (!br_int_existed && !br_int_existed) {
+    // create br-int and br-tun bridges
+    execute_ovsdb_command("add-br br-int", not_care_culminative_time, overall_rc);
 
-  execute_ovsdb_command("set interface patch-tun type=patch",
-                        not_care_culminative_time, overall_rc);
+    execute_ovsdb_command("add-br br-tun", not_care_culminative_time, overall_rc);
 
-  execute_ovsdb_command("set interface patch-tun options:peer=patch-int",
-                        not_care_culminative_time, overall_rc);
+    // execute_openflow_command("del-flows br-tun", not_care_culminative_time, overall_rc);
 
-  execute_ovsdb_command("add-port br-tun patch-int", not_care_culminative_time, overall_rc);
+    // create and connect the patch ports between br-int and br-tun
+    execute_ovsdb_command("add-port br-int patch-tun", not_care_culminative_time, overall_rc);
 
-  execute_ovsdb_command("set interface patch-int type=patch",
-                        not_care_culminative_time, overall_rc);
+    execute_ovsdb_command("set interface patch-tun type=patch",
+                          not_care_culminative_time, overall_rc);
 
-  execute_ovsdb_command("set interface patch-int options:peer=patch-tun",
-                        not_care_culminative_time, overall_rc);
+    execute_ovsdb_command("set interface patch-tun options:peer=patch-int",
+                          not_care_culminative_time, overall_rc);
 
-  // adding default flows
-  // table 2 is for gre, should send to table 3
-  execute_openflow_command("add-flow br-tun \"table=0, priority=1,in_port=\"patch-int\" actions=resubmit(,2)\"",
-                           not_care_culminative_time, overall_rc);
+    execute_ovsdb_command("add-port br-tun patch-int", not_care_culminative_time, overall_rc);
 
-  execute_openflow_command("add-flow br-tun \"table=2, priority=0 actions=resubmit(,22)\"",
-                           not_care_culminative_time, overall_rc);
+    execute_ovsdb_command("set interface patch-int type=patch",
+                          not_care_culminative_time, overall_rc);
 
-  ACA_LOG_DEBUG("ACA_OVS_Programmer::setup_bridges <--- Exiting, overall_rc = %d\n", overall_rc);
+    execute_ovsdb_command("set interface patch-int options:peer=patch-tun",
+                          not_care_culminative_time, overall_rc);
+
+    // adding default flows
+    execute_openflow_command("add-flow br-tun \"table=0, priority=1,in_port=\"patch-int\" actions=resubmit(,2)\"",
+                             not_care_culminative_time, overall_rc);
+
+    execute_openflow_command("add-flow br-tun \"table=2, priority=0 actions=resubmit(,22)\"",
+                             not_care_culminative_time, overall_rc);
+
+  } else {
+    // case 3: only one of the br-int or br-tun is there,
+    // Invalid environment so return an error
+
+    ACA_LOG_ERROR("Invalid environment br-int=%d and br-tun=%d, cannot proceed\n",
+                  br_int_existed, br_tun_existed);
+
+    overall_rc = EXIT_FAILURE;
+  }
+
+  setup_ovs_bridges_mutex.unlock();
+  // -----critical section ends-----
+
+  ACA_LOG_DEBUG("ACA_OVS_Programmer::setup_ovs_bridges_if_need <--- Exiting, overall_rc = %d\n",
+                overall_rc);
 
   return overall_rc;
 }
@@ -105,6 +135,12 @@ int ACA_OVS_Programmer::configure_port(const string vpc_id, const string port_na
 
   if (tunnel_id == 0) {
     throw std::invalid_argument("tunnel_id is 0");
+  }
+
+  overall_rc = setup_ovs_bridges_if_need();
+
+  if (overall_rc != EXIT_SUCCESS) {
+    throw std::runtime_error("Invalid environment with br-int and br-tun");
   }
 
   // TODO: use vpc_id to query vlan manager to lookup and existing internal vlan ID
@@ -162,8 +198,16 @@ int ACA_OVS_Programmer::create_update_neighbor_port(const string vpc_id,
     throw std::invalid_argument("tunnel_id is 0");
   }
 
+  overall_rc = setup_ovs_bridges_if_need();
+
+  if (overall_rc != EXIT_SUCCESS) {
+    throw std::runtime_error("Invalid environment with br-int and br-tun");
+  }
+
   string outport_name = aca_get_outport_name(network_type, remote_ip);
 
+  // TODO: after vlan manager, we need to only create one tunnel (vxlan) port for each remote IP?
+  // don't need to create if the port is already there?
   string cmd_string =
           "add-port br-tun " + outport_name + " -- set interface " +
           outport_name + " type=" + aca_get_network_type_string(network_type) +

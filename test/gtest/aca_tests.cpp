@@ -150,7 +150,7 @@ TEST(ovs_dataplane_test_cases, 2_ports_config_test_traffic)
   overall_rc = EXIT_SUCCESS;
 
   // create and setup br-int and br-tun bridges, and their patch ports
-  overall_rc = ACA_OVS_Programmer::get_instance().setup_bridges();
+  overall_rc = ACA_OVS_Programmer::get_instance().setup_ovs_bridges_if_need();
   ASSERT_EQ(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
 
@@ -351,11 +351,6 @@ TEST(ovs_dataplane_test_cases, 1_port_NEIGHBOR_CREATE_UPDATE)
   ACA_OVS_Programmer::get_instance().execute_ovsdb_command(
           "del-br br-tun", not_care_culminative_time, overall_rc);
 
-  // create and setup br-int and br-tun bridges, and their patch ports
-  overall_rc = ACA_OVS_Programmer::get_instance().setup_bridges();
-  ASSERT_EQ(overall_rc, EXIT_SUCCESS);
-  overall_rc = EXIT_SUCCESS;
-
   // NEIGHBOR_CREATE_UPDATE
   GoalStateOperationReply gsOperationalReply;
 
@@ -436,11 +431,6 @@ TEST(ovs_dataplane_test_cases, 1_port_CREATE_plus_NEIGHBOR_CREATE_UPDATE)
 
   ACA_OVS_Programmer::get_instance().execute_ovsdb_command(
           "del-br br-tun", not_care_culminative_time, overall_rc);
-
-  // create and setup br-int and br-tun bridges, and their patch ports
-  overall_rc = ACA_OVS_Programmer::get_instance().setup_bridges();
-  ASSERT_EQ(overall_rc, EXIT_SUCCESS);
-  overall_rc = EXIT_SUCCESS;
 
   // set demo mode
   bool previous_demo_mode = g_demo_mode;
@@ -530,11 +520,6 @@ TEST(ovs_dataplane_test_cases, 2_ports_CREATE_test_traffic)
 
   ACA_OVS_Programmer::get_instance().execute_ovsdb_command(
           "del-br br-tun", not_care_culminative_time, overall_rc);
-
-  // create and setup br-int and br-tun bridges, and their patch ports
-  overall_rc = ACA_OVS_Programmer::get_instance().setup_bridges();
-  ASSERT_EQ(overall_rc, EXIT_SUCCESS);
-  overall_rc = EXIT_SUCCESS;
 
   // set demo mode
   bool previous_demo_mode = g_demo_mode;

@@ -69,7 +69,7 @@ namespace aca_dataplane_ovs
 int ACA_Dataplane_OVS::initialize()
 {
   // TODO: improve the logging system, and add logging to this module
-  return ACA_OVS_Programmer::get_instance().setup_bridges();
+  return ACA_OVS_Programmer::get_instance().setup_ovs_bridges_if_need();
 }
 
 int ACA_Dataplane_OVS::update_vpc_state_workitem(const VpcState current_VpcState,
