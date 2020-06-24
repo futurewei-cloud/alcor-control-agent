@@ -109,6 +109,7 @@ int Aca_Comm_Manager::update_goal_state(GoalState &parsed_struct,
     rc = exec_command_rc;
   }
 
+
   auto end = chrono::steady_clock::now();
 
   auto message_total_operation_time = cast_to_nanoseconds(end - start).count();
