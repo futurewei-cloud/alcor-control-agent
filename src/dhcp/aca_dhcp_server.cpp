@@ -1,0 +1,155 @@
+// Copyright 2019 The Alcor Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+#include "aca_dhcp_server.h"
+#include "aca_log.h"
+#include "goalstateprovisioner.grpc.pb.h"
+#include <errno.h>
+
+using namespace std;
+using namespace alcorcontroller;
+using namespace aca_dhcp_programming_if;
+
+namespace aca_dhcp_server
+{
+ACA_Dhcp_Server::ACA_Dhcp_Server()
+{
+	try{
+		_dhcp_db = new std::map<dhcp_entry_key, dhcp_entry_data, dhcp_entry_comp>;
+	} catch (const bad_alloc &e){
+		return;
+	}
+
+	_dhcp_entry_thresh = 0x1000000; //1 Mil
+}
+
+ACA_Dhcp_Server::~ACA_Dhcp_Server()
+{
+	delete _dhcp_db;
+	_dhcp_db = NULL;
+}
+
+
+int ACA_Dhcp_Server::initialize()
+{
+	return 0;
+}
+
+int ACA_Dhcp_Server::add_dhcp_entry(dhcp_config *dhcp_cfg_in)
+{
+	dhcp_entry_key stKey = {0};
+	dhcp_entry_data stData = {0};
+
+	if (_validate_dhcp_entry(dhcp_cfg_in)){
+		ACA_LOG_ERROR("Valiate dhcp cfg failed! (id = %s, mac = %s\n",
+				dhcp_cfg_in->network_id, dhcp_cfg_in->mac_address);
+		return EXIT_FAILURE;
+	}
+
+	if (DHCP_DB_SIZE >= _dhcp_entry_thresh){
+		ACA_LOG_WARN("Exceed db threshold! (dhcp_db_size = %s\n)", DHCP_DB_SIZE);
+	}
+
+	stKey.network_id = dhcp_cfg_in->network_id;
+	stKey.mac_address = dhcp_cfg_in->mac_address;
+	stData.ip_address = dhcp_cfg_in->ip_address;
+	stData.ep_host_name = dhcp_cfg_in->ep_host_name;
+
+	if (_dhcp_db->end() != _dhcp_db->find(stKey)){
+		ACA_LOG_ERROR("Entry already existed! (id = %s, mac = %s\n",
+						dhcp_cfg_in->network_id, dhcp_cfg_in->mac_address);
+		return EXIT_FAILURE;
+	}
+
+	_dhcp_db->insert(make_pair(stKey, stData));
+
+	return EXIT_SUCCESS;
+}
+
+int ACA_Dhcp_Server::delete_dhcp_entry(dhcp_config *dhcp_cfg_in)
+{
+	dhcp_entry_key stKey = {0};
+	//dhcp_entry_data stData = {0};
+
+	if (_validate_dhcp_entry(dhcp_cfg_in)){
+		ACA_LOG_ERROR("Valiate dhcp cfg failed! (id = %s, mac = %s\n",
+				dhcp_cfg_in->network_id, dhcp_cfg_in->mac_address);
+		return EXIT_FAILURE;
+	}
+
+	if (0 >= DHCP_DB_SIZE){
+		ACA_LOG_WARN("DHCP DB is empty! (id = %s, mac = %s\n",
+				dhcp_cfg_in->network_id, dhcp_cfg_in->mac_address);
+		return EXIT_SUCCESS;
+	}
+
+	stKey.network_id = dhcp_cfg_in->network_id;
+	stKey.mac_address = dhcp_cfg_in->mac_address;
+
+	if (_dhcp_db->end() == _dhcp_db->find(stKey)){
+		ACA_LOG_INFO("Entry not exist! (id = %s, mac = %s\n",
+						dhcp_cfg_in->network_id, dhcp_cfg_in->mac_address);
+		return EXIT_SUCCESS;
+	}
+
+	_dhcp_db->erase(stKey);
+
+	return EXIT_SUCCESS;
+}
+
+int ACA_Dhcp_Server::update_dhcp_entry(dhcp_config *dhcp_cfg_in)
+{
+	dhcp_entry_key stKey = {0};
+	//dhcp_entry_data stData = {0};
+	std::map<dhcp_entry_key, dhcp_entry_data, dhcp_entry_comp>::iterator pos;
+
+	if (_validate_dhcp_entry(dhcp_cfg_in)){
+		ACA_LOG_ERROR("Valiate dhcp cfg failed! (id = %s, mac = %s\n",
+				dhcp_cfg_in->network_id, dhcp_cfg_in->mac_address);
+		return EXIT_FAILURE;
+	}
+
+	stKey.network_id = dhcp_cfg_in->network_id;
+	stKey.mac_address = dhcp_cfg_in->mac_address;
+
+	pos = _dhcp_db->find(stKey);
+	if (_dhcp_db->end() == pos){
+		ACA_LOG_ERROR("Entry not exist! (id = %s, mac = %s\n",
+						dhcp_cfg_in->network_id, dhcp_cfg_in->mac_address);
+
+		return EXIT_FAILURE;
+	}
+
+	pos->second.ip_address = dhcp_cfg_in->ip_address;
+	pos->second.ep_host_name = dhcp_cfg_in->ep_host_name;
+
+	return EXIT_SUCCESS;
+}
+
+int ACA_Dhcp_Server::_validate_dhcp_entry(dhcp_config *dhcp_cfg_in)
+{
+	return 0;
+}
+
+int ACA_Dhcp_Server::_get_db_size() const
+{
+	if (NULL != _dhcp_db){
+		return _dhcp_db->size();
+	}else{
+		return 0;
+	}
+}
+
+
+}//namespace aca_dhcp_server
