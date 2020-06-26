@@ -40,7 +40,7 @@ class ACA_Vlan_Manager {
   public:
   static ACA_Vlan_Manager &get_instance();
 
-  uint get_vlan_id(string vpc_id);
+  uint get_or_create_vlan_id(string vpc_id);
 
   void add_ovs_port(string vpc_id, string ovs_port);
 

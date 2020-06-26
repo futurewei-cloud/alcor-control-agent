@@ -57,7 +57,7 @@ void ACA_Vlan_Manager::create_entry_unsafe(string vpc_id)
   ACA_LOG_DEBUG("ACA_OVS_Programmer::create_entry_unsafe <--- Exiting\n");
 }
 
-uint ACA_Vlan_Manager::get_vlan_id(string vpc_id)
+uint ACA_Vlan_Manager::get_or_create_vlan_id(string vpc_id)
 {
   ACA_LOG_DEBUG("ACA_Vlan_Manager::acquire_vlan_id ---> Entering\n");
 

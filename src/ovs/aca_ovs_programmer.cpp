@@ -59,19 +59,15 @@ int ACA_OVS_Programmer::setup_ovs_bridges_if_need()
 
   overall_rc = EXIT_SUCCESS;
 
-  // case 1: both br-int and br-tun exist
   if (br_int_existed && br_int_existed) {
+    // case 1: both br-int and br-tun exist
     // nothing to do
-  }
-
-  // case 2: both br-int and br-tun not there, create them
-  else if (!br_int_existed && !br_int_existed) {
+  } else if (!br_int_existed && !br_int_existed) {
+    // case 2: both br-int and br-tun not there, create them
     // create br-int and br-tun bridges
     execute_ovsdb_command("add-br br-int", not_care_culminative_time, overall_rc);
 
     execute_ovsdb_command("add-br br-tun", not_care_culminative_time, overall_rc);
-
-    // execute_openflow_command("del-flows br-tun", not_care_culminative_time, overall_rc);
 
     // create and connect the patch ports between br-int and br-tun
     execute_ovsdb_command("add-port br-int patch-tun", not_care_culminative_time, overall_rc);
@@ -96,13 +92,11 @@ int ACA_OVS_Programmer::setup_ovs_bridges_if_need()
 
     execute_openflow_command("add-flow br-tun \"table=2, priority=0 actions=resubmit(,22)\"",
                              not_care_culminative_time, overall_rc);
-
   } else {
     // case 3: only one of the br-int or br-tun is there,
     // Invalid environment so return an error
     ACA_LOG_ERROR("Invalid environment br-int=%d and br-tun=%d, cannot proceed\n",
                   br_int_existed, br_tun_existed);
-
     overall_rc = EXIT_FAILURE;
   }
 
@@ -147,7 +141,7 @@ int ACA_OVS_Programmer::configure_port(const string vpc_id, const string port_na
 
   // use vpc_id to query vlan_manager to lookup an existing vpc_id entry to get its
   // internal vlan id or to create a new vpc_id entry to get a new internal vlan id
-  int internal_vlan_id = ACA_Vlan_Manager::get_instance().get_vlan_id(vpc_id);
+  int internal_vlan_id = ACA_Vlan_Manager::get_instance().get_or_create_vlan_id(vpc_id);
 
   ACA_Vlan_Manager::get_instance().add_ovs_port(vpc_id, port_name);
 
@@ -220,7 +214,7 @@ int ACA_OVS_Programmer::create_update_neighbor_port(const string vpc_id,
 
   // use vpc_id to query vlan_manager to lookup an existing vpc_id entry to get its
   // internal vlan id or to create a new vpc_id entry to get a new internal vlan id
-  int internal_vlan_id = ACA_Vlan_Manager::get_instance().get_vlan_id(vpc_id);
+  int internal_vlan_id = ACA_Vlan_Manager::get_instance().get_or_create_vlan_id(vpc_id);
 
   ACA_Vlan_Manager::get_instance().add_outport(vpc_id, outport_name);
 

@@ -78,7 +78,7 @@ int Aca_Comm_Manager::update_goal_state(GoalState &goal_state_message,
 
   ACA_LOG_DEBUG("Starting to update goal state\n");
 
-  ACA_LOG_INFO("!!!Goal state message size is: %lu bytes!!!\n",
+  ACA_LOG_INFO("[METRICS] Goal state message size is: %lu bytes\n",
                goal_state_message.ByteSizeLong());
 
   this->print_goal_state(goal_state_message);
@@ -112,7 +112,7 @@ int Aca_Comm_Manager::update_goal_state(GoalState &goal_state_message,
 
   g_total_update_GS_time += message_total_operation_time;
 
-  ACA_LOG_INFO("Elapsed time for message total operation took: %ld nanoseconds or %ld milliseconds.\n",
+  ACA_LOG_INFO("[METRICS] Elapsed time for message total operation took: %ld nanoseconds or %ld milliseconds\n",
                message_total_operation_time, message_total_operation_time / 1000000);
 
   return rc;
