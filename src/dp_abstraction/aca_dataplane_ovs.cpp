@@ -210,11 +210,14 @@ int ACA_Dataplane_OVS::update_port_state_workitem(const PortState current_PortSt
       port_cidr = virtual_ip_address + "/" + found_prefix_len;
 
       if (overall_rc == EXIT_SUCCESS) {
-        ACA_LOG_DEBUG("Port Operation: %s: project_id: %s, vpc_id: %s, port_name: %s, port_cidr: %s, tunnel_id: %d\n",
+        ACA_LOG_DEBUG("Port Operation: %s: project_id:%s, vpc_id:%s, network_type:%d, virtual_ip_address:%s, "
+                      "virtual_mac_address:%s, port_name: %s, port_cidr: %s, tunnel_id: %d\n",
                       aca_get_operation_string(current_PortState.operation_type()),
                       current_PortConfiguration.project_id().c_str(),
                       current_PortConfiguration.vpc_id().c_str(),
+                      current_PortConfiguration.network_type(),
                       current_PortConfiguration.name().c_str(),
+                      virtual_ip_address.c_str(), virtual_mac_address.c_str(),
                       port_cidr.c_str(), found_tunnel_id);
 
         overall_rc = ACA_OVS_Programmer::get_instance().configure_port(
@@ -243,6 +246,16 @@ int ACA_Dataplane_OVS::update_port_state_workitem(const PortState current_PortSt
 
     try {
       assert(current_PortConfiguration.fixed_ips_size() == 1);
+      virtual_ip_address = current_PortConfiguration.fixed_ips(0).ip_address();
+
+      // inet_pton returns 1 for success 0 for failure
+      if (inet_pton(AF_INET, virtual_ip_address.c_str(), &(sa.sin_addr)) != 1) {
+        throw std::invalid_argument("Virtual ip address is not in the expect format");
+      }
+
+      virtual_mac_address = current_PortConfiguration.mac_address();
+      // the below will throw invalid_argument exceptions if mac string is invalid
+      aca_validate_mac_address(virtual_mac_address.c_str());
 
       host_ip_address = current_PortConfiguration.host_info().ip_address();
 
@@ -283,11 +296,13 @@ int ACA_Dataplane_OVS::update_port_state_workitem(const PortState current_PortSt
       }
 
       if (overall_rc == EXIT_SUCCESS) {
-        ACA_LOG_DEBUG("Port Operation: %s: project_id: %s, vpc_id: %s, network_type: %d, neighbor_host_ip_address: %s, tunnel_id: %d\n",
+        ACA_LOG_DEBUG("Port Operation:%s: project_id:%s, vpc_id:%s, network_type:%d, virtual_ip_address:%s, "
+                      "virtual_mac_address:%s, neighbor_host_ip_address:%s, tunnel_id:%d\n ",
                       aca_get_operation_string(current_PortState.operation_type()),
                       current_PortConfiguration.project_id().c_str(),
                       current_PortConfiguration.vpc_id().c_str(),
                       current_PortConfiguration.network_type(),
+                      virtual_ip_address.c_str(), virtual_mac_address.c_str(),
                       host_ip_address.c_str(), found_tunnel_id);
 
         overall_rc = ACA_OVS_Programmer::get_instance().create_update_neighbor_port(

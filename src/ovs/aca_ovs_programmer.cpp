@@ -12,17 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "aca_ovs_programmer.h"
-#include "goalstateprovisioner.grpc.pb.h"
-#include "aca_net_config.h"
 #include "aca_log.h"
 #include "aca_util.h"
+#include "aca_net_config.h"
+#include "aca_vlan_manager.h"
+#include "aca_ovs_programmer.h"
+#include "goalstateprovisioner.grpc.pb.h"
 #include <chrono>
 #include <errno.h>
 
 using namespace std;
+using namespace aca_vlan_manager;
 
-std::mutex setup_ovs_bridges_mutex; // mutex for writing gs reply object
+// mutex for reading and writing to ovs bridges (br-int and br-tun) setups
+mutex setup_ovs_bridges_mutex;
 
 extern bool g_demo_mode;
 
@@ -97,7 +100,6 @@ int ACA_OVS_Programmer::setup_ovs_bridges_if_need()
   } else {
     // case 3: only one of the br-int or br-tun is there,
     // Invalid environment so return an error
-
     ACA_LOG_ERROR("Invalid environment br-int=%d and br-tun=%d, cannot proceed\n",
                   br_int_existed, br_tun_existed);
 
@@ -143,9 +145,11 @@ int ACA_OVS_Programmer::configure_port(const string vpc_id, const string port_na
     throw std::runtime_error("Invalid environment with br-int and br-tun");
   }
 
-  // TODO: use vpc_id to query vlan manager to lookup and existing internal vlan ID
-  // or to generate a new one and remember it
-  int internal_vlan_id = 1;
+  // use vpc_id to query vlan_manager to lookup an existing vpc_id entry to get its
+  // internal vlan id or to create a new vpc_id entry to get a new internal vlan id
+  int internal_vlan_id = ACA_Vlan_Manager::get_instance().get_vlan_id(vpc_id);
+
+  ACA_Vlan_Manager::get_instance().add_ovs_port(vpc_id, port_name);
 
   if (g_demo_mode) {
     string cmd_string = "add-port br-int " + port_name +
@@ -206,28 +210,30 @@ int ACA_OVS_Programmer::create_update_neighbor_port(const string vpc_id,
 
   string outport_name = aca_get_outport_name(network_type, remote_ip);
 
-  // TODO: after vlan manager, we need to only create one tunnel (vxlan) port for each remote IP?
-  // don't need to create if the port is already there?
   string cmd_string =
-          "add-port br-tun " + outport_name + " -- set interface " +
+          "--may-exist add-port br-tun " + outport_name + " -- set interface " +
           outport_name + " type=" + aca_get_network_type_string(network_type) +
           " options:df_default=true options:egress_pkt_mark=0 options:in_key=flow options:out_key=flow options:remote_ip=" +
           remote_ip;
 
   execute_ovsdb_command(cmd_string, culminative_time, overall_rc);
 
-  // TODO: use vpc_id to query vlan manager to lookup and existing internal vlan ID
-  // or to generate a new one and remember it
-  int internal_vlan_id = 1;
+  // use vpc_id to query vlan_manager to lookup an existing vpc_id entry to get its
+  // internal vlan id or to create a new vpc_id entry to get a new internal vlan id
+  int internal_vlan_id = ACA_Vlan_Manager::get_instance().get_vlan_id(vpc_id);
 
-  // TODO: use vpc_id to query vlan manager to see if there is existing tunnels ports in this vpc
-  // if yes, add this new tunnel into the list and use the full tunnel list to construct
-  // the new flow rule
+  ACA_Vlan_Manager::get_instance().add_outport(vpc_id, outport_name);
 
-  // if no, construct the brand new flow rule below
+  string full_outport_list;
+  overall_rc = ACA_Vlan_Manager::get_instance().get_outports(vpc_id, full_outport_list);
+
+  if (overall_rc != EXIT_SUCCESS) {
+    throw std::runtime_error("vpc_id entry not find in vpc_table");
+  }
+
   cmd_string = "add-flow br-tun \"table=22, priority=1,dl_vlan=" + to_string(internal_vlan_id) +
                " actions=strip_vlan,load:" + to_string(tunnel_id) +
-               "->NXM_NX_TUN_ID[],output:\"" + outport_name + "\"\"";
+               "->NXM_NX_TUN_ID[],output:\"" + full_outport_list + "\"\"";
 
   execute_openflow_command(cmd_string, culminative_time, overall_rc);
 
