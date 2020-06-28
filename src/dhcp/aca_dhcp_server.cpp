@@ -16,6 +16,7 @@
 #include "aca_log.h"
 #include "goalstateprovisioner.grpc.pb.h"
 #include <errno.h>
+#include <arpa/inet.h>
 
 using namespace std;
 using namespace alcorcontroller;
@@ -26,12 +27,12 @@ namespace aca_dhcp_server
 ACA_Dhcp_Server::ACA_Dhcp_Server()
 {
 	try{
-		_dhcp_db = new std::map<dhcp_entry_key, dhcp_entry_data, dhcp_entry_comp>;
+		_dhcp_db = new std::map<string, dhcp_entry_data, dhcp_entry_comp>;
 	} catch (const bad_alloc &e){
 		return;
 	}
 
-	_dhcp_entry_thresh = 0x1000000; //1 Mil
+	_dhcp_entry_thresh = 0x10000; //10K
 }
 
 ACA_Dhcp_Server::~ACA_Dhcp_Server()
@@ -48,12 +49,10 @@ int ACA_Dhcp_Server::initialize()
 
 int ACA_Dhcp_Server::add_dhcp_entry(dhcp_config *dhcp_cfg_in)
 {
-	dhcp_entry_key stKey = {0};
 	dhcp_entry_data stData = {0};
 
 	if (_validate_dhcp_entry(dhcp_cfg_in)){
-		ACA_LOG_ERROR("Valiate dhcp cfg failed! (id = %s, mac = %s\n",
-				dhcp_cfg_in->network_id, dhcp_cfg_in->mac_address);
+		ACA_LOG_ERROR("Valiate dhcp cfg failed! (mac = %s\n", dhcp_cfg_in->mac_address);
 		return EXIT_FAILURE;
 	}
 
@@ -61,84 +60,67 @@ int ACA_Dhcp_Server::add_dhcp_entry(dhcp_config *dhcp_cfg_in)
 		ACA_LOG_WARN("Exceed db threshold! (dhcp_db_size = %s\n)", DHCP_DB_SIZE);
 	}
 
-	stKey.network_id = dhcp_cfg_in->network_id;
-	stKey.mac_address = dhcp_cfg_in->mac_address;
-	stData.ip_address = dhcp_cfg_in->ip_address;
-	stData.ep_host_name = dhcp_cfg_in->ep_host_name;
+	DHCP_ENTRY_DATA_SET((dhcp_entry_data*)&stData, dhcp_cfg_in);
 
-	if (_dhcp_db->end() != _dhcp_db->find(stKey)){
-		ACA_LOG_ERROR("Entry already existed! (id = %s, mac = %s\n",
-						dhcp_cfg_in->network_id, dhcp_cfg_in->mac_address);
+	if (_dhcp_db->end() != _dhcp_db->find(dhcp_cfg_in->mac_address)){
+		ACA_LOG_ERROR("Entry already existed! (mac = %s\n", dhcp_cfg_in->mac_address);
 		return EXIT_FAILURE;
 	}
 
-	_dhcp_db->insert(make_pair(stKey, stData));
+	_dhcp_db->insert(make_pair(dhcp_cfg_in->mac_address, stData));
 
 	return EXIT_SUCCESS;
 }
 
 int ACA_Dhcp_Server::delete_dhcp_entry(dhcp_config *dhcp_cfg_in)
 {
-	dhcp_entry_key stKey = {0};
-	//dhcp_entry_data stData = {0};
-
 	if (_validate_dhcp_entry(dhcp_cfg_in)){
-		ACA_LOG_ERROR("Valiate dhcp cfg failed! (id = %s, mac = %s\n",
-				dhcp_cfg_in->network_id, dhcp_cfg_in->mac_address);
+		ACA_LOG_ERROR("Valiate dhcp cfg failed! (mac = %s\n", dhcp_cfg_in->mac_address);
 		return EXIT_FAILURE;
 	}
 
 	if (0 >= DHCP_DB_SIZE){
-		ACA_LOG_WARN("DHCP DB is empty! (id = %s, mac = %s\n",
-				dhcp_cfg_in->network_id, dhcp_cfg_in->mac_address);
+		ACA_LOG_WARN("DHCP DB is empty! (mac = %s\n", dhcp_cfg_in->mac_address);
 		return EXIT_SUCCESS;
 	}
 
-	stKey.network_id = dhcp_cfg_in->network_id;
-	stKey.mac_address = dhcp_cfg_in->mac_address;
-
-	if (_dhcp_db->end() == _dhcp_db->find(stKey)){
-		ACA_LOG_INFO("Entry not exist! (id = %s, mac = %s\n",
-						dhcp_cfg_in->network_id, dhcp_cfg_in->mac_address);
+	if (_dhcp_db->end() == _dhcp_db->find(dhcp_cfg_in->mac_address)){
+		ACA_LOG_INFO("Entry not exist!  (mac = %s\n", dhcp_cfg_in->mac_address);
 		return EXIT_SUCCESS;
 	}
 
-	_dhcp_db->erase(stKey);
+	_dhcp_db->erase(dhcp_cfg_in->mac_address);
 
 	return EXIT_SUCCESS;
 }
 
 int ACA_Dhcp_Server::update_dhcp_entry(dhcp_config *dhcp_cfg_in)
 {
-	dhcp_entry_key stKey = {0};
 	//dhcp_entry_data stData = {0};
-	std::map<dhcp_entry_key, dhcp_entry_data, dhcp_entry_comp>::iterator pos;
+	std::map<string, dhcp_entry_data>::iterator pos;
 
 	if (_validate_dhcp_entry(dhcp_cfg_in)){
-		ACA_LOG_ERROR("Valiate dhcp cfg failed! (id = %s, mac = %s\n",
-				dhcp_cfg_in->network_id, dhcp_cfg_in->mac_address);
+		ACA_LOG_ERROR("Valiate dhcp cfg failed! (mac = %s\n", dhcp_cfg_in->mac_address);
 		return EXIT_FAILURE;
 	}
 
-	stKey.network_id = dhcp_cfg_in->network_id;
-	stKey.mac_address = dhcp_cfg_in->mac_address;
-
-	pos = _dhcp_db->find(stKey);
+	pos = _dhcp_db->find(dhcp_cfg_in->mac_address);
 	if (_dhcp_db->end() == pos){
-		ACA_LOG_ERROR("Entry not exist! (id = %s, mac = %s\n",
-						dhcp_cfg_in->network_id, dhcp_cfg_in->mac_address);
+		ACA_LOG_ERROR("Entry not exist! (mac = %s\n", dhcp_cfg_in->mac_address);
 
 		return EXIT_FAILURE;
 	}
 
-	pos->second.ip_address = dhcp_cfg_in->ip_address;
-	pos->second.ep_host_name = dhcp_cfg_in->ep_host_name;
+	DHCP_ENTRY_DATA_SET((dhcp_entry_data*)&(pos->second), dhcp_cfg_in);
 
 	return EXIT_SUCCESS;
 }
 
 int ACA_Dhcp_Server::_validate_dhcp_entry(dhcp_config *dhcp_cfg_in)
 {
+	//validate ip_address
+
+	//validate mac_address
 	return 0;
 }
 

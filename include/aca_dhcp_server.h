@@ -23,28 +23,18 @@ using namespace aca_dhcp_programming_if;
 // dhcp server implementation class
 namespace aca_dhcp_server
 {
-struct dhcp_entry_key{
-	string network_id;
-	string mac_address;
-};
-
 struct dhcp_entry_data{
-	string ip_address;
-	string ep_host_name;
+	string ipv4_address;
+	string ipv6_address;
+	string port_host_name;
 };
 
-struct dhcp_entry_comp{
-	int operator() (const dhcp_entry_key &d, const dhcp_entry_key &k) const
-	{
-		if (d.network_id > k.network_id){
-			return 0;
-		}
-		if ((d.network_id == k.network_id) && (d.mac_address >= k.mac_address)){
-			return 0;
-		}
-		return 1;
-	}
-};
+#define DHCP_ENTRY_DATA_SET(pData, pCfg)					\
+	do{														\
+		(pData)->ipv4_address = (pCfg)->ip_address;			\
+		(pData)->port_host_name = (pCfg)->port_host_name;	\
+	}while(0)
+
 
 class ACA_Dhcp_Server : public aca_dhcp_programming_if::ACA_Dhcp_Programming_Interface {
   public:
@@ -68,7 +58,7 @@ class ACA_Dhcp_Server : public aca_dhcp_programming_if::ACA_Dhcp_Programming_Int
 	int _get_db_size() const;
 #define DHCP_DB_SIZE	_get_db_size()
 
-	std::map<dhcp_entry_key, dhcp_entry_data, dhcp_entry_comp> *_dhcp_db;
+	std::map<std::string, dhcp_entry_data> *_dhcp_db;
 };
 
 

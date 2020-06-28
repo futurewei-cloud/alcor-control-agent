@@ -76,10 +76,10 @@ int Aca_Dhcp_State_Handler::update_dhcp_state_workitem(const DhcpState current_D
 	}
 
 	DhcpConfiguration current_DhcpConfiguration = current_DhcpState.configuration();
-	stDhcpCfg.network_id = 0; //?? not in message
 	stDhcpCfg.mac_address  = current_DhcpConfiguration.mac_address();
-	stDhcpCfg.ip_address  = current_DhcpConfiguration.ip_address();
-	stDhcpCfg.ep_host_name  = current_DhcpConfiguration.ep_host_name();
+	stDhcpCfg.ipv4_address  = current_DhcpConfiguration.ip_address();
+	//stDhcpCfg.ipv6_address  = current_DhcpConfiguration.ipv6_address();
+	stDhcpCfg.port_host_name  = current_DhcpConfiguration.port_host_name();
 
 	return pfDhcpOp(&stDhcpCfg);
 }

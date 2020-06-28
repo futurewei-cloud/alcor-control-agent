@@ -22,10 +22,10 @@ using namespace std;
 namespace aca_dhcp_programming_if
 {
 struct dhcp_config {
-  string network_id;
   string mac_address;
-  string ip_address;
-  string ep_host_name;
+  string ipv4_address;
+  string ipv6_address;
+  string port_host_name;
 };
 
 // DHCP programming interface class
