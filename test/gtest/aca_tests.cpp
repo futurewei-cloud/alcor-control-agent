@@ -29,8 +29,6 @@ using aca_comm_manager::Aca_Comm_Manager;
 
 // Defines
 #define ACALOGNAME "AlcorControlAgentTest"
-static char LOCALHOST[] = "localhost";
-static char UDP_PROTOCOL[] = "udp";
 
 static char EMPTY_STRING[] = "";
 static char VALID_STRING[] = "VALID_STRING";
@@ -53,20 +51,15 @@ static string vip_address_1 = "10.0.0.1";
 static string vip_address_2 = "10.0.1.2";
 static string vip_address_3 = "10.0.0.3";
 static string vip_address_4 = "10.0.1.4";
-static string remote_ip_1 = "172.17.0.2";
-static string remote_ip_2 = "172.17.0.3";
+static string remote_ip_1 = "10.213.43.188"; // "172.17.0.2"; for docker network
+static string remote_ip_2 = "10.213.43.187"; // "172.17.0.3"; for docker network
 static NetworkType vxlan_type = NetworkType::VXLAN;
 
 // Global variables
-string g_rpc_server = EMPTY_STRING;
-string g_rpc_protocol = EMPTY_STRING;
-std::atomic_ulong g_total_rpc_call_time(0);
-std::atomic_ulong g_total_rpc_client_time(0);
 std::atomic_ulong g_total_network_configuration_time(0);
 std::atomic_ulong g_total_update_GS_time(0);
 bool g_debug_mode = true;
 bool g_demo_mode = false;
-bool g_transitd_loaded = false;
 
 using aca_net_config::Aca_Net_Config;
 using aca_ovs_programmer::ACA_OVS_Programmer;
@@ -87,12 +80,6 @@ using aca_ovs_programmer::ACA_OVS_Programmer;
 
 static void aca_cleanup()
 {
-  ACA_LOG_DEBUG("g_total_rpc_call_time = %lu nanoseconds or %lu milliseconds\n",
-                g_total_rpc_call_time.load(), g_total_rpc_call_time.load() / 1000000);
-
-  ACA_LOG_DEBUG("g_total_rpc_client_time = %lu nanoseconds or %lu milliseconds\n",
-                g_total_rpc_client_time.load(), g_total_rpc_client_time.load() / 1000000);
-
   ACA_LOG_DEBUG("g_total_network_configuration_time = %lu nanoseconds or %lu milliseconds\n",
                 g_total_network_configuration_time.load(),
                 g_total_network_configuration_time.load() / 1000000);
@@ -1349,35 +1336,22 @@ int main(int argc, char **argv)
 
   testing::InitGoogleTest(&argc, argv);
 
-  while ((option = getopt(argc, argv, "s:p:t")) != -1) {
+  while ((option = getopt(argc, argv, "m:s:")) != -1) {
     switch (option) {
+    case 'm':
+      remote_ip_1 = optarg;
+      break;
     case 's':
-      g_rpc_server = optarg;
-      break;
-    case 'p':
-      g_rpc_protocol = optarg;
-      break;
-    case 't':
-      g_transitd_loaded = true;
+      remote_ip_2 = optarg;
       break;
     default: /* the '?' case when the option is not recognized */
       fprintf(stderr,
               "Usage: %s\n"
-              "\t\t[-s transitd RPC server]\n"
-              "\t\t[-p transitd RPC protocol]\n"
-              "\t\t[-t transitd is loaded]\n",
+              "\t\t[-m master machine IP]\n"
+              "\t\t[-s slave machine IP]\n",
               argv[0]);
       exit(EXIT_FAILURE);
     }
-  }
-
-  // fill in the transitd RPC server and protocol if it is not provided in
-  // command line arg
-  if (g_rpc_server == EMPTY_STRING) {
-    g_rpc_server = LOCALHOST;
-  }
-  if (g_rpc_protocol == EMPTY_STRING) {
-    g_rpc_protocol = UDP_PROTOCOL;
   }
 
   int rc = RUN_ALL_TESTS();
