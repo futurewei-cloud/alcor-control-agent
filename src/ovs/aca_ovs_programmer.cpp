@@ -140,7 +140,10 @@ int ACA_OVS_Programmer::configure_port(const string vpc_id, const string port_na
   }
 
   // TODO: if ovs_port already exist in vlan manager, that means it is a duplicated
-  // port CREATE operation, return error.
+  // port CREATE operation, we have the following options to handle it:
+  // 1. Reject call with error message
+  // 2. No ops with warning message
+  // 3. Do it regardless => if there is anything wrong, controller's fault :-)
 
   // use vpc_id to query vlan_manager to lookup an existing vpc_id entry to get its
   // internal vlan id or to create a new vpc_id entry to get a new internal vlan id
