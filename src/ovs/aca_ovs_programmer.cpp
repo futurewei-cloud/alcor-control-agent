@@ -95,8 +95,8 @@ int ACA_OVS_Programmer::setup_ovs_bridges_if_need()
   } else {
     // case 3: only one of the br-int or br-tun is there,
     // Invalid environment so return an error
-    ACA_LOG_ERROR("Invalid environment br-int=%d and br-tun=%d, cannot proceed\n",
-                  br_int_existed, br_tun_existed);
+    ACA_LOG_CRIT("Invalid environment br-int=%d and br-tun=%d, cannot proceed\n",
+                 br_int_existed, br_tun_existed);
     overall_rc = EXIT_FAILURE;
   }
 
@@ -138,6 +138,9 @@ int ACA_OVS_Programmer::configure_port(const string vpc_id, const string port_na
   if (overall_rc != EXIT_SUCCESS) {
     throw std::runtime_error("Invalid environment with br-int and br-tun");
   }
+
+  // TODO: if ovs_port already exist in vlan manager, that means it is a duplicated
+  // port CREATE operation, return error.
 
   // use vpc_id to query vlan_manager to lookup an existing vpc_id entry to get its
   // internal vlan id or to create a new vpc_id entry to get a new internal vlan id

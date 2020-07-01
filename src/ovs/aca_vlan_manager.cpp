@@ -32,7 +32,8 @@ bool ACA_Vlan_Manager::check_entry_existed_unsafe(string vpc_id)
 {
   ACA_LOG_DEBUG("ACA_Vlan_Manager::check_entry_existed_unsafe ---> Entering\n");
 
-  std::unordered_map<std::string, values>::const_iterator found = vpc_table.find(vpc_id);
+  std::unordered_map<std::string, table_entry>::const_iterator found =
+          vpc_table.find(vpc_id);
 
   // found would be equal to vpc_table.end() if entry is not there
   bool entry_existed = (found != vpc_table.end());
@@ -48,11 +49,11 @@ void ACA_Vlan_Manager::create_entry_unsafe(string vpc_id)
 {
   ACA_LOG_DEBUG("ACA_Vlan_Manager::create_entry_unsafe ---> Entering\n");
 
-  values new_values;
-  new_values.vlan_id = current_available_vlan_id.load();
+  table_entry new_table_entry;
+  new_table_entry.vlan_id = current_available_vlan_id.load();
   current_available_vlan_id++;
 
-  vpc_table.emplace(vpc_id, new_values);
+  vpc_table.emplace(vpc_id, new_table_entry);
 
   ACA_LOG_DEBUG("ACA_OVS_Programmer::create_entry_unsafe <--- Exiting\n");
 }

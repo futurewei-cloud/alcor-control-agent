@@ -30,9 +30,11 @@ static atomic_uint current_available_vlan_id(1);
 // Vlan Manager class
 namespace aca_vlan_manager
 {
-struct values {
+struct table_entry {
   uint vlan_id;
+  // list of ovs_ports names on this host in the same VPC to share the same internal vlan_id
   list<string> ovs_ports;
+  // list of output (e.g. vxlan) tunnel ports to the neighbor host communication in the same VPC
   list<string> outports;
 };
 
@@ -60,7 +62,7 @@ class ACA_Vlan_Manager {
   ACA_Vlan_Manager(){};
   ~ACA_Vlan_Manager(){};
 
-  unordered_map<std::string, values> vpc_table;
+  unordered_map<std::string, table_entry> vpc_table;
 
   // mutex for reading and writing to vpc_table
   mutex vpc_table_mutex;
