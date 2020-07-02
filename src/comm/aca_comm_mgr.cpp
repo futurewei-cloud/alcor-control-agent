@@ -15,19 +15,18 @@
 #include "aca_log.h"
 #include "aca_util.h"
 #include "aca_comm_mgr.h"
-#include "aca_net_state_handler.h"
+#include "aca_goal_state_handler.h"
 #include "goalstateprovisioner.grpc.pb.h"
 
 using namespace std;
-using namespace alcorcontroller;
-using namespace aca_net_state_handler;
+using namespace alcor::schema;
+using namespace aca_goal_state_handler;
 
 extern string g_rpc_server;
 extern string g_rpc_protocol;
 extern std::atomic_ulong g_total_rpc_call_time;
 extern std::atomic_ulong g_total_rpc_client_time;
 extern std::atomic_ulong g_total_update_GS_time;
-extern bool g_demo_mode;
 
 namespace aca_comm_manager
 {
@@ -62,8 +61,6 @@ int Aca_Comm_Manager::deserialize(const cppkafka::Buffer *kafka_buffer, GoalStat
   if (parsed_struct.ParseFromArray(kafka_buffer->get_data(), kafka_buffer->get_size())) {
     ACA_LOG_INFO("Successfully converted kafka buffer to protobuf struct\n");
 
-    this->print_goal_state(parsed_struct);
-
     return EXIT_SUCCESS;
   } else {
     rc = -EXIT_FAILURE;
@@ -72,7 +69,7 @@ int Aca_Comm_Manager::deserialize(const cppkafka::Buffer *kafka_buffer, GoalStat
   }
 }
 
-int Aca_Comm_Manager::update_goal_state(GoalState &parsed_struct,
+int Aca_Comm_Manager::update_goal_state(GoalState &goal_state_message,
                                         GoalStateOperationReply &gsOperationReply)
 {
   int exec_command_rc = -EXIT_FAILURE;
@@ -81,22 +78,27 @@ int Aca_Comm_Manager::update_goal_state(GoalState &parsed_struct,
 
   ACA_LOG_DEBUG("Starting to update goal state\n");
 
-  exec_command_rc = Aca_Net_State_Handler::get_instance().update_vpc_states(
-          parsed_struct, gsOperationReply);
+  ACA_LOG_INFO("[METRICS] Goal state message size is: %lu bytes\n",
+               goal_state_message.ByteSizeLong());
+
+  this->print_goal_state(goal_state_message);
+
+  exec_command_rc = Aca_Goal_State_Handler::get_instance().update_vpc_states(
+          goal_state_message, gsOperationReply);
   if (exec_command_rc != EXIT_SUCCESS) {
     ACA_LOG_ERROR("Failed to update vpc state. Failed with error code %d\n", exec_command_rc);
     rc = exec_command_rc;
   }
 
-  exec_command_rc = Aca_Net_State_Handler::get_instance().update_subnet_states(
-          parsed_struct, gsOperationReply);
+  exec_command_rc = Aca_Goal_State_Handler::get_instance().update_subnet_states(
+          goal_state_message, gsOperationReply);
   if (exec_command_rc != EXIT_SUCCESS) {
     ACA_LOG_ERROR("Failed to update subnet state. Failed with error code %d\n", exec_command_rc);
     rc = exec_command_rc;
   }
 
-  exec_command_rc = Aca_Net_State_Handler::get_instance().update_port_states(
-          parsed_struct, gsOperationReply);
+  exec_command_rc = Aca_Goal_State_Handler::get_instance().update_port_states(
+          goal_state_message, gsOperationReply);
   if (exec_command_rc != EXIT_SUCCESS) {
     ACA_LOG_ERROR("Failed to update port state. Failed with error code %d\n", exec_command_rc);
     rc = exec_command_rc;
@@ -118,7 +120,7 @@ int Aca_Comm_Manager::update_goal_state(GoalState &parsed_struct,
 
   g_total_update_GS_time += message_total_operation_time;
 
-  ACA_LOG_INFO("Elapsed time for message total operation took: %ld nanoseconds or %ld milliseconds.\n",
+  ACA_LOG_INFO("[METRICS] Elapsed time for message total operation took: %ld nanoseconds or %ld milliseconds\n",
                message_total_operation_time, message_total_operation_time / 1000000);
 
   return rc;
@@ -131,23 +133,32 @@ void Aca_Comm_Manager::print_goal_state(GoalState parsed_struct)
   }
 
   for (int i = 0; i < parsed_struct.port_states_size(); i++) {
-    fprintf(stdout, "parsed_struct.port_states(%d).operation_type(): %d\n", i,
-            parsed_struct.port_states(i).operation_type());
+    fprintf(stdout, "parsed_struct.port_states(%d).operation_type(): %s\n", i,
+            aca_get_operation_string(parsed_struct.port_states(i).operation_type()));
 
     PortConfiguration current_PortConfiguration =
             parsed_struct.port_states(i).configuration();
 
-    fprintf(stdout, "current_PortConfiguration.version(): %d\n",
-            current_PortConfiguration.version());
+    fprintf(stdout, "current_PortConfiguration.format_version(): %d\n",
+            current_PortConfiguration.format_version());
+
+    fprintf(stdout, "current_PortConfiguration.revision_number(): %d\n",
+            current_PortConfiguration.revision_number());
+
+    fprintf(stdout, "current_PortConfiguration.message_type(): %d\n",
+            current_PortConfiguration.message_type());
+
+    fprintf(stdout, "current_PortConfiguration.id(): %s\n",
+            current_PortConfiguration.id().c_str());
+
+    fprintf(stdout, "current_PortConfiguration.network_type(): %d\n",
+            current_PortConfiguration.network_type());
 
     fprintf(stdout, "current_PortConfiguration.project_id(): %s\n",
             current_PortConfiguration.project_id().c_str());
 
-    fprintf(stdout, "current_PortConfiguration.network_id(): %s\n",
-            current_PortConfiguration.network_id().c_str());
-
-    fprintf(stdout, "current_PortConfiguration.id(): %s\n",
-            current_PortConfiguration.id().c_str());
+    fprintf(stdout, "current_PortConfiguration.vpc_id(): %s\n",
+            current_PortConfiguration.vpc_id().c_str());
 
     fprintf(stdout, "current_PortConfiguration.name(): %s \n",
             current_PortConfiguration.name().c_str());
@@ -158,8 +169,8 @@ void Aca_Comm_Manager::print_goal_state(GoalState parsed_struct)
     fprintf(stdout, "current_PortConfiguration.mac_address(): %s \n",
             current_PortConfiguration.mac_address().c_str());
 
-    fprintf(stdout, "current_PortConfiguration.veth_name(): %s \n",
-            current_PortConfiguration.veth_name().c_str());
+    fprintf(stdout, "current_PortConfiguration.admin_state_up(): %d \n",
+            current_PortConfiguration.admin_state_up());
 
     fprintf(stdout, "current_PortConfiguration.host_info().ip_address(): %s \n",
             current_PortConfiguration.host_info().ip_address().c_str());
@@ -176,34 +187,35 @@ void Aca_Comm_Manager::print_goal_state(GoalState parsed_struct)
               current_PortConfiguration.fixed_ips(j).ip_address().c_str());
     }
 
-    for (int j = 0; j < current_PortConfiguration.security_group_ids_size(); j++) {
-      fprintf(stdout, "current_PortConfiguration.security_group_ids(%d): id %s \n",
-              j, current_PortConfiguration.security_group_ids(j).id().c_str());
-    }
-
     for (int j = 0; j < current_PortConfiguration.allow_address_pairs_size(); j++) {
       fprintf(stdout, "current_PortConfiguration.allow_address_pairs(%d): ip_address %s, mac_address %s \n",
               j, current_PortConfiguration.allow_address_pairs(j).ip_address().c_str(),
               current_PortConfiguration.allow_address_pairs(j).mac_address().c_str());
     }
 
-    for (int j = 0; j < current_PortConfiguration.extra_dhcp_options_size(); j++) {
-      fprintf(stdout, "current_PortConfiguration.extra_dhcp_options(%d): name %s, value %s \n",
-              j, current_PortConfiguration.extra_dhcp_options(j).name().c_str(),
-              current_PortConfiguration.extra_dhcp_options(j).value().c_str());
+    for (int j = 0; j < current_PortConfiguration.security_group_ids_size(); j++) {
+      fprintf(stdout, "current_PortConfiguration.security_group_ids(%d): id %s \n",
+              j, current_PortConfiguration.security_group_ids(j).id().c_str());
     }
+
+    fprintf(stdout, "current_PortConfiguration.veth_name(): %s \n",
+            current_PortConfiguration.veth_name().c_str());
+
     printf("\n");
   }
 
   for (int i = 0; i < parsed_struct.subnet_states_size(); i++) {
-    fprintf(stdout, "parsed_struct.subnet_states(%d).operation_type(): %d\n", i,
-            parsed_struct.subnet_states(i).operation_type());
+    fprintf(stdout, "parsed_struct.subnet_states(%d).operation_type(): %s\n", i,
+            aca_get_operation_string(parsed_struct.subnet_states(i).operation_type()));
 
     SubnetConfiguration current_SubnetConfiguration =
             parsed_struct.subnet_states(i).configuration();
 
-    fprintf(stdout, "current_SubnetConfiguration.version(): %d\n",
-            current_SubnetConfiguration.version());
+    fprintf(stdout, "current_SubnetConfiguration.format_version(): %d\n",
+            current_SubnetConfiguration.format_version());
+
+    fprintf(stdout, "current_SubnetConfiguration.revision_number(): %d\n",
+            current_SubnetConfiguration.revision_number());
 
     fprintf(stdout, "current_SubnetConfiguration.project_id(): %s\n",
             current_SubnetConfiguration.project_id().c_str());
@@ -240,14 +252,17 @@ void Aca_Comm_Manager::print_goal_state(GoalState parsed_struct)
   }
 
   for (int i = 0; i < parsed_struct.vpc_states_size(); i++) {
-    fprintf(stdout, "parsed_struct.vpc_states(%d).operation_type(): %d\n", i,
-            parsed_struct.vpc_states(i).operation_type());
+    fprintf(stdout, "parsed_struct.vpc_states(%d).operation_type(): %s\n", i,
+            aca_get_operation_string(parsed_struct.vpc_states(i).operation_type()));
 
     VpcConfiguration current_VpcConfiguration =
             parsed_struct.vpc_states(i).configuration();
 
-    fprintf(stdout, "current_VpcConfiguration.version(): %d\n",
-            current_VpcConfiguration.version());
+    fprintf(stdout, "current_VpcConfiguration.format_version(): %d\n",
+            current_VpcConfiguration.format_version());
+
+    fprintf(stdout, "current_VpcConfiguration.revision_number(): %d\n",
+            current_VpcConfiguration.revision_number());
 
     fprintf(stdout, "current_VpcConfiguration.project_id(): %s\n",
             current_VpcConfiguration.project_id().c_str());

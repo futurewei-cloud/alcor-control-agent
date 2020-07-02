@@ -5,10 +5,11 @@ set(SOURCES
     ./comm/aca_message_consumer.cpp
     ./comm/aca_comm_mgr.cpp
     ./comm/aca_async_grpc_server.cpp
-    ./dp_abstraction/aca_net_state_handler.cpp
-    ./dp_abstraction/aca_dataplane_OVS.cpp
-    ./dp_abstraction/aca_dataplane_mizar.cpp
+    ./dp_abstraction/aca_goal_state_handler.cpp
+    ./dp_abstraction/aca_dataplane_ovs.cpp
     ./net_config/aca_net_config.cpp
+    ./ovs/aca_ovs_programmer.cpp
+    ./ovs/aca_vlan_manager.cpp
 )
 FIND_LIBRARY(RDKAFKA rdkafka /usr/lib/x86_64-linux-gnu NO_DEFAULT_PATH)
 FIND_LIBRARY(CPPKAFKA cppkafka /usr/local/lib NO_DEFAULT_PATH)
@@ -18,8 +19,6 @@ include_directories(${RDKAFKA_INCLUDE_DIR} ${CPPKAFKA_INCLUDE_DIR})
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../include)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/proto3)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/grpc)
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/mizar_rpc)
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../mizar/src/rpcgen)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../mizar/src/include)
 
 # Find Protobuf installation
@@ -44,11 +43,9 @@ target_link_libraries(AlcorControlAgent rdkafka)
 target_link_libraries(AlcorControlAgent AlcorControlAgentLib)
 target_link_libraries(AlcorControlAgent proto)
 target_link_libraries(AlcorControlAgent grpc)
-target_link_libraries(AlcorControlAgent MizarRPCLib)
 target_link_libraries(AlcorControlAgent ${PROTOBUF_LIBRARY})
 target_link_libraries(AlcorControlAgent ${_GRPC_GRPCPP_UNSECURE})
 
-add_dependencies(AlcorControlAgentLib proto grpc MizarRPCLib)
+add_dependencies(AlcorControlAgentLib proto grpc)
 add_subdirectory(proto3)
 add_subdirectory(grpc)
-add_subdirectory(mizar_rpc)

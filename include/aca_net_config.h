@@ -33,11 +33,6 @@ namespace aca_net_config
 {
 class Aca_Net_Config {
   public:
-  // constructor and destructor purposely omitted to use the default one
-  // provided by the compiler
-  // Aca_Net_Config();
-  // ~Aca_Net_Config();
-
   static Aca_Net_Config &get_instance();
 
   int create_namespace(string ns_name, ulong &culminative_time);
@@ -61,7 +56,7 @@ class Aca_Net_Config {
 
   int execute_system_command(string cmd_string, ulong &culminative_time);
 
-  // compiler will flag the error when below is called.
+  // compiler will flag error when below is called
   Aca_Net_Config(Aca_Net_Config const &) = delete;
   void operator=(Aca_Net_Config const &) = delete;
 

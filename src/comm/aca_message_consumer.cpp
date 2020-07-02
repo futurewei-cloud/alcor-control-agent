@@ -77,8 +77,8 @@ void MessageConsumer::setGroupId(string group_id)
 
 bool MessageConsumer::consumeDispatched(string topic)
 {
-  alcorcontroller::GoalState deserialized_GoalState;
-  alcorcontroller::GoalStateOperationReply gsOperationalReply;
+  alcor::schema::GoalState deserialized_GoalState;
+  alcor::schema::GoalStateOperationReply gsOperationalReply;
   int rc;
   int overall_rc = EXIT_SUCCESS;
 
