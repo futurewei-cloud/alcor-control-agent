@@ -57,35 +57,35 @@ Aca_Dhcp_State_Handler &Aca_Dhcp_State_Handler::get_instance()
 
 int Aca_Dhcp_State_Handler::update_dhcp_state_workitem(const DhcpState current_DhcpState)
 {
-	int (*pfDhcpOp)(dhcp_config*);
-	dhcp_config stDhcpCfg = {0};
+  int (*pfDhcpOp)(dhcp_config *);
+  dhcp_config stDhcpCfg;
 
-	switch (current_DhcpState.operation_type()) {
-	  case OperationType::CREATE:
-		  pfDhcpOp = this->dhcp_programming_if->add_dhcp_entry;
-		  break;
-	  case OperationType::UPDATE:
-		  pfDhcpOp = this->dhcp_programming_if->update_dhcp_entry;
-		  break;
-	  case OperationType::DELETE:
-		  pfDhcpOp = this->dhcp_programming_if->delete_dhcp_entry;
-		  break;
-	  default:
-		  ACA_LOG_DEBUG("=====>wrong dhcp operation\n");
-		  return EXIT_FAILURE;
-	}
+  switch (current_DhcpState.operation_type()) {
+  case OperationType::CREATE:
+    pfDhcpOp = this->dhcp_programming_if->add_dhcp_entry;
+    break;
+  case OperationType::UPDATE:
+    pfDhcpOp = this->dhcp_programming_if->update_dhcp_entry;
+    break;
+  case OperationType::DELETE:
+    pfDhcpOp = this->dhcp_programming_if->delete_dhcp_entry;
+    break;
+  default:
+    ACA_LOG_DEBUG("=====>wrong dhcp operation\n");
+    return EXIT_FAILURE;
+  }
 
-	DhcpConfiguration current_DhcpConfiguration = current_DhcpState.configuration();
-	stDhcpCfg.mac_address  = current_DhcpConfiguration.mac_address();
-	stDhcpCfg.ipv4_address  = current_DhcpConfiguration.ip_address();
-	//stDhcpCfg.ipv6_address  = current_DhcpConfiguration.ipv6_address();
-	stDhcpCfg.port_host_name  = current_DhcpConfiguration.port_host_name();
+  DhcpConfiguration current_DhcpConfiguration = current_DhcpState.configuration();
+  stDhcpCfg.mac_address = current_DhcpConfiguration.mac_address();
+  stDhcpCfg.ipv4_address = current_DhcpConfiguration.ip_address();
+  //stDhcpCfg.ipv6_address  = current_DhcpConfiguration.ipv6_address();
+  stDhcpCfg.port_host_name = current_DhcpConfiguration.port_host_name();
 
-	return pfDhcpOp(&stDhcpCfg);
+  return pfDhcpOp(&stDhcpCfg);
 }
 
 int Aca_Dhcp_State_Handler::update_dhcp_states(GoalState &parsed_struct,
-                                              GoalStateOperationReply &gsOperationReply)
+                                               GoalStateOperationReply &gsOperationReply)
 {
   std::vector<std::future<int> > workitem_future;
   int rc;
@@ -99,9 +99,8 @@ int Aca_Dhcp_State_Handler::update_dhcp_states(GoalState &parsed_struct,
 
     DHCPState current_DhcpState = parsed_struct.dhcp_states(i);
 
-    workitem_future.push_back(std::async(
-            std::launch::async, &Aca_Dhcp_State_Handler::update_dhcp_state_workitem,
-			this, current_DhcpState));
+    workitem_future.push_back(std::async(std::launch::async, &Aca_Dhcp_State_Handler::update_dhcp_state_workitem,
+                                         this, current_DhcpState));
 
     //workitem_future.push_back(std::async(
     //        std::launch::async, &Aca_Dhcp_State_Handler::update_dhcp_state_workitem, this,
@@ -122,4 +121,4 @@ int Aca_Dhcp_State_Handler::update_dhcp_states(GoalState &parsed_struct,
   return overall_rc;
 }
 
-} // namespace aca_net_state_handler
+} // namespace aca_dhcp_state_handler

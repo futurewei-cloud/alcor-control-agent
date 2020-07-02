@@ -15,7 +15,7 @@
 #ifndef ACA_DHCP_STATE_HANDLER_H
 #define ACA_DHCP_STATE_HANDLER_H
 
-#include "aca_dataplane_mizar.h"
+#include "aca_dhcp_programming_if.h"
 #include "goalstateprovisioner.grpc.pb.h"
 
 namespace aca_dhcp_state_handler
@@ -42,5 +42,5 @@ class Aca_Dhcp_State_Handler {
 
   aca_dhcp_programming_if::ACA_Dhcp_Programming_Interface *dhcp_programming_if;
 };
-} // namespace aca_net_state_handler
+} // namespace aca_dhcp_state_handler
 #endif // @ifndef ACA_NET_STATE_HANDLER_H
