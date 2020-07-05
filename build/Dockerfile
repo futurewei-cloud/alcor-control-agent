@@ -7,7 +7,7 @@ RUN echo "--- installing mizar dependencies ---" && \
     clang-7 \
     llvm-7 \
     libelf-dev \
-    openvswitch-switch \
+    #openvswitch-switch \
     iproute2  \
     net-tools \
     iputils-ping \
@@ -17,47 +17,62 @@ RUN echo "--- installing mizar dependencies ---" && \
     python3-pip \
     netcat \
     libcmocka-dev \
-    lcov
-RUN pip3 install httpserver netaddr
-
-RUN echo "--- installing openvswitch compoments and libaries ---" && \
-    apt-get install -y \
-    graphviz \
+    lcov \
+    git \
     autoconf \
     automake \
-    bzip2 \
-    debhelper \
     dh-autoreconf \
-    dh-python \
-    libssl-dev \
-    libtool \
-    openssl \
-    procps \
-    python-all \
-    python-twisted-conch \
-    python-zopeinterface \
-    python-six \
-    libunbound-dev \
-    kmod \
-    libkmod2 \
-    uuid-runtime \
-    fakeroot \
-    git
+    libtool
+RUN pip3 install httpserver netaddr
+
+#RUN echo "--- installing openvswitch compoments and libaries ---" && \
+#    apt-get install -y \
+#    graphviz \
+#    autoconf \
+#    automake \
+#    bzip2 \
+#    debhelper \
+#    dh-autoreconf \
+#    dh-python \
+#    libssl-dev \
+#    libtool \
+#    openssl \
+#    procps \
+#    python-all \
+#    python-twisted-conch \
+#    python-zopeinterface \
+#    python-six \
+#    libunbound-dev \
+#    kmod \
+#    libkmod2 \
+#    uuid-runtime \
+#    fakeroot \
+#    git
 
 ENV OVS_RELEASE_TAG branch-2.12
 RUN echo "--- installing openvswitch dependancies ---" && \
-    git clone -b ${OVS_RELEASE_TAG} https://github.com/openvswitch/ovs.git /var/local/git/openvswitch/src && \
-    cd /var/local/git/openvswitch/src && \
-    echo "--- compiling openvswitch dependancies ---" && \
-    dpkg-checkbuilddeps && \
-    DEB_BUILD_OPTIONS='parallel=8 nocheck' fakeroot debian/rules binary && \
-    echo "--- installing openvswitch deb components and libraries ---" && \
-    cd .. && \
-    dpkg -i libopenvswitch*.deb \
-    #openvswitch-datapath-dkms*.deb \
-    openvswitch-common*.deb \
-    openvswitch-switch*.deb && \
-    rm -rf \var\local\git\openvswitch  
+#    git clone -b ${OVS_RELEASE_TAG} https://github.com/openvswitch/ovs.git /var/local/git/openvswitch/src && \
+#    cd /var/local/git/openvswitch/src && \
+#    echo "--- compiling openvswitch dependancies ---" && \
+#    dpkg-checkbuilddeps && \
+#    DEB_BUILD_OPTIONS='parallel=8 nocheck' fakeroot debian/rules binary && \
+#    echo "--- installing openvswitch deb components and libraries ---" && \
+#    cd .. && \
+#    dpkg -i libopenvswitch*.deb \
+#    #openvswitch-datapath-dkms*.deb \
+#    openvswitch-common*.deb \
+#    openvswitch-switch*.deb && \
+#    rm -rf \var\local\git\openvswitch  
+    git clone -b ${OVS_RELEASE_TAG} https://github.com/openvswitch/ovs.git /var/local/git/openvswitch && \
+    cd /var/local/git/openvswitch && \    
+    ./boot.sh && \
+    ./configure --prefix=/usr/local --localstatedir=/var --sysconfdir=/etc --enable-shared && \
+    make && \
+    make install && \
+    export PATH=$PATH:/usr/local/share/openvswitch/scripts && \
+    apt-get install -y vim && \
+    ovs-ctl start && \
+    ovs-vsctl show
 
 RUN echo "--- installing grpc dependencies ---" && \
     apt-get install -y \
