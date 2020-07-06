@@ -61,8 +61,6 @@ int Aca_Comm_Manager::deserialize(const cppkafka::Buffer *kafka_buffer, GoalStat
   if (parsed_struct.ParseFromArray(kafka_buffer->get_data(), kafka_buffer->get_size())) {
     ACA_LOG_INFO("Successfully converted kafka buffer to protobuf struct\n");
 
-    this->print_goal_state(parsed_struct);
-
     return EXIT_SUCCESS;
   } else {
     rc = -EXIT_FAILURE;
@@ -80,7 +78,10 @@ int Aca_Comm_Manager::update_goal_state(GoalState &goal_state_message,
 
   ACA_LOG_DEBUG("Starting to update goal state\n");
 
-  ACA_LOG_INFO("Goal state message size is: %lu bytes\n", goal_state_message.ByteSizeLong());
+  ACA_LOG_INFO("[METRICS] Goal state message size is: %lu bytes\n",
+               goal_state_message.ByteSizeLong());
+
+  this->print_goal_state(goal_state_message);
 
   exec_command_rc = Aca_Goal_State_Handler::get_instance().update_vpc_states(
           goal_state_message, gsOperationReply);
@@ -111,7 +112,7 @@ int Aca_Comm_Manager::update_goal_state(GoalState &goal_state_message,
 
   g_total_update_GS_time += message_total_operation_time;
 
-  ACA_LOG_INFO("Elapsed time for message total operation took: %ld nanoseconds or %ld milliseconds.\n",
+  ACA_LOG_INFO("[METRICS] Elapsed time for message total operation took: %ld nanoseconds or %ld milliseconds\n",
                message_total_operation_time, message_total_operation_time / 1000000);
 
   return rc;
@@ -124,8 +125,8 @@ void Aca_Comm_Manager::print_goal_state(GoalState parsed_struct)
   }
 
   for (int i = 0; i < parsed_struct.port_states_size(); i++) {
-    fprintf(stdout, "parsed_struct.port_states(%d).operation_type(): %d\n", i,
-            parsed_struct.port_states(i).operation_type());
+    fprintf(stdout, "parsed_struct.port_states(%d).operation_type(): %s\n", i,
+            aca_get_operation_string(parsed_struct.port_states(i).operation_type()));
 
     PortConfiguration current_PortConfiguration =
             parsed_struct.port_states(i).configuration();
@@ -196,8 +197,8 @@ void Aca_Comm_Manager::print_goal_state(GoalState parsed_struct)
   }
 
   for (int i = 0; i < parsed_struct.subnet_states_size(); i++) {
-    fprintf(stdout, "parsed_struct.subnet_states(%d).operation_type(): %d\n", i,
-            parsed_struct.subnet_states(i).operation_type());
+    fprintf(stdout, "parsed_struct.subnet_states(%d).operation_type(): %s\n", i,
+            aca_get_operation_string(parsed_struct.subnet_states(i).operation_type()));
 
     SubnetConfiguration current_SubnetConfiguration =
             parsed_struct.subnet_states(i).configuration();
@@ -243,8 +244,8 @@ void Aca_Comm_Manager::print_goal_state(GoalState parsed_struct)
   }
 
   for (int i = 0; i < parsed_struct.vpc_states_size(); i++) {
-    fprintf(stdout, "parsed_struct.vpc_states(%d).operation_type(): %d\n", i,
-            parsed_struct.vpc_states(i).operation_type());
+    fprintf(stdout, "parsed_struct.vpc_states(%d).operation_type(): %s\n", i,
+            aca_get_operation_string(parsed_struct.vpc_states(i).operation_type()));
 
     VpcConfiguration current_VpcConfiguration =
             parsed_struct.vpc_states(i).configuration();

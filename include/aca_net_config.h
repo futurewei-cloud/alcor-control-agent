@@ -56,7 +56,7 @@ class Aca_Net_Config {
 
   int execute_system_command(string cmd_string, ulong &culminative_time);
 
-  // compiler will flag the error when below is called.
+  // compiler will flag error when below is called
   Aca_Net_Config(Aca_Net_Config const &) = delete;
   void operator=(Aca_Net_Config const &) = delete;
 
