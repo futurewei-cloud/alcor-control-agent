@@ -4,14 +4,12 @@ set(EXECUTABLE_OUTPUT_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../build/tests)
 
 FIND_LIBRARY(RDKAFKA rdkafka /usr/lib/x86_64-linux-gnu NO_DEFAULT_PATH)
 FIND_LIBRARY(CPPKAFKA cppkafka /usr/local/lib NO_DEFAULT_PATH)
-FIND_LIBRARY(OPENVSWITCH openvswitch /usr/local/lib NO_DEFAULT_PATH)
 FIND_LIBRARY(MESSAGEMANAGER messagemanager ${CMAKE_CURRENT_SOURCE_DIR}/../include NO_DEFAULT_PATH)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../include)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../src/proto3)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../mizar/src/include)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../src/grpc)
-link_libraries(${RDKAFKA} ${CPPKAFKA} ${OPENVSWITCH})
-include_directories(/usr/local/include/openvswitch)
+link_libraries(${RDKAFKA} ${CPPKAFKA})
 
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
@@ -48,21 +46,6 @@ target_link_libraries(aca_tests Threads::Threads)
 add_test(
     NAME aca_tests
     COMMAND aca_tests
-)
-
-# Add test cpp file
-add_executable(aca_tests_ovs_control gtest/aca_tests_ovs_control.cpp)
-
-# Link test executable against gtest & gtest_main
-target_link_libraries(aca_tests_ovs_control gtest gtest_main)
-target_link_libraries(aca_tests_ovs_control AlcorControlAgentLib)
-target_link_libraries(aca_tests_ovs_control proto)
-target_link_libraries(aca_tests_ovs_control ${PROTOBUF_LIBRARY})
-target_link_libraries(aca_tests_ovs_control Threads::Threads)
-
-add_test(
-    NAME aca_tests_ovs_control
-    COMMAND aca_tests_ovs_control
 )
 
 # goal state test to process goal state message and send to local client
