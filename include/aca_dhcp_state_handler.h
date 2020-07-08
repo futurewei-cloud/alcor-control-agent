@@ -25,15 +25,12 @@ class Aca_Dhcp_State_Handler {
   static Aca_Dhcp_State_Handler &get_instance();
 
   // process ONE DHCP state
-  int update_dhcp_state_workitem(const alcorcontroller::DHCPState current_DHCPState,
-                                 alcorcontroller::GoalStateOperationReply &gsOperationReply);
+  int update_dhcp_state_workitem(const alcor::schema::DHCPState current_DHCPState,
+                                 alcor::schema::GoalStateOperationReply &gsOperationReply);
 
   // process 0 to N DHCP states
-  int update_dhcp_states(alcorcontroller::GoalState &parsed_struct,
-                         alcorcontroller::GoalStateOperationReply &gsOperationReply);
-
-  int update_goal_state(alcorcontroller::GoalState &parsed_struct,
-                        alcorcontroller::GoalStateOperationReply &gsOperationReply);
+  int update_dhcp_states(alcor::schema::GoalState &parsed_struct,
+                         alcor::schema::GoalStateOperationReply &gsOperationReply);
 
   private:
   // constructor and destructor marked as private so that noone can call it

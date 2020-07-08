@@ -22,6 +22,7 @@
 
 using namespace alcorcontroller;
 using namespace aca_dhcp_programming_if;
+using namespace alcor::schema;
 
 namespace aca_dhcp_state_handler
 {
@@ -55,7 +56,7 @@ Aca_Dhcp_State_Handler &Aca_Dhcp_State_Handler::get_instance()
 }
 
 int Aca_Dhcp_State_Handler::update_dhcp_state_workitem(const DhcpState current_DhcpState,
-                                                       alcorcontroller::GoalStateOperationReply &gsOperationReply)
+                                                       GoalStateOperationReply &gsOperationReply)
 {
   int (*pfDhcpOp)(dhcp_config *);
   dhcp_config stDhcpCfg;
