@@ -20,7 +20,6 @@
 #include "goalstateprovisioner.grpc.pb.h"
 #include <future>
 
-using namespace alcorcontroller;
 using namespace aca_dhcp_programming_if;
 using namespace alcor::schema;
 
@@ -58,34 +57,33 @@ Aca_Dhcp_State_Handler &Aca_Dhcp_State_Handler::get_instance()
 int Aca_Dhcp_State_Handler::update_dhcp_state_workitem(const DHCPState current_DhcpState,
                                                        GoalStateOperationReply &gsOperationReply)
 {
-  int (*pfDhcpOp)(dhcp_config *);
   dhcp_config stDhcpCfg;
-  int retcode = EXIT_SUCCESS;
+  int overall_rc = EXIT_SUCCESS;
+  ulong culminative_dataplane_programming_time = 0;
+  ulong culminative_network_configuration_time = 0;
 
   auto operation_start = chrono::steady_clock::now();
 
+  DHCPConfiguration current_DhcpConfiguration = current_DhcpState.configuration();
+  stDhcpCfg.mac_address = current_DhcpConfiguration.mac_address();
+  stDhcpCfg.ipv4_address = current_DhcpConfiguration.ipv4_address();
+  stDhcpCfg.ipv6_address = current_DhcpConfiguration.ipv6_address();
+  stDhcpCfg.port_host_name = current_DhcpConfiguration.port_host_name();
+
   switch (current_DhcpState.operation_type()) {
   case OperationType::CREATE:
-    pfDhcpOp = this->dhcp_programming_if->add_dhcp_entry;
+    overall_rc = this->dhcp_programming_if->add_dhcp_entry(&stDhcpCfg);
     break;
   case OperationType::UPDATE:
-    pfDhcpOp = this->dhcp_programming_if->update_dhcp_entry;
+    overall_rc = this->dhcp_programming_if->update_dhcp_entry(&stDhcpCfg);
     break;
   case OperationType::DELETE:
-    pfDhcpOp = this->dhcp_programming_if->delete_dhcp_entry;
+    overall_rc = this->dhcp_programming_if->delete_dhcp_entry(&stDhcpCfg);
     break;
   default:
     ACA_LOG_DEBUG("=====>wrong dhcp operation\n");
     return EXIT_FAILURE;
   }
-
-  DHCPConfiguration current_DhcpConfiguration = current_DhcpState.configuration();
-  stDhcpCfg.mac_address = current_DhcpConfiguration.mac_address();
-  stDhcpCfg.ipv4_address = current_DhcpConfiguration.ip_address();
-  //stDhcpCfg.ipv6_address  = current_DhcpConfiguration.ipv6_address();
-  stDhcpCfg.port_host_name = current_DhcpConfiguration.port_host_name();
-
-  retcode = pfDhcpOp(&stDhcpCfg);
 
   auto operation_end = chrono::steady_clock::now();
 
@@ -93,11 +91,11 @@ int Aca_Dhcp_State_Handler::update_dhcp_state_workitem(const DHCPState current_D
           cast_to_nanoseconds(operation_end - operation_start).count();
 
   aca_goal_state_handler::Aca_Goal_State_Handler::get_instance().add_goal_state_operation_status(
-          gsOperationReply, current_DhcpConfiguration.id(), DHCP,
-          current_DhcpState.operation_type(), retcode, culminative_dataplane_programming_time,
+          gsOperationReply, "NA_ID", DHCP, current_DhcpState.operation_type(),
+          overall_rc, culminative_dataplane_programming_time,
           culminative_network_configuration_time, operation_total_time);
 
-  return retcode;
+  return overall_rc;
 }
 
 int Aca_Dhcp_State_Handler::update_dhcp_states(GoalState &parsed_struct,
@@ -115,8 +113,9 @@ int Aca_Dhcp_State_Handler::update_dhcp_states(GoalState &parsed_struct,
 
     DHCPState current_DhcpState = parsed_struct.dhcp_states(i);
 
-    workitem_future.push_back(std::async(std::launch::async, &Aca_Dhcp_State_Handler::update_dhcp_state_workitem,
-                                         this, current_DhcpState));
+    workitem_future.push_back(std::async(
+            std::launch::async, &Aca_Dhcp_State_Handler::update_dhcp_state_workitem,
+            this, current_DhcpState, std::ref(gsOperationReply)));
 
     //workitem_future.push_back(std::async(
     //        std::launch::async, &Aca_Dhcp_State_Handler::update_dhcp_state_workitem, this,
