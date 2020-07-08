@@ -19,22 +19,10 @@
 #define DSCP_DEFAULT (IPTOS_PREC_INTERNETCONTROL >> 2)
 #define STDOUT_FILENO   1   /* Standard output.  */
 
-// #include "goalstateprovisioner.grpc.pb.h"
-// #include <openvswitch/vconn-provider.h> /* add to /usr/local/include/openvswitch */
-// #include <openvswitch/ofpbuf.h>
 #include <openvswitch/ofp-errors.h>
 #include <openvswitch/ofp-packet.h>
-// #include <openvswitch/ofp-port.h>
-// #include <openvswitch/ofp-table.h>
-// #include <openvswitch/ofp-protocol.h>
-// #include <openvswitch/ofp-switch.h>
-// #include <linux/in.h>
-// #include <linux/types.h>
 #include <string>
 
-// extern "C" { 
-//     struct unixctl_conn;
-// }
 // OVS monitor implementation class
 namespace aca_ovs_control
 {
