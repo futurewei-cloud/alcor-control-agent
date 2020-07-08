@@ -13,8 +13,10 @@
 // limitations under the License.
 
 #include "aca_log.h"
+#include "aca_util.h"
 #include "aca_dhcp_server.h"
 #include "aca_dhcp_state_handler.h"
+#include "aca_goal_state_handler.h"
 #include "goalstateprovisioner.grpc.pb.h"
 #include <future>
 
@@ -25,9 +27,6 @@ namespace aca_dhcp_state_handler
 {
 Aca_Dhcp_State_Handler::Aca_Dhcp_State_Handler()
 {
-  ACA_LOG_INFO("DHCP State Handler initialize\n");
-
-  // default to dataplane_mizar for now
   ACA_LOG_INFO("DHCP State Handler: using dhcp server\n");
   this->dhcp_programming_if = new aca_dhcp_server::ACA_Dhcp_Server;
 
@@ -55,10 +54,14 @@ Aca_Dhcp_State_Handler &Aca_Dhcp_State_Handler::get_instance()
   return instance;
 }
 
-int Aca_Dhcp_State_Handler::update_dhcp_state_workitem(const DhcpState current_DhcpState)
+int Aca_Dhcp_State_Handler::update_dhcp_state_workitem(const DhcpState current_DhcpState,
+                                                       alcorcontroller::GoalStateOperationReply &gsOperationReply)
 {
   int (*pfDhcpOp)(dhcp_config *);
   dhcp_config stDhcpCfg;
+  int retcode = EXIT_SUCCESS;
+
+  auto operation_start = chrono::steady_clock::now();
 
   switch (current_DhcpState.operation_type()) {
   case OperationType::CREATE:
@@ -81,7 +84,19 @@ int Aca_Dhcp_State_Handler::update_dhcp_state_workitem(const DhcpState current_D
   //stDhcpCfg.ipv6_address  = current_DhcpConfiguration.ipv6_address();
   stDhcpCfg.port_host_name = current_DhcpConfiguration.port_host_name();
 
-  return pfDhcpOp(&stDhcpCfg);
+  retcode = pfDhcpOp(&stDhcpCfg);
+
+  auto operation_end = chrono::steady_clock::now();
+
+  auto operation_total_time =
+          cast_to_nanoseconds(operation_end - operation_start).count();
+
+  aca_goal_state_handler::Aca_Goal_State_Handler::get_instance().add_goal_state_operation_status(
+          gsOperationReply, current_DhcpConfiguration.id(), DHCP,
+          current_DhcpState.operation_type(), retcode, culminative_dataplane_programming_time,
+          culminative_network_configuration_time, operation_total_time);
+
+  return retcode;
 }
 
 int Aca_Dhcp_State_Handler::update_dhcp_states(GoalState &parsed_struct,

@@ -25,7 +25,8 @@ class Aca_Dhcp_State_Handler {
   static Aca_Dhcp_State_Handler &get_instance();
 
   // process ONE DHCP state
-  int update_dhcp_state_workitem(const alcorcontroller::DHCPState current_DHCPState);
+  int update_dhcp_state_workitem(const alcorcontroller::DHCPState current_DHCPState,
+                                 alcorcontroller::GoalStateOperationReply &gsOperationReply);
 
   // process 0 to N DHCP states
   int update_dhcp_states(alcorcontroller::GoalState &parsed_struct,
@@ -43,4 +44,4 @@ class Aca_Dhcp_State_Handler {
   aca_dhcp_programming_if::ACA_Dhcp_Programming_Interface *dhcp_programming_if;
 };
 } // namespace aca_dhcp_state_handler
-#endif // @ifndef ACA_NET_STATE_HANDLER_H
+#endif // @ifndef ACA_DHCP_STATE_HANDLER_H
