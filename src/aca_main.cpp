@@ -212,12 +212,12 @@ int main(int argc, char *argv[])
     g_ofctl_target = OFCTL_TARGET;
   }
   
-  async_grpc_server = new Aca_Async_GRPC_Server();
-  async_grpc_server_thread =
-         new std::thread(std::bind(&Aca_Async_GRPC_Server::Run, async_grpc_server));
+  // async_grpc_server = new Aca_Async_GRPC_Server();
+  // async_grpc_server_thread =
+  //        new std::thread(std::bind(&Aca_Async_GRPC_Server::Run, async_grpc_server));
 
-  MessageConsumer network_config_consumer(g_broker_list, g_kafka_group_id);
-  rc = network_config_consumer.consumeDispatched(g_kafka_topic);
+  // MessageConsumer network_config_consumer(g_broker_list, g_kafka_group_id);
+  // rc = network_config_consumer.consumeDispatched(g_kafka_topic);
 
   rc = ACA_OVS_Control::get_instance().control();
   

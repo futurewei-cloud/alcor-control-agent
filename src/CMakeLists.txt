@@ -10,6 +10,7 @@ set(SOURCES
     ./net_config/aca_net_config.cpp
     ./ovs/aca_ovs_programmer.cpp
     ./ovs/aca_vlan_manager.cpp
+    ./ovs/ovs_control.cpp
     ./ovs/aca_ovs_control.cpp
 )
 FIND_LIBRARY(RDKAFKA rdkafka /usr/lib/x86_64-linux-gnu NO_DEFAULT_PATH)
