@@ -31,10 +31,9 @@ class ACA_OVS_Control {
   static ACA_OVS_Control &get_instance();
 
   int control();
-  int monitor(const char *bridge, const char *opt);
-  int packet_out(const char *bridge, const char *opt);  
-  int dump_flows(const char *bridge, const char *opt);
-  //int get_packet_in(const char *bridge); 
+  void monitor(const char *bridge, const char *opt);
+  void packet_out(const char *bridge, const char *opt);  
+  void dump_flows(const char *bridge, const char *opt); 
   void parse_packet(void *packet);
   void print_payload(const u_char *payload, int len);
   void print_hex_ascii_line(const u_char *payload, int len, int offset);

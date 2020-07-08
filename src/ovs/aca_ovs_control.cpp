@@ -14,6 +14,8 @@
 
 #include "aca_ovs_control.h"
 #include "ovs_control.h"
+#include "aca_log.h"
+#include "aca_util.h"
 #include <iostream>
 #include <vector> 
 #include <unordered_map> 
@@ -81,25 +83,19 @@ int ACA_OVS_Control::control()
     return overall_rc;
 }
 
-int ACA_OVS_Control::dump_flows(const char *bridge, const char *opt) 
+void ACA_OVS_Control::dump_flows(const char *bridge, const char *opt) 
 {
-    int overall_rc = EXIT_SUCCESS;
     OVS_Control::get_instance().dump_flows(bridge, opt);
-    return overall_rc;
 }
 
-int ACA_OVS_Control::monitor(const char *bridge, const char *opt) 
+void ACA_OVS_Control::monitor(const char *bridge, const char *opt) 
 {
-    int overall_rc = EXIT_SUCCESS;
     OVS_Control::get_instance().monitor(bridge, opt);
-    return overall_rc;
 }
 
-int ACA_OVS_Control::packet_out(const char *bridge, const char *opt) 
+void ACA_OVS_Control::packet_out(const char *bridge, const char *opt) 
 {
-    int overall_rc = EXIT_SUCCESS;
     OVS_Control::get_instance().packet_out(bridge, opt);
-    return overall_rc;
 }
 
 void ACA_OVS_Control::parse_packet(void *packet)
@@ -114,28 +110,27 @@ void ACA_OVS_Control::parse_packet(void *packet)
     lengths though, but the ethernet header is always the same (14 bytes) */
     eth_header = (struct ether_header *) packet;
     
-    printf("Destination Mac: %s\n", ether_ntoa((ether_addr *) &eth_header->ether_dhost));
-    printf("Source Mac: %s\n", ether_ntoa((ether_addr *) &eth_header->ether_shost));
+    ACA_LOG_INFO("Source Mac: %s\n", ether_ntoa((ether_addr *) &eth_header->ether_shost));
 
     int vlan_len = 0;
     char *base = (char *) packet;
     uint16_t ether_type = ntohs(*(uint16_t *) (base + 12));
     if (ether_type == ETHERTYPE_VLAN) {
-        printf("Ethernet Type: 802.1Q VLAN tagging (0x8100) \n");
+        ACA_LOG_INFO("Ethernet Type: 802.1Q VLAN tagging (0x8100) \n");
         ether_type = ntohs(*(uint16_t *) (base + 16));
         vlan_len = 4;
     } 
     
     if (ether_type == ETHERTYPE_ARP) {
-        printf("Ethernet Type: ARP (0x0806) \n");
-        printf("   From: %s\n", inet_ntoa(*(in_addr *) (base + 14 + vlan_len + 14)));
-        printf("     to: %s\n", inet_ntoa(*(in_addr *) (base + 14 + vlan_len + 14 + 10)));
+        ACA_LOG_INFO("Ethernet Type: ARP (0x0806) \n");
+        ACA_LOG_INFO("   From: %s\n", inet_ntoa(*(in_addr *) (base + 14 + vlan_len + 14)));
+        ACA_LOG_INFO("     to: %s\n", inet_ntoa(*(in_addr *) (base + 14 + vlan_len + 14 + 10)));
     } else if (ether_type == ETHERTYPE_IP) {
-        printf("Ethernet Type: IP (0x0800) \n");
+        ACA_LOG_INFO("Ethernet Type: IP (0x0800) \n");
     } else if (ether_type == ETHERTYPE_REVARP) {
-        printf("Ethernet Type: REVARP (0x8035) \n");
+        ACA_LOG_INFO("Ethernet Type: REVARP (0x8035) \n");
     } else {
-        printf("Ethernet Type: Cannot Tell!\n");
+        ACA_LOG_INFO("Ethernet Type: Cannot Tell!\n");
         return;
     }
     
@@ -150,25 +145,25 @@ void ACA_OVS_Control::parse_packet(void *packet)
         return;
     } else {
         /* print source and destination IP addresses */
-        printf("       From: %s\n", inet_ntoa(ip->ip_src));
-        printf("         To: %s\n", inet_ntoa(ip->ip_dst));
+        ACA_LOG_INFO("       From: %s\n", inet_ntoa(ip->ip_src));
+        ACA_LOG_INFO("         To: %s\n", inet_ntoa(ip->ip_dst));
         
         /* determine protocol */ 
         switch(ip->ip_p) {
             case IPPROTO_TCP:
-                printf("   Protocol: TCP\n");
+                ACA_LOG_INFO("   Protocol: TCP\n");
                 break;
             case IPPROTO_UDP:
-                printf("   Protocol: UDP\n");
+                ACA_LOG_INFO("   Protocol: UDP\n");
                 break;
             case IPPROTO_ICMP:
-                printf("   Protocol: ICMP\n");
+                ACA_LOG_INFO("   Protocol: ICMP\n");
                 break;
             case IPPROTO_IP:
-                printf("   Protocol: IP\n");
+                ACA_LOG_INFO("   Protocol: IP\n");
                 break;
             default:
-                printf("   Protocol: unknown\n");
+                ACA_LOG_INFO("   Protocol: unknown\n");
         }
     }
     /* define/compute tcp header offset */
@@ -181,8 +176,8 @@ void ACA_OVS_Control::parse_packet(void *packet)
         // printf("   *** Invalid TCP header length: %u bytes\n", size_tcp);
         return;
     } else {    
-        printf("   Src port: %d\n", ntohs(tcp->th_sport));
-        printf("   Dst port: %d\n", ntohs(tcp->th_dport));
+        ACA_LOG_INFO("   Src port: %d\n", ntohs(tcp->th_sport));
+        ACA_LOG_INFO("   Dst port: %d\n", ntohs(tcp->th_dport));
         
         /* define/compute tcp payload (segment) offset */
         payload = (u_char *)(base + SIZE_ETHERNET + vlan_len + size_ip + size_tcp);
@@ -195,7 +190,7 @@ void ACA_OVS_Control::parse_packet(void *packet)
         * treat it as a string.
         */
         if (size_payload > 0) {
-            printf("   Payload (%d bytes):\n", size_payload);
+            ACA_LOG_INFO("   Payload (%d bytes):\n", size_payload);
             print_payload(payload, size_payload);
         }
     }
@@ -212,11 +207,11 @@ void ACA_OVS_Control::parse_packet(void *packet)
     } else {
         int udp_sport = ntohs(udp->uh_sport);
         int udp_dport = ntohs(udp->uh_dport);
-        printf("   Src port: %d\n", udp_sport);
-        printf("   Dst port: %d\n", udp_dport);
+        ACA_LOG_INFO("   Src port: %d\n", udp_sport);
+        ACA_LOG_INFO("   Dst port: %d\n", udp_dport);
         
         if (udp_sport == 68 && udp_dport == 67) {
-            printf ("   Message Type: DHCP\n");
+            ACA_LOG_INFO("   Message Type: DHCP\n");
         }
 
         /* define/compute udp payload (daragram) offset */
@@ -230,7 +225,7 @@ void ACA_OVS_Control::parse_packet(void *packet)
         * treat it as a string.
         */
         if (size_payload > 0) {
-            printf("   Payload (%d bytes):\n", size_payload);
+            ACA_LOG_INFO("   Payload (%d bytes):\n", size_payload);
             print_payload(payload, size_payload);
         }
     }
@@ -290,36 +285,36 @@ ACA_OVS_Control::print_hex_ascii_line(const u_char *payload, int len, int offset
     const u_char *ch;
 
     /* offset */
-    printf("%05d   ", offset);
+    ACA_LOG_INFO("%05d   ", offset);
     
     /* hex */
     ch = payload;
     for(i = 0; i < len; i++) {
-        printf("%02x ", *ch);
+        ACA_LOG_INFO("%02x ", *ch);
         ch++;
         /* print extra space after 8th byte for visual aid */
-        if (i == 7) printf(" ");
+        if (i == 7) ACA_LOG_INFO(" ");
     }
     /* print space to handle line less than 8 bytes */
-    if (len < 8) printf(" ");
+    if (len < 8) ACA_LOG_INFO(" ");
     
     /* fill hex gap with spaces if not full line */
     if (len < 16) {
         gap = 16 - len;
         for (i = 0; i < gap; i++) {
-            printf("   ");
+            ACA_LOG_INFO("   ");
         }
     }
-    printf("   ");
+    ACA_LOG_INFO("   ");
     
     /* ascii (if printable) */
     ch = payload;
     for(i = 0; i < len; i++) {
-        if (isprint(*ch)) printf("%c", *ch);
-        else printf(".");
+        if (isprint(*ch)) ACA_LOG_INFO("%c", *ch);
+        else ACA_LOG_INFO(".");
         ch++;
     }
-    printf("\n");
+    ACA_LOG_INFO("\n");
     return;
 }
 
