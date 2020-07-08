@@ -55,7 +55,7 @@ Aca_Dhcp_State_Handler &Aca_Dhcp_State_Handler::get_instance()
   return instance;
 }
 
-int Aca_Dhcp_State_Handler::update_dhcp_state_workitem(const DhcpState current_DhcpState,
+int Aca_Dhcp_State_Handler::update_dhcp_state_workitem(const DHCPState current_DhcpState,
                                                        GoalStateOperationReply &gsOperationReply)
 {
   int (*pfDhcpOp)(dhcp_config *);
@@ -79,7 +79,7 @@ int Aca_Dhcp_State_Handler::update_dhcp_state_workitem(const DhcpState current_D
     return EXIT_FAILURE;
   }
 
-  DhcpConfiguration current_DhcpConfiguration = current_DhcpState.configuration();
+  DHCPConfiguration current_DhcpConfiguration = current_DhcpState.configuration();
   stDhcpCfg.mac_address = current_DhcpConfiguration.mac_address();
   stDhcpCfg.ipv4_address = current_DhcpConfiguration.ip_address();
   //stDhcpCfg.ipv6_address  = current_DhcpConfiguration.ipv6_address();
