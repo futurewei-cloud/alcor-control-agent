@@ -16,11 +16,13 @@
 #include "aca_util.h"
 #include "aca_comm_mgr.h"
 #include "aca_goal_state_handler.h"
+#include "aca_dhcp_state_handler.h"
 #include "goalstateprovisioner.grpc.pb.h"
 
 using namespace std;
 using namespace alcor::schema;
 using namespace aca_goal_state_handler;
+using namespace aca_dhcp_state_handler;
 
 extern string g_rpc_server;
 extern string g_rpc_protocol;
@@ -105,12 +107,11 @@ int Aca_Comm_Manager::update_goal_state(GoalState &goal_state_message,
   }
 
   exec_command_rc = Aca_Dhcp_State_Handler::get_instance().update_dhcp_states(
-          parsed_struct, gsOperationReply);
+          goal_state_message, gsOperationReply);
   if (exec_command_rc != EXIT_SUCCESS) {
     ACA_LOG_ERROR("Failed to update dhcp state. Failed with error code %d\n", exec_command_rc);
     rc = exec_command_rc;
   }
-
 
   auto end = chrono::steady_clock::now();
 
