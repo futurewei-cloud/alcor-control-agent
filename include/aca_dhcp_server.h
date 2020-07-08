@@ -32,7 +32,7 @@ struct dhcp_entry_data {
 
 #define DHCP_ENTRY_DATA_SET(pData, pCfg)                                       \
   do {                                                                         \
-    (pData)->ipv4_address = (pCfg)->ip_address;                                \
+    (pData)->ipv4_address = (pCfg)->ipv4_address;                              \
     (pData)->port_host_name = (pCfg)->port_host_name;                          \
   } while (0)
 

@@ -19,7 +19,6 @@
 #include <arpa/inet.h>
 
 using namespace std;
-using namespace alcorcontroller;
 using namespace aca_dhcp_programming_if;
 
 namespace aca_dhcp_server
@@ -51,7 +50,8 @@ int ACA_Dhcp_Server::add_dhcp_entry(dhcp_config *dhcp_cfg_in)
   dhcp_entry_data stData;
 
   if (_validate_dhcp_entry(dhcp_cfg_in)) {
-    ACA_LOG_ERROR("Valiate dhcp cfg failed! (mac = %s)\n", dhcp_cfg_in->mac_address);
+    ACA_LOG_ERROR("Valiate dhcp cfg failed! (mac = %s)\n",
+                  dhcp_cfg_in->mac_address.c_str());
     return EXIT_FAILURE;
   }
 
@@ -62,7 +62,8 @@ int ACA_Dhcp_Server::add_dhcp_entry(dhcp_config *dhcp_cfg_in)
   DHCP_ENTRY_DATA_SET((dhcp_entry_data *)&stData, dhcp_cfg_in);
 
   if (_dhcp_db->end() != _dhcp_db->find(dhcp_cfg_in->mac_address)) {
-    ACA_LOG_ERROR("Entry already existed! (mac = %s)\n", dhcp_cfg_in->mac_address);
+    ACA_LOG_ERROR("Entry already existed! (mac = %s)\n",
+                  dhcp_cfg_in->mac_address.c_str());
     return EXIT_FAILURE;
   }
 
@@ -76,17 +77,18 @@ int ACA_Dhcp_Server::add_dhcp_entry(dhcp_config *dhcp_cfg_in)
 int ACA_Dhcp_Server::delete_dhcp_entry(dhcp_config *dhcp_cfg_in)
 {
   if (_validate_dhcp_entry(dhcp_cfg_in)) {
-    ACA_LOG_ERROR("Valiate dhcp cfg failed! (mac = %s)\n", dhcp_cfg_in->mac_address);
+    ACA_LOG_ERROR("Valiate dhcp cfg failed! (mac = %s)\n",
+                  dhcp_cfg_in->mac_address.c_str());
     return EXIT_FAILURE;
   }
 
   if (0 >= DHCP_DB_SIZE) {
-    ACA_LOG_WARN("DHCP DB is empty! (mac = %s)\n", dhcp_cfg_in->mac_address);
+    ACA_LOG_WARN("DHCP DB is empty! (mac = %s)\n", dhcp_cfg_in->mac_address.c_str());
     return EXIT_FAILURE;
   }
 
   if (_dhcp_db->end() == _dhcp_db->find(dhcp_cfg_in->mac_address)) {
-    ACA_LOG_INFO("Entry not exist!  (mac = %s)\n", dhcp_cfg_in->mac_address);
+    ACA_LOG_INFO("Entry not exist!  (mac = %s)\n", dhcp_cfg_in->mac_address.c_str());
     return EXIT_SUCCESS;
   }
 
@@ -103,13 +105,14 @@ int ACA_Dhcp_Server::update_dhcp_entry(dhcp_config *dhcp_cfg_in)
   std::map<string, dhcp_entry_data>::iterator pos;
 
   if (_validate_dhcp_entry(dhcp_cfg_in)) {
-    ACA_LOG_ERROR("Valiate dhcp cfg failed! (mac = %s)\n", dhcp_cfg_in->mac_address);
+    ACA_LOG_ERROR("Valiate dhcp cfg failed! (mac = %s)\n",
+                  dhcp_cfg_in->mac_address.c_str());
     return EXIT_FAILURE;
   }
 
   pos = _dhcp_db->find(dhcp_cfg_in->mac_address);
   if (_dhcp_db->end() == pos) {
-    ACA_LOG_ERROR("Entry not exist! (mac = %s)\n", dhcp_cfg_in->mac_address);
+    ACA_LOG_ERROR("Entry not exist! (mac = %s)\n", dhcp_cfg_in->mac_address.c_str());
 
     return EXIT_FAILURE;
   }
