@@ -33,6 +33,7 @@ RUN echo "--- installing openvswitch dependancies ---" && \
     ./configure --prefix=/usr/local --localstatedir=/var --sysconfdir=/etc --enable-shared && \
     make && \
     make install && \
+    cp /var/local/git/openvswitch/lib/vconn-provider.h /usr/local/include/openvswitch/vconn-provider.h && \
     rm -rf \var\local\git\openvswitch
 
 RUN echo "--- installing grpc dependencies ---" && \
