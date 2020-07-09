@@ -191,9 +191,6 @@ void ACA_OVS_Control::parse_packet(void *packet)
         }
     }
 
-    /*
-     * To Do: parse UPD packet and identity DHCP
-     */
      /* define/compute udp header offset */
     const struct sniff_udp *udp = (struct sniff_udp*)(base + SIZE_ETHERNET + vlan_len + size_ip);
     int size_udp = ntohs(udp->uh_ulen);
