@@ -33,10 +33,6 @@ RUN echo "--- installing openvswitch dependancies ---" && \
     ./configure --prefix=/usr/local --localstatedir=/var --sysconfdir=/etc --enable-shared && \
     make && \
     make install && \
-    export PATH=$PATH:/usr/local/share/openvswitch/scripts && \
-    apt-get install -y vim && \
-    ovs-ctl start && \
-    ovs-vsctl show && \
     rm -rf \var\local\git\openvswitch
 
 RUN echo "--- installing grpc dependencies ---" && \
