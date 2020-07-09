@@ -24,7 +24,7 @@ To set up your local development environment, we recommend to use fork-and-branc
     ```
     cd ~/dev
     $ git clone --recurse-submodules https://github.com/<your_github_username>/alcor-control-agent.git ~/alcor-control-agent
-    $ cd ~/alcor-control-agent
+    $ cd ~/dev/alcor-control-agent
     $ git submodule update --init --recursive
     ```
 3. Add a remote pointing back to the Alcor Official repository
