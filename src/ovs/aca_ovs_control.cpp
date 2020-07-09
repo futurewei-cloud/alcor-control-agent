@@ -28,8 +28,6 @@
 #include <errno.h>
 #include <stdexcept>
 #include <inttypes.h>
-// #include <unistd.h>
-#include <pcap.h>
 #include <net/ethernet.h>
 #include <netinet/ether.h>
 #include <netinet/ip.h>
