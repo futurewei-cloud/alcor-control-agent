@@ -182,8 +182,7 @@ void ACA_OVS_Control::parse_packet(void *packet)
         size_payload = ntohs(ip->ip_len) - (size_ip + size_tcp);
         
         /*
-        * Print payload data; it might be binary, so don't just
-        * treat it as a string.
+        * Print payload data;
         */
         if (size_payload > 0) {
             ACA_LOG_INFO("   Payload (%d bytes):\n", size_payload);
@@ -214,8 +213,7 @@ void ACA_OVS_Control::parse_packet(void *packet)
         size_payload = ntohs(ip->ip_len) - (size_ip + 8);
 
         /*
-        * Print payload data; it might be binary, so don't just
-        * treat it as a string.
+        * Print payload data.
         */
         if (size_payload > 0) {
             ACA_LOG_INFO("   Payload (%d bytes):\n", size_payload);
