@@ -28,8 +28,6 @@
 #include <openvswitch/ofp-table.h>
 #include <openvswitch/ofp-protocol.h>
 #include <openvswitch/ofp-switch.h>
-// #include <linux/in.h>
-// #include <string>
 
 extern "C" { 
     struct unixctl_conn;
