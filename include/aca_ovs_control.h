@@ -30,9 +30,41 @@ class ACA_OVS_Control {
   public:
   static ACA_OVS_Control &get_instance();
 
+  /* 
+   * main function to call other function through command line
+   * It accepts three options:
+   *   -c <commands>, available commands are dump-flows, monitor, packet_out
+   *   -t <target bridge>, eg. br-int, br-tun
+   *   -o <additional options>, depends on the command
+   */
   int control();
+
+  /* 
+   * create a monitor channel connecting to ovs.
+   * Input: 
+   *    const char *bridge: bridge name
+   *    cnost char *opt: option for monitor
+   * Availabe options: 
+   *    <miss-len>: a number larger than 1. 
+   *    resume: continually intercept packet-in message
+   */
   void monitor(const char *bridge, const char *opt);
-  void packet_out(const char *bridge, const char *opt);  
+  
+  /*
+   * send a packet back to ovs.
+   * Input:
+   *    const char *bridge: bridge name
+   *    cnost char *opt: option for packet_out
+   * Availabe options:
+   *    in_port=<in_port>: (required) in_port number on ovs, or controller, local
+   *    packet=<hex string>: (required) the hex string representation of a packet 
+   *    actions=<actions>: actions can be normal, control, or resumbit(,2) to a table 
+   * example:
+   *    ACA_OVS_Control::get_instance().packet_out("br-tun", 
+   *                            "in_port=controller packet=<hex-string> actions=normal"
+   */
+  void packet_out(const char *bridge, const char *opt);
+
   void dump_flows(const char *bridge, const char *opt); 
   void parse_packet(void *packet);
   void print_payload(const u_char *payload, int len);

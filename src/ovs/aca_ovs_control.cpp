@@ -137,8 +137,6 @@ void ACA_OVS_Control::parse_packet(void *packet)
     /* define/compute ip header offset */
     const struct sniff_ip *ip = (struct sniff_ip*)(base + SIZE_ETHERNET + vlan_len);
     int size_ip = IP_HL(ip)*4;
-    // const struct ip *ip = (struct ip*)(base + SIZE_ETHERNET + vlan_len);
-    // int size_ip = ip->ip_hl;
     
     if (size_ip < 20) {
         // printf("   *** Invalid IP header length: %u bytes\n", size_ip);
