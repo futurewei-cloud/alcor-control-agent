@@ -7,7 +7,7 @@ RUN echo "--- installing mizar dependencies ---" && \
     clang-7 \
     llvm-7 \
     libelf-dev \
-    openvswitch-switch \
+    #openvswitch-switch \
     iproute2  \
     net-tools \
     iputils-ping \
@@ -17,8 +17,24 @@ RUN echo "--- installing mizar dependencies ---" && \
     python3-pip \
     netcat \
     libcmocka-dev \
-    lcov
+    lcov \
+    git \
+    autoconf \
+    automake \
+    dh-autoreconf \
+    libtool
 RUN pip3 install httpserver netaddr
+
+ENV OVS_RELEASE_TAG branch-2.12
+RUN echo "--- installing openvswitch dependancies ---" && \
+    git clone -b ${OVS_RELEASE_TAG} https://github.com/openvswitch/ovs.git /var/local/git/openvswitch && \
+    cd /var/local/git/openvswitch && \    
+    ./boot.sh && \
+    ./configure --prefix=/usr/local --localstatedir=/var --sysconfdir=/etc --enable-shared && \
+    make && \
+    make install && \
+    cp /var/local/git/openvswitch/lib/vconn-provider.h /usr/local/include/openvswitch/vconn-provider.h && \
+    rm -rf \var\local\git\openvswitch
 
 RUN echo "--- installing grpc dependencies ---" && \
     apt-get install -y \
