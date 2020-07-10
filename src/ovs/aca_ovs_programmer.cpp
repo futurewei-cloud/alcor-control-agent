@@ -255,7 +255,7 @@ void ACA_OVS_Programmer::execute_ovsdb_command(const std::string cmd_string,
 
   auto ovsdb_client_start = chrono::steady_clock::now();
 
-  string ovsdb_cmd_string = "ovs-vsctl " + cmd_string;
+  string ovsdb_cmd_string = "/usr/bin/ovs-vsctl " + cmd_string;
   int rc = aca_net_config::Aca_Net_Config::get_instance().execute_system_command(ovsdb_cmd_string);
 
   if (rc != EXIT_SUCCESS) {
@@ -282,7 +282,7 @@ void ACA_OVS_Programmer::execute_openflow_command(const std::string cmd_string,
 
   auto openflow_client_start = chrono::steady_clock::now();
 
-  string openflow_cmd_string = "ovs-ofctl " + cmd_string;
+  string openflow_cmd_string = "/usr/bin/ovs-ofctl " + cmd_string;
   int rc = aca_net_config::Aca_Net_Config::get_instance().execute_system_command(openflow_cmd_string);
 
   if (rc != EXIT_SUCCESS) {
