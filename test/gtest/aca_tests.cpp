@@ -51,8 +51,8 @@ static string vip_address_1 = "10.0.0.1";
 static string vip_address_2 = "10.0.1.2";
 static string vip_address_3 = "10.0.0.3";
 static string vip_address_4 = "10.0.1.4";
-static string remote_ip_1 = "10.213.43.188"; // "172.17.0.2"; for docker network
-static string remote_ip_2 = "10.213.43.187"; // "172.17.0.3"; for docker network
+static string remote_ip_1 = "172.17.0.2"; // for docker network
+static string remote_ip_2 = "172.17.0.3"; // for docker network
 static NetworkType vxlan_type = NetworkType::VXLAN;
 
 // Global variables
