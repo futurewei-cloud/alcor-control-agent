@@ -190,9 +190,6 @@ void Aca_Comm_Manager::print_goal_state(GoalState parsed_struct)
               j, current_PortConfiguration.security_group_ids(j).id().c_str());
     }
 
-    fprintf(stdout, "current_PortConfiguration.veth_name(): %s \n",
-            current_PortConfiguration.veth_name().c_str());
-
     printf("\n");
   }
 
@@ -227,19 +224,6 @@ void Aca_Comm_Manager::print_goal_state(GoalState parsed_struct)
     fprintf(stdout, "current_SubnetConfiguration.tunnel_id(): %ld \n",
             current_SubnetConfiguration.tunnel_id());
 
-    for (int j = 0; j < current_SubnetConfiguration.transit_switches_size(); j++) {
-      fprintf(stdout, "current_SubnetConfiguration.transit_switches(%d).vpc_id(): %s \n",
-              j, current_SubnetConfiguration.transit_switches(j).vpc_id().c_str());
-
-      fprintf(stdout, "current_SubnetConfiguration.transit_switches(%d).subnet_id(): %s \n",
-              j, current_SubnetConfiguration.transit_switches(j).subnet_id().c_str());
-
-      fprintf(stdout, "current_SubnetConfiguration.transit_switches(%d).ip_address(): %s \n",
-              j, current_SubnetConfiguration.transit_switches(j).ip_address().c_str());
-
-      fprintf(stdout, "current_SubnetConfiguration.transit_switches(%d).mac_address(): %s \n",
-              j, current_SubnetConfiguration.transit_switches(j).mac_address().c_str());
-    }
     printf("\n");
   }
 
