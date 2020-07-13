@@ -16,7 +16,7 @@
 #include "aca_util.h"
 #include "aca_net_config.h"
 #include "aca_vlan_manager.h"
-#include "aca_router_programmer.h"
+#include "aca_ovs_l3_programmer.h"
 // #include "goalstateprovisioner.grpc.pb.h"
 // #include <chrono>
 #include <errno.h>
@@ -27,22 +27,22 @@ using namespace aca_vlan_manager;
 // some mutex for reading and writing it internal data
 // mutex setup_ovs_bridges_mutex;
 
-namespace aca_router_programmer
+namespace aca_ovs_l3_programmer
 {
-ACA_Router_Programmer &ACA_Router_Programmer::get_instance()
+ACA_OVS_L3_Programmer &ACA_OVS_L3_Programmer::get_instance()
 {
   // Instance is destroyed when program exits.
   // It is instantiated on first use.
-  static ACA_Router_Programmer instance;
+  static ACA_OVS_L3_Programmer instance;
   return instance;
 }
 
 // [James action] - close down on the input param
-int ACA_Router_Programmer::create_router(const string vpc_id, const string port_name,
+int ACA_OVS_L3_Programmer::create_router(const string vpc_id, const string port_name,
                                          const string virtual_ip,
                                          uint tunnel_id, ulong &culminative_time)
 {
-  ACA_LOG_DEBUG("ACA_Router_Programmer::create_router ---> Entering\n");
+  ACA_LOG_DEBUG("ACA_OVS_L3_Programmer::create_router ---> Entering\n");
 
   int overall_rc = EXIT_SUCCESS;
 
@@ -51,7 +51,7 @@ int ACA_Router_Programmer::create_router(const string vpc_id, const string port_
   //   throw std::invalid_argument("vpc_id is empty");
   // }
 
-  // do we need the below?
+  // we will likely need the below
   // overall_rc = setup_ovs_bridges_if_need();
 
   // if (overall_rc != EXIT_SUCCESS) {
@@ -79,7 +79,7 @@ int ACA_Router_Programmer::create_router(const string vpc_id, const string port_
   //                 " actions=mod_vlan_vid:" + to_string(internal_vlan_id) + ",output:\"patch-int\"\"",
   //         culminative_time, overall_rc);
 
-  ACA_LOG_DEBUG("ACA_Router_Programmer::create_router <--- Exiting, overall_rc = %d\n",
+  ACA_LOG_DEBUG("ACA_OVS_L3_Programmer::create_router <--- Exiting, overall_rc = %d\n",
                 overall_rc);
 
   return overall_rc;
@@ -88,12 +88,12 @@ int ACA_Router_Programmer::create_router(const string vpc_id, const string port_
 // this function is to teach this compute host about the neighbor host's dvr mac
 // so that we can problem the rule to restore it back to the VM's gateway mac
 // [James action] - close down on the input param
-int ACA_Router_Programmer::create_neighbor_host_dvr(const string vpc_id,
+int ACA_OVS_L3_Programmer::create_neighbor_host_dvr(const string vpc_id,
                                                     alcor::schema::NetworkType network_type,
                                                     const string remote_ip, uint tunnel_id,
                                                     ulong &culminative_time)
 {
-  ACA_LOG_DEBUG("ACA_Router_Programmer::create_neighbor_host_dvr ---> Entering\n");
+  ACA_LOG_DEBUG("ACA_OVS_L3_Programmer::create_neighbor_host_dvr ---> Entering\n");
 
   int overall_rc = EXIT_SUCCESS;
 
@@ -101,26 +101,26 @@ int ACA_Router_Programmer::create_neighbor_host_dvr(const string vpc_id,
 
   // ovs-ofctl add-flow br-int "table=0,priority=25,dl_vlan=1,dl_src=02:42:ac:11:00:03, actions=mod_dl_src:02:42:ac:11:00:01 output:NORMAL"
 
-  ACA_LOG_DEBUG("ACA_Router_Programmer::create_neighbor_host_dvr <--- Exiting, overall_rc = %d\n",
+  ACA_LOG_DEBUG("ACA_OVS_L3_Programmer::create_neighbor_host_dvr <--- Exiting, overall_rc = %d\n",
                 overall_rc);
 
   return overall_rc;
 }
 
 // [James action] - close down on the input param
-int ACA_Router_Programmer::create_neighbor_L3(const string vpc_id,
+int ACA_OVS_L3_Programmer::create_neighbor_l3(const string vpc_id,
                                               alcor::schema::NetworkType network_type,
                                               const string remote_ip, uint tunnel_id,
                                               ulong &culminative_time)
 {
-  ACA_LOG_DEBUG("ACA_Router_Programmer::create_neighbor_L3 ---> Entering\n");
+  ACA_LOG_DEBUG("ACA_OVS_L3_Programmer::create_neighbor_l3 ---> Entering\n");
 
   int overall_rc = EXIT_SUCCESS;
 
   // with DVR, a cross subnet packet will be routed to the same subnet usign Alcor DVR.
   // that means a L3 neighbor will become a L2 neighbor
 
-  // we will need each this compute host about L2 neighbor info in case if it is not known already
+  // we will need teach this compute host about L2 neighbor info in case if it is not known already
   // we can consider doing this L2 neighbor creation as an on demand rule to support scale
 
   // when we are ready to put the DVR rule as on demand, we should put the L2 neighbor rule as
@@ -136,10 +136,10 @@ int ACA_Router_Programmer::create_neighbor_L3(const string vpc_id,
   // the rule will look like:
   // ovs-ofctl add-flow br-tun "table=0,priority=50,ip,dl_vlan=1,nw_dst=10.0.1.106,dl_dst=02:42:ac:11:00:01 actions=mod_vlan_vid:2,mod_dl_src:02:42:ac:11:00:00,mod_dl_dst=c6:41:e9:81:56:91,resubmit(,2)"
 
-  ACA_LOG_DEBUG("ACA_Router_Programmer::create_neighbor_L3 <--- Exiting, overall_rc = %d\n",
+  ACA_LOG_DEBUG("ACA_OVS_L3_Programmer::create_neighbor_l3 <--- Exiting, overall_rc = %d\n",
                 overall_rc);
 
   return overall_rc;
 }
 
-} // namespace aca_router_programmer
+} // namespace aca_ovs_l3_programmer

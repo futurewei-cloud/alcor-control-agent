@@ -14,7 +14,8 @@
 
 #include "aca_dataplane_ovs.h"
 #include "aca_goal_state_handler.h"
-#include "aca_ovs_programmer.h"
+#include "aca_ovs_l2_programmer.h"
+#include "aca_ovs_l3_programmer.h"
 #include "aca_net_config.h"
 #include "aca_log.h"
 #include "goalstateprovisioner.grpc.pb.h"
@@ -24,7 +25,7 @@
 
 using namespace std;
 using namespace alcor::schema;
-using aca_ovs_programmer::ACA_OVS_Programmer;
+using aca_ovs_l2_programmer::ACA_OVS_L2_Programmer;
 
 static void aca_validate_mac_address(const char *mac_string)
 {
@@ -69,7 +70,7 @@ namespace aca_dataplane_ovs
 int ACA_Dataplane_OVS::initialize()
 {
   // TODO: improve the logging system, and add logging to this module
-  return ACA_OVS_Programmer::get_instance().setup_ovs_bridges_if_need();
+  return ACA_OVS_L2_Programmer::get_instance().setup_ovs_bridges_if_need();
 }
 
 int ACA_Dataplane_OVS::update_vpc_state_workitem(const VpcState current_VpcState,
@@ -220,7 +221,7 @@ int ACA_Dataplane_OVS::update_port_state_workitem(const PortState current_PortSt
                       virtual_ip_address.c_str(), virtual_mac_address.c_str(),
                       port_cidr.c_str(), found_tunnel_id);
 
-        overall_rc = ACA_OVS_Programmer::get_instance().configure_port(
+        overall_rc = ACA_OVS_L2_Programmer::get_instance().configure_port(
                 current_PortConfiguration.vpc_id(), current_PortConfiguration.name(),
                 port_cidr, found_tunnel_id, culminative_dataplane_programming_time);
       }
@@ -305,7 +306,7 @@ int ACA_Dataplane_OVS::update_port_state_workitem(const PortState current_PortSt
                       virtual_ip_address.c_str(), virtual_mac_address.c_str(),
                       host_ip_address.c_str(), found_tunnel_id);
 
-        overall_rc = ACA_OVS_Programmer::get_instance().create_update_neighbor_port(
+        overall_rc = ACA_OVS_L2_Programmer::get_instance().create_update_neighbor_port(
                 current_PortConfiguration.vpc_id(),
                 current_PortConfiguration.network_type(), host_ip_address,
                 found_tunnel_id, culminative_dataplane_programming_time);
