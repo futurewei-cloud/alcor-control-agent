@@ -41,8 +41,6 @@ using aca_comm_manager::Aca_Comm_Manager;
 // Global variables
 string g_rpc_server = EMPTY_STRING;
 string g_rpc_protocol = EMPTY_STRING;
-std::atomic_ulong g_total_rpc_call_time(0);
-std::atomic_ulong g_total_rpc_client_time(0);
 std::atomic_ulong g_total_network_configuration_time(0);
 std::atomic_ulong g_total_update_GS_time(0);
 bool g_demo_mode = false;
@@ -57,12 +55,6 @@ using std::string;
 
 static void aca_cleanup()
 {
-  ACA_LOG_DEBUG("g_total_rpc_call_time = %lu nanoseconds or %lu milliseconds\n",
-                g_total_rpc_call_time.load(), g_total_rpc_call_time.load() / 1000000);
-
-  ACA_LOG_DEBUG("g_total_rpc_client_time = %lu nanoseconds or %lu milliseconds\n",
-                g_total_rpc_client_time.load(), g_total_rpc_client_time.load() / 1000000);
-
   ACA_LOG_DEBUG("g_total_network_configuration_time = %lu nanoseconds or %lu milliseconds\n",
                 g_total_network_configuration_time.load(),
                 g_total_network_configuration_time.load() / 1000000);

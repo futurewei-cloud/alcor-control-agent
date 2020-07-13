@@ -23,9 +23,9 @@
 #include <unistd.h> /* for getopt */
 #include <grpcpp/grpcpp.h>
 
+using aca_ovs_control::ACA_OVS_Control;
 using messagemanager::MessageConsumer;
 using std::string;
-using aca_ovs_control::ACA_OVS_Control;
 
 // Defines
 #define ACALOGNAME "AlcorControlAgent"
@@ -52,8 +52,6 @@ string g_rpc_protocol = EMPTY_STRING;
 string g_ofctl_command = EMPTY_STRING;
 string g_ofctl_target = EMPTY_STRING;
 string g_ofctl_options = EMPTY_STRING;
-std::atomic_ulong g_total_rpc_call_time(0);
-std::atomic_ulong g_total_rpc_client_time(0);
 std::atomic_ulong g_total_network_configuration_time(0);
 std::atomic_ulong g_total_update_GS_time(0);
 bool g_demo_mode = false;
@@ -61,12 +59,6 @@ bool g_debug_mode = false;
 
 static void aca_cleanup()
 {
-  ACA_LOG_DEBUG("g_total_rpc_call_time = %lu nanoseconds or %lu milliseconds\n",
-                g_total_rpc_call_time.load(), g_total_rpc_call_time.load() / 1000000);
-
-  ACA_LOG_DEBUG("g_total_rpc_client_time = %lu nanoseconds or %lu milliseconds\n",
-                g_total_rpc_client_time.load(), g_total_rpc_client_time.load() / 1000000);
-
   ACA_LOG_DEBUG("g_total_network_configuration_time = %lu nanoseconds or %lu milliseconds\n",
                 g_total_network_configuration_time.load(),
                 g_total_network_configuration_time.load() / 1000000);
@@ -162,10 +154,10 @@ int main(int argc, char *argv[])
       break;
     case 't':
       g_ofctl_target = optarg;
-      break;  
+      break;
     case 'o':
       g_ofctl_options = optarg;
-      break;    
+      break;
     case 'm':
       g_demo_mode = true;
       break;
@@ -211,16 +203,16 @@ int main(int argc, char *argv[])
   if (g_ofctl_target == EMPTY_STRING) {
     g_ofctl_target = OFCTL_TARGET;
   }
-  
+
   async_grpc_server = new Aca_Async_GRPC_Server();
   async_grpc_server_thread =
-         new std::thread(std::bind(&Aca_Async_GRPC_Server::Run, async_grpc_server));
-  
+          new std::thread(std::bind(&Aca_Async_GRPC_Server::Run, async_grpc_server));
+
   ACA_OVS_Control::get_instance().monitor("br-tun", "resume");
 
   MessageConsumer network_config_consumer(g_broker_list, g_kafka_group_id);
   rc = network_config_consumer.consumeDispatched(g_kafka_topic);
-  
+
   aca_cleanup();
   return rc;
 }
