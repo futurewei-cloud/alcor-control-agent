@@ -24,8 +24,6 @@ using namespace aca_goal_state_handler;
 
 extern string g_rpc_server;
 extern string g_rpc_protocol;
-extern std::atomic_ulong g_total_rpc_call_time;
-extern std::atomic_ulong g_total_rpc_client_time;
 extern std::atomic_ulong g_total_update_GS_time;
 
 namespace aca_comm_manager

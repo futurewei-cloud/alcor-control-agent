@@ -9,6 +9,7 @@ set(SOURCES
     ./dp_abstraction/aca_dataplane_ovs.cpp
     ./net_config/aca_net_config.cpp
     ./ovs/aca_ovs_programmer.cpp
+    ./ovs/aca_router_programmer.cpp
     ./ovs/aca_vlan_manager.cpp
     ./ovs/ovs_control.cpp
     ./ovs/aca_ovs_control.cpp
