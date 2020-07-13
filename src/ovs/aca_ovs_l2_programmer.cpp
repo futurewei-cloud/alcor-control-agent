@@ -17,7 +17,7 @@
 #include "aca_util.h"
 #include "aca_net_config.h"
 #include "aca_vlan_manager.h"
-#include "aca_ovs_programmer.h"
+#include "aca_ovs_l2_programmer.h"
 #include "goalstateprovisioner.grpc.pb.h"
 #include <chrono>
 #include <thread>
@@ -31,7 +31,7 @@ mutex setup_ovs_bridges_mutex;
 
 extern bool g_demo_mode;
 
-namespace aca_ovs_programmer
+namespace aca_ovs_l2_programmer
 {
 static int aca_set_port_vlan_workitem(const string port_name, uint vlan_id)
 {
@@ -74,17 +74,17 @@ static int aca_set_port_vlan_workitem(const string port_name, uint vlan_id)
   return overall_rc;
 }
 
-ACA_OVS_Programmer &ACA_OVS_Programmer::get_instance()
+ACA_OVS_L2_Programmer &ACA_OVS_L2_Programmer::get_instance()
 {
   // Instance is destroyed when program exits.
   // It is instantiated on first use.
-  static ACA_OVS_Programmer instance;
+  static ACA_OVS_L2_Programmer instance;
   return instance;
 }
 
-int ACA_OVS_Programmer::setup_ovs_bridges_if_need()
+int ACA_OVS_L2_Programmer::setup_ovs_bridges_if_need()
 {
-  ACA_LOG_DEBUG("ACA_OVS_Programmer::setup_ovs_bridges_if_need ---> Entering\n");
+  ACA_LOG_DEBUG("ACA_OVS_L2_Programmer::setup_ovs_bridges_if_need ---> Entering\n");
 
   ulong not_care_culminative_time;
   int overall_rc = EXIT_SUCCESS;
@@ -146,17 +146,17 @@ int ACA_OVS_Programmer::setup_ovs_bridges_if_need()
   setup_ovs_bridges_mutex.unlock();
   // -----critical section ends-----
 
-  ACA_LOG_DEBUG("ACA_OVS_Programmer::setup_ovs_bridges_if_need <--- Exiting, overall_rc = %d\n",
+  ACA_LOG_DEBUG("ACA_OVS_L2_Programmer::setup_ovs_bridges_if_need <--- Exiting, overall_rc = %d\n",
                 overall_rc);
 
   return overall_rc;
 }
 
-int ACA_OVS_Programmer::configure_port(const string vpc_id, const string port_name,
-                                       const string virtual_ip, uint tunnel_id,
-                                       ulong &culminative_time)
+int ACA_OVS_L2_Programmer::configure_port(const string vpc_id, const string port_name,
+                                          const string virtual_ip,
+                                          uint tunnel_id, ulong &culminative_time)
 {
-  ACA_LOG_DEBUG("ACA_OVS_Programmer::port_configure ---> Entering\n");
+  ACA_LOG_DEBUG("ACA_OVS_L2_Programmer::port_configure ---> Entering\n");
 
   int overall_rc = EXIT_SUCCESS;
 
@@ -241,17 +241,18 @@ int ACA_OVS_Programmer::configure_port(const string vpc_id, const string port_na
     }
   }
 
-  ACA_LOG_DEBUG("ACA_OVS_Programmer::port_configure <--- Exiting, overall_rc = %d\n", overall_rc);
+  ACA_LOG_DEBUG("ACA_OVS_L2_Programmer::port_configure <--- Exiting, overall_rc = %d\n",
+                overall_rc);
 
   return overall_rc;
 }
 
-int ACA_OVS_Programmer::create_update_neighbor_port(const string vpc_id,
-                                                    alcor::schema::NetworkType network_type,
-                                                    const string remote_ip, uint tunnel_id,
-                                                    ulong &culminative_time)
+int ACA_OVS_L2_Programmer::create_update_neighbor_port(const string vpc_id,
+                                                       alcor::schema::NetworkType network_type,
+                                                       const string remote_ip,
+                                                       uint tunnel_id, ulong &culminative_time)
 {
-  ACA_LOG_DEBUG("ACA_OVS_Programmer::port_neighbor_create_update ---> Entering\n");
+  ACA_LOG_DEBUG("ACA_OVS_L2_Programmer::port_neighbor_create_update ---> Entering\n");
 
   int overall_rc = EXIT_SUCCESS;
 
@@ -307,16 +308,16 @@ int ACA_OVS_Programmer::create_update_neighbor_port(const string vpc_id,
 
   execute_openflow_command(cmd_string, culminative_time, overall_rc);
 
-  ACA_LOG_DEBUG("ACA_OVS_Programmer::port_neighbor_create_update <--- Exiting, overall_rc = %d\n",
+  ACA_LOG_DEBUG("ACA_OVS_L2_Programmer::port_neighbor_create_update <--- Exiting, overall_rc = %d\n",
                 overall_rc);
 
   return overall_rc;
 }
 
-void ACA_OVS_Programmer::execute_ovsdb_command(const std::string cmd_string,
-                                               ulong &culminative_time, int &overall_rc)
+void ACA_OVS_L2_Programmer::execute_ovsdb_command(const std::string cmd_string,
+                                                  ulong &culminative_time, int &overall_rc)
 {
-  ACA_LOG_DEBUG("ACA_OVS_Programmer::execute_ovsdb_command ---> Entering\n");
+  ACA_LOG_DEBUG("ACA_OVS_L2_Programmer::execute_ovsdb_command ---> Entering\n");
 
   auto ovsdb_client_start = chrono::steady_clock::now();
 
@@ -337,13 +338,13 @@ void ACA_OVS_Programmer::execute_ovsdb_command(const std::string cmd_string,
   ACA_LOG_INFO("Elapsed time for ovsdb client call took: %ld nanoseconds or %ld milliseconds. rc: %d\n",
                ovsdb_client_time_total_time, ovsdb_client_time_total_time / 1000000, rc);
 
-  ACA_LOG_DEBUG("ACA_OVS_Programmer::execute_ovsdb_command <--- Exiting, rc = %d\n", rc);
+  ACA_LOG_DEBUG("ACA_OVS_L2_Programmer::execute_ovsdb_command <--- Exiting, rc = %d\n", rc);
 }
 
-void ACA_OVS_Programmer::execute_openflow_command(const std::string cmd_string,
-                                                  ulong &culminative_time, int &overall_rc)
+void ACA_OVS_L2_Programmer::execute_openflow_command(const std::string cmd_string,
+                                                     ulong &culminative_time, int &overall_rc)
 {
-  ACA_LOG_DEBUG("ACA_OVS_Programmer::execute_openflow_command ---> Entering\n");
+  ACA_LOG_DEBUG("ACA_OVS_L2_Programmer::execute_openflow_command ---> Entering\n");
 
   auto openflow_client_start = chrono::steady_clock::now();
 
@@ -365,7 +366,7 @@ void ACA_OVS_Programmer::execute_openflow_command(const std::string cmd_string,
                openflow_client_time_total_time,
                openflow_client_time_total_time / 1000000, rc);
 
-  ACA_LOG_DEBUG("ACA_OVS_Programmer::execute_openflow_command <--- Exiting, rc = %d\n", rc);
+  ACA_LOG_DEBUG("ACA_OVS_L2_Programmer::execute_openflow_command <--- Exiting, rc = %d\n", rc);
 }
 
-} // namespace aca_ovs_programmer
+} // namespace aca_ovs_l2_programmer

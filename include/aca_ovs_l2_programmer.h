@@ -12,18 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef ACA_OVS_PROGRAMMER_H
-#define ACA_OVS_PROGRAMMER_H
+#ifndef ACA_OVS_L2_PROGRAMMER_H
+#define ACA_OVS_L2_PROGRAMMER_H
 
 #include "goalstateprovisioner.grpc.pb.h"
 #include <string>
 
-// OVS programmer implementation class
-namespace aca_ovs_programmer
+// OVS L2 programmer implementation class
+namespace aca_ovs_l2_programmer
 {
-class ACA_OVS_Programmer {
+class ACA_OVS_L2_Programmer {
   public:
-  static ACA_OVS_Programmer &get_instance();
+  static ACA_OVS_L2_Programmer &get_instance();
 
   int setup_ovs_bridges_if_need();
 
@@ -42,12 +42,12 @@ class ACA_OVS_Programmer {
                                 ulong &culminative_time, int &overall_rc);
 
   // compiler will flag the error when below is called.
-  ACA_OVS_Programmer(ACA_OVS_Programmer const &) = delete;
-  void operator=(ACA_OVS_Programmer const &) = delete;
+  ACA_OVS_L2_Programmer(ACA_OVS_L2_Programmer const &) = delete;
+  void operator=(ACA_OVS_L2_Programmer const &) = delete;
 
   private:
-  ACA_OVS_Programmer(){};
-  ~ACA_OVS_Programmer(){};
+  ACA_OVS_L2_Programmer(){};
+  ~ACA_OVS_L2_Programmer(){};
 };
-} // namespace aca_ovs_programmer
-#endif // #ifndef ACA_OVS_PROGRAMMER_H
+} // namespace aca_ovs_l2_programmer
+#endif // #ifndef ACA_OVS_L2_PROGRAMMER_H
