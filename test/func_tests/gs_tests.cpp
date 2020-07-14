@@ -329,7 +329,7 @@ int main(int argc, char *argv[])
   VpcState *new_vpc_states = GoalState_builder.add_vpc_states();
 
   // fill in port state structs
-  new_port_states->set_operation_type(OperationType::FINALIZE);
+  new_port_states->set_operation_type(OperationType::CREATE);
 
   // this will allocate new PortConfiguration, will need to free it later
   PortConfiguration *PortConfiguration_builder = new_port_states->mutable_configuration();
@@ -377,7 +377,7 @@ int main(int argc, char *argv[])
   // fill in the vpc state structs
   new_vpc_states = GoalState_builder.add_vpc_states();
 
-  new_vpc_states->set_operation_type(OperationType::CREATE_UPDATE_SWITCH);
+  new_vpc_states->set_operation_type(OperationType::CREATE);
 
   // this will allocate new VpcConfiguration, will need to free it later
   VpcConfiguration *VpcConiguration_builder = new_vpc_states->mutable_configuration();

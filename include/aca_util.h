@@ -25,6 +25,31 @@
 
 #define cast_to_nanoseconds(x) chrono::duration_cast<chrono::nanoseconds>(x)
 
+static inline const char *aca_get_operation_string(alcor::schema::OperationType operation)
+{
+  switch (operation) {
+  case alcor::schema::OperationType::CREATE:
+    return "CREATE";
+  case alcor::schema::OperationType::UPDATE:
+    return "UPDATE";
+  case alcor::schema::OperationType::GET:
+    return "GET";
+  case alcor::schema::OperationType::DELETE:
+    return "DELETE";
+  case alcor::schema::OperationType::INFO:
+    return "INFO";
+  case alcor::schema::OperationType::NEIGHBOR_CREATE_UPDATE:
+    return "NEIGHBOR_CREATE_UPDATE";
+  case alcor::schema::OperationType::NEIGHBOR_GET:
+    return "NEIGHBOR_GET";
+  case alcor::schema::OperationType::NEIGHBOR_DELETE:
+    return "NEIGHBOR_DELETE";
+
+  default:
+    return "ERROR: unknown operation type!";
+  }
+}
+
 static inline std::string aca_get_network_type_string(alcor::schema::NetworkType network_type)
 {
   switch (network_type) {
@@ -55,37 +80,18 @@ aca_get_outport_name(alcor::schema::NetworkType network_type, std::string remote
   return aca_get_network_type_string(network_type) + "-" + std::to_string(hash_value);
 }
 
-static inline const char *aca_get_operation_string(alcor::schema::OperationType operation)
+static inline const char *aca_get_neighbor_type_string(alcor::schema::NeighborType neighbor_type)
 {
-  switch (operation) {
-  case alcor::schema::OperationType::CREATE:
-    return "CREATE";
-  case alcor::schema::OperationType::UPDATE:
-    return "UPDATE";
-  case alcor::schema::OperationType::GET:
-    return "GET";
-  case alcor::schema::OperationType::DELETE:
-    return "DELETE";
-  case alcor::schema::OperationType::INFO:
-    return "INFO";
-  case alcor::schema::OperationType::NEIGHBOR_CREATE_UPDATE:
-    return "NEIGHBOR_CREATE_UPDATE";
-  case alcor::schema::OperationType::NEIGHBOR_GET:
-    return "NEIGHBOR_GET";
-  case alcor::schema::OperationType::NEIGHBOR_DELETE:
-    return "NEIGHBOR_DELETE";
-  case alcor::schema::OperationType::CREATE_UPDATE_GATEWAY:
-    return "CREATE_UPDATE_GATEWAY";
-
-  case alcor::schema::OperationType::FINALIZE:
-    return "FINALIZE";
-  case alcor::schema::OperationType::CREATE_UPDATE_SWITCH:
-    return "CREATE_UPDATE_SWITCH";
-  case alcor::schema::OperationType::CREATE_UPDATE_ROUTER:
-    return "CREATE_UPDATE_ROUTER";
+  switch (neighbor_type) {
+  case alcor::schema::NeighborType::L2:
+    return "L2";
+  case alcor::schema::NeighborType::L3:
+    return "L3";
+  case alcor::schema::NeighborType::HOST_DVR:
+    return "HOST_DVR";
 
   default:
-    return "ERROR: unknown operation type!";
+    return "ERROR: unknown neighbor type!";
   }
 }
 

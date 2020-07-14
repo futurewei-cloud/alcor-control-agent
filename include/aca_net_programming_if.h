@@ -37,6 +37,16 @@ class ACA_Core_Net_Programming_Interface {
   update_port_state_workitem(const alcor::schema::PortState current_PortState,
                              alcor::schema::GoalState &parsed_struct,
                              alcor::schema::GoalStateOperationReply &gsOperationReply) = 0;
+
+  virtual int
+  update_neighbor_state_workitem(const alcor::schema::NeighborState current_NeighborState,
+                                 alcor::schema::GoalState &parsed_struct,
+                                 alcor::schema::GoalStateOperationReply &gsOperationReply) = 0;
+
+  virtual int
+  update_router_state_workitem(const alcor::schema::RouterState current_RouterState,
+                               alcor::schema::GoalState &parsed_struct,
+                               alcor::schema::GoalStateOperationReply &gsOperationReply) = 0;
 };
 } // namespace aca_net_programming_if
 #endif // #ifndef ACA_NET_PROGRAMMING_IF_H
