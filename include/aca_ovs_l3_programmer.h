@@ -16,7 +16,18 @@
 #define ACA_OVS_L3_PROGRAMMER_H
 
 #include "goalstateprovisioner.grpc.pb.h"
+#include <unordered_map>
 #include <string>
+
+using namespace std;
+
+struct subnet_table_entry {
+  alcor::schema::NetworkType network_type;
+  string cidr;
+  uint tunnel_id;
+  string gateway_ip;
+  string gateway_mac;
+};
 
 // OVS L3 programmer implementation class
 namespace aca_ovs_l3_programmer
@@ -28,16 +39,16 @@ class ACA_OVS_L3_Programmer {
   // [James action] - also need to add the corresponding update and delete operations
   // at least the prototype but ideally the full implementation
 
-  int create_router(const std::string vpc_id, const std::string port_name,
-                    const std::string virtual_ip, uint tunnel_id, ulong &culminative_time);
+  int create_router(const string host_dvr_mac,
+                    unordered_map<string, subnet_table_entry> subnet_table,
+                    ulong &culminative_time);
 
-  int create_neighbor_host_dvr(const std::string vpc_id, alcor::schema::NetworkType network_type,
-                               const std::string remote_ip, uint tunnel_id,
+  int create_neighbor_host_dvr(const string vpc_id, alcor::schema::NetworkType network_type,
+                               const string remote_ip, uint tunnel_id,
                                ulong &culminative_time);
 
-  int create_neighbor_l3(const std::string vpc_id, alcor::schema::NetworkType network_type,
-                         const std::string remote_ip, uint tunnel_id,
-                         ulong &culminative_time);
+  int create_neighbor_l3(const string vpc_id, alcor::schema::NetworkType network_type,
+                         const string remote_ip, uint tunnel_id, ulong &culminative_time);
 
   // compiler will flag the error when below is called.
   ACA_OVS_L3_Programmer(ACA_OVS_L3_Programmer const &) = delete;

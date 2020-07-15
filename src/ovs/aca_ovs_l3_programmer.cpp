@@ -37,10 +37,9 @@ ACA_OVS_L3_Programmer &ACA_OVS_L3_Programmer::get_instance()
   return instance;
 }
 
-// [James action] - close down on the input param
-int ACA_OVS_L3_Programmer::create_router(const string vpc_id, const string port_name,
-                                         const string virtual_ip,
-                                         uint tunnel_id, ulong &culminative_time)
+int ACA_OVS_L3_Programmer::create_router(const std::string host_dvr_mac,
+                                         unordered_map<std::string, subnet_table_entry> subnet_table,
+                                         ulong &culminative_time)
 {
   ACA_LOG_DEBUG("ACA_OVS_L3_Programmer::create_router ---> Entering\n");
 
