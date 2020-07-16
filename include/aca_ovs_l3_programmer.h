@@ -44,8 +44,8 @@ class ACA_OVS_L3_Programmer {
                     ulong &culminative_time);
 
   int create_neighbor_host_dvr(const string vpc_id, alcor::schema::NetworkType network_type,
-                               const string remote_ip, uint tunnel_id,
-                               ulong &culminative_time);
+                               const string host_dvr_mac, const string gateway_mac,
+                               uint tunnel_id, ulong &culminative_time);
 
   int create_neighbor_l3(const string vpc_id, alcor::schema::NetworkType network_type,
                          const string remote_ip, uint tunnel_id, ulong &culminative_time);

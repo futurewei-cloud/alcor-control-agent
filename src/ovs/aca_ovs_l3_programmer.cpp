@@ -37,7 +37,7 @@ ACA_OVS_L3_Programmer &ACA_OVS_L3_Programmer::get_instance()
   return instance;
 }
 
-int ACA_OVS_L3_Programmer::create_router(const std::string host_dvr_mac,
+int ACA_OVS_L3_Programmer::create_router(const string host_dvr_mac,
                                          unordered_map<std::string, subnet_table_entry> subnet_table,
                                          ulong &culminative_time)
 {
@@ -85,18 +85,23 @@ int ACA_OVS_L3_Programmer::create_router(const std::string host_dvr_mac,
 }
 
 // this function is to teach this compute host about the neighbor host's dvr mac
-// so that we can problem the rule to restore it back to the VM's gateway mac
-// [James action] - close down on the input param
+// so that we can program the rule to restore it back to the VM's gateway mac
 int ACA_OVS_L3_Programmer::create_neighbor_host_dvr(const string vpc_id,
                                                     alcor::schema::NetworkType network_type,
-                                                    const string remote_ip, uint tunnel_id,
-                                                    ulong &culminative_time)
+                                                    const string host_dvr_mac,
+                                                    const string gateway_mac,
+                                                    uint tunnel_id, ulong &culminative_time)
 {
   ACA_LOG_DEBUG("ACA_OVS_L3_Programmer::create_neighbor_host_dvr ---> Entering\n");
 
   int overall_rc = EXIT_SUCCESS;
 
   // the rule will look like:
+
+  // we can get the internal vlan id from the vlan manager using vpc_id as input
+
+  // is the below rule good enough? need to check if other plumbing is needed to handle
+  // the case that this tunnel is not known to the compute host yet
 
   // ovs-ofctl add-flow br-int "table=0,priority=25,dl_vlan=1,dl_src=02:42:ac:11:00:03, actions=mod_dl_src:02:42:ac:11:00:01 output:NORMAL"
 

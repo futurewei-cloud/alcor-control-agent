@@ -360,7 +360,7 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
                                                       GoalState &parsed_struct,
                                                       GoalStateOperationReply &gsOperationReply)
 {
-  int overall_rc;
+  int rc, overall_rc;
   struct sockaddr_in sa;
   //string found_cidr;
   // size_t slash_pos;
@@ -370,6 +370,7 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
   //string found_prefix_len;
   NetworkType found_network_type;
   uint found_tunnel_id;
+  string found_gateway_mac;
   bool subnet_info_found = false;
   //string port_cidr;
   ulong culminative_dataplane_programming_time = 0;
@@ -445,10 +446,6 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
                         current_NeighborConfiguration.fixed_ips(0).subnet_id().c_str());
           overall_rc = -EXIT_FAILURE;
         } else {
-          overall_rc = EXIT_SUCCESS;
-        }
-
-        if (overall_rc == EXIT_SUCCESS) {
           ACA_LOG_DEBUG(
                   "Neighbor Operation:%s: neighbor_type:%s, project_id:%s, vpc_id:%s, network_type:%d, virtual_ip_address:%s, "
                   "virtual_mac_address:%s, neighbor_host_ip_address:%s, tunnel_id:%d\n ",
@@ -479,8 +476,90 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
       break;
 
     case NeighborType::HOST_DVR:
+      try {
+        if (current_NeighborConfiguration.host_dvr_mac_addresses_size() < 1) {
+          throw std::invalid_argument("host_dvr_mac_addresses_size is less than 1");
+        }
 
-      // TBD
+        // assume EXIT_SUCCESS unless we run into error
+        overall_rc = EXIT_SUCCESS;
+
+        for (int i = 0;
+             i < current_NeighborConfiguration.host_dvr_mac_addresses_size(); i++) {
+          string current_host_dvr_mac_address =
+                  current_NeighborConfiguration.host_dvr_mac_addresses(i).host_dvr_mac_address();
+
+          // the below will throw invalid_argument exceptions if mac string is invalid
+          aca_validate_mac_address(current_host_dvr_mac_address.c_str());
+
+          string current_host_dvr_subnet_id =
+                  current_NeighborConfiguration.host_dvr_mac_addresses(i).subnet_id();
+
+          // Look up the subnet configuration to query for additional info
+          for (int j = 0; j < parsed_struct.subnet_states_size(); j++) {
+            SubnetConfiguration current_SubnetConfiguration =
+                    parsed_struct.subnet_states(j).configuration();
+
+            ACA_LOG_DEBUG("current_SubnetConfiguration subnet ID: %s.\n",
+                          current_SubnetConfiguration.id().c_str());
+
+            if (parsed_struct.subnet_states(j).operation_type() == OperationType::INFO) {
+              if (current_SubnetConfiguration.id() == current_host_dvr_subnet_id) {
+                found_network_type = current_SubnetConfiguration.network_type();
+
+                found_tunnel_id = current_SubnetConfiguration.tunnel_id();
+                aca_validate_tunnel_id(found_tunnel_id);
+
+                found_gateway_mac = current_SubnetConfiguration.gateway().mac_address();
+                // the below will throw invalid_argument exceptions if mac string is invalid
+                aca_validate_mac_address(found_gateway_mac.c_str());
+
+                subnet_info_found = true;
+                break;
+              }
+            }
+          }
+
+          if (!subnet_info_found) {
+            ACA_LOG_ERROR("Not able to find the info for neighbor with subnet ID: %s.\n",
+                          current_host_dvr_subnet_id.c_str());
+            overall_rc = -EXIT_FAILURE;
+          } else {
+            ACA_LOG_DEBUG(
+                    "Neighbor Operation:%s: neighbor_type:%s, project_id:%s, vpc_id:%s, network_type:%d, host_dvr_mac:%s, "
+                    "gateway_mac:%s, tunnel_id:%d\n",
+                    aca_get_operation_string(current_NeighborState.operation_type()),
+                    aca_get_neighbor_type_string(current_NeighborConfiguration.neighbor_type()),
+                    current_NeighborConfiguration.project_id().c_str(),
+                    current_NeighborConfiguration.vpc_id().c_str(),
+                    found_network_type, current_host_dvr_mac_address.c_str(),
+                    found_gateway_mac.c_str(), found_tunnel_id);
+
+            rc = ACA_OVS_L3_Programmer::get_instance().create_neighbor_host_dvr(
+                    current_NeighborConfiguration.vpc_id(), found_network_type,
+                    current_host_dvr_mac_address, found_gateway_mac,
+                    found_tunnel_id, culminative_dataplane_programming_time);
+
+            if (rc != EXIT_SUCCESS) {
+              ACA_LOG_ERROR("ACA_OVS_L3_Programmer::create_neighbor_host_dvr returned failure rc=%d\n",
+                            rc);
+              overall_rc = rc;
+            }
+          }
+        }
+
+      } catch (const std::invalid_argument &e) {
+        ACA_LOG_ERROR("Invalid argument exception caught while parsing neighbor configuration, message: %s.\n",
+                      e.what());
+        overall_rc = -EINVAL;
+      } catch (const std::exception &e) {
+        ACA_LOG_ERROR("Exception caught while parsing neighbor configuration, message: %s.\n",
+                      e.what());
+        overall_rc = -EFAULT;
+      } catch (...) {
+        ACA_LOG_ERROR("Unknown exception caught while parsing neighbor configuration, rethrowing.\n");
+        throw; // rethrowing
+      }
       break;
 
     default:
