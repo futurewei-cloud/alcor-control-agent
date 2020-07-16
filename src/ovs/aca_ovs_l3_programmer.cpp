@@ -111,27 +111,23 @@ int ACA_OVS_L3_Programmer::create_neighbor_host_dvr(const string vpc_id,
   return overall_rc;
 }
 
-// [James action] - close down on the input param
 int ACA_OVS_L3_Programmer::create_neighbor_l3(const string vpc_id,
                                               alcor::schema::NetworkType network_type,
-                                              const string remote_ip, uint tunnel_id,
-                                              ulong &culminative_time)
+                                              const string virtual_ip, const string virtual_mac,
+                                              uint tunnel_id, ulong &culminative_time)
 {
   ACA_LOG_DEBUG("ACA_OVS_L3_Programmer::create_neighbor_l3 ---> Entering\n");
 
   int overall_rc = EXIT_SUCCESS;
 
-  // with DVR, a cross subnet packet will be routed to the same subnet usign Alcor DVR.
+  // with DVR, a cross subnet packet will be routed to the destination subnet using Alcor DVR.
   // that means a L3 neighbor will become a L2 neighbor
 
-  // we will need teach this compute host about L2 neighbor info in case if it is not known already
+  // the goal state parsing logic already took care of that
   // we can consider doing this L2 neighbor creation as an on demand rule to support scale
 
   // when we are ready to put the DVR rule as on demand, we should put the L2 neighbor rule as
   // on demand also
-
-  // the code here can simply call the existing code to create L2 neighbor, that is:
-  // ACA_OVS_Programmer::get_instance().create_update_neighbor_port
 
   // for the first implementation, we will go ahead and program the on demand rules DVR here
   // in the future, the programming of the on demand rule will be triggered by the first packet
