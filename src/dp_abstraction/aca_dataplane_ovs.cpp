@@ -394,16 +394,8 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
   switch (current_NeighborState.operation_type()) {
   case OperationType::CREATE:
 
-    switch (current_NeighborConfiguration.neighbor_type()) {
-    case NeighborType::L3:
-
-      // TBD
-
-      // intentionally fallthrough the L3 case into L2 because
-      // the L3 neighbor will become L2 neighbor after routing
-      [[fallthrough]];
-
-    case NeighborType::L2:
+    if (current_NeighborConfiguration.neighbor_type() == NeighborType::L2 ||
+        current_NeighborConfiguration.neighbor_type() == NeighborType::L3) {
       try {
         assert(current_NeighborConfiguration.fixed_ips_size() == 1);
         virtual_ip_address = current_NeighborConfiguration.fixed_ips(0).ip_address();
@@ -461,11 +453,23 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
                   virtual_ip_address.c_str(), virtual_mac_address.c_str(),
                   host_ip_address.c_str(), found_tunnel_id);
 
-          overall_rc = ACA_OVS_L2_Programmer::get_instance().create_update_neighbor_port(
+          rc = ACA_OVS_L2_Programmer::get_instance().create_update_neighbor_port(
                   current_NeighborConfiguration.vpc_id(), found_network_type, host_ip_address,
                   found_tunnel_id, culminative_dataplane_programming_time);
-        }
 
+          if (rc != EXIT_SUCCESS) {
+            overall_rc = rc;
+          } else {
+            {
+              if (current_NeighborConfiguration.neighbor_type() == NeighborType::L3) {
+                overall_rc = ACA_OVS_L3_Programmer::get_instance().create_neighbor_l3(
+                        current_NeighborConfiguration.vpc_id(),
+                        found_network_type, host_ip_address, virtual_mac_address,
+                        found_tunnel_id, culminative_dataplane_programming_time);
+              }
+            }
+          }
+        }
       } catch (const std::invalid_argument &e) {
         ACA_LOG_ERROR("Invalid argument exception caught while parsing neighbor configuration, message: %s.\n",
                       e.what());
@@ -479,8 +483,7 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
         throw; // rethrowing
       }
       break;
-
-    case NeighborType::HOST_DVR:
+    } else { // (current_NeighborConfiguration.neighbor_type()==NeighborType::HOST_DVR)
       try {
         if (current_NeighborConfiguration.host_dvr_mac_addresses_size() < 1) {
           throw std::invalid_argument("host_dvr_mac_addresses_size is less than 1");
@@ -565,12 +568,6 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
         ACA_LOG_ERROR("Unknown exception caught while parsing neighbor configuration, rethrowing.\n");
         throw; // rethrowing
       }
-      break;
-
-    default:
-      ACA_LOG_ERROR("Invalid neighbor type %d\n",
-                    current_NeighborConfiguration.neighbor_type());
-      overall_rc = -EXIT_FAILURE;
       break;
     }
 
