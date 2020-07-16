@@ -48,7 +48,8 @@ class ACA_OVS_L3_Programmer {
                                uint tunnel_id, ulong &culminative_time);
 
   int create_neighbor_l3(const string vpc_id, alcor::schema::NetworkType network_type,
-                         const string remote_ip, uint tunnel_id, ulong &culminative_time);
+                         const string virtual_ip, const string virtual_mac,
+                         uint tunnel_id, ulong &culminative_time);
 
   // compiler will flag the error when below is called.
   ACA_OVS_L3_Programmer(ACA_OVS_L3_Programmer const &) = delete;
