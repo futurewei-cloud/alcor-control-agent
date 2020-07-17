@@ -14,6 +14,7 @@
 
 #include "aca_log.h"
 #include "aca_util.h"
+#include "aca_ovs_control.h"
 #include "aca_message_consumer.h"
 #include "aca_async_grpc_server.h"
 #include "goalstateprovisioner.grpc.pb.h"
@@ -24,6 +25,7 @@
 
 using messagemanager::MessageConsumer;
 using std::string;
+using aca_ovs_control::ACA_OVS_Control;
 
 // Defines
 #define ACALOGNAME "AlcorControlAgent"
@@ -33,6 +35,8 @@ static char KAFKA_TOPIC[] = "Host-ts-1";
 static char KAFKA_GROUP_ID[] = "test-group-id";
 static char LOCALHOST[] = "localhost";
 static char UDP_PROTOCOL[] = "udp";
+static char OFCTL_COMMAND[] = "monitor";
+static char OFCTL_TARGET[] = "br-int";
 
 using namespace std;
 
@@ -45,6 +49,9 @@ string g_kafka_topic = EMPTY_STRING;
 string g_kafka_group_id = EMPTY_STRING;
 string g_rpc_server = EMPTY_STRING;
 string g_rpc_protocol = EMPTY_STRING;
+string g_ofctl_command = EMPTY_STRING;
+string g_ofctl_target = EMPTY_STRING;
+string g_ofctl_options = EMPTY_STRING;
 std::atomic_ulong g_total_rpc_call_time(0);
 std::atomic_ulong g_total_rpc_client_time(0);
 std::atomic_ulong g_total_network_configuration_time(0);
@@ -133,7 +140,7 @@ int main(int argc, char *argv[])
   signal(SIGINT, aca_signal_handler);
   signal(SIGTERM, aca_signal_handler);
 
-  while ((option = getopt(argc, argv, "b:h:g:s:p:md")) != -1) {
+  while ((option = getopt(argc, argv, "b:h:g:s:p:c:t:o:md")) != -1) {
     switch (option) {
     case 'b':
       g_broker_list = optarg;
@@ -150,6 +157,15 @@ int main(int argc, char *argv[])
     case 'p':
       g_rpc_protocol = optarg;
       break;
+    case 'c':
+      g_ofctl_command = optarg;
+      break;
+    case 't':
+      g_ofctl_target = optarg;
+      break;  
+    case 'o':
+      g_ofctl_options = optarg;
+      break;    
     case 'm':
       g_demo_mode = true;
       break;
@@ -164,6 +180,8 @@ int main(int argc, char *argv[])
               "\t\t[-g kafka group id]\n"
               "\t\t[-s transitd RPC server]\n"
               "\t\t[-p transitd RPC protocol]\n"
+              "\t\t[-c ofctl command]\n"
+              "\t\t[-t ofctl target]\n"
               "\t\t[-m enable demo mode]\n"
               "\t\t[-d enable debug mode]\n",
               argv[0]);
@@ -187,14 +205,22 @@ int main(int argc, char *argv[])
   if (g_rpc_protocol == EMPTY_STRING) {
     g_rpc_protocol = UDP_PROTOCOL;
   }
-
+  if (g_ofctl_command == EMPTY_STRING) {
+    g_ofctl_command = OFCTL_COMMAND;
+  }
+  if (g_ofctl_target == EMPTY_STRING) {
+    g_ofctl_target = OFCTL_TARGET;
+  }
+  
   async_grpc_server = new Aca_Async_GRPC_Server();
   async_grpc_server_thread =
-          new std::thread(std::bind(&Aca_Async_GRPC_Server::Run, async_grpc_server));
+         new std::thread(std::bind(&Aca_Async_GRPC_Server::Run, async_grpc_server));
+  
+  ACA_OVS_Control::get_instance().monitor("br-tun", "resume");
 
   MessageConsumer network_config_consumer(g_broker_list, g_kafka_group_id);
   rc = network_config_consumer.consumeDispatched(g_kafka_topic);
-
+  
   aca_cleanup();
   return rc;
 }

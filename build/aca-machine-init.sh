@@ -1,5 +1,6 @@
-FROM ubuntu:18.04
-RUN echo "--- installing mizar dependencies ---" && \
+#!/bin/bash
+# TODO: remove the unneeded dependencies
+echo "1--- installing mizar dependencies ---" && \
     apt-get update -y && apt-get install -y \
     rpcbind \
     rsyslog \
@@ -7,7 +8,7 @@ RUN echo "--- installing mizar dependencies ---" && \
     clang-7 \
     llvm-7 \
     libelf-dev \
-    #openvswitch-switch \
+    # openvswitch-switch \
     iproute2  \
     net-tools \
     iputils-ping \
@@ -17,17 +18,12 @@ RUN echo "--- installing mizar dependencies ---" && \
     python3-pip \
     netcat \
     libcmocka-dev \
-    lcov \
-    git \
-    autoconf \
-    automake \
-    dh-autoreconf \
-    libtool
-RUN pip3 install httpserver netaddr
+    lcov
+pip3 install httpserver netaddr
 
-ENV OVS_RELEASE_TAG branch-2.12
-RUN echo "--- installing openvswitch dependancies ---" && \
-    git clone -b ${OVS_RELEASE_TAG} https://github.com/openvswitch/ovs.git /var/local/git/openvswitch && \
+OVS_RELEASE_TAG="branch-2.12"
+echo "1.5--- installing openvswitch dependancies ---" && \
+    git clone -b $OVS_RELEASE_TAG https://github.com/openvswitch/ovs.git /var/local/git/openvswitch && \
     cd /var/local/git/openvswitch && \    
     ./boot.sh && \
     ./configure --prefix=/usr/local --localstatedir=/var --sysconfdir=/etc --enable-shared && \
@@ -36,16 +32,39 @@ RUN echo "--- installing openvswitch dependancies ---" && \
     cp /var/local/git/openvswitch/lib/vconn-provider.h /usr/local/include/openvswitch/vconn-provider.h && \
     rm -rf \var\local\git\openvswitch
 
-RUN echo "--- installing grpc dependencies ---" && \
-    apt-get install -y \
+echo "2--- installing librdkafka ---" && \
+    apt-get update -y && apt-get install -y --no-install-recommends\
+    librdkafka-dev \
+    doxygen \
+    libssl-dev \
+    zlib1g-dev \
+    libboost-program-options-dev \
+    libboost-all-dev \
+    && apt-get clean
+
+echo "3--- installing cppkafka ---" && \
+    apt-get update -y && apt-get install -y cmake 
+    git clone https://github.com/mfontanini/cppkafka.git /var/local/git/cppkafka && \
+    cd /var/local/git/cppkafka && \
+    mkdir build && \
+    cd build && \
+    cmake .. && \
+    make && \
+    make install && \
+    ldconfig && \
+    rm -rf /var/local/git/cppkafka
+
+echo "4--- installing grpc dependencies ---" && \
+    apt-get update -y && apt-get install -y \
     cmake libssl-dev \
     autoconf git pkg-config \
     automake libtool make g++ unzip 
+    cd ~
 
 # installing grpc and its dependencies
-ENV GRPC_RELEASE_TAG v1.24.x
-RUN echo "--- cloning grpc repo ---" && \
-    git clone -b ${GRPC_RELEASE_TAG} https://github.com/grpc/grpc /var/local/git/grpc && \
+GRPC_RELEASE_TAG="v1.24.x"
+echo "5--- cloning grpc repo ---" && \
+    git clone -b $GRPC_RELEASE_TAG https://github.com/grpc/grpc /var/local/git/grpc && \
     cd /var/local/git/grpc && \
     git submodule update --init && \
     echo "--- installing c-ares ---" && \
@@ -79,24 +98,6 @@ RUN echo "--- cloning grpc repo ---" && \
     make install && \
     rm -rf /var/local/git/grpc
 
-# this layer is consuming about 406MB, can try to optimize 
-RUN echo "--- installing librdkafka ---" && \
-    apt-get install -y --no-install-recommends\
-    librdkafka-dev \
-    doxygen \
-    libssl-dev \
-    zlib1g-dev \
-    libboost-program-options-dev \
-    libboost-all-dev \
-    && apt-get clean
-
-RUN echo "--- installing cppkafka ---" && \
-    git clone https://github.com/mfontanini/cppkafka.git /var/local/git/cppkafka && \
-    cd /var/local/git/cppkafka && \
-    mkdir build && \
-    cd build && \
-    cmake .. && \
-    make && \
-    make install && \
-    ldconfig && \
-    rm -rf /var/local/git/cppkafka
+echo "6--- "
+# building alcor-control-agent
+cd ~/alcor-control-agent && cmake . && make
