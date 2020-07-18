@@ -25,8 +25,8 @@
 
 using namespace std;
 using namespace alcor::schema;
-using aca_ovs_l2_programmer::ACA_OVS_L2_Programmer;
-using aca_ovs_l3_programmer::ACA_OVS_L3_Programmer;
+using namespace aca_ovs_l2_programmer;
+using namespace aca_ovs_l3_programmer;
 
 static void aca_validate_mac_address(const char *mac_string)
 {
@@ -367,17 +367,13 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
 {
   int rc, overall_rc;
   struct sockaddr_in sa;
-  //string found_cidr;
-  // size_t slash_pos;
   string virtual_ip_address;
   string virtual_mac_address;
   string host_ip_address;
-  //string found_prefix_len;
   NetworkType found_network_type;
   uint found_tunnel_id;
   string found_gateway_mac;
   bool subnet_info_found = false;
-  //string port_cidr;
   ulong culminative_dataplane_programming_time = 0;
   ulong culminative_network_configuration_time = 0;
 
@@ -680,6 +676,7 @@ int ACA_Dataplane_OVS::update_router_state_workitem(RouterState current_RouterSt
 
               // populate the subnet table entry and then add that to new_subnet_table
               subnet_table_entry new_subnet_table_entry;
+              new_subnet_table_entry.vpc_id = current_SubnetConfiguration.vpc_id();
               new_subnet_table_entry.network_type =
                       current_SubnetConfiguration.network_type();
               new_subnet_table_entry.cidr = found_cidr;
@@ -715,7 +712,8 @@ int ACA_Dataplane_OVS::update_router_state_workitem(RouterState current_RouterSt
         }
 
         ACA_OVS_L3_Programmer::get_instance().create_router(
-                host_dvr_mac, new_subnet_table, culminative_dataplane_programming_time);
+                current_RouterConfiguration.id(), host_dvr_mac,
+                new_subnet_table, culminative_dataplane_programming_time);
       }
 
     } catch (const std::invalid_argument &e) {

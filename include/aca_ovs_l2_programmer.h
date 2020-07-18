@@ -18,6 +18,10 @@
 #include "goalstateprovisioner.grpc.pb.h"
 #include <string>
 
+#define PRIORITY_HIGH 50
+#define PRIORITY_MID 25
+#define PRIORITY_LOW 1
+
 // OVS L2 programmer implementation class
 namespace aca_ovs_l2_programmer
 {

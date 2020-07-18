@@ -297,13 +297,13 @@ int ACA_OVS_L2_Programmer::create_update_neighbor_port(const string vpc_id,
     throw std::runtime_error("vpc_id entry not find in vpc_table");
   }
 
-  cmd_string = "add-flow br-tun \"table=22, priority=1,dl_vlan=" + to_string(internal_vlan_id) +
+  cmd_string = "add-flow br-tun \"table=22,priority=1,dl_vlan=" + to_string(internal_vlan_id) +
                " actions=strip_vlan,load:" + to_string(tunnel_id) +
                "->NXM_NX_TUN_ID[],output:\"" + full_outport_list + "\"\"";
 
   execute_openflow_command(cmd_string, culminative_time, overall_rc);
 
-  cmd_string = "add-flow br-tun \"table=0, priority=1,in_port=\"" +
+  cmd_string = "add-flow br-tun \"table=0,priority=1,in_port=\"" +
                outport_name + "\" actions=resubmit(,4)\"";
 
   execute_openflow_command(cmd_string, culminative_time, overall_rc);
