@@ -16,13 +16,17 @@
 #include "aca_util.h"
 #include "aca_net_config.h"
 #include "aca_vlan_manager.h"
+#include "aca_ovs_l2_programmer.h"
 #include "aca_ovs_l3_programmer.h"
-// #include "goalstateprovisioner.grpc.pb.h"
-// #include <chrono>
+#include "goalstateprovisioner.grpc.pb.h"
+#include <unordered_map>
+#include <mutex>
+#include <chrono>
 #include <errno.h>
 
 using namespace std;
 using namespace aca_vlan_manager;
+using namespace aca_ovs_l2_programmer;
 
 // some mutex for reading and writing it internal data
 // mutex setup_ovs_bridges_mutex;
@@ -37,7 +41,7 @@ ACA_OVS_L3_Programmer &ACA_OVS_L3_Programmer::get_instance()
   return instance;
 }
 
-int ACA_OVS_L3_Programmer::create_router(const string host_dvr_mac,
+int ACA_OVS_L3_Programmer::create_router(const string host_dvr_mac, const string router_id,
                                          unordered_map<std::string, subnet_table_entry> subnet_table,
                                          ulong &culminative_time)
 {
@@ -45,23 +49,44 @@ int ACA_OVS_L3_Programmer::create_router(const string host_dvr_mac,
 
   int overall_rc = EXIT_SUCCESS;
 
-  // check the input paremeters
-  // if (vpc_id.empty()) {
-  //   throw std::invalid_argument("vpc_id is empty");
-  // }
+  if (host_dvr_mac.empty()) {
+    throw std::invalid_argument("host_dvr_mac is empty");
+  }
 
-  // we will likely need the below
-  // overall_rc = setup_ovs_bridges_if_need();
+  // if _host_dvr_mac is not set yet, set it
+  if (_host_dvr_mac.empty()) {
+    _host_dvr_mac = host_dvr_mac;
+  }
+  // else if it is set, and same as the input
+  else if (_host_dvr_mac != host_dvr_mac) {
+    throw std::invalid_argument("Trying to set a different host dvr mac, old: " + _host_dvr_mac +
+                                "new:" + host_dvr_mac);
+  }
+  // do nothing for (_host_dvr_mac == host_dvr_mac)
 
-  // if (overall_rc != EXIT_SUCCESS) {
-  //   throw std::runtime_error("Invalid environment with br-int and br-tun");
-  // }
+  if (router_id.empty()) {
+    throw std::invalid_argument("router_id is empty");
+  }
+
+  overall_rc = ACA_OVS_L2_Programmer::get_instance().setup_ovs_bridges_if_need();
+
+  if (overall_rc != EXIT_SUCCESS) {
+    throw std::runtime_error("Invalid environment with br-int and br-tun");
+  }
+
+  // -----critical section starts-----
+  _routers_table_mutex.lock();
+  if (_routers_table.find(router_id) == _routers_table.end()) {
+    _routers_table.emplace(router_id, subnet_table);
+  }
+  _routers_table_mutex.unlock();
+  // -----critical section ends-----
 
   // [James action] - create a new class for this router object
   // create the internal router object, store the needed info including
   // gateway port ip and mac into the object
 
-  // the rule will look like:
+  // the rule will look like for each gateway port in the subnet:
 
   // Program Arp and ICMP responder for the gateway port 10.0.0.1:
 
@@ -94,7 +119,29 @@ int ACA_OVS_L3_Programmer::create_neighbor_host_dvr(const string vpc_id,
 {
   ACA_LOG_DEBUG("ACA_OVS_L3_Programmer::create_neighbor_host_dvr ---> Entering\n");
 
-  int overall_rc = EXIT_SUCCESS;
+  int overall_rc;
+
+  if (vpc_id.empty()) {
+    throw std::invalid_argument("vpc_id is empty");
+  }
+
+  if (host_dvr_mac.empty()) {
+    throw std::invalid_argument("host_dvr_mac is empty");
+  }
+
+  if (gateway_mac.empty()) {
+    throw std::invalid_argument("gateway_mac is empty");
+  }
+
+  if (tunnel_id == 0) {
+    throw std::invalid_argument("tunnel_id is 0");
+  }
+
+  overall_rc = ACA_OVS_L2_Programmer::get_instance().setup_ovs_bridges_if_need();
+
+  if (overall_rc != EXIT_SUCCESS) {
+    throw std::runtime_error("Invalid environment with br-int and br-tun");
+  }
 
   // the rule will look like:
 
@@ -102,6 +149,16 @@ int ACA_OVS_L3_Programmer::create_neighbor_host_dvr(const string vpc_id,
 
   // is the below rule good enough? need to check if other plumbing is needed to handle
   // the case that this tunnel is not known to the compute host yet
+
+  // we have: source host DVR mac
+  //
+
+  // cmd_string = "add-flow br-int \"table=0,priority=" + PRIORITY_MID +
+  //              ",dl_vlan=" + to_string(internal_vlan_id) +
+  //              " actions=strip_vlan,load:" + to_string(tunnel_id) +
+  //              "->NXM_NX_TUN_ID[],output:\"" + full_outport_list + "\"\"";
+
+  // execute_openflow_command(cmd_string, culminative_time, overall_rc);
 
   // ovs-ofctl add-flow br-int "table=0,priority=25,dl_vlan=1,dl_src=02:42:ac:11:00:03, actions=mod_dl_src:02:42:ac:11:00:01 output:NORMAL"
 
@@ -119,6 +176,28 @@ int ACA_OVS_L3_Programmer::create_neighbor_l3(const string vpc_id,
   ACA_LOG_DEBUG("ACA_OVS_L3_Programmer::create_neighbor_l3 ---> Entering\n");
 
   int overall_rc = EXIT_SUCCESS;
+
+  if (vpc_id.empty()) {
+    throw std::invalid_argument("vpc_id is empty");
+  }
+
+  if (virtual_ip.empty()) {
+    throw std::invalid_argument("virtual_ip is empty");
+  }
+
+  if (virtual_mac.empty()) {
+    throw std::invalid_argument("virtual_mac is empty");
+  }
+
+  if (tunnel_id == 0) {
+    throw std::invalid_argument("tunnel_id is 0");
+  }
+
+  overall_rc = ACA_OVS_L2_Programmer::get_instance().setup_ovs_bridges_if_need();
+
+  if (overall_rc != EXIT_SUCCESS) {
+    throw std::runtime_error("Invalid environment with br-int and br-tun");
+  }
 
   // with DVR, a cross subnet packet will be routed to the destination subnet using Alcor DVR.
   // that means a L3 neighbor will become a L2 neighbor

@@ -21,17 +21,6 @@ echo "1--- installing mizar dependencies ---" && \
     lcov
 pip3 install httpserver netaddr
 
-OVS_RELEASE_TAG="branch-2.12"
-echo "1.5--- installing openvswitch dependancies ---" && \
-    git clone -b $OVS_RELEASE_TAG https://github.com/openvswitch/ovs.git /var/local/git/openvswitch && \
-    cd /var/local/git/openvswitch && \    
-    ./boot.sh && \
-    ./configure --prefix=/usr/local --localstatedir=/var --sysconfdir=/etc --enable-shared && \
-    make && \
-    make install && \
-    cp /var/local/git/openvswitch/lib/vconn-provider.h /usr/local/include/openvswitch/vconn-provider.h && \
-    rm -rf \var\local\git\openvswitch
-
 echo "2--- installing librdkafka ---" && \
     apt-get update -y && apt-get install -y --no-install-recommends\
     librdkafka-dev \
@@ -53,13 +42,13 @@ echo "3--- installing cppkafka ---" && \
     make install && \
     ldconfig && \
     rm -rf /var/local/git/cppkafka
+    cd ~
 
 echo "4--- installing grpc dependencies ---" && \
     apt-get update -y && apt-get install -y \
     cmake libssl-dev \
     autoconf git pkg-config \
     automake libtool make g++ unzip 
-    cd ~
 
 # installing grpc and its dependencies
 GRPC_RELEASE_TAG="v1.24.x"
@@ -96,8 +85,22 @@ echo "5--- cloning grpc repo ---" && \
     cmake -Dgtest_build_samples=ON -DBUILD_SHARED_LIBS=ON . && \
     make && \
     make install && \
-    rm -rf /var/local/git/grpc
+    rm -rf /var/local/git/grpc && \
+    cd ~
 
-echo "6--- "
-# building alcor-control-agent
+OVS_RELEASE_TAG="branch-2.12"
+echo "6--- installing openvswitch dependancies ---" && \
+    git clone -b $OVS_RELEASE_TAG https://github.com/openvswitch/ovs.git /var/local/git/openvswitch && \
+    cd /var/local/git/openvswitch && \
+    ./boot.sh && \
+    ./configure --prefix=/usr/local --localstatedir=/var --sysconfdir=/etc --enable-shared && \
+    make && \
+    make install && \
+    cp /var/local/git/openvswitch/lib/vconn-provider.h /usr/local/include/openvswitch/vconn-provider.h && \
+    cd /usr/local/bin && \
+    rm ov* && \
+    rm -rf \var\local\git\openvswitch
+    cd ~
+
+echo "7--- building alcor-control-agent"
 cd ~/alcor-control-agent && cmake . && make

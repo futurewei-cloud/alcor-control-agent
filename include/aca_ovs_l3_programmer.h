@@ -21,7 +21,14 @@
 
 using namespace std;
 
+struct port_table_entry {
+  string virtual_ip;
+  string virtual_mac;
+  string neighbor_host_dvr_mac;
+};
+
 struct subnet_table_entry {
+  string vpc_id;
   alcor::schema::NetworkType network_type;
   string cidr;
   uint tunnel_id;
@@ -39,7 +46,7 @@ class ACA_OVS_L3_Programmer {
   // [James action] - also need to add the corresponding update and delete operations
   // at least the prototype but ideally the full implementation
 
-  int create_router(const string host_dvr_mac,
+  int create_router(const string host_dvr_mac, const string router_id,
                     unordered_map<string, subnet_table_entry> subnet_table,
                     ulong &culminative_time);
 
@@ -58,6 +65,13 @@ class ACA_OVS_L3_Programmer {
   private:
   ACA_OVS_L3_Programmer(){};
   ~ACA_OVS_L3_Programmer(){};
+
+  string _host_dvr_mac;
+
+  unordered_map<string, unordered_map<string, subnet_table_entry> > _routers_table;
+
+  // mutex for reading and writing to routers_table
+  mutex _routers_table_mutex;
 };
 } // namespace aca_ovs_l3_programmer
 #endif // #ifndef ACA_OVS_L3_PROGRAMMER_H

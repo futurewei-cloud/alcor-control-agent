@@ -62,12 +62,10 @@ class ACA_Vlan_Manager {
   ACA_Vlan_Manager(){};
   ~ACA_Vlan_Manager(){};
 
-  unordered_map<string, vpc_table_entry> vpc_table;
+  unordered_map<string, vpc_table_entry> _vpcs_table;
 
-  // mutex for reading and writing to vpc_table
-  mutex vpc_table_mutex;
-
-  bool check_entry_existed_unsafe(string vpc_id);
+  // mutex for reading and writing to _vpcs_table
+  mutex _vpcs_table_mutex;
 
   void create_entry_unsafe(string vpc_id);
 };
