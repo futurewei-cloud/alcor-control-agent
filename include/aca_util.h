@@ -87,8 +87,6 @@ static inline const char *aca_get_neighbor_type_string(alcor::schema::NeighborTy
     return "L2";
   case alcor::schema::NeighborType::L3:
     return "L3";
-  case alcor::schema::NeighborType::HOST_DVR:
-    return "HOST_DVR";
 
   default:
     return "ERROR: unknown neighbor type!";
