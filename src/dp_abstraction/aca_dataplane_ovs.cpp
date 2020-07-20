@@ -373,6 +373,7 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
   NetworkType found_network_type;
   uint found_tunnel_id;
   string found_gateway_mac;
+  string neighbor_host_dvr_mac;
   bool subnet_info_found = false;
   ulong culminative_dataplane_programming_time = 0;
   ulong culminative_network_configuration_time = 0;
@@ -412,6 +413,10 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
           throw std::invalid_argument("Neighbor host ip address is not in the expect format");
         }
 
+        neighbor_host_dvr_mac = current_NeighborConfiguration.neighbor_host_dvr_mac();
+        // the below will throw invalid_argument exceptions if mac string is invalid
+        aca_validate_mac_address(neighbor_host_dvr_mac.c_str());
+
         // Look up the subnet configuration to query for tunnel_id
         for (int j = 0; j < parsed_struct.subnet_states_size(); j++) {
           SubnetConfiguration current_SubnetConfiguration =
@@ -441,17 +446,24 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
         } else {
           ACA_LOG_DEBUG(
                   "Neighbor Operation:%s: neighbor_type:%s, project_id:%s, vpc_id:%s, network_type:%d, virtual_ip_address:%s, "
-                  "virtual_mac_address:%s, neighbor_host_ip_address:%s, tunnel_id:%d\n ",
+                  "virtual_mac_address:%s, neighbor_host_ip_address:%s, tunnel_id:%d, neighbor_host_dvr_mac:%s\n ",
                   aca_get_operation_string(current_NeighborState.operation_type()),
                   aca_get_neighbor_type_string(current_NeighborConfiguration.neighbor_type()),
                   current_NeighborConfiguration.project_id().c_str(),
-                  current_NeighborConfiguration.vpc_id().c_str(), found_network_type,
-                  virtual_ip_address.c_str(), virtual_mac_address.c_str(),
-                  host_ip_address.c_str(), found_tunnel_id);
+                  current_NeighborConfiguration.vpc_id().c_str(),
+                  found_network_type, virtual_ip_address.c_str(),
+                  virtual_mac_address.c_str(), host_ip_address.c_str(),
+                  found_tunnel_id, neighbor_host_dvr_mac.c_str());
 
+          // with Alcor DVR, a cross subnet packet will be routed to the destination subnet.
+          // that means a L3 neighbor will become a L2 neighbor, therefore, call the below
+          // for both L2 and L3 neighbor update
           rc = ACA_OVS_L2_Programmer::get_instance().create_update_neighbor_port(
                   current_NeighborConfiguration.vpc_id(), found_network_type, host_ip_address,
                   found_tunnel_id, culminative_dataplane_programming_time);
+          // we can consider doing this L2 neighbor creation as an on demand rule to support scale
+          // when we are ready to put the DVR rule as on demand, we should put the L2 neighbor rule
+          // as on demand also
 
           if (rc != EXIT_SUCCESS) {
             overall_rc = rc;
@@ -460,8 +472,10 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
               if (current_NeighborConfiguration.neighbor_type() == NeighborType::L3) {
                 overall_rc = ACA_OVS_L3_Programmer::get_instance().create_neighbor_l3(
                         current_NeighborConfiguration.vpc_id(),
+                        current_NeighborConfiguration.fixed_ips(0).subnet_id(),
                         found_network_type, host_ip_address, virtual_mac_address,
-                        found_tunnel_id, culminative_dataplane_programming_time);
+                        found_tunnel_id, neighbor_host_dvr_mac,
+                        culminative_dataplane_programming_time);
               }
             }
           }
@@ -539,16 +553,16 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
                     found_network_type, current_host_dvr_mac_address.c_str(),
                     found_gateway_mac.c_str(), found_tunnel_id);
 
-            rc = ACA_OVS_L3_Programmer::get_instance().create_neighbor_host_dvr(
-                    current_NeighborConfiguration.vpc_id(), found_network_type,
-                    current_host_dvr_mac_address, found_gateway_mac,
-                    found_tunnel_id, culminative_dataplane_programming_time);
+            // rc = ACA_OVS_L3_Programmer::get_instance().create_neighbor_host_dvr(
+            //         current_NeighborConfiguration.vpc_id(), found_network_type,
+            //         current_host_dvr_mac_address, found_gateway_mac,
+            //         found_tunnel_id, culminative_dataplane_programming_time);
 
-            if (rc != EXIT_SUCCESS) {
-              ACA_LOG_ERROR("ACA_OVS_L3_Programmer::create_neighbor_host_dvr returned failure rc=%d\n",
-                            rc);
-              overall_rc = rc;
-            }
+            // if (rc != EXIT_SUCCESS) {
+            //   ACA_LOG_ERROR("ACA_OVS_L3_Programmer::create_neighbor_host_dvr returned failure rc=%d\n",
+            //                 rc);
+            //   overall_rc = rc;
+            // }
           }
         }
 
@@ -704,11 +718,11 @@ int ACA_Dataplane_OVS::update_router_state_workitem(RouterState current_RouterSt
                       aca_get_operation_string(current_RouterState.operation_type()),
                       current_RouterConfiguration.id().c_str(), host_dvr_mac.c_str());
 
-        for (auto it = new_subnet_table.begin(); it != new_subnet_table.end(); ++it) {
-          ACA_LOG_DEBUG("Subnet ID:%s: cidr:%s, tunnel_id:%d, gateway_ip:%s, gateway_mac:%s\n ",
-                        it->first.c_str(), it->second.cidr.c_str(),
-                        it->second.tunnel_id, it->second.gateway_ip.c_str(),
-                        it->second.gateway_mac.c_str());
+        for (auto it = new_subnet_table.begin(); it != new_subnet_table.end(); it++) {
+          ACA_LOG_DEBUG("Subnet ID:%s: vpc_id:%s, cidr:%s, tunnel_id:%d, gateway_ip:%s, gateway_mac:%s\n ",
+                        it->first.c_str(), it->second.vpc_id.c_str(),
+                        it->second.cidr.c_str(), it->second.tunnel_id,
+                        it->second.gateway_ip.c_str(), it->second.gateway_mac.c_str());
         }
 
         ACA_OVS_L3_Programmer::get_instance().create_router(

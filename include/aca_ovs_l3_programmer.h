@@ -34,6 +34,8 @@ struct subnet_table_entry {
   uint tunnel_id;
   string gateway_ip;
   string gateway_mac;
+  // list of ports within the subnet
+  unordered_map<string, port_table_entry> ports;
 };
 
 // OVS L3 programmer implementation class
@@ -43,20 +45,17 @@ class ACA_OVS_L3_Programmer {
   public:
   static ACA_OVS_L3_Programmer &get_instance();
 
-  // [James action] - also need to add the corresponding update and delete operations
+  // TODO: also need to add the corresponding update and delete operations
   // at least the prototype but ideally the full implementation
 
   int create_router(const string host_dvr_mac, const string router_id,
-                    unordered_map<string, subnet_table_entry> subnet_table,
+                    unordered_map<string, subnet_table_entry> subnets_table,
                     ulong &culminative_time);
 
-  int create_neighbor_host_dvr(const string vpc_id, alcor::schema::NetworkType network_type,
-                               const string host_dvr_mac, const string gateway_mac,
-                               uint tunnel_id, ulong &culminative_time);
-
-  int create_neighbor_l3(const string vpc_id, alcor::schema::NetworkType network_type,
-                         const string virtual_ip, const string virtual_mac,
-                         uint tunnel_id, ulong &culminative_time);
+  int create_neighbor_l3(const string vpc_id, const string subnet_id,
+                         alcor::schema::NetworkType network_type, const string virtual_ip,
+                         const string virtual_mac, uint tunnel_id,
+                         const string neighbor_host_dvr_mac, ulong &culminative_time);
 
   // compiler will flag the error when below is called.
   ACA_OVS_L3_Programmer(ACA_OVS_L3_Programmer const &) = delete;
@@ -71,6 +70,7 @@ class ACA_OVS_L3_Programmer {
   unordered_map<string, unordered_map<string, subnet_table_entry> > _routers_table;
 
   // mutex for reading and writing to routers_table
+  // consider using a read / write lock to improve performance
   mutex _routers_table_mutex;
 };
 } // namespace aca_ovs_l3_programmer

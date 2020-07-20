@@ -23,13 +23,13 @@
 #include <mutex>
 #include <chrono>
 #include <errno.h>
+#include <arpa/inet.h>
+
+#define HEX_IP_BUFFER_SIZE 12
 
 using namespace std;
 using namespace aca_vlan_manager;
 using namespace aca_ovs_l2_programmer;
-
-// some mutex for reading and writing it internal data
-// mutex setup_ovs_bridges_mutex;
 
 namespace aca_ovs_l3_programmer
 {
@@ -42,12 +42,17 @@ ACA_OVS_L3_Programmer &ACA_OVS_L3_Programmer::get_instance()
 }
 
 int ACA_OVS_L3_Programmer::create_router(const string host_dvr_mac, const string router_id,
-                                         unordered_map<std::string, subnet_table_entry> subnet_table,
+                                         unordered_map<std::string, subnet_table_entry> subnets_table,
                                          ulong &culminative_time)
 {
   ACA_LOG_DEBUG("ACA_OVS_L3_Programmer::create_router ---> Entering\n");
 
   int overall_rc = EXIT_SUCCESS;
+  int source_vlan_id;
+  string current_gateway_mac;
+  char hex_ip_buffer[HEX_IP_BUFFER_SIZE];
+  int addr;
+  string cmd_string;
 
   if (host_dvr_mac.empty()) {
     throw std::invalid_argument("host_dvr_mac is empty");
@@ -77,31 +82,52 @@ int ACA_OVS_L3_Programmer::create_router(const string host_dvr_mac, const string
   // -----critical section starts-----
   _routers_table_mutex.lock();
   if (_routers_table.find(router_id) == _routers_table.end()) {
-    _routers_table.emplace(router_id, subnet_table);
+    _routers_table.emplace(router_id, subnets_table);
   }
   _routers_table_mutex.unlock();
   // -----critical section ends-----
 
-  // [James action] - create a new class for this router object
-  // create the internal router object, store the needed info including
-  // gateway port ip and mac into the object
+  // for each subnet's gateway:
+  for (auto subnet_it = subnets_table.begin(); subnet_it != subnets_table.end(); subnet_it++) {
+    ACA_LOG_DEBUG("subnet_id:%s\n ", subnet_it->first.c_str());
 
-  // the rule will look like for each gateway port in the subnet:
+    source_vlan_id = ACA_Vlan_Manager::get_instance().get_or_create_vlan_id(
+            subnet_it->second.vpc_id);
 
-  // Program Arp and ICMP responder for the gateway port 10.0.0.1:
+    current_gateway_mac = subnet_it->second.gateway_mac;
+    current_gateway_mac.erase(
+            remove(current_gateway_mac.begin(), current_gateway_mac.end(), ':'),
+            current_gateway_mac.end());
 
-  // ovs-ofctl add-flow br-tun "table=51,priority=50,arp,dl_vlan=1,nw_dst=10.0.0.1 actions=move:NXM_OF_ETH_SRC[]->NXM_OF_ETH_DST[],mod_dl_src:02:42:ac:11:00:01,load:0x2->NXM_OF_ARP_OP[],move:NXM_NX_ARP_SHA[]->NXM_NX_ARP_THA[],move:NXM_OF_ARP_SPA[]->NXM_OF_ARP_TPA[],load:0x0242ac110001->NXM_NX_ARP_SHA[],load:0x0a000001->NXM_OF_ARP_SPA[],in_port"
+    addr = inet_addr(subnet_it->second.gateway_ip.c_str());
+    snprintf(hex_ip_buffer, HEX_IP_BUFFER_SIZE, "0x%08x\n", addr);
 
-  // ovs-ofctl add-flow br-tun "table=52,priority=50,icmp,dl_vlan=1,nw_dst=10.0.0.1 actions=move:NXM_OF_ETH_SRC[]->NXM_OF_ETH_DST[],mod_dl_src:02:42:ac:11:00:01,move:NXM_OF_IP_SRC[]->NXM_OF_IP_DST[],mod_nw_src:10.0.0.1,load:0xff->NXM_NX_IP_TTL[],load:0->NXM_OF_ICMP_TYPE[],in_port"
+    // Program Arp responder:
+    cmd_string = "add-flow br-tun \"table=51,priority=50,arp,dl_vlan=" +
+                 to_string(source_vlan_id) + ",nw_dst=" + subnet_it->second.gateway_ip +
+                 " actions=move:NXM_OF_ETH_SRC[]->NXM_OF_ETH_DST[],mod_dl_src:" +
+                 subnet_it->second.gateway_mac +
+                 ",load:0x2->NXM_OF_ARP_OP[],move:NXM_NX_ARP_SHA[]->NXM_NX_ARP_THA[],move:NXM_OF_ARP_SPA[]->NXM_OF_ARP_TPA[],load:0x" +
+                 current_gateway_mac + "->NXM_NX_ARP_SHA[],load:0x" +
+                 string(hex_ip_buffer) + "->NXM_OF_ARP_SPA[],in_port";
 
-  // Should be able to ping the gateway now:
+    ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
+            cmd_string, culminative_time, overall_rc);
 
-  // ping -c1 10.0.0.1
+    // Program ICMP responder:
+    cmd_string = "add-flow br-tun \"table=52,priority=50,icmp,dl_vlan=" +
+                 to_string(source_vlan_id) + ",nw_dst=" + subnet_it->second.gateway_ip +
+                 " actions=move:NXM_OF_ETH_SRC[]->NXM_OF_ETH_DST[],mod_dl_src:" +
+                 subnet_it->second.gateway_mac +
+                 ",move:NXM_OF_IP_SRC[]->NXM_OF_IP_DST[],mod_nw_src:" +
+                 subnet_it->second.gateway_ip +
+                 ",load:0xff->NXM_NX_IP_TTL[],load:0->NXM_OF_ICMP_TYPE[],in_port";
 
-  // execute_openflow_command( - example
-  //         "add-flow br-tun \"table=4, priority=1,tun_id=" + to_string(tunnel_id) +
-  //                 " actions=mod_vlan_vid:" + to_string(internal_vlan_id) + ",output:\"patch-int\"\"",
-  //         culminative_time, overall_rc);
+    ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
+            cmd_string, culminative_time, overall_rc);
+
+    // Should be able to ping the gateway now
+  }
 
   ACA_LOG_DEBUG("ACA_OVS_L3_Programmer::create_router <--- Exiting, overall_rc = %d\n",
                 overall_rc);
@@ -109,75 +135,26 @@ int ACA_OVS_L3_Programmer::create_router(const string host_dvr_mac, const string
   return overall_rc;
 }
 
-// this function is to teach this compute host about the neighbor host's dvr mac
-// so that we can program the rule to restore it back to the VM's gateway mac
-int ACA_OVS_L3_Programmer::create_neighbor_host_dvr(const string vpc_id,
-                                                    alcor::schema::NetworkType network_type,
-                                                    const string host_dvr_mac,
-                                                    const string gateway_mac,
-                                                    uint tunnel_id, ulong &culminative_time)
+int ACA_OVS_L3_Programmer::create_neighbor_l3(const string vpc_id, const string subnet_id,
+                                              alcor::schema::NetworkType network_type,
+                                              const string virtual_ip,
+                                              const string virtual_mac, uint tunnel_id,
+                                              const string neighbor_host_dvr_mac,
+                                              ulong &culminative_time)
 {
-  ACA_LOG_DEBUG("ACA_OVS_L3_Programmer::create_neighbor_host_dvr ---> Entering\n");
+  ACA_LOG_DEBUG("ACA_OVS_L3_Programmer::create_neighbor_l3 ---> Entering\n");
 
-  int overall_rc;
+  int overall_rc = EXIT_SUCCESS;
+  bool found_subnet_in_router = false;
+  int source_vlan_id;
+  int destination_vlan_id;
+  string cmd_string;
 
   if (vpc_id.empty()) {
     throw std::invalid_argument("vpc_id is empty");
   }
 
-  if (host_dvr_mac.empty()) {
-    throw std::invalid_argument("host_dvr_mac is empty");
-  }
-
-  if (gateway_mac.empty()) {
-    throw std::invalid_argument("gateway_mac is empty");
-  }
-
-  if (tunnel_id == 0) {
-    throw std::invalid_argument("tunnel_id is 0");
-  }
-
-  overall_rc = ACA_OVS_L2_Programmer::get_instance().setup_ovs_bridges_if_need();
-
-  if (overall_rc != EXIT_SUCCESS) {
-    throw std::runtime_error("Invalid environment with br-int and br-tun");
-  }
-
-  // the rule will look like:
-
-  // we can get the internal vlan id from the vlan manager using vpc_id as input
-
-  // is the below rule good enough? need to check if other plumbing is needed to handle
-  // the case that this tunnel is not known to the compute host yet
-
-  // we have: source host DVR mac
-  //
-
-  // cmd_string = "add-flow br-int \"table=0,priority=" + PRIORITY_MID +
-  //              ",dl_vlan=" + to_string(internal_vlan_id) +
-  //              " actions=strip_vlan,load:" + to_string(tunnel_id) +
-  //              "->NXM_NX_TUN_ID[],output:\"" + full_outport_list + "\"\"";
-
-  // execute_openflow_command(cmd_string, culminative_time, overall_rc);
-
-  // ovs-ofctl add-flow br-int "table=0,priority=25,dl_vlan=1,dl_src=02:42:ac:11:00:03, actions=mod_dl_src:02:42:ac:11:00:01 output:NORMAL"
-
-  ACA_LOG_DEBUG("ACA_OVS_L3_Programmer::create_neighbor_host_dvr <--- Exiting, overall_rc = %d\n",
-                overall_rc);
-
-  return overall_rc;
-}
-
-int ACA_OVS_L3_Programmer::create_neighbor_l3(const string vpc_id,
-                                              alcor::schema::NetworkType network_type,
-                                              const string virtual_ip, const string virtual_mac,
-                                              uint tunnel_id, ulong &culminative_time)
-{
-  ACA_LOG_DEBUG("ACA_OVS_L3_Programmer::create_neighbor_l3 ---> Entering\n");
-
-  int overall_rc = EXIT_SUCCESS;
-
-  if (vpc_id.empty()) {
+  if (subnet_id.empty()) {
     throw std::invalid_argument("vpc_id is empty");
   }
 
@@ -199,21 +176,67 @@ int ACA_OVS_L3_Programmer::create_neighbor_l3(const string vpc_id,
     throw std::runtime_error("Invalid environment with br-int and br-tun");
   }
 
-  // with DVR, a cross subnet packet will be routed to the destination subnet using Alcor DVR.
-  // that means a L3 neighbor will become a L2 neighbor
+  // TODO: insert the port info into _routers_table, for use with on demand rule programming later
 
-  // the goal state parsing logic already took care of that
-  // we can consider doing this L2 neighbor creation as an on demand rule to support scale
+  // going through our list of routers
+  for (auto router_it = _routers_table.begin();
+       router_it != _routers_table.end(); router_it++) {
+    ACA_LOG_DEBUG("router ID:%s\n ", router_it->first.c_str());
 
-  // when we are ready to put the DVR rule as on demand, we should put the L2 neighbor rule as
-  // on demand also
+    // try to see if the destination subnet GW is connected to the current router
+    auto found_subnet = router_it->second.find(subnet_id);
 
-  // for the first implementation, we will go ahead and program the on demand rules DVR here
-  // in the future, the programming of the on demand rule will be triggered by the first packet
-  // sent to openflow controller, that's ACA
+    if (found_subnet == router_it->second.end()) {
+      // subnet not found in this router, go look at the next router
+      continue;
+    } else {
+      // destination subnet found!
+      found_subnet_in_router = true;
 
-  // the rule will look like:
-  // ovs-ofctl add-flow br-tun "table=0,priority=50,ip,dl_vlan=1,nw_dst=10.0.1.106,dl_dst=02:42:ac:11:00:01 actions=mod_vlan_vid:2,mod_dl_src:02:42:ac:11:00:00,mod_dl_dst=c6:41:e9:81:56:91,resubmit(,2)"
+      // for each other subnet connected to this router, create the routing rule
+      for (auto subnet_it = router_it->second.begin();
+           subnet_it != router_it->second.end(); subnet_it++) {
+        // skip the destination neighbor subnet
+        if (subnet_it->first == subnet_id) {
+          continue;
+        }
+        ACA_LOG_DEBUG("subnet_id:%s\n ", subnet_it->first.c_str());
+
+        source_vlan_id = ACA_Vlan_Manager::get_instance().get_or_create_vlan_id(
+                subnet_it->second.vpc_id);
+
+        // essential rule to restore from neighbor host DVR mac to destination GW mac:
+        cmd_string = "add-flow br-tun \"table=0,priority=25,dl_vlan=" +
+                     to_string(source_vlan_id) + ",dl_src=" + neighbor_host_dvr_mac +
+                     " actions=mod_dl_src:" + subnet_it->second.gateway_mac + " output:NORMAL";
+
+        ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
+                cmd_string, culminative_time, overall_rc);
+
+        destination_vlan_id =
+                ACA_Vlan_Manager::get_instance().get_or_create_vlan_id(vpc_id);
+
+        // for the first implementation, we will go ahead and program the on demand routing rule here
+        // in the future, the programming of the on demand rule will be triggered by the first packet
+        // sent to openflow controller, that's ACA
+        cmd_string = "add-flow br-tun \"table=0,priority=50,ip,dl_vlan=" +
+                     to_string(source_vlan_id) + ",nw_dst=" + virtual_ip +
+                     ",dl_dst=" + subnet_it->second.gateway_mac +
+                     " actions=mod_vlan_vid:" + to_string(destination_vlan_id) +
+                     ",mod_dl_src:" + _host_dvr_mac +
+                     ",mod_dl_dst:" + virtual_mac + ",resubmit(,2)";
+
+        ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
+                cmd_string, culminative_time, overall_rc);
+      }
+      break;
+    }
+  }
+
+  if (!found_subnet_in_router) {
+    ACA_LOG_ERROR("subnet_id %s not find in our local routers\n", subnet_id.c_str());
+    overall_rc = ENOENT;
+  }
 
   ACA_LOG_DEBUG("ACA_OVS_L3_Programmer::create_neighbor_l3 <--- Exiting, overall_rc = %d\n",
                 overall_rc);
