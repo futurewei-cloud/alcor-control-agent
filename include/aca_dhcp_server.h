@@ -18,6 +18,8 @@
 #include "aca_dhcp_programming_if.h"
 #include <map>
 #include <mutex>
+#include <cstdint>
+#include <cstdlib>
 
 using namespace aca_dhcp_programming_if;
 
@@ -36,37 +38,139 @@ struct dhcp_entry_data {
     (pData)->port_host_name = (pCfg)->port_host_name;                          \
   } while (0)
 
+//BOOTP Message Type
+#define BOOTP_MSG_BOOTREQUEST (0x1)
+#define BOOTP_MSG_BOOTREPLY (0x2)
+
+//DHCP Message Type
+#define DHCP_MSG_NONE (0x0)
+#define DHCP_MSG_DHCPDISCOVER (0x1)
+#define DHCP_MSG_DHCPOFFER (0x2)
+#define DHCP_MSG_DHCPREQUEST (0x3)
+#define DHCP_MSG_DHCPDECLINE (0x4)
+#define DHCP_MSG_DHCPACK (0x5)
+#define DHCP_MSG_DHCPNAK (0x6)
+#define DHCP_MSG_DHCPRELEASE (0x7)
+#define DHCP_MSG_DHCPINFORM (0x8)
+#define DHCP_MSG_MAX (0x9)
+
+//DHCP Message Fields
+#define DHCP_MSG_OPTS_LENGTH (308)
+#define DHCP_MSG_FD_HTYPE_ETHERNET (0x1)
+
+struct dhcp_message {
+  uint8_t op;
+  uint8_t htype;
+  uint8_t hlen;
+  uint8_t hops;
+  uint32_t xid;
+  uint16_t secs;
+  uint16_t flags;
+  uint32_t ciaddr;
+  uint32_t yiaddr;
+  uint32_t siaddr;
+  uint32_t giaddr;
+  uint8_t chaddr[16];
+  uint8_t sname[64];
+  uint8_t file[128];
+  uint32_t cookie;
+  uint8_t options[DHCP_MSG_OPTS_LENGTH]; // 321 - cookie
+};
+
+// DHCP Message Options Code
+#define DHCP_OPT_PAD (0x0)
+#define DHCP_OPT_END (0xff)
+#define DHCP_OPT_MSG_TYPE (0x35)
+#define DHCP_OPT_IP_LEASE_TIME (0x33)
+
+#define DHCP_OPT_LEN (0x1)
+#define DHCP_OPT_DEFAULT_IP_LEASE_TIME (86)
+
+struct dhcp_message_type {
+  uint8_t code;
+  uint8_t len;
+  uint8_t msg_type;
+};
+
+struct dhcp_ip_lease_time {
+  uint8_t code;
+  uint8_t len;
+  uint32_t lease_time;
+};
+
+union dhcp_message_options {
+  dhcp_message_type *dhcpmsgtype;
+  dhcp_ip_lease_time *ipleasetime;
+};
+
+#define ENCODE_DHCP_MESSAGE_TYPE(pMsg)                                         \
+  do {                                                                         \
+    (pMsg)->code = DHCP_OPT_MSG_TYPE;                                          \
+    (pMsg)->len = 1;                                                           \
+    (pMsg)->msg_type = DHCP_MSG_DHCPOFFER;                                     \
+  } while (0)
+#define PACK_DHCP_MESSAGE_TYPE(pMsg, pos, index)                               \
+  do {                                                                         \
+    ENCODE_DHCP_MESSAGE_TYPE(pMsg);                                            \
+    (pos)[(index)] = (pMsg)->code;                                             \
+    (pos)[(index) + 1] = (pMsg)->len;                                          \
+    pos[index + 2] = (pMsg)->msg_type;                                         \
+    index += 2 + (pMsg)->len;                                                  \
+  } while (0)
+
+#define ENCODE_DHCP_IP_LEASE_TIME(pMsg)                                        \
+  do {                                                                         \
+    (pMsg)->code = DHCP_OPT_IP_LEASE_TIME;                                     \
+    (pMsg)->len = 4;                                                           \
+    (pMsg)->lease_time = DHCP_OPT_DEFAULT_IP_LEASE_TIME;                       \
+  } while (0)
+#define PACK_DHCP_IP_LEASE_TIME(pMsg, pos, index)                              \
+  do {                                                                         \
+    ENCODE_DHCP_IP_LEASE_TIME(pMsg);                                           \
+    (pos)[(index)] = (pMsg)->code;                                             \
+    (pos)[(index) + 1] = (pMsg)->len;                                          \
+    *(uint32_t *)(pos + index + 2) = (pMsg)->lease_time;                       \
+    index += 2 + (pMsg)->len;                                                  \
+  } while (0)
+
 class ACA_Dhcp_Server : public aca_dhcp_programming_if::ACA_Dhcp_Programming_Interface {
   public:
   ACA_Dhcp_Server();
-
   ~ACA_Dhcp_Server();
-
   int initialize();
 
+  /* Management Plane Ops */
   int add_dhcp_entry(dhcp_config *dhcp_cfg_in);
-
   int update_dhcp_entry(dhcp_config *dhcp_cfg_in);
-
   int delete_dhcp_entry(dhcp_config *dhcp_cfg_in);
 
+  /* Dataplane Ops */
+  void dhcps_recv(void *message);
+  void dhcps_xmit(void *message);
+
   private:
+  dhcp_entry_data *_search_dhcp_entry(string mac_address);
   void _validate_mac_address(const char *mac_string);
-
   void _validate_ipv4_address(const char *ip_address);
-
   void _validate_ipv6_address(const char *ip_address);
-
   int _validate_dhcp_entry(dhcp_config *dhcp_cfg_in);
+  int _validate_dhcp_message(dhcp_message *dhcpmsg);
+  uint8_t _get_message_type(dhcp_message *dhcpmsg);
+  uint8_t *_get_option(dhcp_message *dhcpmsg, uint8_t code);
+  void _init_dhcp_msg_ops();
+
+  void _parse_dhcp_none(dhcp_message *dhcpmsg);
+  void _parse_dhcp_discover(dhcp_message *dhcpmsg);
+  dhcp_message *_pack_dhcp_offer();
 
   int _dhcp_entry_thresh;
-
   int _get_db_size() const;
 #define DHCP_DB_SIZE _get_db_size()
 
   std::map<std::string, dhcp_entry_data> *_dhcp_db;
-
   std::mutex _dhcp_db_mutex;
+
+  void (*_parse_dhcp_msg_ops[DHCP_MSG_MAX])(dhcp_message *dhcpmsg);
 };
 
 } // namespace aca_dhcp_server
