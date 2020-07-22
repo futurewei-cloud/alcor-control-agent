@@ -130,10 +130,22 @@ int ACA_OVS_L2_Programmer::setup_ovs_bridges_if_need()
                           not_care_culminative_time, overall_rc);
 
     // adding default flows
-    execute_openflow_command("add-flow br-tun \"table=0, priority=1,in_port=\"patch-int\" actions=resubmit(,2)\"",
+    execute_openflow_command("add-flow br-tun \"table=0,priority=1,in_port=\"patch-int\" actions=resubmit(,2)\"",
                              not_care_culminative_time, overall_rc);
 
-    execute_openflow_command("add-flow br-tun \"table=2, priority=0 actions=resubmit(,22)\"",
+    execute_openflow_command("add-flow br-tun \"table=2,priority=1 actions=resubmit(,22)\"",
+                             not_care_culminative_time, overall_rc);
+
+    execute_openflow_command("add-flow br-tun \"table=0,priority=25,arp,arp_op=1,in_port=\"patch-int\" actions=resubmit(,51)\"",
+                             not_care_culminative_time, overall_rc);
+
+    execute_openflow_command("add-flow br-tun \"table=51,priority=1 actions=resubmit(,22)\"",
+                             not_care_culminative_time, overall_rc);
+
+    execute_openflow_command("add-flow br-tun \"table=0,priority=25,icmp,icmp_type=8,in_port=\"patch-int\" actions=resubmit(,52)\"",
+                             not_care_culminative_time, overall_rc);
+
+    execute_openflow_command("add-flow br-tun \"table=52,priority=1 actions=resubmit(,22)\"",
                              not_care_culminative_time, overall_rc);
   } else {
     // case 3: only one of the br-int or br-tun is there,

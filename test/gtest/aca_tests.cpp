@@ -54,12 +54,16 @@ static string vmac_address_1 = "fa:16:3e:d7:f2:6c";
 static string vmac_address_2 = "fa:16:3e:d7:f2:6d";
 static string vmac_address_3 = "fa:16:3e:d7:f2:6e";
 static string vmac_address_4 = "fa:16:3e:d7:f2:6f";
-static string vip_address_1 = "10.10.0.1";
-static string vip_address_2 = "10.10.1.2";
-static string vip_address_3 = "10.10.0.3";
-static string vip_address_4 = "10.10.1.4";
+static string vip_address_1 = "10.10.0.101";
+static string vip_address_2 = "10.10.1.102";
+static string vip_address_3 = "10.10.0.103";
+static string vip_address_4 = "10.10.1.104";
 static string remote_ip_1 = "172.17.0.2"; // for docker network
 static string remote_ip_2 = "172.17.0.3"; // for docker network
+static string subnet1_gw_ip = "10.10.0.1";
+static string subnet2_gw_ip = "10.10.1.1";
+static string subnet1_gw_mac = "fa:16:3e:d7:f2:11";
+static string subnet2_gw_mac = "fa:16:3e:d7:f2:21";
 static NetworkType vxlan_type = NetworkType::VXLAN;
 
 // Global variables
@@ -937,6 +941,157 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_CREATE_test_traffic_SLAVE)
   new_subnet_states->clear_configuration();
 
   // not deleting br-int and br-tun bridges so that master can ping the two new ports
+}
+
+TEST(ovs_dataplane_test_cases, DISABLED_2_ports_ROUTING_test_traffic_one_machine)
+{
+  ulong not_care_culminative_time = 0;
+  string cmd_string;
+  int overall_rc;
+
+  GoalState GoalState_builder;
+  PortState *new_port_states = GoalState_builder.add_port_states();
+  SubnetState *new_subnet_states = GoalState_builder.add_subnet_states();
+
+  new_port_states->set_operation_type(OperationType::CREATE);
+
+  // fill in port state structs for port 3
+  PortConfiguration *PortConfiguration_builder = new_port_states->mutable_configuration();
+  PortConfiguration_builder->set_format_version(1);
+  PortConfiguration_builder->set_revision_number(1);
+  PortConfiguration_builder->set_message_type(MessageType::FULL);
+  // PortConfiguration_builder->set_network_type(NetworkType::VXLAN); // should default to VXLAN
+
+  PortConfiguration_builder->set_project_id(project_id);
+  PortConfiguration_builder->set_vpc_id(vpc_id_1);
+  PortConfiguration_builder->set_name(port_name_3);
+  PortConfiguration_builder->set_mac_address(vmac_address_3);
+  PortConfiguration_builder->set_admin_state_up(true);
+
+  PortConfiguration_FixedIp *FixedIp_builder = PortConfiguration_builder->add_fixed_ips();
+  FixedIp_builder->set_subnet_id(subnet_id_1);
+  FixedIp_builder->set_ip_address(vip_address_3);
+
+  PortConfiguration_SecurityGroupId *SecurityGroup_builder =
+          PortConfiguration_builder->add_security_group_ids();
+  SecurityGroup_builder->set_id("1");
+
+  // fill in subnet state structs
+  new_subnet_states->set_operation_type(OperationType::INFO);
+
+  SubnetConfiguration *SubnetConiguration_builder =
+          new_subnet_states->mutable_configuration();
+  SubnetConiguration_builder->set_format_version(1);
+  SubnetConiguration_builder->set_revision_number(1);
+  SubnetConiguration_builder->set_project_id(project_id);
+  SubnetConiguration_builder->set_vpc_id(vpc_id_1);
+  SubnetConiguration_builder->set_id(subnet_id_1);
+  SubnetConiguration_builder->set_cidr("10.10.0.0/24");
+  SubnetConiguration_builder->set_tunnel_id(20);
+
+  // delete br-int and br-tun bridges
+  ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
+          "del-br br-int", not_care_culminative_time, overall_rc);
+
+  ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
+          "del-br br-tun", not_care_culminative_time, overall_rc);
+
+  // set demo mode to false because routing test need real routable port
+  // e.g. container port created by docker + ovs-docker
+  bool previous_demo_mode = g_demo_mode;
+  g_demo_mode = false;
+
+  overall_rc = Aca_Net_Config::get_instance().execute_system_command(
+          "docker run -itd --name con3 --net=none busybox sh");
+  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
+
+  cmd_string = "ovs-docker add-port br-int eth0 con3 --ipaddress=" + vip_address_3 +
+               "/24 --gateway=" + subnet1_gw_ip + "--macaddress=" + vmac_address_3;
+  Aca_Net_Config::get_instance().execute_system_command(cmd_string);
+  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
+
+  cmd_string = "ovs-docker set-vlan br-int eth0 con3 1";
+  Aca_Net_Config::get_instance().execute_system_command(cmd_string);
+  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
+
+  overall_rc = Aca_Net_Config::get_instance().execute_system_command(
+          "docker run -itd --name con4 --net=none busybox sh");
+  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
+
+  cmd_string = "ovs-docker add-port br-int eth0 con4 --ipaddress=" + vip_address_4 +
+               "/24 --gateway=" + subnet2_gw_ip + "--macaddress=" + vmac_address_4;
+  Aca_Net_Config::get_instance().execute_system_command(cmd_string);
+  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
+
+  cmd_string = "ovs-docker set-vlan br-int eth0 con4 2";
+  Aca_Net_Config::get_instance().execute_system_command(cmd_string);
+  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
+
+  // configure new port 3
+  GoalStateOperationReply gsOperationalReply;
+
+  overall_rc = Aca_Comm_Manager::get_instance().update_goal_state(
+          GoalState_builder, gsOperationalReply);
+  ASSERT_EQ(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
+
+  // check to ensure the port 3 is created and setup correctly
+  ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
+          "get Interface " + port_name_3 + " ofport", not_care_culminative_time, overall_rc);
+  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
+
+  // setup the configuration for port 4
+  PortConfiguration_builder->set_vpc_id(vpc_id_2);
+  PortConfiguration_builder->set_name(port_name_4);
+  PortConfiguration_builder->set_mac_address(vmac_address_4);
+  FixedIp_builder->set_ip_address(vip_address_4);
+  FixedIp_builder->set_subnet_id(subnet_id_2);
+
+  // fill in subnet state structs
+  SubnetConiguration_builder->set_vpc_id(vpc_id_2);
+  SubnetConiguration_builder->set_id(subnet_id_2);
+  SubnetConiguration_builder->set_cidr("10.10.1.0/24");
+  SubnetConiguration_builder->set_tunnel_id(30);
+
+  // create a new port 4
+  overall_rc = Aca_Comm_Manager::get_instance().update_goal_state(
+          GoalState_builder, gsOperationalReply);
+  ASSERT_EQ(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
+
+  // restore demo mode
+  g_demo_mode = previous_demo_mode;
+
+  // check to ensure the port 4 is created and setup correctly
+  ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
+          "get Interface " + port_name_4 + " ofport", not_care_culminative_time, overall_rc);
+  EXPECT_NE(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
+
+  // test traffic between the two newly created ports, it should not work
+  // because they are from different subnet
+  cmd_string = "ping -I " + vip_address_3 + " -c1 " + vip_address_4;
+  overall_rc = Aca_Net_Config::get_instance().execute_system_command(cmd_string);
+  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
+
+  cmd_string = "ping -I " + vip_address_4 + " -c1 " + vip_address_3;
+  overall_rc = Aca_Net_Config::get_instance().execute_system_command(cmd_string);
+  EXPECT_NE(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
+
+  // free the allocated configurations since we are done with it now
+  new_port_states->clear_configuration();
+  new_subnet_states->clear_configuration();
+
+  // not deleting br-int and br-tun bridges for testing only
 }
 
 TEST(net_config_test_cases, create_namespace_invalid)
