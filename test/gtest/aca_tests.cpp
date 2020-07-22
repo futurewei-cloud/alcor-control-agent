@@ -978,12 +978,17 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_ROUTING_test_traffic_one_machine
   SubnetConiguration_builder->set_cidr("10.10.0.0/24");
   SubnetConiguration_builder->set_tunnel_id(20);
 
-  // delete br-int and br-tun bridges
+  // delete and add br-int and br-tun bridges to clear everything
   ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
           "del-br br-int", not_care_culminative_time, overall_rc);
 
   ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
           "del-br br-tun", not_care_culminative_time, overall_rc);
+
+  // create and setup br-int and br-tun bridges, and their patch ports
+  overall_rc = ACA_OVS_L2_Programmer::get_instance().setup_ovs_bridges_if_need();
+  ASSERT_EQ(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
 
   // set demo mode to false because routing test need real routable port
   // e.g. container port created by docker + ovs-docker
@@ -996,7 +1001,7 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_ROUTING_test_traffic_one_machine
   overall_rc = EXIT_SUCCESS;
 
   cmd_string = "ovs-docker add-port br-int eth0 con3 --ipaddress=" + vip_address_3 +
-               "/24 --gateway=" + subnet1_gw_ip + "--macaddress=" + vmac_address_3;
+               "/24 --gateway=" + subnet1_gw_ip + " --macaddress=" + vmac_address_3;
   Aca_Net_Config::get_instance().execute_system_command(cmd_string);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
@@ -1012,7 +1017,7 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_ROUTING_test_traffic_one_machine
   overall_rc = EXIT_SUCCESS;
 
   cmd_string = "ovs-docker add-port br-int eth0 con4 --ipaddress=" + vip_address_4 +
-               "/24 --gateway=" + subnet2_gw_ip + "--macaddress=" + vmac_address_4;
+               "/24 --gateway=" + subnet2_gw_ip + " --macaddress=" + vmac_address_4;
   Aca_Net_Config::get_instance().execute_system_command(cmd_string);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
@@ -1028,12 +1033,6 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_ROUTING_test_traffic_one_machine
   overall_rc = Aca_Comm_Manager::get_instance().update_goal_state(
           GoalState_builder, gsOperationalReply);
   ASSERT_EQ(overall_rc, EXIT_SUCCESS);
-  overall_rc = EXIT_SUCCESS;
-
-  // check to ensure the port 3 is created and setup correctly
-  ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
-          "get Interface " + port_name_3 + " ofport", not_care_culminative_time, overall_rc);
-  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
 
   // setup the configuration for port 4
@@ -1058,21 +1057,26 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_ROUTING_test_traffic_one_machine
   // restore demo mode
   g_demo_mode = previous_demo_mode;
 
-  // check to ensure the port 4 is created and setup correctly
-  ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
-          "get Interface " + port_name_4 + " ofport", not_care_culminative_time, overall_rc);
-  EXPECT_NE(overall_rc, EXIT_SUCCESS);
+  // should be able to ping itselves
+  overall_rc = Aca_Net_Config::get_instance().execute_system_command(
+          "docker exec con3 ping -c1 " + vip_address_3);
+  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
+
+  overall_rc = Aca_Net_Config::get_instance().execute_system_command(
+          "docker exec con4 ping -c1 " + vip_address_4);
+  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
 
   // test traffic between the two newly created ports, it should not work
   // because they are from different subnet
-  cmd_string = "ping -I " + vip_address_3 + " -c1 " + vip_address_4;
-  overall_rc = Aca_Net_Config::get_instance().execute_system_command(cmd_string);
-  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
+  overall_rc = Aca_Net_Config::get_instance().execute_system_command(
+          "docker exec con3 ping -c1 " + vip_address_4);
+  EXPECT_NE(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
 
-  cmd_string = "ping -I " + vip_address_4 + " -c1 " + vip_address_3;
-  overall_rc = Aca_Net_Config::get_instance().execute_system_command(cmd_string);
+  overall_rc = Aca_Net_Config::get_instance().execute_system_command(
+          "docker exec con4 ping -c1 " + vip_address_3);
   EXPECT_NE(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
 
@@ -1081,6 +1085,29 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_ROUTING_test_traffic_one_machine
   new_subnet_states->clear_configuration();
 
   // not deleting br-int and br-tun bridges for testing only
+
+  // cleanup
+  /*
+  overall_rc = Aca_Net_Config::get_instance().execute_system_command(
+          "docker stop con3");
+  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
+
+  overall_rc = Aca_Net_Config::get_instance().execute_system_command(
+          "docker rm con3");
+  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
+
+  overall_rc = Aca_Net_Config::get_instance().execute_system_command(
+          "docker stop con4");
+  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
+
+  overall_rc = Aca_Net_Config::get_instance().execute_system_command(
+          "docker rm con4");
+  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
+  */
 }
 
 TEST(net_config_test_cases, create_namespace_invalid)
