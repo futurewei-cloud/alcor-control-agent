@@ -137,6 +137,11 @@ static void aca_test_create_default_subnet_state(SubnetState *new_subnet_states)
   SubnetConiguration_builder->set_id(subnet_id_1);
   SubnetConiguration_builder->set_cidr("10.0.0.0/24");
   SubnetConiguration_builder->set_tunnel_id(20);
+
+  auto *subnetConfig_GatewayBuilder(new SubnetConfiguration_Gateway);
+  subnetConfig_GatewayBuilder->set_ip_address(subnet1_gw_ip);
+  subnetConfig_GatewayBuilder->set_mac_address(subnet1_gw_mac);
+  SubnetConiguration_builder->set_allocated_gateway(subnetConfig_GatewayBuilder);
 }
 
 TEST(ovs_dataplane_test_cases, 2_ports_config_test_traffic)
@@ -995,10 +1000,8 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_ROUTING_test_traffic_one_machine
   bool previous_demo_mode = g_demo_mode;
   g_demo_mode = false;
 
-  overall_rc = Aca_Net_Config::get_instance().execute_system_command(
+  Aca_Net_Config::get_instance().execute_system_command(
           "docker run -itd --name con3 --net=none busybox sh");
-  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
-  overall_rc = EXIT_SUCCESS;
 
   cmd_string = "ovs-docker add-port br-int eth0 con3 --ipaddress=" + vip_address_3 +
                "/24 --gateway=" + subnet1_gw_ip + " --macaddress=" + vmac_address_3;
@@ -1011,10 +1014,8 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_ROUTING_test_traffic_one_machine
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
 
-  overall_rc = Aca_Net_Config::get_instance().execute_system_command(
+  Aca_Net_Config::get_instance().execute_system_command(
           "docker run -itd --name con4 --net=none busybox sh");
-  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
-  overall_rc = EXIT_SUCCESS;
 
   cmd_string = "ovs-docker add-port br-int eth0 con4 --ipaddress=" + vip_address_4 +
                "/24 --gateway=" + subnet2_gw_ip + " --macaddress=" + vmac_address_4;
@@ -1083,6 +1084,71 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_ROUTING_test_traffic_one_machine
   // free the allocated configurations since we are done with it now
   new_port_states->clear_configuration();
   new_subnet_states->clear_configuration();
+
+  // program the router
+  GoalState GoalState_builder2;
+  RouterState *new_router_states = GoalState_builder2.add_router_states();
+  SubnetState *new_subnet_states1 = GoalState_builder2.add_subnet_states();
+  SubnetState *new_subnet_states2 = GoalState_builder2.add_subnet_states();
+
+  new_router_states->set_operation_type(OperationType::CREATE);
+
+  // fill in router state structs
+  RouterConfiguration *RouterConfiguration_builder =
+          new_router_states->mutable_configuration();
+  RouterConfiguration_builder->set_format_version(1);
+  RouterConfiguration_builder->set_revision_number(1);
+
+  RouterConfiguration_builder->set_id("router_id1");
+  RouterConfiguration_builder->set_host_dvr_mac_address("fa:16:3e:d7:f2:02");
+  RouterConfiguration_builder->add_subnet_ids(subnet_id_1);
+  RouterConfiguration_builder->add_subnet_ids(subnet_id_2);
+
+  // fill in subnet state structs
+  aca_test_create_default_subnet_state(new_subnet_states1);
+
+  // fill in subnet state structs
+  new_subnet_states2->set_operation_type(OperationType::INFO);
+
+  SubnetConfiguration *SubnetConiguration_builder2 =
+          new_subnet_states2->mutable_configuration();
+  SubnetConiguration_builder2->set_format_version(1);
+  SubnetConiguration_builder2->set_revision_number(1);
+  SubnetConiguration_builder2->set_project_id(project_id);
+  SubnetConiguration_builder2->set_vpc_id(vpc_id_2);
+  SubnetConiguration_builder2->set_id(subnet_id_2);
+  SubnetConiguration_builder2->set_cidr("10.10.1.0/24");
+  SubnetConiguration_builder2->set_tunnel_id(30);
+
+  auto *subnetConfig_GatewayBuilder2(new SubnetConfiguration_Gateway);
+  subnetConfig_GatewayBuilder2->set_ip_address(subnet2_gw_ip);
+  subnetConfig_GatewayBuilder2->set_mac_address(subnet2_gw_mac);
+  SubnetConiguration_builder2->set_allocated_gateway(subnetConfig_GatewayBuilder2);
+
+  // create the router
+  overall_rc = Aca_Comm_Manager::get_instance().update_goal_state(
+          GoalState_builder2, gsOperationalReply);
+  ASSERT_EQ(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
+
+  // should be able to ping the GWs now
+  overall_rc = Aca_Net_Config::get_instance().execute_system_command(
+          "docker exec con3 ping -c1 " + subnet1_gw_ip);
+  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
+
+  overall_rc = Aca_Net_Config::get_instance().execute_system_command(
+          "docker exec con4 ping -c1 " + subnet2_gw_ip);
+  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
+
+  // free the allocated configurations since we are done with it now
+  new_router_states->clear_configuration();
+  new_subnet_states1->clear_configuration();
+  new_subnet_states2->clear_configuration();
+
+  // program the L3 neighbor rules
+  // should be able to ping each other now
 
   // not deleting br-int and br-tun bridges for testing only
 

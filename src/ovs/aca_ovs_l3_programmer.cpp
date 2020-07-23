@@ -99,8 +99,8 @@ int ACA_OVS_L3_Programmer::create_router(const string host_dvr_mac, const string
             remove(current_gateway_mac.begin(), current_gateway_mac.end(), ':'),
             current_gateway_mac.end());
 
-    addr = inet_addr(subnet_it->second.gateway_ip.c_str());
-    snprintf(hex_ip_buffer, HEX_IP_BUFFER_SIZE, "0x%08x\n", addr);
+    addr = inet_network(subnet_it->second.gateway_ip.c_str());
+    snprintf(hex_ip_buffer, HEX_IP_BUFFER_SIZE, "0x%08x", addr);
 
     // Program Arp responder:
     cmd_string = "add-flow br-tun \"table=51,priority=50,arp,dl_vlan=" +
@@ -109,7 +109,7 @@ int ACA_OVS_L3_Programmer::create_router(const string host_dvr_mac, const string
                  subnet_it->second.gateway_mac +
                  ",load:0x2->NXM_OF_ARP_OP[],move:NXM_NX_ARP_SHA[]->NXM_NX_ARP_THA[],move:NXM_OF_ARP_SPA[]->NXM_OF_ARP_TPA[],load:0x" +
                  current_gateway_mac + "->NXM_NX_ARP_SHA[],load:0x" +
-                 string(hex_ip_buffer) + "->NXM_OF_ARP_SPA[],in_port";
+                 string(hex_ip_buffer) + "->NXM_OF_ARP_SPA[],in_port\"";
 
     ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
             cmd_string, culminative_time, overall_rc);
@@ -121,7 +121,7 @@ int ACA_OVS_L3_Programmer::create_router(const string host_dvr_mac, const string
                  subnet_it->second.gateway_mac +
                  ",move:NXM_OF_IP_SRC[]->NXM_OF_IP_DST[],mod_nw_src:" +
                  subnet_it->second.gateway_ip +
-                 ",load:0xff->NXM_NX_IP_TTL[],load:0->NXM_OF_ICMP_TYPE[],in_port";
+                 ",load:0xff->NXM_NX_IP_TTL[],load:0->NXM_OF_ICMP_TYPE[],in_port\"";
 
     ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
             cmd_string, culminative_time, overall_rc);
