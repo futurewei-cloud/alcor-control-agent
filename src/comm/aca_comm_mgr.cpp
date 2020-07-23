@@ -227,14 +227,14 @@ void Aca_Comm_Manager::print_goal_state(GoalState parsed_struct)
     fprintf(stdout, "current_SubnetConfiguration.revision_number(): %d\n",
             current_SubnetConfiguration.revision_number());
 
+    fprintf(stdout, "current_SubnetConfiguration.id(): %s\n",
+            current_SubnetConfiguration.id().c_str());
+
     fprintf(stdout, "current_SubnetConfiguration.project_id(): %s\n",
             current_SubnetConfiguration.project_id().c_str());
 
     fprintf(stdout, "current_SubnetConfiguration.vpc_id(): %s\n",
             current_SubnetConfiguration.vpc_id().c_str());
-
-    fprintf(stdout, "current_SubnetConfiguration.id(): %s\n",
-            current_SubnetConfiguration.id().c_str());
 
     fprintf(stdout, "current_SubnetConfiguration.name(): %s \n",
             current_SubnetConfiguration.name().c_str());
@@ -244,6 +244,24 @@ void Aca_Comm_Manager::print_goal_state(GoalState parsed_struct)
 
     fprintf(stdout, "current_SubnetConfiguration.tunnel_id(): %ld \n",
             current_SubnetConfiguration.tunnel_id());
+
+    fprintf(stdout, "current_SubnetConfiguration.gateway().ip_address(): %s \n",
+            current_SubnetConfiguration.gateway().ip_address().c_str());
+
+    fprintf(stdout, "current_SubnetConfiguration.gateway().mac_address(): %s \n",
+            current_SubnetConfiguration.gateway().mac_address().c_str());
+
+    fprintf(stdout, "current_SubnetConfiguration.dhcp_enable(): %d \n",
+            current_SubnetConfiguration.dhcp_enable());
+
+    fprintf(stdout, "current_SubnetConfiguration.availability_zone(): %s \n",
+            current_SubnetConfiguration.availability_zone().c_str());
+
+    fprintf(stdout, "current_SubnetConfiguration.primary_dns(): %s \n",
+            current_SubnetConfiguration.primary_dns().c_str());
+
+    fprintf(stdout, "current_SubnetConfiguration.secondary_dns(): %s \n",
+            current_SubnetConfiguration.secondary_dns().c_str());
 
     printf("\n");
   }

@@ -567,8 +567,12 @@ int ACA_Dataplane_OVS::update_router_state_workitem(RouterState current_RouterSt
       for (int i = 0; i < current_RouterConfiguration.subnet_ids_size(); i++) {
         string current_router_subnet_id = current_RouterConfiguration.subnet_ids(i);
 
+        ACA_LOG_DEBUG("Processing subnet ID: %s for router ID: %s.\n",
+                      current_router_subnet_id.c_str(),
+                      current_RouterConfiguration.id().c_str());
+
         // check if current_router_subnet_id has already been added to new_subnet_table
-        if (new_subnet_table.find(current_router_subnet_id) == new_subnet_table.end()) {
+        if (new_subnet_table.find(current_router_subnet_id) != new_subnet_table.end()) {
           throw std::invalid_argument("subnet id: " + current_router_subnet_id +
                                       " already existed on the router");
         }
