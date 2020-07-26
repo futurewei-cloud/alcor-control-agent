@@ -64,6 +64,8 @@ static string subnet1_gw_ip = "10.10.0.1";
 static string subnet2_gw_ip = "10.10.1.1";
 static string subnet1_gw_mac = "fa:16:3e:d7:f2:11";
 static string subnet2_gw_mac = "fa:16:3e:d7:f2:21";
+static string host1_dvr_mac_address = "fa:16:3e:d7:f2:01";
+static string host2_dvr_mac_address = "fa:16:3e:d7:f2:02";
 static NetworkType vxlan_type = NetworkType::VXLAN;
 
 // Global variables
@@ -1044,7 +1046,7 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_ROUTING_test_traffic_one_machine
 
   overall_rc = Aca_Comm_Manager::get_instance().update_goal_state(
           GoalState_builder, gsOperationalReply);
-  ASSERT_EQ(overall_rc, EXIT_SUCCESS);
+  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
 
   // setup the configuration for port 4
@@ -1063,7 +1065,7 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_ROUTING_test_traffic_one_machine
   // create a new port 4
   overall_rc = Aca_Comm_Manager::get_instance().update_goal_state(
           GoalState_builder, gsOperationalReply);
-  ASSERT_EQ(overall_rc, EXIT_SUCCESS);
+  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
 
   // restore demo mode
@@ -1139,7 +1141,7 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_ROUTING_test_traffic_one_machine
   // create the router
   overall_rc = Aca_Comm_Manager::get_instance().update_goal_state(
           GoalState_builder2, gsOperationalReply);
-  ASSERT_EQ(overall_rc, EXIT_SUCCESS);
+  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
 
   // should be able to ping the GWs now
@@ -1153,38 +1155,111 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_ROUTING_test_traffic_one_machine
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
 
-  // free the allocated configurations since we are done with it now
+  // clear the allocated router configurations since we are done with it now
   new_router_states->clear_configuration();
+
+  // just clearing the router states and reuse the two subnet states in GoalState_builder2
+  GoalState_builder2.clear_router_states();
+
+  // program the L3 neighbor rules
+  NeighborState *new_neighbor_states3 = GoalState_builder2.add_neighbor_states();
+  NeighborState *new_neighbor_states4 = GoalState_builder2.add_neighbor_states();
+
+  // fill in neighbor state structs for port 3
+  new_neighbor_states3->set_operation_type(OperationType::CREATE);
+
+  NeighborConfiguration *NeighborConfiguration_builder3 =
+          new_neighbor_states3->mutable_configuration();
+  NeighborConfiguration_builder3->set_format_version(1);
+  NeighborConfiguration_builder3->set_revision_number(1);
+
+  NeighborConfiguration_builder3->set_neighbor_type(NeighborType::L3);
+  NeighborConfiguration_builder3->set_project_id(project_id);
+  NeighborConfiguration_builder3->set_vpc_id(vpc_id_1);
+  NeighborConfiguration_builder3->set_name(port_name_3);
+  NeighborConfiguration_builder3->set_mac_address(vmac_address_3);
+  NeighborConfiguration_builder3->set_host_ip_address(remote_ip_2);
+
+  NeighborConfiguration_builder3->set_neighbor_host_dvr_mac(host2_dvr_mac_address);
+
+  NeighborConfiguration_FixedIp *FixedIp_builder3 =
+          NeighborConfiguration_builder3->add_fixed_ips();
+  FixedIp_builder3->set_subnet_id(subnet_id_1);
+  FixedIp_builder3->set_ip_address(vip_address_3);
+
+  // fill in neighbor state structs for port 4
+  new_neighbor_states4->set_operation_type(OperationType::CREATE);
+
+  NeighborConfiguration *NeighborConfiguration_builder4 =
+          new_neighbor_states4->mutable_configuration();
+  NeighborConfiguration_builder4->set_format_version(1);
+  NeighborConfiguration_builder4->set_revision_number(1);
+
+  NeighborConfiguration_builder4->set_neighbor_type(NeighborType::L3);
+  NeighborConfiguration_builder4->set_project_id(project_id);
+  NeighborConfiguration_builder4->set_vpc_id(vpc_id_2);
+  NeighborConfiguration_builder4->set_name(port_name_4);
+  NeighborConfiguration_builder4->set_mac_address(vmac_address_4);
+  NeighborConfiguration_builder4->set_host_ip_address(remote_ip_2);
+
+  NeighborConfiguration_builder4->set_neighbor_host_dvr_mac(host2_dvr_mac_address);
+
+  NeighborConfiguration_FixedIp *FixedIp_builder4 =
+          NeighborConfiguration_builder4->add_fixed_ips();
+  FixedIp_builder4->set_subnet_id(subnet_id_2);
+  FixedIp_builder4->set_ip_address(vip_address_4);
+
+  // create the L3 neighbors
+  overall_rc = Aca_Comm_Manager::get_instance().update_goal_state(
+          GoalState_builder2, gsOperationalReply);
+  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
+
+  // should be able to ping each other now using router
+  overall_rc = Aca_Net_Config::get_instance().execute_system_command(
+          "docker exec con3 ping -c1 " + vip_address_4);
+  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
+
+  overall_rc = Aca_Net_Config::get_instance().execute_system_command(
+          "docker exec con4 ping -c1 " + vip_address_3);
+  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
+
+  // free the allocated configurations since we are done with it now
+  new_neighbor_states3->clear_configuration();
+  new_neighbor_states4->clear_configuration();
   new_subnet_states1->clear_configuration();
   new_subnet_states2->clear_configuration();
 
-  // program the L3 neighbor rules
-  // should be able to ping each other now
-
-  // not deleting br-int and br-tun bridges for testing only
-
   // cleanup
-  /*
-  overall_rc = Aca_Net_Config::get_instance().execute_system_command(
-          "docker stop con3");
+
+  overall_rc = Aca_Net_Config::get_instance().execute_system_command("docker kill con3");
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
 
-  overall_rc = Aca_Net_Config::get_instance().execute_system_command(
-          "docker rm con3");
+  overall_rc = Aca_Net_Config::get_instance().execute_system_command("docker rm con3");
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
 
-  overall_rc = Aca_Net_Config::get_instance().execute_system_command(
-          "docker stop con4");
+  overall_rc = Aca_Net_Config::get_instance().execute_system_command("docker kill con4");
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
 
-  overall_rc = Aca_Net_Config::get_instance().execute_system_command(
-          "docker rm con4");
+  overall_rc = Aca_Net_Config::get_instance().execute_system_command("docker rm con4");
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
-  */
+
+  // delete br-int and br-tun bridges
+  ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
+          "del-br br-int", not_care_culminative_time, overall_rc);
+  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
+
+  ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
+          "del-br br-tun", not_care_culminative_time, overall_rc);
+  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
 }
 
 TEST(net_config_test_cases, create_namespace_invalid)
