@@ -108,8 +108,8 @@ int ACA_OVS_L3_Programmer::create_router(const string host_dvr_mac, const string
                  " actions=move:NXM_OF_ETH_SRC[]->NXM_OF_ETH_DST[],mod_dl_src:" +
                  subnet_it->second.gateway_mac +
                  ",load:0x2->NXM_OF_ARP_OP[],move:NXM_NX_ARP_SHA[]->NXM_NX_ARP_THA[],move:NXM_OF_ARP_SPA[]->NXM_OF_ARP_TPA[],load:0x" +
-                 current_gateway_mac + "->NXM_NX_ARP_SHA[],load:0x" +
-                 string(hex_ip_buffer) + "->NXM_OF_ARP_SPA[],in_port\"";
+                 current_gateway_mac + "->NXM_NX_ARP_SHA[],load:" + string(hex_ip_buffer) +
+                 "->NXM_OF_ARP_SPA[],in_port\"";
 
     ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
             cmd_string, culminative_time, overall_rc);
