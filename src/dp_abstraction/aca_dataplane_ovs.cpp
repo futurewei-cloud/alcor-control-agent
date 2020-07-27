@@ -473,8 +473,8 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
                 overall_rc = ACA_OVS_L3_Programmer::get_instance().create_neighbor_l3(
                         current_NeighborConfiguration.vpc_id(),
                         current_NeighborConfiguration.fixed_ips(0).subnet_id(),
-                        found_network_type, host_ip_address, virtual_mac_address,
-                        found_tunnel_id, neighbor_host_dvr_mac,
+                        found_network_type, virtual_ip_address,
+                        virtual_mac_address, found_tunnel_id, neighbor_host_dvr_mac,
                         culminative_dataplane_programming_time);
               }
             }
@@ -647,7 +647,7 @@ int ACA_Dataplane_OVS::update_router_state_workitem(RouterState current_RouterSt
         }
 
         ACA_OVS_L3_Programmer::get_instance().create_router(
-                current_RouterConfiguration.id(), host_dvr_mac,
+                host_dvr_mac, current_RouterConfiguration.id(),
                 new_subnet_table, culminative_dataplane_programming_time);
       }
 

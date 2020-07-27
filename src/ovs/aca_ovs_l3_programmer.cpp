@@ -208,7 +208,7 @@ int ACA_OVS_L3_Programmer::create_neighbor_l3(const string vpc_id, const string 
         // essential rule to restore from neighbor host DVR mac to destination GW mac:
         cmd_string = "add-flow br-tun \"table=0,priority=25,dl_vlan=" +
                      to_string(source_vlan_id) + ",dl_src=" + neighbor_host_dvr_mac +
-                     " actions=mod_dl_src:" + subnet_it->second.gateway_mac + " output:NORMAL";
+                     " actions=mod_dl_src:" + subnet_it->second.gateway_mac + " output:NORMAL\"";
 
         ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
                 cmd_string, culminative_time, overall_rc);
@@ -224,7 +224,7 @@ int ACA_OVS_L3_Programmer::create_neighbor_l3(const string vpc_id, const string 
                      ",dl_dst=" + subnet_it->second.gateway_mac +
                      " actions=mod_vlan_vid:" + to_string(destination_vlan_id) +
                      ",mod_dl_src:" + _host_dvr_mac +
-                     ",mod_dl_dst:" + virtual_mac + ",resubmit(,2)";
+                     ",mod_dl_dst:" + virtual_mac + ",resubmit(,2)\"";
 
         ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
                 cmd_string, culminative_time, overall_rc);
