@@ -1275,6 +1275,11 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_ROUTING_test_traffic_MASTER)
   ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
           "del-br br-tun", not_care_culminative_time, overall_rc);
 
+  // create and setup br-int and br-tun bridges, and their patch ports
+  overall_rc = ACA_OVS_L2_Programmer::get_instance().setup_ovs_bridges_if_need();
+  ASSERT_EQ(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
+
   // kill the docker instances just in case
   Aca_Net_Config::get_instance().execute_system_command("docker kill con1");
 
@@ -1398,15 +1403,25 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_ROUTING_test_traffic_MASTER)
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
 
-  // test traffic between the two newly created ports, it should not work
-  // because they are from different subnet
+  // test traffic between the ports without router on same subnet
   overall_rc = Aca_Net_Config::get_instance().execute_system_command(
-          "docker exec con1 ping -c1 " + vip_address_2);
+          "docker exec con1 ping -c1 " + vip_address_3);
+  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
+
+  overall_rc = Aca_Net_Config::get_instance().execute_system_command(
+          "docker exec con2 ping -c1 " + vip_address_4);
+  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
+
+  // test traffic between the ports without router on different subnet
+  overall_rc = Aca_Net_Config::get_instance().execute_system_command(
+          "docker exec con1 ping -c1 " + vip_address_4);
   EXPECT_NE(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
 
   overall_rc = Aca_Net_Config::get_instance().execute_system_command(
-          "docker exec con2 ping -c1 " + vip_address_1);
+          "docker exec con2 ping -c1 " + vip_address_3);
   EXPECT_NE(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
 
@@ -1531,7 +1546,7 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_ROUTING_test_traffic_MASTER)
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
 
-  // should be able to ping port 3 and port 4 on slave using router
+  // test traffic between the ports with router on same subnet
   overall_rc = Aca_Net_Config::get_instance().execute_system_command(
           "docker exec con1 ping -c1 " + vip_address_3);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
@@ -1539,6 +1554,17 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_ROUTING_test_traffic_MASTER)
 
   overall_rc = Aca_Net_Config::get_instance().execute_system_command(
           "docker exec con2 ping -c1 " + vip_address_4);
+  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
+
+  // test traffic between the ports without router on different subnet
+  overall_rc = Aca_Net_Config::get_instance().execute_system_command(
+          "docker exec con1 ping -c1 " + vip_address_4);
+  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
+
+  overall_rc = Aca_Net_Config::get_instance().execute_system_command(
+          "docker exec con2 ping -c1 " + vip_address_3);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
 
@@ -1550,19 +1576,19 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_ROUTING_test_traffic_MASTER)
 
   // cleanup
 
-  overall_rc = Aca_Net_Config::get_instance().execute_system_command("docker kill con3");
+  overall_rc = Aca_Net_Config::get_instance().execute_system_command("docker kill con1");
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
 
-  overall_rc = Aca_Net_Config::get_instance().execute_system_command("docker rm con3");
+  overall_rc = Aca_Net_Config::get_instance().execute_system_command("docker rm con1");
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
 
-  overall_rc = Aca_Net_Config::get_instance().execute_system_command("docker kill con4");
+  overall_rc = Aca_Net_Config::get_instance().execute_system_command("docker kill con2");
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
 
-  overall_rc = Aca_Net_Config::get_instance().execute_system_command("docker rm con4");
+  overall_rc = Aca_Net_Config::get_instance().execute_system_command("docker rm con2");
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
 
@@ -1590,6 +1616,11 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_ROUTING_test_traffic_SLAVE)
 
   ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
           "del-br br-tun", not_care_culminative_time, overall_rc);
+
+  // create and setup br-int and br-tun bridges, and their patch ports
+  overall_rc = ACA_OVS_L2_Programmer::get_instance().setup_ovs_bridges_if_need();
+  ASSERT_EQ(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
 
   // kill the docker instances just in case
   Aca_Net_Config::get_instance().execute_system_command("docker kill con3");

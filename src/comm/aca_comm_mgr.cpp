@@ -329,6 +329,8 @@ void Aca_Comm_Manager::print_goal_state(GoalState parsed_struct)
     }
     printf("\n");
   }
+
+  // TODO: also print router and neighbor and DHCP states
 }
 
 } // namespace aca_comm_manager
