@@ -206,7 +206,7 @@ int ACA_OVS_L3_Programmer::create_neighbor_l3(const string vpc_id, const string 
                 subnet_it->second.vpc_id);
 
         // essential rule to restore from neighbor host DVR mac to destination GW mac:
-        cmd_string = "add-flow br-tun \"table=0,priority=25,dl_vlan=" +
+        cmd_string = "add-flow br-int \"table=0,priority=25,dl_vlan=" +
                      to_string(source_vlan_id) + ",dl_src=" + neighbor_host_dvr_mac +
                      " actions=mod_dl_src:" + subnet_it->second.gateway_mac + " output:NORMAL\"";
 
