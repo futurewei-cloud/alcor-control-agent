@@ -314,6 +314,8 @@ int Aca_Net_Config::execute_system_command(string cmd_string, ulong &culminative
     return rc;
   }
 
+  ACA_LOG_INFO("Executing command: %s\n", cmd_string.c_str());
+
   auto network_configuration_time_start = chrono::steady_clock::now();
 
   rc = system(cmd_string.c_str());
@@ -329,15 +331,15 @@ int Aca_Net_Config::execute_system_command(string cmd_string, ulong &culminative
 
   g_total_network_configuration_time += network_configuration_elapse_time;
 
-  ACA_LOG_DEBUG("Elapsed time for system command took: %ld nanoseconds or %ld milliseconds.\n",
+  if (rc == EXIT_SUCCESS) {
+    ACA_LOG_INFO("Command succeeded!");
+  } else {
+    ACA_LOG_DEBUG("Command failed!!! rc: %d", rc);
+  }
+
+  ACA_LOG_DEBUG(" Elapsed time for system command took: %ld nanoseconds or %ld milliseconds.\n\n",
                 network_configuration_elapse_time,
                 network_configuration_elapse_time / 1000000);
-
-  if (rc == EXIT_SUCCESS) {
-    ACA_LOG_INFO("Command succeeded: %s\n", cmd_string.c_str());
-  } else {
-    ACA_LOG_DEBUG("Command failed!!!: %s\n", cmd_string.c_str());
-  }
 
   return rc;
 }
