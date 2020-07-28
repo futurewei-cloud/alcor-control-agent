@@ -36,8 +36,8 @@ class ACA_OVS_L2_Programmer {
 
   int create_update_neighbor_port(const std::string vpc_id,
                                   alcor::schema::NetworkType network_type,
-                                  const std::string remote_ip, uint tunnel_id,
-                                  ulong &culminative_time);
+                                  const std::string remote_host_ip,
+                                  uint tunnel_id, ulong &culminative_time);
 
   void execute_ovsdb_command(const std::string cmd_string,
                              ulong &culminative_time, int &overall_rc);

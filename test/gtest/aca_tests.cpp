@@ -1404,14 +1404,15 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_ROUTING_test_traffic_MASTER)
   overall_rc = EXIT_SUCCESS;
 
   // test traffic between the ports without router on same subnet
+  // expect to fail before neighbor info is not programmed yet
   overall_rc = Aca_Net_Config::get_instance().execute_system_command(
           "docker exec con1 ping -c1 " + vip_address_3);
-  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
+  EXPECT_NE(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
 
   overall_rc = Aca_Net_Config::get_instance().execute_system_command(
           "docker exec con2 ping -c1 " + vip_address_4);
-  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
+  EXPECT_NE(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
 
   // test traffic between the ports without router on different subnet
