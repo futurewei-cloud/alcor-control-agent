@@ -15,6 +15,7 @@
 #ifndef ACA_UTIL_H
 #define ACA_UTIL_H
 
+#include "aca_net_config.h"
 #include "aca_log.h"
 #include "goalstateprovisioner.grpc.pb.h"
 #include <string>
@@ -106,6 +107,19 @@ static inline const char *aca_get_neighbor_type_string(alcor::schema::NeighborTy
   default:
     return "ERROR: unknown neighbor type!";
   }
+}
+
+static inline bool aca_is_port_on_same_host(const std::string hosting_port_ip)
+{
+  if (hosting_port_ip.empty()) {
+    return false;
+  }
+
+  const std::string IFCONFIG_PREFIX = "ifconfig ";
+  std::string cmd_string = IFCONFIG_PREFIX + " | grep " + hosting_port_ip;
+  int rc = aca_net_config::Aca_Net_Config::get_instance().execute_system_command(cmd_string);
+
+  return (rc == EXIT_SUCCESS);
 }
 
 #endif

@@ -261,7 +261,7 @@ int ACA_OVS_L2_Programmer::configure_port(const string vpc_id, const string port
 
 int ACA_OVS_L2_Programmer::create_update_neighbor_port(const string vpc_id,
                                                        alcor::schema::NetworkType network_type,
-                                                       const string remote_ip,
+                                                       const string remote_host_ip,
                                                        uint tunnel_id, ulong &culminative_time)
 {
   ACA_LOG_DEBUG("ACA_OVS_L2_Programmer::port_neighbor_create_update ---> Entering\n");
@@ -272,8 +272,8 @@ int ACA_OVS_L2_Programmer::create_update_neighbor_port(const string vpc_id,
     throw std::invalid_argument("vpc_id is empty");
   }
 
-  if (remote_ip.empty()) {
-    throw std::invalid_argument("remote_ip is empty");
+  if (remote_host_ip.empty()) {
+    throw std::invalid_argument("remote_host_ip is empty");
   }
 
   if (tunnel_id == 0) {
@@ -286,13 +286,13 @@ int ACA_OVS_L2_Programmer::create_update_neighbor_port(const string vpc_id,
     throw std::runtime_error("Invalid environment with br-int and br-tun");
   }
 
-  string outport_name = aca_get_outport_name(network_type, remote_ip);
+  string outport_name = aca_get_outport_name(network_type, remote_host_ip);
 
   string cmd_string =
           "--may-exist add-port br-tun " + outport_name + " -- set interface " +
           outport_name + " type=" + aca_get_network_type_string(network_type) +
           " options:df_default=true options:egress_pkt_mark=0 options:in_key=flow options:out_key=flow options:remote_ip=" +
-          remote_ip;
+          remote_host_ip;
 
   execute_ovsdb_command(cmd_string, culminative_time, overall_rc);
 

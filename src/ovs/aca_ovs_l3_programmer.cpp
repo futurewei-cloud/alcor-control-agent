@@ -135,12 +135,11 @@ int ACA_OVS_L3_Programmer::create_router(const string host_dvr_mac, const string
   return overall_rc;
 }
 
-int ACA_OVS_L3_Programmer::create_neighbor_l3(const string vpc_id, const string subnet_id,
-                                              alcor::schema::NetworkType network_type,
-                                              const string virtual_ip,
-                                              const string virtual_mac, uint tunnel_id,
-                                              const string neighbor_host_dvr_mac,
-                                              ulong &culminative_time)
+int ACA_OVS_L3_Programmer::create_neighbor_l3(
+        const string vpc_id, const string subnet_id,
+        alcor::schema::NetworkType network_type, const string virtual_ip,
+        const string virtual_mac, const string remote_host_ip, uint tunnel_id,
+        const string neighbor_host_dvr_mac, ulong &culminative_time)
 {
   ACA_LOG_DEBUG("ACA_OVS_L3_Programmer::create_neighbor_l3 ---> Entering\n");
 
@@ -149,6 +148,7 @@ int ACA_OVS_L3_Programmer::create_neighbor_l3(const string vpc_id, const string 
   int source_vlan_id;
   int destination_vlan_id;
   string cmd_string;
+  string of_rule_output;
 
   if (vpc_id.empty()) {
     throw std::invalid_argument("vpc_id is empty");
@@ -219,12 +219,20 @@ int ACA_OVS_L3_Programmer::create_neighbor_l3(const string vpc_id, const string 
         // for the first implementation, we will go ahead and program the on demand routing rule here
         // in the future, the programming of the on demand rule will be triggered by the first packet
         // sent to openflow controller, that's ACA
+
+        // the openflow rule output depends on whether the hosting ip is on this compute host or not
+        if (aca_is_port_on_same_host(remote_host_ip)) {
+          of_rule_output = ",output:\"patch-int\"\"";
+        } else {
+          of_rule_output = ",resubmit(,2)\"";
+        }
+
         cmd_string = "add-flow br-tun \"table=0,priority=50,ip,dl_vlan=" +
                      to_string(source_vlan_id) + ",nw_dst=" + virtual_ip +
                      ",dl_dst=" + subnet_it->second.gateway_mac +
                      " actions=mod_vlan_vid:" + to_string(destination_vlan_id) +
                      ",mod_dl_src:" + _host_dvr_mac +
-                     ",mod_dl_dst:" + virtual_mac + ",resubmit(,2)\"";
+                     ",mod_dl_dst:" + virtual_mac + of_rule_output;
 
         ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
                 cmd_string, culminative_time, overall_rc);
