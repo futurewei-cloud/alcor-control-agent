@@ -970,6 +970,11 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_ROUTING_test_traffic_one_machine
   ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
           "del-br br-tun", not_care_culminative_time, overall_rc);
 
+  // create and setup br-int and br-tun bridges, and their patch ports
+  overall_rc = ACA_OVS_L2_Programmer::get_instance().setup_ovs_bridges_if_need();
+  ASSERT_EQ(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
+
   // kill the docker instances just in case
   Aca_Net_Config::get_instance().execute_system_command("docker kill con3");
 

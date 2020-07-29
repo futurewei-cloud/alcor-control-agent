@@ -466,7 +466,7 @@ void Aca_Comm_Manager::print_goal_state(GoalState parsed_struct)
 
     for (int j = 0; j < current_RouterConfiguration.subnet_ids_size(); j++) {
       fprintf(stdout, "current_RouterConfiguration.subnet_ids(%d): %s\n", j,
-              current_RouterConfiguration.subnet_ids(i).c_str());
+              current_RouterConfiguration.subnet_ids(j).c_str());
     }
 
     printf("\n");

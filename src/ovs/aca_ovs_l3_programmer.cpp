@@ -222,7 +222,7 @@ int ACA_OVS_L3_Programmer::create_neighbor_l3(
 
         // the openflow rule output depends on whether the hosting ip is on this compute host or not
         if (aca_is_port_on_same_host(remote_host_ip)) {
-          of_rule_output = ",output:\"patch-int\"\"";
+          of_rule_output = ",output:IN_PORT\"";
         } else {
           of_rule_output = ",resubmit(,2)\"";
         }
