@@ -56,7 +56,9 @@ struct dhcp_entry_data {
 
 //DHCP Message Fields
 #define DHCP_MSG_OPTS_LENGTH (308)
-#define DHCP_MSG_FD_HTYPE_ETHERNET (0x1)
+#define DHCP_MSG_HWTYPE_ETH (0x1)
+#define DHCP_MSG_HWTYPE_ETH_LEN (0x6)
+#define DHCP_MSG_MAGIC_COOKIE (0x63825363) //magic cookie per RFC2131
 
 struct dhcp_message {
   uint8_t op;
@@ -80,11 +82,15 @@ struct dhcp_message {
 // DHCP Message Options Code
 #define DHCP_OPT_PAD (0x0)
 #define DHCP_OPT_END (0xff)
-#define DHCP_OPT_MSG_TYPE (0x35)
-#define DHCP_OPT_IP_LEASE_TIME (0x33)
+#define DHCP_OPT_LEN_1BYTE (0x1)
+#define DHCP_OPT_LEN_4BYTE (0x4)
+#define DHCP_OPT_CODE_MSGTYPE (0x35)
+#define DHCP_OPT_CODE_IP_LEASE_TIME (0x33)
+#define DHCP_OPT_CODE_SERVER_ID (0x36)
+#define DHCP_OPT_CODE_REQ_IP (0x32)
 
-#define DHCP_OPT_LEN (0x1)
-#define DHCP_OPT_DEFAULT_IP_LEASE_TIME (86)
+#define DHCP_OPT_CLV_HEADER (0x2) //CLV = Code + Length + Value
+#define DHCP_OPT_DEFAULT_IP_LEASE_TIME (86400) //One day
 
 struct dhcp_message_type {
   uint8_t code;
@@ -98,45 +104,29 @@ struct dhcp_ip_lease_time {
   uint32_t lease_time;
 };
 
+struct dhcp_server_id {
+  uint8_t code;
+  uint8_t len;
+  uint32_t sid;
+};
+
+struct dhcp_req_ip {
+  uint8_t code;
+  uint8_t len;
+  uint32_t req_ip;
+};
+
 union dhcp_message_options {
   dhcp_message_type *dhcpmsgtype;
   dhcp_ip_lease_time *ipleasetime;
+  dhcp_server_id *serverid;
+  dhcp_req_ip *reqip;
 };
-
-#define ENCODE_DHCP_MESSAGE_TYPE(pMsg)                                         \
-  do {                                                                         \
-    (pMsg)->code = DHCP_OPT_MSG_TYPE;                                          \
-    (pMsg)->len = 1;                                                           \
-    (pMsg)->msg_type = DHCP_MSG_DHCPOFFER;                                     \
-  } while (0)
-#define PACK_DHCP_MESSAGE_TYPE(pMsg, pos, index)                               \
-  do {                                                                         \
-    ENCODE_DHCP_MESSAGE_TYPE(pMsg);                                            \
-    (pos)[(index)] = (pMsg)->code;                                             \
-    (pos)[(index) + 1] = (pMsg)->len;                                          \
-    pos[index + 2] = (pMsg)->msg_type;                                         \
-    index += 2 + (pMsg)->len;                                                  \
-  } while (0)
-
-#define ENCODE_DHCP_IP_LEASE_TIME(pMsg)                                        \
-  do {                                                                         \
-    (pMsg)->code = DHCP_OPT_IP_LEASE_TIME;                                     \
-    (pMsg)->len = 4;                                                           \
-    (pMsg)->lease_time = DHCP_OPT_DEFAULT_IP_LEASE_TIME;                       \
-  } while (0)
-#define PACK_DHCP_IP_LEASE_TIME(pMsg, pos, index)                              \
-  do {                                                                         \
-    ENCODE_DHCP_IP_LEASE_TIME(pMsg);                                           \
-    (pos)[(index)] = (pMsg)->code;                                             \
-    (pos)[(index) + 1] = (pMsg)->len;                                          \
-    *(uint32_t *)(pos + index + 2) = (pMsg)->lease_time;                       \
-    index += 2 + (pMsg)->len;                                                  \
-  } while (0)
 
 class ACA_Dhcp_Server : public aca_dhcp_programming_if::ACA_Dhcp_Programming_Interface {
   public:
   ACA_Dhcp_Server();
-  ~ACA_Dhcp_Server();
+  virtual ~ACA_Dhcp_Server();
   int initialize();
 
   /* Management Plane Ops */
@@ -149,20 +139,34 @@ class ACA_Dhcp_Server : public aca_dhcp_programming_if::ACA_Dhcp_Programming_Int
   void dhcps_xmit(void *message);
 
   private:
+  /*************** Management plane operations ***********************/
   dhcp_entry_data *_search_dhcp_entry(string mac_address);
   void _validate_mac_address(const char *mac_string);
   void _validate_ipv4_address(const char *ip_address);
   void _validate_ipv6_address(const char *ip_address);
   int _validate_dhcp_entry(dhcp_config *dhcp_cfg_in);
+
+  /**************** Data plane operations *********************/
   int _validate_dhcp_message(dhcp_message *dhcpmsg);
-  uint8_t _get_message_type(dhcp_message *dhcpmsg);
-  uint8_t *_get_option(dhcp_message *dhcpmsg, uint8_t code);
   void _init_dhcp_msg_ops();
+  uint8_t *_get_option(dhcp_message *dhcpmsg, uint8_t code);
+  uint8_t _get_message_type(dhcp_message *dhcpmsg);
+  uint32_t _get_server_id(dhcp_message *dhcpmsg);
+  uint32_t _get_requested_ip(dhcp_message *dhcpmsg);
 
   void _parse_dhcp_none(dhcp_message *dhcpmsg);
   void _parse_dhcp_discover(dhcp_message *dhcpmsg);
-  dhcp_message *_pack_dhcp_offer();
+  void _parse_dhcp_request(dhcp_message *dhcpmsg);
 
+  dhcp_message *_pack_dhcp_offer(dhcp_message *dhcpdiscover, dhcp_entry_data *pData);
+  dhcp_message *_pack_dhcp_ack(dhcp_message *dhcpreq);
+  dhcp_message *_pack_dhcp_nak(dhcp_message *dhcpreq);
+  void _pack_dhcp_message(dhcp_message *rpl, dhcp_message *req);
+  void _pack_dhcp_header(dhcp_message *dhcpmsg);
+  void _pack_dhcp_opt_msgtype(uint8_t *option, uint8_t msg_type);
+  void _pack_dhcp_opt_ip_lease_time(uint8_t *option, uint32_t lease);
+
+  /****************** Private variables ******************/
   int _dhcp_entry_thresh;
   int _get_db_size() const;
 #define DHCP_DB_SIZE _get_db_size()

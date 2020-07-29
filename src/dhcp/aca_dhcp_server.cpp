@@ -17,6 +17,7 @@
 #include "goalstateprovisioner.grpc.pb.h"
 #include <errno.h>
 #include <arpa/inet.h>
+#include "aca_ovs_control.h"
 
 using namespace std;
 using namespace aca_dhcp_programming_if;
@@ -211,11 +212,7 @@ int ACA_Dhcp_Server::_get_db_size() const
   }
 }
 
-void ACA_Dhcp_Server::_init_dhcp_msg_ops()
-{
-  _parse_dhcp_msg_ops[DHCP_MSG_NONE] = _parse_dhcp_none;
-  _parse_dhcp_msg_ops[DHCP_MSG_DHCPDISCOVER] = _parse_dhcp_discover;
-}
+/************* Operation and procedure for dataplane *******************/
 
 void ACA_Dhcp_Server::dhcps_recv(void *message)
 {
@@ -242,6 +239,8 @@ void ACA_Dhcp_Server::dhcps_recv(void *message)
 
 void ACA_Dhcp_Server::dhcps_xmit(void *message)
 {
+  ACA_OVS_Control::get_instance().packet_out(
+          "br-int", "in_port=controller packet=<hex-string> actions=normal");
 }
 
 int ACA_Dhcp_Server::_validate_dhcp_message(dhcp_message *dhcpmsg)
@@ -260,7 +259,7 @@ int ACA_Dhcp_Server::_validate_dhcp_message(dhcp_message *dhcpmsg)
       break;
     }
 
-    if (DHCP_MSG_FD_HTYPE_ETHERNET == dhcpmsg->htype && 6 != dhcpmsg->hlen) {
+    if (DHCP_MSG_HWTYPE_ETH == dhcpmsg->htype && 6 != dhcpmsg->hlen) {
       retcode = -1;
       ACA_LOG_ERROR("Invalid 'hlen' field for ethernet!\n");
       break;
@@ -282,17 +281,14 @@ uint8_t *ACA_Dhcp_Server::_get_option(dhcp_message *dhcpmsg, uint8_t code)
   options = dhcpmsg->options;
 
   for (int i = 0; i < DHCP_MSG_OPTS_LENGTH;) {
-    switch (options[i]) {
-    case code:
+    if (options[i] == code) {
       return options + i;
-    case DHCP_OPT_PAD:
+    } else if (options[i] == DHCP_OPT_PAD) {
       i++;
+    } else if (options[i] == DHCP_OPT_END) {
       break;
-    case DHCP_OPT_END:
-      break;
-    default:
-      i += options[DHCP_OPT_LEN + i] + 2;
-      break;
+    } else {
+      i += options[i + 1] + DHCP_OPT_CLV_HEADER;
     }
   }
 
@@ -308,7 +304,7 @@ uint8_t ACA_Dhcp_Server::_get_message_type(dhcp_message *dhcpmsg)
     return DHCP_MSG_NONE;
   }
 
-  popt->dhcpmsgtype = _get_option(dhcpmsg, DHCP_OPT_MSG_TYPE);
+  popt->dhcpmsgtype = (dhcp_message_type *)_get_option(dhcpmsg, DHCP_OPT_CODE_MSGTYPE);
   if (nullptr == popt->dhcpmsgtype) {
     return DHCP_MSG_NONE;
   }
@@ -316,9 +312,117 @@ uint8_t ACA_Dhcp_Server::_get_message_type(dhcp_message *dhcpmsg)
   return popt->dhcpmsgtype->msg_type;
 }
 
+uint32_t ACA_Dhcp_Server::_get_server_id(dhcp_message *dhcpmsg)
+{
+  dhcp_message_options *popt = nullptr;
+
+  if (nullptr == dhcpmsg) {
+    ACA_LOG_ERROR("DHCP message is null!\n");
+    return 0;
+  }
+
+  popt->serverid = (dhcp_server_id *)_get_option(dhcpmsg, DHCP_OPT_CODE_SERVER_ID);
+  if (nullptr == popt->serverid) {
+    return 0;
+  }
+
+  return popt->serverid->sid;
+}
+
+uint32_t ACA_Dhcp_Server::_get_requested_ip(dhcp_message *dhcpmsg)
+{
+  dhcp_message_options *popt = nullptr;
+
+  if (nullptr == dhcpmsg) {
+    ACA_LOG_ERROR("DHCP message is null!\n");
+    return 0;
+  }
+
+  popt->reqip = (dhcp_req_ip *)_get_option(dhcpmsg, DHCP_OPT_CODE_REQ_IP);
+  if (nullptr == popt->reqip) {
+    return 0;
+  }
+
+  return popt->reqip->req_ip;
+}
+
+void ACA_Dhcp_Server::_pack_dhcp_message(dhcp_message *rpl, dhcp_message *req)
+{
+  if (nullptr == rpl || nullptr == req) {
+    return;
+  }
+
+  //DHCP Fix header
+  _pack_dhcp_header(rpl);
+
+  rpl->hops = req->hops;
+  rpl->xid = req->xid;
+  rpl->ciaddr = 0;
+  rpl->siaddr = 0;
+  rpl->giaddr = 0;
+  memcpy(rpl->chaddr, req->chaddr, 16);
+}
+
+void ACA_Dhcp_Server::_pack_dhcp_header(dhcp_message *dhcpmsg)
+{
+  if (nullptr == dhcpmsg) {
+    return;
+  }
+
+  dhcpmsg->op = BOOTP_MSG_BOOTREPLY;
+  dhcpmsg->htype = DHCP_MSG_HWTYPE_ETH;
+  dhcpmsg->hlen = DHCP_MSG_HWTYPE_ETH_LEN;
+  dhcpmsg->cookie = htonl(DHCP_MSG_MAGIC_COOKIE);
+}
+
+void ACA_Dhcp_Server::_pack_dhcp_opt_msgtype(uint8_t *option, uint8_t msg_type)
+{
+  dhcp_message_type *msgtype = nullptr;
+
+  if (nullptr == option) {
+    return;
+  }
+
+  msgtype = (dhcp_message_type *)option;
+  msgtype->code = DHCP_OPT_CODE_MSGTYPE;
+  msgtype->len = DHCP_OPT_LEN_1BYTE;
+  msgtype->msg_type = msg_type;
+}
+
+void ACA_Dhcp_Server::_pack_dhcp_opt_ip_lease_time(uint8_t *option, uint32_t lease)
+{
+  dhcp_ip_lease_time *lt = nullptr;
+
+  if (nullptr == option) {
+    return;
+  }
+
+  if (0 == lease) {
+    lease = DHCP_OPT_DEFAULT_IP_LEASE_TIME;
+  }
+
+  lt->code = DHCP_OPT_CODE_IP_LEASE_TIME;
+  lt->len = DHCP_OPT_LEN_4BYTE;
+  lt->lease_time = lease;
+}
+
+void ACA_Dhcp_Server::_init_dhcp_msg_ops()
+{
+  _parse_dhcp_msg_ops[DHCP_MSG_NONE] = _parse_dhcp_none;
+  _parse_dhcp_msg_ops[DHCP_MSG_DHCPDISCOVER] = _parse_dhcp_discover;
+  _parse_dhcp_msg_ops[DHCP_MSG_DHCPOFFER] = _parse_dhcp_none;
+  _parse_dhcp_msg_ops[DHCP_MSG_DHCPREQUEST] = _parse_dhcp_request;
+  _parse_dhcp_msg_ops[DHCP_MSG_DHCPDECLINE] = _parse_dhcp_none;
+  _parse_dhcp_msg_ops[DHCP_MSG_DHCPACK] = _parse_dhcp_none;
+  _parse_dhcp_msg_ops[DHCP_MSG_DHCPNAK] = _parse_dhcp_none;
+  _parse_dhcp_msg_ops[DHCP_MSG_DHCPRELEASE] = _parse_dhcp_none;
+  _parse_dhcp_msg_ops[DHCP_MSG_DHCPINFORM] = _parse_dhcp_none;
+}
+
 void ACA_Dhcp_Server::_parse_dhcp_none(dhcp_message *dhcpmsg)
 {
-  dhcpmsg = dhcpmsg;
+  ACA_LOG_ERROR("Wrong DHCP message type! (Message type = %d)\n",
+                _get_message_type(dhcpmsg));
   return;
 }
 
@@ -336,7 +440,12 @@ void ACA_Dhcp_Server::_parse_dhcp_discover(dhcp_message *dhcpmsg)
     return;
   }
 
-  dhcpoffer = new dhcp_message();
+  dhcpoffer = _pack_dhcp_offer(dhcpmsg, pData);
+  if (nullptr == dhcpoffer) {
+    return;
+  }
+
+  dhcps_xmit(dhcpoffer);
 }
 
 dhcp_message *
@@ -344,42 +453,140 @@ ACA_Dhcp_Server::_pack_dhcp_offer(dhcp_message *dhcpdiscover, dhcp_entry_data *p
 {
   dhcp_message *dhcpoffer = nullptr;
   struct sockaddr_in sa;
-  dhcp_message_options dhcpmsgopts;
   uint8_t *pos = nullptr;
-  int index = 0;
   int opts_len = 0;
 
-  //DHCP Fix header
   dhcpoffer = new dhcp_message();
-  dhcpoffer->op = BOOTP_MSG_BOOTREPLY;
-  dhcpoffer->htype = dhcpdiscover->htype;
-  dhcpoffer->hops = dhcpdiscover->hops;
-  dhcpoffer->xid = dhcpdiscover->xid;
-  dhcpoffer->ciaddr = 0;
+
+  //Pack DHCP header
+  _pack_dhcp_message(dhcpoffer, dhcpdiscover);
 
   if (inet_pton(AF_INET, pData->ipv4_address, &(sa.sin_addr)) != 1) {
     throw std::invalid_argument("Virtual ipv4 address is not in the expect format");
   }
-  dhcpoffer->yiaddr = sa.sin_addr;
-  dhcpoffer->siaddr = 0;
-  dhcpoffer->giaddr = 0;
-  memcpy(dhcpoffer->chaddr, dhcpdiscover->chaddr, 16);
+  dhcpoffer->yiaddr = htonl(sa.sin_addr);
 
   //DHCP Options
-  dhcpoffer->cookie = dhcpdiscover->cookie;
   pos = dhcpoffer->options;
-  while (index < DHCP_MSG_OPTS_LENGTH) {
-    //DHCP Options: dhcp message type
-    PACK_DHCP_MESSAGE_TYPE((dhcp_message_type *)&(dhcpmsgopts.dhcpmsgtype), pos, index);
 
-    //DHCP Options: ip address lease time
-    PACK_DHCP_MESSAGE_TYPE((dhcp_message_type *)&(dhcpmsgopts.ipleasetime), pos, index);
+  //DHCP Options: dhcp message type
+  _pack_dhcp_opt_msgtype(&pos[opts_len], DHCP_MSG_DHCPOFFER);
+  opts_len += DHCP_OPT_CLV_HEADER + DHCP_OPT_LEN_1BYTE;
 
-    //DHCP Options: server identifier
+  //DHCP Options: ip address lease time
+  _pack_dhcp_opt_ip_lease_time(&pos[opts_len], DHCP_OPT_DEFAULT_IP_LEASE_TIME);
+  opts_len += DHCP_OPT_CLV_HEADER + DHCP_OPT_LEN_4BYTE;
 
-    //DHCP Options: end
-    pos[index] = DHCP_OPT_END;
+  //DHCP Options: server identifier
+
+  //DHCP Options: end
+  pos[opts_len] = DHCP_OPT_END;
+
+  return dhcpoffer;
+}
+
+void ACA_Dhcp_Server::_parse_dhcp_request(dhcp_message *dhcpmsg)
+{
+  string mac_address;
+  dhcp_entry_data *pData = nullptr;
+  dhcp_message *dhcpack = nullptr;
+  dhcp_message *dhcpnak = nullptr;
+  struct sockaddr_in sa;
+  uint32_t self_sid = 0;
+
+  // Fetch the record in DB
+  mac_address = dhcpmsg->chaddr;
+  mac_address.substr(0, dhcpmsg->hlen);
+  pData = _search_dhcp_entry(mac_address);
+  if (nullptr == pData) {
+    ACA_LOG_ERROR("DHCP entry does not exist! (mac = %s)\n", mac_address.c_str());
+    return;
   }
+
+  //Verify client is requesting to myself
+  //Need the fetch self server id here!!
+  if (self_sid == _get_server_id(dhcpmsg)) { //request to me
+    //Verify the ip address from client is the one assigned in DHCPOFFER
+    if (inet_pton(AF_INET, pData->ipv4_address, &(sa.sin_addr)) != 1) {
+      throw std::invalid_argument("Virtual ipv4 address is not in the expect format");
+    }
+    if (sa.sin_addr != _get_requested_ip(dhcpmsg)) {
+      ACA_LOG_ERROR("IP address %d in DHCP request is not same as the one in DB!", sa.sin_addr);
+      dhcpnak = _pack_dhcp_nak(dhcpmsg);
+      dhcps_xmit(dhcpnak);
+      return;
+    }
+
+    dhcpack = _pack_dhcp_ack(dhcpmsg);
+    dhcps_xmit(dhcpack);
+
+  } else { //not to me
+  }
+}
+
+dhcp_message *ACA_Dhcp_Server::_pack_dhcp_ack(dhcp_message *dhcpreq)
+{
+  dhcp_message *dhcpack = nullptr;
+  struct sockaddr_in sa;
+  uint8_t *pos = nullptr;
+  int opts_len = 0;
+
+  dhcpack = new dhcp_message();
+
+  //Pack DHCP header
+  _pack_dhcp_message(dhcpack, dhcpreq);
+
+  if (inet_pton(AF_INET, pData->ipv4_address, &(sa.sin_addr)) != 1) {
+    throw std::invalid_argument("Virtual ipv4 address is not in the expect format");
+  }
+  dhcpack->yiaddr = htonl(sa.sin_addr);
+
+  //DHCP Options
+  pos = dhcpack->options;
+
+  //DHCP Options: dhcp message type
+  _pack_dhcp_opt_msgtype(&pos[opts_len], DHCP_MSG_DHCPACK);
+  opts_len += DHCP_OPT_CLV_HEADER + DHCP_OPT_LEN_1BYTE;
+
+  //DHCP Options: ip address lease time
+  _pack_dhcp_opt_ip_lease_time(&pos[opts_len], DHCP_OPT_DEFAULT_IP_LEASE_TIME);
+  opts_len += DHCP_OPT_CLV_HEADER + DHCP_OPT_LEN_4BYTE;
+
+  //DHCP Options: server identifier
+
+  //DHCP Options: end
+  pos[opts_len] = DHCP_OPT_END;
+
+  return dhcpack;
+}
+
+dhcp_message *ACA_Dhcp_Server::_pack_dhcp_nak(dhcp_message *dhcpreq)
+{
+  dhcp_message *dhcpnak = nullptr;
+  struct sockaddr_in sa;
+  uint8_t *pos = nullptr;
+  int opts_len = 0;
+
+  dhcpnak = new dhcp_message();
+
+  //Pack DHCP header
+  _pack_dhcp_message(dhcpnak, dhcpreq);
+
+  dhcpnak->yiaddr = 0;
+
+  //DHCP Options
+  pos = dhcpnak->options;
+
+  //DHCP Options: dhcp message type
+  _pack_dhcp_opt_msgtype(&pos[opts_len], DHCP_MSG_DHCPNAK);
+  opts_len += DHCP_OPT_CLV_HEADER + DHCP_OPT_LEN_1BYTE;
+
+  //DHCP Options: server identifier
+
+  //DHCP Options: end
+  pos[opts_len] = DHCP_OPT_END;
+
+  return dhcpnak;
 }
 
 } //namespace aca_dhcp_server
