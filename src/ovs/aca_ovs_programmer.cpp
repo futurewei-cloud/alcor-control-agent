@@ -169,6 +169,13 @@ int ACA_OVS_Programmer::configure_port(const string vpc_id, const string port_na
             cmd_string, culminative_time);
     if (command_rc != EXIT_SUCCESS)
       overall_rc = command_rc;
+  } else {
+    // non-demo mode is for nova integration, where the vif and ovs port has been
+    // created by nova compute agent running on the compute host
+    // just need to set the vlan tag on the ovs port
+    string cmd_string = "set port " + port_name + " tag=" + to_string(internal_vlan_id);
+
+    execute_ovsdb_command(cmd_string, culminative_time, overall_rc);
   }
 
   execute_openflow_command(

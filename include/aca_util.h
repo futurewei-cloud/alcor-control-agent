@@ -55,6 +55,17 @@ aca_get_outport_name(alcor::schema::NetworkType network_type, std::string remote
   return aca_get_network_type_string(network_type) + "-" + std::to_string(hash_value);
 }
 
+static inline std::string aca_get_port_name(std::string port_id)
+{
+  static char TAP_PREFIX[] = "tap";
+  static ushort PORT_NAME_LEN = 14;
+
+  std::string port_name = TAP_PREFIX + port_id;
+  port_name = port_name.substr(0, PORT_NAME_LEN);
+
+  return port_name;
+}
+
 static inline const char *aca_get_operation_string(alcor::schema::OperationType operation)
 {
   switch (operation) {

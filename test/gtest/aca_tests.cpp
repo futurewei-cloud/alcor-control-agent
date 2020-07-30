@@ -39,10 +39,14 @@ static string vpc_id_1 = "1b08a5bc-b718-11ea-b3de-111111111111";
 static string vpc_id_2 = "1b08a5bc-b718-11ea-b3de-222222222222";
 static string subnet_id_1 = "27330ae4-b718-11ea-b3de-111111111111";
 static string subnet_id_2 = "27330ae4-b718-11ea-b3de-222222222222";
-static string port_name_1 = "tap-11111111";
-static string port_name_2 = "tap-22222222";
-static string port_name_3 = "tap-33333333";
-static string port_name_4 = "tap-44444444";
+static string port_id_1 = "01111111-b718-11ea-b3de-111111111111";
+static string port_id_2 = "02222222-b718-11ea-b3de-111111111111";
+static string port_id_3 = "03333333-b718-11ea-b3de-111111111111";
+static string port_id_4 = "04444444-b718-11ea-b3de-111111111111";
+static string port_name_1 = aca_get_port_name(port_id_1);
+static string port_name_2 = aca_get_port_name(port_id_2);
+static string port_name_3 = aca_get_port_name(port_id_3);
+static string port_name_4 = aca_get_port_name(port_id_4);
 static string vmac_address_1 = "fa:16:3e:d7:f2:6c";
 static string vmac_address_2 = "fa:16:3e:d7:f2:6d";
 static string vmac_address_3 = "fa:16:3e:d7:f2:6e";
@@ -104,6 +108,7 @@ static void aca_test_create_default_port_state(PortState *new_port_states)
   PortConfiguration_builder->set_revision_number(1);
   PortConfiguration_builder->set_message_type(MessageType::FULL);
   // PortConfiguration_builder->set_network_type(NetworkType::VXLAN); // should default to VXLAN
+  PortConfiguration_builder->set_id(port_id_1);
 
   PortConfiguration_builder->set_project_id(project_id);
   PortConfiguration_builder->set_vpc_id(vpc_id_1);
@@ -503,6 +508,7 @@ TEST(ovs_dataplane_test_cases, 2_ports_CREATE_test_traffic)
   PortConfiguration_builder->set_revision_number(1);
   PortConfiguration_builder->set_message_type(MessageType::FULL);
   // PortConfiguration_builder->set_network_type(NetworkType::VXLAN); // should default to VXLAN
+  PortConfiguration_builder->set_id(port_id_1);
 
   PortConfiguration_builder->set_project_id(project_id);
   PortConfiguration_builder->set_vpc_id(vpc_id_1);
@@ -546,6 +552,7 @@ TEST(ovs_dataplane_test_cases, 2_ports_CREATE_test_traffic)
   overall_rc = EXIT_SUCCESS;
 
   // setup the configuration for port 2
+  PortConfiguration_builder->set_id(port_id_2);
   PortConfiguration_builder->set_name(port_name_2);
   PortConfiguration_builder->set_mac_address(vmac_address_2);
   FixedIp_builder->set_ip_address(vip_address_2);
@@ -609,6 +616,7 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_CREATE_test_traffic_MASTER)
   PortConfiguration_builder->set_revision_number(1);
   PortConfiguration_builder->set_message_type(MessageType::FULL);
   // PortConfiguration_builder->set_network_type(NetworkType::VXLAN); // should default to VXLAN
+  PortConfiguration_builder->set_id(port_id_1);
 
   PortConfiguration_builder->set_project_id(project_id);
   PortConfiguration_builder->set_vpc_id(vpc_id_1);
@@ -690,6 +698,7 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_CREATE_test_traffic_MASTER)
   overall_rc = EXIT_SUCCESS;
 
   // setup the configuration for port 2
+  PortConfiguration_builder->set_id(port_id_2);
   PortConfiguration_builder->set_vpc_id(vpc_id_2);
   PortConfiguration_builder->set_name(port_name_2);
   PortConfiguration_builder->set_mac_address(vmac_address_2);
@@ -793,6 +802,7 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_CREATE_test_traffic_SLAVE)
   PortConfiguration_builder->set_revision_number(1);
   PortConfiguration_builder->set_message_type(MessageType::FULL);
   // PortConfiguration_builder->set_network_type(NetworkType::VXLAN); // should default to VXLAN
+  PortConfiguration_builder->set_id(port_id_3);
 
   PortConfiguration_builder->set_project_id(project_id);
   PortConfiguration_builder->set_vpc_id(vpc_id_1);
@@ -874,6 +884,7 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_CREATE_test_traffic_SLAVE)
   overall_rc = EXIT_SUCCESS;
 
   // setup the configuration for port 4
+  PortConfiguration_builder->set_id(port_id_4);
   PortConfiguration_builder->set_vpc_id(vpc_id_2);
   PortConfiguration_builder->set_name(port_name_4);
   PortConfiguration_builder->set_mac_address(vmac_address_4);
