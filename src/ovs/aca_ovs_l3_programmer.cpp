@@ -148,7 +148,6 @@ int ACA_OVS_L3_Programmer::create_neighbor_l3(
   int source_vlan_id;
   int destination_vlan_id;
   string cmd_string;
-  string of_rule_output;
 
   if (vpc_id.empty()) {
     throw std::invalid_argument("vpc_id is empty");
@@ -178,6 +177,8 @@ int ACA_OVS_L3_Programmer::create_neighbor_l3(
 
   // TODO: insert the port info into _routers_table, for use with on demand rule programming later
 
+  bool is_port_on_same_host = aca_is_port_on_same_host(remote_host_ip);
+
   // going through our list of routers
   for (auto router_it = _routers_table.begin();
        router_it != _routers_table.end(); router_it++) {
@@ -206,9 +207,13 @@ int ACA_OVS_L3_Programmer::create_neighbor_l3(
                 subnet_it->second.vpc_id);
 
         // essential rule to restore from neighbor host DVR mac to destination GW mac:
-        cmd_string = "add-flow br-int \"table=0,priority=25,dl_vlan=" +
-                     to_string(source_vlan_id) + ",dl_src=" + neighbor_host_dvr_mac +
-                     " actions=mod_dl_src:" + subnet_it->second.gateway_mac + " output:NORMAL\"";
+        // not needed if the neighbor port is at the same compute host
+        if (!is_port_on_same_host) {
+          cmd_string = "add-flow br-int \"table=0,priority=25,dl_vlan=" +
+                       to_string(source_vlan_id) + ",dl_src=" + neighbor_host_dvr_mac +
+                       " actions=mod_dl_src:" + subnet_it->second.gateway_mac +
+                       " output:NORMAL\"";
+        }
 
         ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
                 cmd_string, culminative_time, overall_rc);
@@ -220,19 +225,21 @@ int ACA_OVS_L3_Programmer::create_neighbor_l3(
         // in the future, the programming of the on demand rule will be triggered by the first packet
         // sent to openflow controller, that's ACA
 
-        // the openflow rule output depends on whether the hosting ip is on this compute host or not
-        if (aca_is_port_on_same_host(remote_host_ip)) {
-          of_rule_output = ",output:IN_PORT\"";
+        // the openflow rule depends on whether the hosting ip is on this compute host or not
+        if (is_port_on_same_host) {
+          cmd_string = "add-flow br-tun \"table=0,priority=50,ip,dl_vlan=" +
+                       to_string(source_vlan_id) + ",nw_dst=" + virtual_ip +
+                       ",dl_dst=" + subnet_it->second.gateway_mac +
+                       " actions=mod_vlan_vid:" + to_string(destination_vlan_id) +
+                       ",mod_dl_dst:" + virtual_mac + ",output:IN_PORT\"";
         } else {
-          of_rule_output = ",resubmit(,2)\"";
+          cmd_string = "add-flow br-tun \"table=0,priority=50,ip,dl_vlan=" +
+                       to_string(source_vlan_id) + ",nw_dst=" + virtual_ip +
+                       ",dl_dst=" + subnet_it->second.gateway_mac +
+                       " actions=mod_vlan_vid:" + to_string(destination_vlan_id) +
+                       ",mod_dl_src:" + _host_dvr_mac +
+                       ",mod_dl_dst:" + virtual_mac + ",resubmit(,2)\"";
         }
-
-        cmd_string = "add-flow br-tun \"table=0,priority=50,ip,dl_vlan=" +
-                     to_string(source_vlan_id) + ",nw_dst=" + virtual_ip +
-                     ",dl_dst=" + subnet_it->second.gateway_mac +
-                     " actions=mod_vlan_vid:" + to_string(destination_vlan_id) +
-                     ",mod_dl_src:" + _host_dvr_mac +
-                     ",mod_dl_dst:" + virtual_mac + of_rule_output;
 
         ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
                 cmd_string, culminative_time, overall_rc);
