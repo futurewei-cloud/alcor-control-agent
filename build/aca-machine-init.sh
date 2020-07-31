@@ -8,7 +8,7 @@ echo "1--- installing mizar dependencies ---" && \
     clang-7 \
     llvm-7 \
     libelf-dev \
-    # openvswitch-switch \
+    openvswitch-switch \
     iproute2  \
     net-tools \
     iputils-ping \
@@ -20,17 +20,6 @@ echo "1--- installing mizar dependencies ---" && \
     libcmocka-dev \
     lcov
 pip3 install httpserver netaddr
-
-OVS_RELEASE_TAG="branch-2.12"
-echo "1.5--- installing openvswitch dependancies ---" && \
-    git clone -b $OVS_RELEASE_TAG https://github.com/openvswitch/ovs.git /var/local/git/openvswitch && \
-    cd /var/local/git/openvswitch && \    
-    ./boot.sh && \
-    ./configure --prefix=/usr/local --localstatedir=/var --sysconfdir=/etc --enable-shared && \
-    make && \
-    make install && \
-    cp /var/local/git/openvswitch/lib/vconn-provider.h /usr/local/include/openvswitch/vconn-provider.h && \
-    rm -rf \var\local\git\openvswitch
 
 echo "2--- installing librdkafka ---" && \
     apt-get update -y && apt-get install -y --no-install-recommends\
@@ -53,13 +42,13 @@ echo "3--- installing cppkafka ---" && \
     make install && \
     ldconfig && \
     rm -rf /var/local/git/cppkafka
+    cd ~
 
 echo "4--- installing grpc dependencies ---" && \
     apt-get update -y && apt-get install -y \
     cmake libssl-dev \
     autoconf git pkg-config \
     automake libtool make g++ unzip 
-    cd ~
 
 # installing grpc and its dependencies
 GRPC_RELEASE_TAG="v1.24.x"
@@ -96,8 +85,39 @@ echo "5--- cloning grpc repo ---" && \
     cmake -Dgtest_build_samples=ON -DBUILD_SHARED_LIBS=ON . && \
     make && \
     make install && \
-    rm -rf /var/local/git/grpc
+    rm -rf /var/local/git/grpc && \
+    cd ~
 
-echo "6--- "
-# building alcor-control-agent
+OVS_RELEASE_TAG="branch-2.12"
+echo "6--- installing openvswitch dependancies ---" && \
+    git clone -b $OVS_RELEASE_TAG https://github.com/openvswitch/ovs.git /var/local/git/openvswitch && \
+    cd /var/local/git/openvswitch && \
+    ./boot.sh && \
+    ./configure --prefix=/usr/local --localstatedir=/var --sysconfdir=/etc --enable-shared && \
+    make && \
+    make install && \
+    cp /var/local/git/openvswitch/lib/vconn-provider.h /usr/local/include/openvswitch/vconn-provider.h && \
+    cd /usr/local/bin && \
+    rm ov* && \
+    rm -rf \var\local\git\openvswitch
+    cd ~
+
+echo "7--- building alcor-control-agent"
 cd ~/alcor-control-agent && cmake . && make
+
+echo "8--- rebuilding br-tun and br-int"
+ovs-vsctl add-br br-int
+ovs-vsctl add-br br-tun
+ovs-vsctl add-port br-int patch-tun
+
+ovs-vsctl set interface patch-tun type=patch
+ovs-vsctl set interface patch-tun options:peer=patch-int
+ovs-vsctl add-port br-tun patch-int 
+ovs-vsctl set interface patch-int type=patch
+ovs-vsctl set interface patch-int options:peer=patch-tun
+
+ovs-ofctl add-flow br-tun "table=0, priority=1,in_port="patch-int" actions=resubmit(,2)"
+ovs-ofctl add-flow br-tun "table=2, priority=0 actions=resubmit(,22)"
+
+echo "7--- running alcor-control-agent"
+./build/bin/AlcorControlAgent -d &
