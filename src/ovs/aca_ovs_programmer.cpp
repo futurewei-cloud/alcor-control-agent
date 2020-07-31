@@ -20,6 +20,7 @@
 #include "goalstateprovisioner.grpc.pb.h"
 #include <chrono>
 #include <thread>
+#include <future>
 #include <errno.h>
 
 using namespace std;
@@ -110,13 +111,53 @@ int ACA_OVS_Programmer::setup_ovs_bridges_if_need()
   return overall_rc;
 }
 
+int ACA_OVS_Programmer::set_port_vlan_workitem(const string port_name, uint vlan_id,
+                                               ulong &culminative_time)
+{
+  ACA_LOG_DEBUG("ACA_OVS_Programmer::set_port_vlan_workitem ---> Entering\n");
+
+  int overall_rc = EXIT_SUCCESS;
+
+  if (port_name.empty()) {
+    throw std::invalid_argument("port_name is empty");
+  }
+
+  if (vlan_id == 0) {
+    throw std::invalid_argument("vlan_id is zero");
+  }
+
+  static ushort MAX_PORT_WAIT_SECONDS = 300; // 5 mins
+  uint waited_seconds = 0;
+  string cmd_string = "set port " + port_name + " tag=" + to_string(vlan_id);
+
+  do {
+    execute_ovsdb_command(cmd_string, culminative_time, overall_rc);
+
+    if (overall_rc == EXIT_SUCCESS)
+      break;
+
+    std::this_thread::sleep_for(chrono::milliseconds(1000));
+  } while (++waited_seconds < MAX_PORT_WAIT_SECONDS);
+
+  if (overall_rc != EXIT_SUCCESS) {
+    ACA_LOG_ERROR("Not able to set the vlan tag %d for port %s even after waiting\n",
+                  vlan_id, port_name.c_str());
+  }
+
+  // TODO: after this workitem thread is done, it should provide the updated success/fail result back to DPM
+
+  ACA_LOG_DEBUG("ACA_OVS_Programmer::set_port_vlan_workitem <--- Exiting, overall_rc = %d\n",
+                overall_rc);
+
+  return overall_rc;
+}
+
 int ACA_OVS_Programmer::configure_port(const string vpc_id, const string port_name,
                                        const string virtual_ip, uint tunnel_id,
                                        ulong &culminative_time)
 {
   ACA_LOG_DEBUG("ACA_OVS_Programmer::port_configure ---> Entering\n");
 
-  int temp_rc = EXIT_SUCCESS;
   int overall_rc = EXIT_SUCCESS;
 
   if (vpc_id.empty()) {
@@ -153,6 +194,11 @@ int ACA_OVS_Programmer::configure_port(const string vpc_id, const string port_na
 
   ACA_Vlan_Manager::get_instance().add_ovs_port(vpc_id, port_name);
 
+  execute_openflow_command(
+          "add-flow br-tun \"table=4, priority=1,tun_id=" + to_string(tunnel_id) +
+                  " actions=mod_vlan_vid:" + to_string(internal_vlan_id) + ",output:\"patch-int\"\"",
+          culminative_time, overall_rc);
+
   if (g_demo_mode) {
     string cmd_string = "add-port br-int " + port_name +
                         " tag=" + to_string(internal_vlan_id) +
@@ -181,30 +227,17 @@ int ACA_OVS_Programmer::configure_port(const string vpc_id, const string port_na
 
     execute_ovsdb_command(cmd_string, culminative_time, overall_rc);
 
-    // static ushort MAX_PORT_WAIT_SECONDS = 300; // 5 mins
-    // uint waited_seconds = 0;
+    // if the ovs port is not there to set to vlan, we will return PENDING as the result
+    // and spin up the new thread to keep trying that in the backgroud
+    if (overall_rc != EXIT_SUCCESS) {
+      overall_rc = EINPROGRESS;
+    }
 
-    // do {
-    //   temp_rc = EXIT_SUCCESS;
-    //   execute_ovsdb_command(cmd_string, culminative_time, temp_rc);
-
-    //   if (temp_rc == EXIT_SUCCESS)
-    //     break;
-
-    //   std::this_thread::sleep_for(chrono::milliseconds(1000));
-    // } while (++waited_seconds < MAX_PORT_WAIT_SECONDS);
-
-    // if (temp_rc != EXIT_SUCCESS) {
-    //   ACA_LOG_ERROR("Not able to set the vlan tag %d for port %s even after waiting\n",
-    //                 internal_vlan_id, port_name.c_str());
-    //   overall_rc = temp_rc;
-    // }
+    ulong not_care_culminative_time = 0;
+    std::async(std::launch::async, &ACA_OVS_Programmer::set_port_vlan_workitem, this,
+               port_name, internal_vlan_id, std::ref(not_care_culminative_time));
+    // purposely not wait for this set_port_vlan_workitem
   }
-
-  execute_openflow_command(
-          "add-flow br-tun \"table=4, priority=1,tun_id=" + to_string(tunnel_id) +
-                  " actions=mod_vlan_vid:" + to_string(internal_vlan_id) + ",output:\"patch-int\"\"",
-          culminative_time, overall_rc);
 
   ACA_LOG_DEBUG("ACA_OVS_Programmer::port_configure <--- Exiting, overall_rc = %d\n", overall_rc);
 

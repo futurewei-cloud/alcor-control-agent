@@ -27,6 +27,8 @@ class ACA_OVS_Programmer {
 
   int setup_ovs_bridges_if_need();
 
+  int set_port_vlan_workitem(const std::string port_name, uint vlan_id, ulong &culminative_time);
+
   int configure_port(const std::string vpc_id, const std::string port_name,
                      const std::string virtual_ip, uint tunnel_id, ulong &culminative_time);
 

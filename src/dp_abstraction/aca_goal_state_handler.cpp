@@ -190,14 +190,13 @@ void Aca_Goal_State_Handler::add_goal_state_operation_status(
 
   if (operation_rc == EXIT_SUCCESS)
     overall_operation_status = OperationStatus::SUCCESS;
+  else if (operation_rc == EINPROGRESS && resource_type == PORT &&
+           operation_type == OperationType::CREATE)
+    overall_operation_status = OperationStatus::PENDING;
   else if (operation_rc == -EINVAL)
     overall_operation_status = OperationStatus::INVALID_ARG;
   else
     overall_operation_status = OperationStatus::FAILURE;
-
-  // override overall_operation_status to
-  if (resource_type == PORT && operation_type == OperationType::CREATE)
-    overall_operation_status = OperationStatus::PENDING;
 
   ACA_LOG_DEBUG("gsOperationReply - resource_id: %s\n", id.c_str());
   ACA_LOG_DEBUG("gsOperationReply - resource_type: %d\n", resource_type);
