@@ -19,6 +19,7 @@
 #include "aca_ovs_programmer.h"
 #include "goalstateprovisioner.grpc.pb.h"
 #include <chrono>
+#include <thread>
 #include <errno.h>
 
 using namespace std;
@@ -115,6 +116,7 @@ int ACA_OVS_Programmer::configure_port(const string vpc_id, const string port_na
 {
   ACA_LOG_DEBUG("ACA_OVS_Programmer::port_configure ---> Entering\n");
 
+  int temp_rc = EXIT_SUCCESS;
   int overall_rc = EXIT_SUCCESS;
 
   if (vpc_id.empty()) {
@@ -172,10 +174,29 @@ int ACA_OVS_Programmer::configure_port(const string vpc_id, const string port_na
   } else {
     // non-demo mode is for nova integration, where the vif and ovs port has been
     // created by nova compute agent running on the compute host
-    // just need to set the vlan tag on the ovs port
+
+    // just need to set the vlan tag on the ovs port, the ovs port may be not created by nova yet,
+    // so keep trying until PORT_WAIT_TIME
     string cmd_string = "set port " + port_name + " tag=" + to_string(internal_vlan_id);
 
-    execute_ovsdb_command(cmd_string, culminative_time, overall_rc);
+    static ushort MAX_PORT_WAIT_SECONDS = 300; // 5 mins
+    uint waited_seconds = 0;
+
+    do {
+      temp_rc = EXIT_SUCCESS;
+      execute_ovsdb_command(cmd_string, culminative_time, temp_rc);
+
+      if (temp_rc == EXIT_SUCCESS)
+        break;
+
+      std::this_thread::sleep_for(chrono::milliseconds(1000));
+    } while (++waited_seconds < MAX_PORT_WAIT_SECONDS);
+
+    if (temp_rc != EXIT_SUCCESS) {
+      ACA_LOG_ERROR("Not able to set the vlan tag %d for port %s even after waiting\n",
+                    internal_vlan_id, port_name.c_str());
+      overall_rc = temp_rc;
+    }
   }
 
   execute_openflow_command(
