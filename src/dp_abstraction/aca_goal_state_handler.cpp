@@ -195,6 +195,10 @@ void Aca_Goal_State_Handler::add_goal_state_operation_status(
   else
     overall_operation_status = OperationStatus::FAILURE;
 
+  // override overall_operation_status to
+  if (resource_type == PORT && operation_type == OperationType::CREATE)
+    overall_operation_status = OperationStatus::PENDING;
+
   ACA_LOG_DEBUG("gsOperationReply - resource_id: %s\n", id.c_str());
   ACA_LOG_DEBUG("gsOperationReply - resource_type: %d\n", resource_type);
   ACA_LOG_DEBUG("gsOperationReply - operation_type: %d\n", operation_type);

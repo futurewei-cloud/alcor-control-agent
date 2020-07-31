@@ -179,24 +179,26 @@ int ACA_OVS_Programmer::configure_port(const string vpc_id, const string port_na
     // so keep trying until PORT_WAIT_TIME
     string cmd_string = "set port " + port_name + " tag=" + to_string(internal_vlan_id);
 
-    static ushort MAX_PORT_WAIT_SECONDS = 300; // 5 mins
-    uint waited_seconds = 0;
+    execute_ovsdb_command(cmd_string, culminative_time, overall_rc);
 
-    do {
-      temp_rc = EXIT_SUCCESS;
-      execute_ovsdb_command(cmd_string, culminative_time, temp_rc);
+    // static ushort MAX_PORT_WAIT_SECONDS = 300; // 5 mins
+    // uint waited_seconds = 0;
 
-      if (temp_rc == EXIT_SUCCESS)
-        break;
+    // do {
+    //   temp_rc = EXIT_SUCCESS;
+    //   execute_ovsdb_command(cmd_string, culminative_time, temp_rc);
 
-      std::this_thread::sleep_for(chrono::milliseconds(1000));
-    } while (++waited_seconds < MAX_PORT_WAIT_SECONDS);
+    //   if (temp_rc == EXIT_SUCCESS)
+    //     break;
 
-    if (temp_rc != EXIT_SUCCESS) {
-      ACA_LOG_ERROR("Not able to set the vlan tag %d for port %s even after waiting\n",
-                    internal_vlan_id, port_name.c_str());
-      overall_rc = temp_rc;
-    }
+    //   std::this_thread::sleep_for(chrono::milliseconds(1000));
+    // } while (++waited_seconds < MAX_PORT_WAIT_SECONDS);
+
+    // if (temp_rc != EXIT_SUCCESS) {
+    //   ACA_LOG_ERROR("Not able to set the vlan tag %d for port %s even after waiting\n",
+    //                 internal_vlan_id, port_name.c_str());
+    //   overall_rc = temp_rc;
+    // }
   }
 
   execute_openflow_command(
