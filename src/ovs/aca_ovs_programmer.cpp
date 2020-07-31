@@ -33,6 +33,47 @@ extern bool g_demo_mode;
 
 namespace aca_ovs_programmer
 {
+static int aca_set_port_vlan_workitem(const string port_name, uint vlan_id)
+{
+  ACA_LOG_DEBUG("aca_set_port_vlan_workitem ---> Entering\n");
+
+  ulong not_care_culminative_time = 0;
+  int overall_rc = EXIT_SUCCESS;
+
+  if (port_name.empty()) {
+    throw std::invalid_argument("port_name is empty");
+  }
+
+  if (vlan_id == 0) {
+    throw std::invalid_argument("vlan_id is zero");
+  }
+
+  static ushort MAX_PORT_WAIT_SECONDS = 300; // 5 mins
+  uint waited_seconds = 0;
+  string cmd_string = "set port " + port_name + " tag=" + to_string(vlan_id);
+
+  do {
+    ACA_OVS_Programmer::get_instance().execute_ovsdb_command(
+            cmd_string, not_care_culminative_time, overall_rc);
+
+    if (overall_rc == EXIT_SUCCESS)
+      break;
+
+    std::this_thread::sleep_for(chrono::milliseconds(1000));
+  } while (++waited_seconds < MAX_PORT_WAIT_SECONDS);
+
+  if (overall_rc != EXIT_SUCCESS) {
+    ACA_LOG_ERROR("Not able to set the vlan tag %d for port %s even after waiting\n",
+                  vlan_id, port_name.c_str());
+  }
+
+  // TODO: after this workitem thread is done, it should provide the updated success/fail result back to DPM
+
+  ACA_LOG_DEBUG("aca_set_port_vlan_workitem <--- Exiting, overall_rc = %d\n", overall_rc);
+
+  return overall_rc;
+}
+
 ACA_OVS_Programmer &ACA_OVS_Programmer::get_instance()
 {
   // Instance is destroyed when program exits.
@@ -106,47 +147,6 @@ int ACA_OVS_Programmer::setup_ovs_bridges_if_need()
   // -----critical section ends-----
 
   ACA_LOG_DEBUG("ACA_OVS_Programmer::setup_ovs_bridges_if_need <--- Exiting, overall_rc = %d\n",
-                overall_rc);
-
-  return overall_rc;
-}
-
-int ACA_OVS_Programmer::set_port_vlan_workitem(const string port_name, uint vlan_id,
-                                               ulong &culminative_time)
-{
-  ACA_LOG_DEBUG("ACA_OVS_Programmer::set_port_vlan_workitem ---> Entering\n");
-
-  int overall_rc = EXIT_SUCCESS;
-
-  if (port_name.empty()) {
-    throw std::invalid_argument("port_name is empty");
-  }
-
-  if (vlan_id == 0) {
-    throw std::invalid_argument("vlan_id is zero");
-  }
-
-  static ushort MAX_PORT_WAIT_SECONDS = 300; // 5 mins
-  uint waited_seconds = 0;
-  string cmd_string = "set port " + port_name + " tag=" + to_string(vlan_id);
-
-  do {
-    execute_ovsdb_command(cmd_string, culminative_time, overall_rc);
-
-    if (overall_rc == EXIT_SUCCESS)
-      break;
-
-    std::this_thread::sleep_for(chrono::milliseconds(1000));
-  } while (++waited_seconds < MAX_PORT_WAIT_SECONDS);
-
-  if (overall_rc != EXIT_SUCCESS) {
-    ACA_LOG_ERROR("Not able to set the vlan tag %d for port %s even after waiting\n",
-                  vlan_id, port_name.c_str());
-  }
-
-  // TODO: after this workitem thread is done, it should provide the updated success/fail result back to DPM
-
-  ACA_LOG_DEBUG("ACA_OVS_Programmer::set_port_vlan_workitem <--- Exiting, overall_rc = %d\n",
                 overall_rc);
 
   return overall_rc;
@@ -233,10 +233,12 @@ int ACA_OVS_Programmer::configure_port(const string vpc_id, const string port_na
       overall_rc = EINPROGRESS;
     }
 
-    ulong not_care_culminative_time = 0;
-    std::async(std::launch::async, &ACA_OVS_Programmer::set_port_vlan_workitem, this,
-               port_name, internal_vlan_id, std::ref(not_care_culminative_time));
-    // purposely not wait for this set_port_vlan_workitem
+    std::thread t(aca_set_port_vlan_workitem, port_name, internal_vlan_id);
+
+    // purposely not wait for this aca_set_port_vlan_workitem
+    if (t.joinable()) {
+      t.detach();
+    }
   }
 
   ACA_LOG_DEBUG("ACA_OVS_Programmer::port_configure <--- Exiting, overall_rc = %d\n", overall_rc);
