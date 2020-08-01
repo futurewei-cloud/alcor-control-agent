@@ -13,12 +13,14 @@
 // limitations under the License.
 
 #include "aca_log.h"
+#include "aca_config.h"
 #include "aca_util.h"
 #include "aca_net_config.h"
 #include "aca_vlan_manager.h"
 #include "aca_ovs_programmer.h"
 #include "goalstateprovisioner.grpc.pb.h"
 #include <chrono>
+#include <thread>
 #include <errno.h>
 
 using namespace std;
@@ -31,6 +33,47 @@ extern bool g_demo_mode;
 
 namespace aca_ovs_programmer
 {
+static int aca_set_port_vlan_workitem(const string port_name, uint vlan_id)
+{
+  ACA_LOG_DEBUG("aca_set_port_vlan_workitem ---> Entering\n");
+
+  ulong not_care_culminative_time = 0;
+  int overall_rc;
+
+  if (port_name.empty()) {
+    throw std::invalid_argument("port_name is empty");
+  }
+
+  if (vlan_id == 0 || vlan_id >= 4095) {
+    throw std::invalid_argument("vlan_id is invalid: " + to_string(vlan_id));
+  }
+
+  uint retry_times = 0;
+  string cmd_string = "set port " + port_name + " tag=" + to_string(vlan_id);
+
+  do {
+    std::this_thread::sleep_for(chrono::milliseconds(PORT_SCAN_SLEEP_INTERVAL));
+
+    overall_rc = EXIT_SUCCESS;
+    ACA_OVS_Programmer::get_instance().execute_ovsdb_command(
+            cmd_string, not_care_culminative_time, overall_rc);
+
+    if (overall_rc == EXIT_SUCCESS)
+      break;
+  } while (++retry_times < MAX_PORT_SCAN_RETRY);
+
+  if (overall_rc != EXIT_SUCCESS) {
+    ACA_LOG_ERROR("Not able to set the vlan tag %d for port %s even after waiting\n",
+                  vlan_id, port_name.c_str());
+  }
+
+  // TODO: after this workitem thread is done, it should provide the updated success/fail result back to DPM
+
+  ACA_LOG_DEBUG("aca_set_port_vlan_workitem <--- Exiting, overall_rc = %d\n", overall_rc);
+
+  return overall_rc;
+}
+
 ACA_OVS_Programmer &ACA_OVS_Programmer::get_instance()
 {
   // Instance is destroyed when program exits.
@@ -151,6 +194,11 @@ int ACA_OVS_Programmer::configure_port(const string vpc_id, const string port_na
 
   ACA_Vlan_Manager::get_instance().add_ovs_port(vpc_id, port_name);
 
+  execute_openflow_command(
+          "add-flow br-tun \"table=4, priority=1,tun_id=" + to_string(tunnel_id) +
+                  " actions=mod_vlan_vid:" + to_string(internal_vlan_id) + ",output:\"patch-int\"\"",
+          culminative_time, overall_rc);
+
   if (g_demo_mode) {
     string cmd_string = "add-port br-int " + port_name +
                         " tag=" + to_string(internal_vlan_id) +
@@ -169,12 +217,29 @@ int ACA_OVS_Programmer::configure_port(const string vpc_id, const string port_na
             cmd_string, culminative_time);
     if (command_rc != EXIT_SUCCESS)
       overall_rc = command_rc;
-  }
+  } else {
+    // non-demo mode is for nova integration, where the vif and ovs port has been
+    // created by nova compute agent running on the compute host
 
-  execute_openflow_command(
-          "add-flow br-tun \"table=4, priority=1,tun_id=" + to_string(tunnel_id) +
-                  " actions=mod_vlan_vid:" + to_string(internal_vlan_id) + ",output:\"patch-int\"\"",
-          culminative_time, overall_rc);
+    // just need to set the vlan tag on the ovs port, the ovs port may be not created by nova yet
+    string cmd_string = "set port " + port_name + " tag=" + to_string(internal_vlan_id);
+
+    execute_ovsdb_command(cmd_string, culminative_time, overall_rc);
+
+    // if the ovs port is not there to set to vlan, we will return PENDING as the result
+    // and spin up the new thread to keep trying that in the backgroud
+    if (overall_rc != EXIT_SUCCESS) {
+      overall_rc = EINPROGRESS;
+
+      // start a new background thread work set the port vlan
+      std::thread t(aca_set_port_vlan_workitem, port_name, internal_vlan_id);
+
+      // purposely not wait for this aca_set_port_vlan_workitem
+      if (t.joinable()) {
+        t.detach();
+      }
+    }
+  }
 
   ACA_LOG_DEBUG("ACA_OVS_Programmer::port_configure <--- Exiting, overall_rc = %d\n", overall_rc);
 

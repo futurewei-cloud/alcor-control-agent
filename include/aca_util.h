@@ -23,6 +23,9 @@
 // it should be more than enough for the number of hosts in a region
 #define MAX_OUTPORT_NAME_POSTFIX 99999999
 
+#define TAP_PREFIX "tap" // vm tap device prefix
+#define PORT_NAME_LEN 14 // Nova generated port name length
+
 #define cast_to_nanoseconds(x) chrono::duration_cast<chrono::nanoseconds>(x)
 
 static inline std::string aca_get_network_type_string(alcor::schema::NetworkType network_type)
@@ -53,6 +56,14 @@ aca_get_outport_name(alcor::schema::NetworkType network_type, std::string remote
   auto hash_value = str_hash(remote_ip) % MAX_OUTPORT_NAME_POSTFIX;
 
   return aca_get_network_type_string(network_type) + "-" + std::to_string(hash_value);
+}
+
+static inline std::string aca_get_port_name(std::string port_id)
+{
+  std::string port_name = TAP_PREFIX + port_id;
+  port_name = port_name.substr(0, PORT_NAME_LEN);
+
+  return port_name;
 }
 
 static inline const char *aca_get_operation_string(alcor::schema::OperationType operation)

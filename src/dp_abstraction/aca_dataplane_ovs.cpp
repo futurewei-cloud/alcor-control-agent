@@ -121,6 +121,7 @@ int ACA_Dataplane_OVS::update_port_state_workitem(const PortState current_PortSt
                                                   GoalStateOperationReply &gsOperationReply)
 {
   int overall_rc;
+  string generated_port_name;
   struct sockaddr_in sa;
   string found_cidr;
   uint found_tunnel_id;
@@ -151,6 +152,10 @@ int ACA_Dataplane_OVS::update_port_state_workitem(const PortState current_PortSt
   case OperationType::CREATE:
 
     assert(current_PortConfiguration.message_type() == MessageType::FULL);
+
+    assert(!current_PortConfiguration.id().empty());
+
+    generated_port_name = aca_get_port_name(current_PortConfiguration.id());
 
     try {
       // TODO: add support for more than one fixed_ips in the future
@@ -210,19 +215,19 @@ int ACA_Dataplane_OVS::update_port_state_workitem(const PortState current_PortSt
       port_cidr = virtual_ip_address + "/" + found_prefix_len;
 
       if (overall_rc == EXIT_SUCCESS) {
-        ACA_LOG_DEBUG("Port Operation: %s: project_id:%s, vpc_id:%s, network_type:%d, virtual_ip_address:%s, "
-                      "virtual_mac_address:%s, port_name: %s, port_cidr: %s, tunnel_id: %d\n",
+        ACA_LOG_DEBUG("Port Operation: %s: port_id: %s, project_id:%s, vpc_id:%s, network_type:%d, "
+                      "virtual_ip_address:%s, virtual_mac_address:%s, generated_port_name: %s, port_cidr: %s, tunnel_id: %d\n",
                       aca_get_operation_string(current_PortState.operation_type()),
+                      current_PortConfiguration.id().c_str(),
                       current_PortConfiguration.project_id().c_str(),
                       current_PortConfiguration.vpc_id().c_str(),
                       current_PortConfiguration.network_type(),
-                      current_PortConfiguration.name().c_str(),
                       virtual_ip_address.c_str(), virtual_mac_address.c_str(),
-                      port_cidr.c_str(), found_tunnel_id);
+                      generated_port_name.c_str(), port_cidr.c_str(), found_tunnel_id);
 
         overall_rc = ACA_OVS_Programmer::get_instance().configure_port(
-                current_PortConfiguration.vpc_id(), current_PortConfiguration.name(),
-                port_cidr, found_tunnel_id, culminative_dataplane_programming_time);
+                current_PortConfiguration.vpc_id(), generated_port_name, port_cidr,
+                found_tunnel_id, culminative_dataplane_programming_time);
       }
 
     } catch (const std::invalid_argument &e) {
