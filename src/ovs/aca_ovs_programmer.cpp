@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "aca_log.h"
+#include "aca_config.h"
 #include "aca_util.h"
 #include "aca_net_config.h"
 #include "aca_vlan_manager.h"
@@ -43,16 +44,15 @@ static int aca_set_port_vlan_workitem(const string port_name, uint vlan_id)
     throw std::invalid_argument("port_name is empty");
   }
 
-  if (vlan_id == 0) {
-    throw std::invalid_argument("vlan_id is zero");
+  if (vlan_id == 0 || vlan_id >= 4095) {
+    throw std::invalid_argument("vlan_id is invalid: " + to_string(vlan_id));
   }
 
-  static ushort MAX_PORT_WAIT_SECONDS = 300; // 5 mins
-  uint waited_seconds = 0;
+  uint retry_times = 0;
   string cmd_string = "set port " + port_name + " tag=" + to_string(vlan_id);
 
   do {
-    std::this_thread::sleep_for(chrono::milliseconds(1000));
+    std::this_thread::sleep_for(chrono::milliseconds(PORT_SCAN_SLEEP_INTERVAL));
 
     overall_rc = EXIT_SUCCESS;
     ACA_OVS_Programmer::get_instance().execute_ovsdb_command(
@@ -60,7 +60,7 @@ static int aca_set_port_vlan_workitem(const string port_name, uint vlan_id)
 
     if (overall_rc == EXIT_SUCCESS)
       break;
-  } while (++waited_seconds < MAX_PORT_WAIT_SECONDS);
+  } while (++retry_times < MAX_PORT_SCAN_RETRY);
 
   if (overall_rc != EXIT_SUCCESS) {
     ACA_LOG_ERROR("Not able to set the vlan tag %d for port %s even after waiting\n",
