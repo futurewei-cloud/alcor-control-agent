@@ -119,5 +119,5 @@ ovs-vsctl set interface patch-int options:peer=patch-tun
 ovs-ofctl add-flow br-tun "table=0, priority=1,in_port="patch-int" actions=resubmit(,2)"
 ovs-ofctl add-flow br-tun "table=2, priority=0 actions=resubmit(,22)"
 
-echo "7--- running alcor-control-agent"
+echo "9--- running alcor-control-agent"
 ./build/bin/AlcorControlAgent -d &

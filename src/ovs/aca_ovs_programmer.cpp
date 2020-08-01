@@ -20,7 +20,6 @@
 #include "goalstateprovisioner.grpc.pb.h"
 #include <chrono>
 #include <thread>
-#include <future>
 #include <errno.h>
 
 using namespace std;
@@ -222,8 +221,7 @@ int ACA_OVS_Programmer::configure_port(const string vpc_id, const string port_na
     // non-demo mode is for nova integration, where the vif and ovs port has been
     // created by nova compute agent running on the compute host
 
-    // just need to set the vlan tag on the ovs port, the ovs port may be not created by nova yet,
-    // so keep trying until PORT_WAIT_TIME
+    // just need to set the vlan tag on the ovs port, the ovs port may be not created by nova yet
     string cmd_string = "set port " + port_name + " tag=" + to_string(internal_vlan_id);
 
     execute_ovsdb_command(cmd_string, culminative_time, overall_rc);
@@ -232,13 +230,14 @@ int ACA_OVS_Programmer::configure_port(const string vpc_id, const string port_na
     // and spin up the new thread to keep trying that in the backgroud
     if (overall_rc != EXIT_SUCCESS) {
       overall_rc = EINPROGRESS;
-    }
 
-    std::thread t(aca_set_port_vlan_workitem, port_name, internal_vlan_id);
+      // start a new background thread work set the port vlan
+      std::thread t(aca_set_port_vlan_workitem, port_name, internal_vlan_id);
 
-    // purposely not wait for this aca_set_port_vlan_workitem
-    if (t.joinable()) {
-      t.detach();
+      // purposely not wait for this aca_set_port_vlan_workitem
+      if (t.joinable()) {
+        t.detach();
+      }
     }
   }
 
