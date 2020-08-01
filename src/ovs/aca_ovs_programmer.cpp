@@ -38,7 +38,7 @@ static int aca_set_port_vlan_workitem(const string port_name, uint vlan_id)
   ACA_LOG_DEBUG("aca_set_port_vlan_workitem ---> Entering\n");
 
   ulong not_care_culminative_time = 0;
-  int overall_rc = EXIT_SUCCESS;
+  int overall_rc;
 
   if (port_name.empty()) {
     throw std::invalid_argument("port_name is empty");
@@ -53,13 +53,14 @@ static int aca_set_port_vlan_workitem(const string port_name, uint vlan_id)
   string cmd_string = "set port " + port_name + " tag=" + to_string(vlan_id);
 
   do {
+    std::this_thread::sleep_for(chrono::milliseconds(1000));
+
+    overall_rc = EXIT_SUCCESS;
     ACA_OVS_Programmer::get_instance().execute_ovsdb_command(
             cmd_string, not_care_culminative_time, overall_rc);
 
     if (overall_rc == EXIT_SUCCESS)
       break;
-
-    std::this_thread::sleep_for(chrono::milliseconds(1000));
   } while (++waited_seconds < MAX_PORT_WAIT_SECONDS);
 
   if (overall_rc != EXIT_SUCCESS) {
