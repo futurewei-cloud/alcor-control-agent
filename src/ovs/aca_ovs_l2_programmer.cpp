@@ -244,6 +244,7 @@ int ACA_OVS_L2_Programmer::configure_port(const string vpc_id, const string port
     if (overall_rc != EXIT_SUCCESS) {
       overall_rc = EINPROGRESS;
 
+<<<<<<< HEAD:src/ovs/aca_ovs_l2_programmer.cpp
       // start a new background thread work set the port vlan
       std::thread t(aca_set_port_vlan_workitem, port_name, internal_vlan_id);
 
@@ -254,6 +255,8 @@ int ACA_OVS_L2_Programmer::configure_port(const string vpc_id, const string port
     }
   }
 
+=======
+>>>>>>> 9f0cc4b3ea8c9a860503002a5a28e17f25578c8c:src/ovs/aca_ovs_l2_programmer.cpp
   ACA_LOG_DEBUG("ACA_OVS_L2_Programmer::port_configure <--- Exiting, overall_rc = %d\n",
                 overall_rc);
 
