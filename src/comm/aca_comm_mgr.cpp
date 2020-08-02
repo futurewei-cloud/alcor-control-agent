@@ -190,22 +190,6 @@ void Aca_Comm_Manager::print_goal_state(GoalState parsed_struct)
               k, current_VpcConfiguration.routes(k).next_hop().c_str());
     }
 
-    for (int l = 0; l < current_VpcConfiguration.transit_routers_size(); l++) {
-      fprintf(stdout,
-              "current_VpcConfiguration.transit_routers(%d).vpc_id(): "
-              "%s \n",
-              l, current_VpcConfiguration.transit_routers(l).vpc_id().c_str());
-
-      fprintf(stdout,
-              "current_VpcConfiguration.transit_routers(%d).ip_address(): "
-              "%s \n",
-              l, current_VpcConfiguration.transit_routers(l).ip_address().c_str());
-
-      fprintf(stdout,
-              "current_VpcConfiguration.transit_routers(%d).mac_address(): "
-              "%s \n",
-              l, current_VpcConfiguration.transit_routers(l).mac_address().c_str());
-    }
     printf("\n");
   }
 
@@ -291,9 +275,6 @@ void Aca_Comm_Manager::print_goal_state(GoalState parsed_struct)
 
     fprintf(stdout, "current_PortConfiguration.name(): %s \n",
             current_PortConfiguration.name().c_str());
-
-    fprintf(stdout, "current_PortConfiguration.network_ns(): %s \n",
-            current_PortConfiguration.network_ns().c_str());
 
     fprintf(stdout, "current_PortConfiguration.mac_address(): %s \n",
             current_PortConfiguration.mac_address().c_str());

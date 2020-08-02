@@ -140,9 +140,6 @@ void parse_goalstate(GoalState parsed_struct, GoalState GoalState_builder)
     assert(parsed_struct.port_states(i).configuration().name() ==
            GoalState_builder.port_states(i).configuration().name());
 
-    assert(parsed_struct.port_states(i).configuration().network_ns() ==
-           GoalState_builder.port_states(i).configuration().network_ns());
-
     assert(parsed_struct.port_states(i).configuration().mac_address() ==
            GoalState_builder.port_states(i).configuration().mac_address());
 
@@ -259,21 +256,6 @@ void parse_goalstate(GoalState parsed_struct, GoalState GoalState_builder)
       assert(parsed_struct.vpc_states(i).configuration().routes(k).next_hop() ==
              GoalState_builder.vpc_states(i).configuration().routes(k).next_hop());
     }
-
-    assert(parsed_struct.vpc_states(i).configuration().transit_routers_size() ==
-           GoalState_builder.vpc_states(i).configuration().transit_routers_size());
-
-    for (int l = 0;
-         l < parsed_struct.vpc_states(i).configuration().transit_routers_size(); l++) {
-      assert(parsed_struct.vpc_states(i).configuration().transit_routers(l).vpc_id() ==
-             GoalState_builder.vpc_states(i).configuration().transit_routers(l).vpc_id());
-
-      assert(parsed_struct.vpc_states(i).configuration().transit_routers(l).ip_address() ==
-             GoalState_builder.vpc_states(i).configuration().transit_routers(l).ip_address());
-
-      assert(parsed_struct.vpc_states(i).configuration().transit_routers(l).mac_address() ==
-             GoalState_builder.vpc_states(i).configuration().transit_routers(l).mac_address());
-    }
   }
 
   fprintf(stdout, "All content matched!\n");
@@ -337,7 +319,6 @@ int main(int argc, char *argv[])
   PortConfiguration_builder->set_project_id("dbf72700-5106-4a7a-918f-111111111111");
   PortConfiguration_builder->set_id("dd12d1dadad2g4h");
   PortConfiguration_builder->set_name("Peer1");
-  PortConfiguration_builder->set_network_ns("Final_ns_dd12d1dadad2g4h");
   PortConfiguration_builder->set_mac_address("fa:16:3e:d7:f2:6c");
 
   PortConfiguration_HostInfo *portConfig_HostInfoBuilder(new PortConfiguration_HostInfo);
@@ -388,12 +369,6 @@ int main(int argc, char *argv[])
   VpcConiguration_builder->set_name("SuperVpc");
   VpcConiguration_builder->set_cidr("192.168.0.0/24");
   VpcConiguration_builder->set_tunnel_id(11111);
-  // this will allocate new VpcConfiguration_TransitRouter, may need to free it later
-  VpcConfiguration_TransitRouter *TransitRouter_builder =
-          VpcConiguration_builder->add_transit_routers();
-  TransitRouter_builder->set_vpc_id("12345");
-  TransitRouter_builder->set_ip_address("10.0.0.2");
-  TransitRouter_builder->set_mac_address("aa-bb-cc-dd-ee-ff");
 
   string string_message;
 

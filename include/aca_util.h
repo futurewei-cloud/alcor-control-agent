@@ -84,7 +84,6 @@ aca_get_outport_name(alcor::schema::NetworkType network_type, std::string remote
   return aca_get_network_type_string(network_type) + "-" + std::to_string(hash_value);
 }
 
-<<<<<<< HEAD
 static inline std::string aca_get_port_name(std::string port_id)
 {
   std::string port_name = TAP_PREFIX + port_id;
@@ -93,10 +92,7 @@ static inline std::string aca_get_port_name(std::string port_id)
   return port_name;
 }
 
-static inline const char *aca_get_operation_string(alcor::schema::OperationType operation)
-=======
 static inline const char *aca_get_neighbor_type_string(alcor::schema::NeighborType neighbor_type)
->>>>>>> added L2 neighbor parsing under neighbor state, passing one and two machine tests
 {
   switch (neighbor_type) {
   case alcor::schema::NeighborType::L2:

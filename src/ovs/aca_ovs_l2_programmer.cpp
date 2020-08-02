@@ -55,7 +55,7 @@ static int aca_set_port_vlan_workitem(const string port_name, uint vlan_id)
     std::this_thread::sleep_for(chrono::milliseconds(PORT_SCAN_SLEEP_INTERVAL));
 
     overall_rc = EXIT_SUCCESS;
-    ACA_OVS_Programmer::get_instance().execute_ovsdb_command(
+    ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
             cmd_string, not_care_culminative_time, overall_rc);
 
     if (overall_rc == EXIT_SUCCESS)
