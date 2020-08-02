@@ -213,10 +213,10 @@ int ACA_OVS_L3_Programmer::create_neighbor_l3(
                        to_string(source_vlan_id) + ",dl_src=" + neighbor_host_dvr_mac +
                        " actions=mod_dl_src:" + subnet_it->second.gateway_mac +
                        " output:NORMAL\"";
-        }
 
-        ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
-                cmd_string, culminative_time, overall_rc);
+          ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
+                  cmd_string, culminative_time, overall_rc);
+        }
 
         destination_vlan_id =
                 ACA_Vlan_Manager::get_instance().get_or_create_vlan_id(vpc_id);
