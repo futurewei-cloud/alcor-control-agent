@@ -996,6 +996,7 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_ROUTING_test_traffic_one_machine
   PortConfiguration_builder->set_revision_number(1);
   PortConfiguration_builder->set_message_type(MessageType::FULL);
   // PortConfiguration_builder->set_network_type(NetworkType::VXLAN); // should default to VXLAN
+  PortConfiguration_builder->set_id(port_id_3);
 
   PortConfiguration_builder->set_project_id(project_id);
   PortConfiguration_builder->set_vpc_id(vpc_id_1);
@@ -1066,6 +1067,7 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_ROUTING_test_traffic_one_machine
   overall_rc = EXIT_SUCCESS;
 
   // setup the configuration for port 4
+  PortConfiguration_builder->set_id(port_id_4);
   PortConfiguration_builder->set_vpc_id(vpc_id_2);
   PortConfiguration_builder->set_name(port_name_4);
   PortConfiguration_builder->set_mac_address(vmac_address_4);
@@ -1317,6 +1319,7 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_ROUTING_test_traffic_MASTER)
   PortConfiguration_builder->set_revision_number(1);
   PortConfiguration_builder->set_message_type(MessageType::FULL);
   // PortConfiguration_builder->set_network_type(NetworkType::VXLAN); // should default to VXLAN
+  PortConfiguration_builder->set_id(port_id_1);
 
   PortConfiguration_builder->set_project_id(project_id);
   PortConfiguration_builder->set_vpc_id(vpc_id_1);
@@ -1387,6 +1390,7 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_ROUTING_test_traffic_MASTER)
   overall_rc = EXIT_SUCCESS;
 
   // setup the configuration for port 2
+  PortConfiguration_builder->set_id(port_id_2);
   PortConfiguration_builder->set_vpc_id(vpc_id_2);
   PortConfiguration_builder->set_name(port_name_2);
   PortConfiguration_builder->set_mac_address(vmac_address_2);
@@ -1659,6 +1663,7 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_ROUTING_test_traffic_SLAVE)
   PortConfiguration_builder->set_format_version(1);
   PortConfiguration_builder->set_revision_number(1);
   PortConfiguration_builder->set_message_type(MessageType::FULL);
+  PortConfiguration_builder->set_id(port_id_3);
 
   PortConfiguration_builder->set_project_id(project_id);
   PortConfiguration_builder->set_vpc_id(vpc_id_1);
@@ -1729,6 +1734,7 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_ROUTING_test_traffic_SLAVE)
   overall_rc = EXIT_SUCCESS;
 
   // setup the configuration for port 4
+  PortConfiguration_builder->set_id(port_id_4);
   PortConfiguration_builder->set_vpc_id(vpc_id_2);
   PortConfiguration_builder->set_name(port_name_4);
   PortConfiguration_builder->set_mac_address(vmac_address_4);
