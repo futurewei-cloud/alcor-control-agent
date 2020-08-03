@@ -1063,7 +1063,7 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_ROUTING_test_traffic_one_machine
 
   overall_rc = Aca_Comm_Manager::get_instance().update_goal_state(
           GoalState_builder, gsOperationalReply);
-  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
+  EXPECT_NE(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
 
   // setup the configuration for port 4
@@ -1083,7 +1083,7 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_ROUTING_test_traffic_one_machine
   // create a new port 4
   overall_rc = Aca_Comm_Manager::get_instance().update_goal_state(
           GoalState_builder, gsOperationalReply);
-  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
+  EXPECT_NE(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
 
   // restore demo mode
@@ -1386,7 +1386,7 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_ROUTING_test_traffic_MASTER)
 
   overall_rc = Aca_Comm_Manager::get_instance().update_goal_state(
           GoalState_builder, gsOperationalReply);
-  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
+  EXPECT_NE(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
 
   // setup the configuration for port 2
@@ -1406,7 +1406,7 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_ROUTING_test_traffic_MASTER)
   // create a new port 2
   overall_rc = Aca_Comm_Manager::get_instance().update_goal_state(
           GoalState_builder, gsOperationalReply);
-  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
+  EXPECT_NE(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
 
   // restore demo mode
@@ -1730,7 +1730,7 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_ROUTING_test_traffic_SLAVE)
 
   overall_rc = Aca_Comm_Manager::get_instance().update_goal_state(
           GoalState_builder, gsOperationalReply);
-  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
+  EXPECT_NE(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
 
   // setup the configuration for port 4
@@ -1750,7 +1750,7 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_ROUTING_test_traffic_SLAVE)
   // create a new port 4
   overall_rc = Aca_Comm_Manager::get_instance().update_goal_state(
           GoalState_builder, gsOperationalReply);
-  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
+  EXPECT_NE(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
 
   // restore demo mode
