@@ -16,10 +16,11 @@
 #define ACA_DHCP_SERVER_H
 
 #include "aca_dhcp_programming_if.h"
-#include <map>
+#include <unordered_map>
 #include <mutex>
 #include <cstdint>
 #include <cstdlib>
+#include <string>
 
 using namespace aca_dhcp_programming_if;
 
@@ -165,13 +166,16 @@ class ACA_Dhcp_Server : public aca_dhcp_programming_if::ACA_Dhcp_Programming_Int
   void _pack_dhcp_header(dhcp_message *dhcpmsg);
   void _pack_dhcp_opt_msgtype(uint8_t *option, uint8_t msg_type);
   void _pack_dhcp_opt_ip_lease_time(uint8_t *option, uint32_t lease);
+  void _pack_dhcp_opt_server_id(uint8_t *option, uint32_t server_id);
+
+  string _serialize_dhcp_message(dhcp_message *dhcpmsg);
 
   /****************** Private variables ******************/
   int _dhcp_entry_thresh;
   int _get_db_size() const;
 #define DHCP_DB_SIZE _get_db_size()
 
-  std::map<std::string, dhcp_entry_data> *_dhcp_db;
+  std::unordered_map<std::string, dhcp_entry_data> *_dhcp_db;
   std::mutex _dhcp_db_mutex;
 
   void (*_parse_dhcp_msg_ops[DHCP_MSG_MAX])(dhcp_message *dhcpmsg);

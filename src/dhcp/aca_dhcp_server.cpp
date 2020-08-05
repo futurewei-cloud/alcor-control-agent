@@ -27,7 +27,7 @@ namespace aca_dhcp_server
 ACA_Dhcp_Server::ACA_Dhcp_Server()
 {
   try {
-    _dhcp_db = new map<string, dhcp_entry_data>;
+    _dhcp_db = new unordered_map<string, dhcp_entry_data>;
   } catch (const bad_alloc &e) {
     return;
   }
@@ -239,8 +239,30 @@ void ACA_Dhcp_Server::dhcps_recv(void *message)
 
 void ACA_Dhcp_Server::dhcps_xmit(void *message)
 {
-  ACA_OVS_Control::get_instance().packet_out(
-          "br-int", "in_port=controller packet=<hex-string> actions=normal");
+  string bridge = "br-int";
+  string in_port = "in port=controller";
+  string whitespace = " ";
+  string action = "actions=normal";
+  string packetpre = "packet=";
+  string packet;
+  string options;
+
+  if (nullptr == message) {
+    return;
+  }
+
+  packet = _serialize_dhcp_message((dhcp_message *)message);
+  if (nullptr == packet) {
+    return;
+  }
+
+  //bridge = "br-int" opts = "in_port=controller packet=<hex-string> actions=normal"
+  options = in_port + whitespace + packetpre + packet + whitespace + action;
+
+  aca_ovs_control::ACA_OVS_Control::get_instance().packet_out(bridge.c_str(),
+                                                              options.c_str());
+
+  delete message;
 }
 
 int ACA_Dhcp_Server::_validate_dhcp_message(dhcp_message *dhcpmsg)
@@ -401,9 +423,24 @@ void ACA_Dhcp_Server::_pack_dhcp_opt_ip_lease_time(uint8_t *option, uint32_t lea
     lease = DHCP_OPT_DEFAULT_IP_LEASE_TIME;
   }
 
+  lt = (dhcp_ip_lease_time *)option;
   lt->code = DHCP_OPT_CODE_IP_LEASE_TIME;
   lt->len = DHCP_OPT_LEN_4BYTE;
   lt->lease_time = lease;
+}
+
+void ACA_Dhcp_Server::_pack_dhcp_opt_server_id(uint8_t *option, uint32_t server_id)
+{
+  dhcp_server_id *sid = nullptr;
+
+  if (nullptr == option) {
+    return;
+  }
+
+  sid = (dhcp_server_id *)option;
+  sid->code = DHCP_OPT_CODE_SERVER_ID;
+  sid->len = DHCP_OPT_LEN_4BYTE;
+  sid->sid = server_id;
 }
 
 void ACA_Dhcp_Server::_init_dhcp_msg_ops()
@@ -478,6 +515,8 @@ ACA_Dhcp_Server::_pack_dhcp_offer(dhcp_message *dhcpdiscover, dhcp_entry_data *p
   opts_len += DHCP_OPT_CLV_HEADER + DHCP_OPT_LEN_4BYTE;
 
   //DHCP Options: server identifier
+  _pack_dhcp_opt_server_id(&pos[opts_len], 2130706433); //Hard coded for 127.0.0.1
+  opts_len += DHCP_OPT_CLV_HEADER + DHCP_OPT_LEN_4BYTE;
 
   //DHCP Options: end
   pos[opts_len] = DHCP_OPT_END;
@@ -553,6 +592,8 @@ dhcp_message *ACA_Dhcp_Server::_pack_dhcp_ack(dhcp_message *dhcpreq)
   opts_len += DHCP_OPT_CLV_HEADER + DHCP_OPT_LEN_4BYTE;
 
   //DHCP Options: server identifier
+  _pack_dhcp_opt_server_id(&pos[opts_len], 2130706433); //Hard coded for 127.0.0.1
+  opts_len += DHCP_OPT_CLV_HEADER + DHCP_OPT_LEN_4BYTE;
 
   //DHCP Options: end
   pos[opts_len] = DHCP_OPT_END;
@@ -582,11 +623,70 @@ dhcp_message *ACA_Dhcp_Server::_pack_dhcp_nak(dhcp_message *dhcpreq)
   opts_len += DHCP_OPT_CLV_HEADER + DHCP_OPT_LEN_1BYTE;
 
   //DHCP Options: server identifier
+  _pack_dhcp_opt_server_id(&pos[opts_len], 2130706433); //Hard coded for 127.0.0.1
+  opts_len += DHCP_OPT_CLV_HEADER + DHCP_OPT_LEN_4BYTE;
 
   //DHCP Options: end
   pos[opts_len] = DHCP_OPT_END;
 
   return dhcpnak;
+}
+
+string ACA_Dhcp_Server::_serialize_dhcp_message(dhcp_message *dhcpmsg)
+{
+  string packet;
+
+  if (nullptr == dhcpmsg) {
+    return nullptr;
+  }
+
+  //fix header
+  packet.append(to_string(dhcpmsg->op));
+  packet.append(to_string(dhcpmsg->htype));
+  packet.append(to_string(dhcpmsg->hlen));
+  packet.append(to_string(dhcpmsg->hops));
+
+  packet.append(to_string(htonl(dhcpmsg->xid)));
+  packet.append(to_string(htons(dhcpmsg->secs)));
+  packet.append(to_string(htons(dhcpmsg->flags)));
+  packet.append(to_string(htonl(dhcpmsg->ciaddr)));
+  packet.append(to_string(htonl(dhcpmsg->yiaddr)));
+  packet.append(to_string(htonl(dhcpmsg->siaddr)));
+  packet.append(to_string(htonl(dhcpmsg->giaddr)));
+
+  for (int i = 0; i < 16; i++) {
+    packet.append(to_string(dhcpmsg->chaddr[i]));
+  }
+  for (int i = 0; i < 64; i++) {
+    packet.append(to_string(dhcpmsg->sname[i]));
+  }
+  for (int i = 0; i < 128; i++) {
+    packet.append(to_string(dhcpmsg->file[i]));
+  }
+
+  packet.append(to_string(htonl(dhcpmsg->cookie)));
+
+  //options part
+  for (int i = 0; i < DHCP_MSG_OPTS_LENGTH;) {
+    if (DHCP_OPT_END == dhcpmsg->options[i]) {
+      packet.append(to_string(dhcpmsg->options[i]));
+      break;
+    }
+    packet.append(to_string(dhcpmsg->options[i]));
+    packet.append(to_string(dhcpmsg->options[i + 1]));
+    if (DHCP_OPT_LEN_1BYTE == dhcpmsg->options[i + 1]) {
+      packet.append(to_string(dhcpmsg->options[i + 2]));
+      i += DHCP_OPT_CLV_HEADER + DHCP_OPT_LEN_1BYTE;
+      continue;
+    }
+    if (DHCP_OPT_LEN_4BYTE == dhcpmsg->options[i + 1]) {
+      packet.append(to_string(htonl(*(uint32_t *)(&dhcpmsg->options[i + 2]))));
+      i += DHCP_OPT_CLV_HEADER + DHCP_OPT_LEN_4BYTE;
+      continue;
+    }
+  }
+
+  return packet;
 }
 
 } //namespace aca_dhcp_server
