@@ -609,6 +609,80 @@ TEST(ovs_dataplane_test_cases, 2_ports_CREATE_test_traffic)
   overall_rc = EXIT_SUCCESS;
 }
 
+TEST(ovs_dataplane_test_cases, 10_ports_CREATE)
+{
+  string port_name_postfix = "11111111-2222-3333-4444-555555555555";
+  string ip_address_prefix = "10.0.0.";
+  int rc;
+
+  GoalState GoalState_builder;
+  PortState *new_port_states;
+  SubnetState *new_subnet_states = GoalState_builder.add_subnet_states();
+
+  const int PORTS_TO_CREATE = 10;
+
+  for (int i = 0; i < PORTS_TO_CREATE; i++) {
+    string i_string = std::to_string(i);
+    string port_name = i_string + port_name_postfix;
+
+    new_port_states = GoalState_builder.add_port_states();
+    new_port_states->set_operation_type(OperationType::CREATE);
+
+    // this will allocate new PortConfiguration, may need to free it later
+    PortConfiguration *PortConfiguration_builder =
+            new_port_states->mutable_configuration();
+    PortConfiguration_builder->set_format_version(1);
+    PortConfiguration_builder->set_revision_number(1);
+    PortConfiguration_builder->set_message_type(MessageType::FULL);
+    PortConfiguration_builder->set_id(i_string);
+
+    PortConfiguration_builder->set_project_id(project_id);
+    PortConfiguration_builder->set_vpc_id(vpc_id_1);
+    PortConfiguration_builder->set_name(port_name);
+    PortConfiguration_builder->set_mac_address(vmac_address_1);
+    PortConfiguration_builder->set_admin_state_up(true);
+
+    PortConfiguration_FixedIp *PortIp_builder =
+            PortConfiguration_builder->add_fixed_ips();
+    PortIp_builder->set_subnet_id(subnet_id_1);
+    PortIp_builder->set_ip_address(ip_address_prefix + i_string);
+
+    PortConfiguration_SecurityGroupId *SecurityGroup_builder =
+            PortConfiguration_builder->add_security_group_ids();
+    SecurityGroup_builder->set_id("1");
+  }
+
+  // fill in the subnet state structs
+  aca_test_create_default_subnet_state(new_subnet_states);
+
+  bool previous_demo_mode = g_demo_mode;
+  g_demo_mode = false;
+
+  GoalStateOperationReply gsOperationalReply;
+  rc = Aca_Comm_Manager::get_instance().update_goal_state(GoalState_builder, gsOperationalReply);
+  EXPECT_NE(rc, EXIT_SUCCESS);
+
+  g_demo_mode = previous_demo_mode;
+
+  // calculate the average latency
+  ulong total_port_create_time = 0;
+
+  for (int i = 0; i < PORTS_TO_CREATE; i++) {
+    ACA_LOG_DEBUG("Port State(%d) took: %u nanoseconds or %u milliseconds\n", i,
+                  gsOperationalReply.operation_statuses(i).state_elapse_time(),
+                  gsOperationalReply.operation_statuses(i).state_elapse_time() / 1000000);
+
+    total_port_create_time +=
+            gsOperationalReply.operation_statuses(i).state_elapse_time();
+  }
+
+  ulong average_port_create_time = total_port_create_time / PORTS_TO_CREATE;
+
+  ACA_LOG_DEBUG("Average Port Create of %d took: %lu nanoseconds or %lu milliseconds\n",
+                PORTS_TO_CREATE, average_port_create_time,
+                average_port_create_time / 1000000);
+}
+
 TEST(ovs_dataplane_test_cases, DISABLED_2_ports_CREATE_test_traffic_MASTER)
 {
   ulong not_care_culminative_time = 0;
