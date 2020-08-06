@@ -244,6 +244,9 @@ int ACA_OVS_L3_Programmer::create_neighbor_l3(
         ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
                 cmd_string, culminative_time, overall_rc);
       }
+      // we found our interested router from _routers_table which has the destination subnet GW connected to it.
+      // Since each subnet GW can only be connected to one router, therefore, there is no point to look at other
+      // routers on the higher level for (auto router_it = _routers_table.begin() loop
       break;
     }
   }

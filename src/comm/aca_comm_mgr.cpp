@@ -81,22 +81,6 @@ int Aca_Comm_Manager::update_goal_state(GoalState &goal_state_message,
 
   this->print_goal_state(goal_state_message);
 
-  // comment out the VPC and subnet states update code
-  // since it is not needed with the current OVS dataplane
-  //   exec_command_rc = Aca_Goal_State_Handler::get_instance().update_vpc_states(
-  //           goal_state_message, gsOperationReply);
-  //   if (exec_command_rc != EXIT_SUCCESS) {
-  //     ACA_LOG_ERROR("Failed to update vpc state. Failed with error code %d\n", exec_command_rc);
-  //     rc = exec_command_rc;
-  //   }
-
-  //   exec_command_rc = Aca_Goal_State_Handler::get_instance().update_subnet_states(
-  //           goal_state_message, gsOperationReply);
-  //   if (exec_command_rc != EXIT_SUCCESS) {
-  //     ACA_LOG_ERROR("Failed to update subnet state. Failed with error code %d\n", exec_command_rc);
-  //     rc = exec_command_rc;
-  //   }
-
   if (goal_state_message.router_states_size() > 0) {
     exec_command_rc = Aca_Goal_State_Handler::get_instance().update_router_states(
             goal_state_message, gsOperationReply);
