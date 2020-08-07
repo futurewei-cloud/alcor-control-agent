@@ -8,7 +8,8 @@ set(SOURCES
     ./dp_abstraction/aca_goal_state_handler.cpp
     ./dp_abstraction/aca_dataplane_ovs.cpp
     ./net_config/aca_net_config.cpp
-    ./ovs/aca_ovs_programmer.cpp
+    ./ovs/aca_ovs_l2_programmer.cpp
+    ./ovs/aca_ovs_l3_programmer.cpp
     ./ovs/aca_vlan_manager.cpp
     ./ovs/ovs_control.cpp
     ./ovs/aca_ovs_control.cpp

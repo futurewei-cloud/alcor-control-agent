@@ -17,7 +17,7 @@
 #include "aca_util.h"
 #include "aca_net_config.h"
 #include "aca_vlan_manager.h"
-#include "aca_ovs_programmer.h"
+#include "aca_ovs_l2_programmer.h"
 #include "goalstateprovisioner.grpc.pb.h"
 #include <chrono>
 #include <thread>
@@ -31,7 +31,7 @@ mutex setup_ovs_bridges_mutex;
 
 extern bool g_demo_mode;
 
-namespace aca_ovs_programmer
+namespace aca_ovs_l2_programmer
 {
 static int aca_set_port_vlan_workitem(const string port_name, uint vlan_id)
 {
@@ -55,7 +55,7 @@ static int aca_set_port_vlan_workitem(const string port_name, uint vlan_id)
     std::this_thread::sleep_for(chrono::milliseconds(PORT_SCAN_SLEEP_INTERVAL));
 
     overall_rc = EXIT_SUCCESS;
-    ACA_OVS_Programmer::get_instance().execute_ovsdb_command(
+    ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
             cmd_string, not_care_culminative_time, overall_rc);
 
     if (overall_rc == EXIT_SUCCESS)
@@ -74,17 +74,17 @@ static int aca_set_port_vlan_workitem(const string port_name, uint vlan_id)
   return overall_rc;
 }
 
-ACA_OVS_Programmer &ACA_OVS_Programmer::get_instance()
+ACA_OVS_L2_Programmer &ACA_OVS_L2_Programmer::get_instance()
 {
   // Instance is destroyed when program exits.
   // It is instantiated on first use.
-  static ACA_OVS_Programmer instance;
+  static ACA_OVS_L2_Programmer instance;
   return instance;
 }
 
-int ACA_OVS_Programmer::setup_ovs_bridges_if_need()
+int ACA_OVS_L2_Programmer::setup_ovs_bridges_if_need()
 {
-  ACA_LOG_DEBUG("ACA_OVS_Programmer::setup_ovs_bridges_if_need ---> Entering\n");
+  ACA_LOG_DEBUG("ACA_OVS_L2_Programmer::setup_ovs_bridges_if_need ---> Entering\n");
 
   ulong not_care_culminative_time;
   int overall_rc = EXIT_SUCCESS;
@@ -102,12 +102,13 @@ int ACA_OVS_Programmer::setup_ovs_bridges_if_need()
 
   overall_rc = EXIT_SUCCESS;
 
-  if (br_int_existed && br_int_existed) {
+  if (br_int_existed && br_tun_existed) {
     // case 1: both br-int and br-tun exist
-    // nothing to do
+    ACA_LOG_DEBUG("Both br-int and br-tun existed: do nothing\n");
   } else if (!br_int_existed && !br_int_existed) {
-    // case 2: both br-int and br-tun not there, create them
-    // create br-int and br-tun bridges
+    // case 2: both br-int and br-tun not there
+    ACA_LOG_DEBUG("Both br-int and br-tun not existed: create them\n");
+
     execute_ovsdb_command("add-br br-int", not_care_culminative_time, overall_rc);
 
     execute_ovsdb_command("add-br br-tun", not_care_culminative_time, overall_rc);
@@ -130,10 +131,22 @@ int ACA_OVS_Programmer::setup_ovs_bridges_if_need()
                           not_care_culminative_time, overall_rc);
 
     // adding default flows
-    execute_openflow_command("add-flow br-tun \"table=0, priority=1,in_port=\"patch-int\" actions=resubmit(,2)\"",
+    execute_openflow_command("add-flow br-tun \"table=0,priority=1,in_port=\"patch-int\" actions=resubmit(,2)\"",
                              not_care_culminative_time, overall_rc);
 
-    execute_openflow_command("add-flow br-tun \"table=2, priority=0 actions=resubmit(,22)\"",
+    execute_openflow_command("add-flow br-tun \"table=2,priority=1 actions=resubmit(,22)\"",
+                             not_care_culminative_time, overall_rc);
+
+    execute_openflow_command("add-flow br-tun \"table=0,priority=25,arp,arp_op=1,in_port=\"patch-int\" actions=resubmit(,51)\"",
+                             not_care_culminative_time, overall_rc);
+
+    execute_openflow_command("add-flow br-tun \"table=51,priority=1 actions=resubmit(,22)\"",
+                             not_care_culminative_time, overall_rc);
+
+    execute_openflow_command("add-flow br-tun \"table=0,priority=25,icmp,icmp_type=8,in_port=\"patch-int\" actions=resubmit(,52)\"",
+                             not_care_culminative_time, overall_rc);
+
+    execute_openflow_command("add-flow br-tun \"table=52,priority=1 actions=resubmit(,22)\"",
                              not_care_culminative_time, overall_rc);
   } else {
     // case 3: only one of the br-int or br-tun is there,
@@ -146,17 +159,17 @@ int ACA_OVS_Programmer::setup_ovs_bridges_if_need()
   setup_ovs_bridges_mutex.unlock();
   // -----critical section ends-----
 
-  ACA_LOG_DEBUG("ACA_OVS_Programmer::setup_ovs_bridges_if_need <--- Exiting, overall_rc = %d\n",
+  ACA_LOG_DEBUG("ACA_OVS_L2_Programmer::setup_ovs_bridges_if_need <--- Exiting, overall_rc = %d\n",
                 overall_rc);
 
   return overall_rc;
 }
 
-int ACA_OVS_Programmer::configure_port(const string vpc_id, const string port_name,
-                                       const string virtual_ip, uint tunnel_id,
-                                       ulong &culminative_time)
+int ACA_OVS_L2_Programmer::configure_port(const string vpc_id, const string port_name,
+                                          const string virtual_ip,
+                                          uint tunnel_id, ulong &culminative_time)
 {
-  ACA_LOG_DEBUG("ACA_OVS_Programmer::port_configure ---> Entering\n");
+  ACA_LOG_DEBUG("ACA_OVS_L2_Programmer::port_configure ---> Entering\n");
 
   int overall_rc = EXIT_SUCCESS;
 
@@ -241,17 +254,18 @@ int ACA_OVS_Programmer::configure_port(const string vpc_id, const string port_na
     }
   }
 
-  ACA_LOG_DEBUG("ACA_OVS_Programmer::port_configure <--- Exiting, overall_rc = %d\n", overall_rc);
+  ACA_LOG_DEBUG("ACA_OVS_L2_Programmer::port_configure <--- Exiting, overall_rc = %d\n",
+                overall_rc);
 
   return overall_rc;
 }
 
-int ACA_OVS_Programmer::create_update_neighbor_port(const string vpc_id,
-                                                    alcor::schema::NetworkType network_type,
-                                                    const string remote_ip, uint tunnel_id,
-                                                    ulong &culminative_time)
+int ACA_OVS_L2_Programmer::create_update_neighbor_port(const string vpc_id,
+                                                       alcor::schema::NetworkType network_type,
+                                                       const string remote_host_ip,
+                                                       uint tunnel_id, ulong &culminative_time)
 {
-  ACA_LOG_DEBUG("ACA_OVS_Programmer::port_neighbor_create_update ---> Entering\n");
+  ACA_LOG_DEBUG("ACA_OVS_L2_Programmer::port_neighbor_create_update ---> Entering\n");
 
   int overall_rc = EXIT_SUCCESS;
 
@@ -259,8 +273,8 @@ int ACA_OVS_Programmer::create_update_neighbor_port(const string vpc_id,
     throw std::invalid_argument("vpc_id is empty");
   }
 
-  if (remote_ip.empty()) {
-    throw std::invalid_argument("remote_ip is empty");
+  if (remote_host_ip.empty()) {
+    throw std::invalid_argument("remote_host_ip is empty");
   }
 
   if (tunnel_id == 0) {
@@ -273,13 +287,13 @@ int ACA_OVS_Programmer::create_update_neighbor_port(const string vpc_id,
     throw std::runtime_error("Invalid environment with br-int and br-tun");
   }
 
-  string outport_name = aca_get_outport_name(network_type, remote_ip);
+  string outport_name = aca_get_outport_name(network_type, remote_host_ip);
 
   string cmd_string =
           "--may-exist add-port br-tun " + outport_name + " -- set interface " +
           outport_name + " type=" + aca_get_network_type_string(network_type) +
           " options:df_default=true options:egress_pkt_mark=0 options:in_key=flow options:out_key=flow options:remote_ip=" +
-          remote_ip;
+          remote_host_ip;
 
   execute_ovsdb_command(cmd_string, culminative_time, overall_rc);
 
@@ -296,27 +310,27 @@ int ACA_OVS_Programmer::create_update_neighbor_port(const string vpc_id,
     throw std::runtime_error("vpc_id entry not find in vpc_table");
   }
 
-  cmd_string = "add-flow br-tun \"table=22, priority=1,dl_vlan=" + to_string(internal_vlan_id) +
+  cmd_string = "add-flow br-tun \"table=22,priority=1,dl_vlan=" + to_string(internal_vlan_id) +
                " actions=strip_vlan,load:" + to_string(tunnel_id) +
                "->NXM_NX_TUN_ID[],output:\"" + full_outport_list + "\"\"";
 
   execute_openflow_command(cmd_string, culminative_time, overall_rc);
 
-  cmd_string = "add-flow br-tun \"table=0, priority=1,in_port=\"" +
+  cmd_string = "add-flow br-tun \"table=0,priority=1,in_port=\"" +
                outport_name + "\" actions=resubmit(,4)\"";
 
   execute_openflow_command(cmd_string, culminative_time, overall_rc);
 
-  ACA_LOG_DEBUG("ACA_OVS_Programmer::port_neighbor_create_update <--- Exiting, overall_rc = %d\n",
+  ACA_LOG_DEBUG("ACA_OVS_L2_Programmer::port_neighbor_create_update <--- Exiting, overall_rc = %d\n",
                 overall_rc);
 
   return overall_rc;
 }
 
-void ACA_OVS_Programmer::execute_ovsdb_command(const std::string cmd_string,
-                                               ulong &culminative_time, int &overall_rc)
+void ACA_OVS_L2_Programmer::execute_ovsdb_command(const std::string cmd_string,
+                                                  ulong &culminative_time, int &overall_rc)
 {
-  ACA_LOG_DEBUG("ACA_OVS_Programmer::execute_ovsdb_command ---> Entering\n");
+  ACA_LOG_DEBUG("ACA_OVS_L2_Programmer::execute_ovsdb_command ---> Entering\n");
 
   auto ovsdb_client_start = chrono::steady_clock::now();
 
@@ -337,13 +351,13 @@ void ACA_OVS_Programmer::execute_ovsdb_command(const std::string cmd_string,
   ACA_LOG_INFO("Elapsed time for ovsdb client call took: %ld nanoseconds or %ld milliseconds. rc: %d\n",
                ovsdb_client_time_total_time, ovsdb_client_time_total_time / 1000000, rc);
 
-  ACA_LOG_DEBUG("ACA_OVS_Programmer::execute_ovsdb_command <--- Exiting, rc = %d\n", rc);
+  ACA_LOG_DEBUG("ACA_OVS_L2_Programmer::execute_ovsdb_command <--- Exiting, rc = %d\n", rc);
 }
 
-void ACA_OVS_Programmer::execute_openflow_command(const std::string cmd_string,
-                                                  ulong &culminative_time, int &overall_rc)
+void ACA_OVS_L2_Programmer::execute_openflow_command(const std::string cmd_string,
+                                                     ulong &culminative_time, int &overall_rc)
 {
-  ACA_LOG_DEBUG("ACA_OVS_Programmer::execute_openflow_command ---> Entering\n");
+  ACA_LOG_DEBUG("ACA_OVS_L2_Programmer::execute_openflow_command ---> Entering\n");
 
   auto openflow_client_start = chrono::steady_clock::now();
 
@@ -365,7 +379,7 @@ void ACA_OVS_Programmer::execute_openflow_command(const std::string cmd_string,
                openflow_client_time_total_time,
                openflow_client_time_total_time / 1000000, rc);
 
-  ACA_LOG_DEBUG("ACA_OVS_Programmer::execute_openflow_command <--- Exiting, rc = %d\n", rc);
+  ACA_LOG_DEBUG("ACA_OVS_L2_Programmer::execute_openflow_command <--- Exiting, rc = %d\n", rc);
 }
 
-} // namespace aca_ovs_programmer
+} // namespace aca_ovs_l2_programmer

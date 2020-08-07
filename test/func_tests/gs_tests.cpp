@@ -41,8 +41,6 @@ using aca_comm_manager::Aca_Comm_Manager;
 // Global variables
 string g_rpc_server = EMPTY_STRING;
 string g_rpc_protocol = EMPTY_STRING;
-std::atomic_ulong g_total_rpc_call_time(0);
-std::atomic_ulong g_total_rpc_client_time(0);
 std::atomic_ulong g_total_network_configuration_time(0);
 std::atomic_ulong g_total_update_GS_time(0);
 bool g_demo_mode = false;
@@ -57,12 +55,6 @@ using std::string;
 
 static void aca_cleanup()
 {
-  ACA_LOG_DEBUG("g_total_rpc_call_time = %lu nanoseconds or %lu milliseconds\n",
-                g_total_rpc_call_time.load(), g_total_rpc_call_time.load() / 1000000);
-
-  ACA_LOG_DEBUG("g_total_rpc_client_time = %lu nanoseconds or %lu milliseconds\n",
-                g_total_rpc_client_time.load(), g_total_rpc_client_time.load() / 1000000);
-
   ACA_LOG_DEBUG("g_total_network_configuration_time = %lu nanoseconds or %lu milliseconds\n",
                 g_total_network_configuration_time.load(),
                 g_total_network_configuration_time.load() / 1000000);
@@ -148,14 +140,8 @@ void parse_goalstate(GoalState parsed_struct, GoalState GoalState_builder)
     assert(parsed_struct.port_states(i).configuration().name() ==
            GoalState_builder.port_states(i).configuration().name());
 
-    assert(parsed_struct.port_states(i).configuration().network_ns() ==
-           GoalState_builder.port_states(i).configuration().network_ns());
-
     assert(parsed_struct.port_states(i).configuration().mac_address() ==
            GoalState_builder.port_states(i).configuration().mac_address());
-
-    assert(parsed_struct.port_states(i).configuration().veth_name() ==
-           GoalState_builder.port_states(i).configuration().veth_name());
 
     assert(parsed_struct.port_states(i).configuration().host_info().ip_address() ==
            GoalState_builder.port_states(i).configuration().host_info().ip_address());
@@ -225,36 +211,6 @@ void parse_goalstate(GoalState parsed_struct, GoalState GoalState_builder)
 
     assert(parsed_struct.subnet_states(i).configuration().cidr() ==
            GoalState_builder.subnet_states(i).configuration().cidr());
-
-    assert(parsed_struct.subnet_states(i).configuration().transit_switches_size() ==
-           GoalState_builder.subnet_states(i).configuration().transit_switches_size());
-
-    for (int j = 0;
-         j < parsed_struct.subnet_states(i).configuration().transit_switches_size(); j++) {
-      assert(parsed_struct.subnet_states(i).configuration().transit_switches(j).vpc_id() ==
-             GoalState_builder.subnet_states(i)
-                     .configuration()
-                     .transit_switches(j)
-                     .vpc_id());
-
-      assert(parsed_struct.subnet_states(i).configuration().transit_switches(j).subnet_id() ==
-             GoalState_builder.subnet_states(i)
-                     .configuration()
-                     .transit_switches(j)
-                     .subnet_id());
-
-      assert(parsed_struct.subnet_states(i).configuration().transit_switches(j).ip_address() ==
-             GoalState_builder.subnet_states(i)
-                     .configuration()
-                     .transit_switches(j)
-                     .ip_address());
-
-      assert(parsed_struct.subnet_states(i).configuration().transit_switches(j).mac_address() ==
-             GoalState_builder.subnet_states(i)
-                     .configuration()
-                     .transit_switches(j)
-                     .mac_address());
-    }
   }
 
   assert(parsed_struct.vpc_states_size() == GoalState_builder.vpc_states_size());
@@ -299,21 +255,6 @@ void parse_goalstate(GoalState parsed_struct, GoalState GoalState_builder)
 
       assert(parsed_struct.vpc_states(i).configuration().routes(k).next_hop() ==
              GoalState_builder.vpc_states(i).configuration().routes(k).next_hop());
-    }
-
-    assert(parsed_struct.vpc_states(i).configuration().transit_routers_size() ==
-           GoalState_builder.vpc_states(i).configuration().transit_routers_size());
-
-    for (int l = 0;
-         l < parsed_struct.vpc_states(i).configuration().transit_routers_size(); l++) {
-      assert(parsed_struct.vpc_states(i).configuration().transit_routers(l).vpc_id() ==
-             GoalState_builder.vpc_states(i).configuration().transit_routers(l).vpc_id());
-
-      assert(parsed_struct.vpc_states(i).configuration().transit_routers(l).ip_address() ==
-             GoalState_builder.vpc_states(i).configuration().transit_routers(l).ip_address());
-
-      assert(parsed_struct.vpc_states(i).configuration().transit_routers(l).mac_address() ==
-             GoalState_builder.vpc_states(i).configuration().transit_routers(l).mac_address());
     }
   }
 
@@ -370,7 +311,7 @@ int main(int argc, char *argv[])
   VpcState *new_vpc_states = GoalState_builder.add_vpc_states();
 
   // fill in port state structs
-  new_port_states->set_operation_type(OperationType::FINALIZE);
+  new_port_states->set_operation_type(OperationType::CREATE);
 
   // this will allocate new PortConfiguration, will need to free it later
   PortConfiguration *PortConfiguration_builder = new_port_states->mutable_configuration();
@@ -378,9 +319,7 @@ int main(int argc, char *argv[])
   PortConfiguration_builder->set_project_id("dbf72700-5106-4a7a-918f-111111111111");
   PortConfiguration_builder->set_id("dd12d1dadad2g4h");
   PortConfiguration_builder->set_name("Peer1");
-  PortConfiguration_builder->set_network_ns("Final_ns_dd12d1dadad2g4h");
   PortConfiguration_builder->set_mac_address("fa:16:3e:d7:f2:6c");
-  PortConfiguration_builder->set_veth_name("veth0");
 
   PortConfiguration_HostInfo *portConfig_HostInfoBuilder(new PortConfiguration_HostInfo);
   portConfig_HostInfoBuilder->set_ip_address("172.0.0.2");
@@ -415,18 +354,11 @@ int main(int argc, char *argv[])
   SubnetConiguration_builder->set_name("SuperSubnet");
   SubnetConiguration_builder->set_cidr("10.0.0.1/16");
   SubnetConiguration_builder->set_tunnel_id(22222);
-  // this will allocate new SubnetConfiguration_TransitSwitch, may need to free it later
-  SubnetConfiguration_TransitSwitch *TransitSwitch_builder =
-          SubnetConiguration_builder->add_transit_switches();
-  TransitSwitch_builder->set_vpc_id("99d9d709-8478-4b46-9f3f-2206b1023fd3");
-  TransitSwitch_builder->set_subnet_id("superSubnet");
-  TransitSwitch_builder->set_ip_address("172.0.0.1");
-  TransitSwitch_builder->set_mac_address("cc:dd:ee:aa:bb:cc");
 
   // fill in the vpc state structs
   new_vpc_states = GoalState_builder.add_vpc_states();
 
-  new_vpc_states->set_operation_type(OperationType::CREATE_UPDATE_SWITCH);
+  new_vpc_states->set_operation_type(OperationType::CREATE);
 
   // this will allocate new VpcConfiguration, will need to free it later
   VpcConfiguration *VpcConiguration_builder = new_vpc_states->mutable_configuration();
@@ -437,12 +369,6 @@ int main(int argc, char *argv[])
   VpcConiguration_builder->set_name("SuperVpc");
   VpcConiguration_builder->set_cidr("192.168.0.0/24");
   VpcConiguration_builder->set_tunnel_id(11111);
-  // this will allocate new VpcConfiguration_TransitRouter, may need to free it later
-  VpcConfiguration_TransitRouter *TransitRouter_builder =
-          VpcConiguration_builder->add_transit_routers();
-  TransitRouter_builder->set_vpc_id("12345");
-  TransitRouter_builder->set_ip_address("10.0.0.2");
-  TransitRouter_builder->set_mac_address("aa-bb-cc-dd-ee-ff");
 
   string string_message;
 

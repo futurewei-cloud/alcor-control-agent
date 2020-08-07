@@ -4,5 +4,5 @@
     ignore = untracked
 [submodule "alcor"]
 	path = alcor
-	url = https://github.com/futurewei-cloud/alcor
+	url = https://github.com/futurewei-cloud/alcor.git
     ignore = untracked

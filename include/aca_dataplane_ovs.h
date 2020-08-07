@@ -33,6 +33,14 @@ class ACA_Dataplane_OVS : public aca_net_programming_if::ACA_Core_Net_Programmin
   int update_port_state_workitem(const alcor::schema::PortState current_PortState,
                                  alcor::schema::GoalState &parsed_struct,
                                  alcor::schema::GoalStateOperationReply &gsOperationReply);
+
+  int update_neighbor_state_workitem(const alcor::schema::NeighborState current_NeighborState,
+                                     alcor::schema::GoalState &parsed_struct,
+                                     alcor::schema::GoalStateOperationReply &gsOperationReply);
+
+  int update_router_state_workitem(const alcor::schema::RouterState current_RouterState,
+                                   alcor::schema::GoalState &parsed_struct,
+                                   alcor::schema::GoalStateOperationReply &gsOperationReply);
 };
 } // namespace aca_dataplane_ovs
 #endif // #ifndef ACA_DATAPLANCE_OVS_H
