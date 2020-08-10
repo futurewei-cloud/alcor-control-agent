@@ -128,7 +128,8 @@ class ACA_Dhcp_Server : public aca_dhcp_programming_if::ACA_Dhcp_Programming_Int
   public:
   ACA_Dhcp_Server();
   virtual ~ACA_Dhcp_Server();
-  int initialize();
+
+  static ACA_Dhcp_Server &get_instance();
 
   /* Management Plane Ops */
   int add_dhcp_entry(dhcp_config *dhcp_cfg_in);
@@ -140,6 +141,12 @@ class ACA_Dhcp_Server : public aca_dhcp_programming_if::ACA_Dhcp_Programming_Int
   void dhcps_xmit(void *message);
 
   private:
+  /*************** Initialization and De-initialization ***********************/
+  void _init_dhcp_db();
+  void _deinit_dhcp_db();
+  void _init_dhcp_ofp();
+  void _deinit_dhcp_ofp();
+
   /*************** Management plane operations ***********************/
   dhcp_entry_data *_search_dhcp_entry(string mac_address);
   void _validate_mac_address(const char *mac_string);

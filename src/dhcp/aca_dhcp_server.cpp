@@ -18,6 +18,7 @@
 #include <errno.h>
 #include <arpa/inet.h>
 #include "aca_ovs_control.h"
+#include "aca_ovs_l2_programmer.h"
 
 using namespace std;
 using namespace aca_dhcp_programming_if;
@@ -26,6 +27,20 @@ namespace aca_dhcp_server
 {
 ACA_Dhcp_Server::ACA_Dhcp_Server()
 {
+  _init_dhcp_db();
+  _init_dhcp_msg_ops();
+  _init_dhcp_ofp();
+}
+
+ACA_Dhcp_Server::~ACA_Dhcp_Server()
+{
+  _deinit_dhcp_db();
+
+  _deinit_dhcp_ofp();
+}
+
+void ACA_Dhcp_Server::_init_dhcp_db()
+{
   try {
     _dhcp_db = new unordered_map<string, dhcp_entry_data>;
   } catch (const bad_alloc &e) {
@@ -33,19 +48,47 @@ ACA_Dhcp_Server::ACA_Dhcp_Server()
   }
 
   _dhcp_entry_thresh = 0x10000; //10K
-
-  _init_dhcp_msg_ops();
 }
 
-ACA_Dhcp_Server::~ACA_Dhcp_Server()
+void ACA_Dhcp_Server::_deinit_dhcp_db()
 {
   delete _dhcp_db;
   _dhcp_db = nullptr;
+  _dhcp_entry_thresh = 0;
 }
 
-int ACA_Dhcp_Server::initialize()
+void ACA_Dhcp_Server::_init_dhcp_ofp()
 {
-  return 0;
+  aca_ovs_l2_programmer::ACA_OVS_L2_Programmer *pL2Prog = nullptr;
+  unsigned long not_care_culminative_time;
+  int overall_rc = EXIT_SUCCESS;
+
+  pL2Prog = &(aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance());
+
+  // adding dhcp default flows
+  pL2Prog->execute_openflow_command("add-flow br-int \"table=0,priority=25,udp,udp_src=68,udp_dst=67,actions=CONTROLLER\"",
+                                    not_care_culminative_time, overall_rc);
+  return;
+}
+
+void ACA_Dhcp_Server::_deinit_dhcp_ofp()
+{
+  aca_ovs_l2_programmer::ACA_OVS_L2_Programmer *pL2Prog = nullptr;
+  unsigned long not_care_culminative_time;
+  int overall_rc = EXIT_SUCCESS;
+
+  pL2Prog = &(aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance());
+
+  // adding dhcp default flows
+  pL2Prog->execute_openflow_command("del-flow br-int \"udp,udp_src=68,udp_dst=67\"",
+                                    not_care_culminative_time, overall_rc);
+  return;
+}
+
+ACA_Dhcp_Server &ACA_Dhcp_Server::get_instance()
+{
+  static ACA_Dhcp_Server instance;
+  return instance;
 }
 
 int ACA_Dhcp_Server::add_dhcp_entry(dhcp_config *dhcp_cfg_in)
@@ -105,7 +148,7 @@ int ACA_Dhcp_Server::delete_dhcp_entry(dhcp_config *dhcp_cfg_in)
 int ACA_Dhcp_Server::update_dhcp_entry(dhcp_config *dhcp_cfg_in)
 {
   //dhcp_entry_data stData = {0};
-  std::map<string, dhcp_entry_data>::iterator pos;
+  std::unordered_map<string, dhcp_entry_data>::iterator pos;
   dhcp_entry_data *pData = nullptr;
 
   if (_validate_dhcp_entry(dhcp_cfg_in)) {
@@ -129,7 +172,7 @@ int ACA_Dhcp_Server::update_dhcp_entry(dhcp_config *dhcp_cfg_in)
 
 dhcp_entry_data *ACA_Dhcp_Server::_search_dhcp_entry(string mac_address)
 {
-  std::map<string, dhcp_entry_data>::iterator pos;
+  std::unordered_map<string, dhcp_entry_data>::iterator pos;
 
   pos = _dhcp_db->find(mac_address);
   if (_dhcp_db->end() == pos) {

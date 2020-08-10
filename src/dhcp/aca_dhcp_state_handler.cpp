@@ -28,7 +28,7 @@ namespace aca_dhcp_state_handler
 Aca_Dhcp_State_Handler::Aca_Dhcp_State_Handler()
 {
   ACA_LOG_INFO("DHCP State Handler: using dhcp server\n");
-  this->dhcp_programming_if = new aca_dhcp_server::ACA_Dhcp_Server;
+  this->dhcp_programming_if = &(aca_dhcp_server::ACA_Dhcp_Server::get_instance());
 
   int rc = this->dhcp_programming_if->initialize();
 
