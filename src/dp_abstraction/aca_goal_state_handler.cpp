@@ -70,9 +70,6 @@ int Aca_Goal_State_Handler::update_vpc_states(GoalState &parsed_struct,
   int rc;
   int overall_rc = EXIT_SUCCESS;
 
-  // if (parsed_struct.vpc_states_size() == 0)
-  //   overall_rc = EXIT_SUCCESS in the current logic
-
   for (int i = 0; i < parsed_struct.vpc_states_size(); i++) {
     ACA_LOG_DEBUG("=====>parsing vpc states #%d\n", i);
 
@@ -82,10 +79,6 @@ int Aca_Goal_State_Handler::update_vpc_states(GoalState &parsed_struct,
             std::launch::async, &Aca_Goal_State_Handler::update_vpc_state_workitem,
             this, current_VPCState, std::ref(gsOperationReply)));
 
-    // keeping below just in case if we want to call it serially
-    // rc = update_vpc_state_workitem(current_VPCState, gsOperationReply);
-    // if (rc != EXIT_SUCCESS)
-    //   overall_rc = rc;
   } // for (int i = 0; i < parsed_struct.vpc_states_size(); i++)
 
   for (int i = 0; i < parsed_struct.vpc_states_size(); i++) {
@@ -111,9 +104,6 @@ int Aca_Goal_State_Handler::update_subnet_states(GoalState &parsed_struct,
   int rc;
   int overall_rc = EXIT_SUCCESS;
 
-  // if (parsed_struct.subnet_states_size() == 0)
-  //   overall_rc = EXIT_SUCCESS in the current logic
-
   for (int i = 0; i < parsed_struct.subnet_states_size(); i++) {
     ACA_LOG_DEBUG("=====>parsing subnet states #%d\n", i);
 
@@ -123,10 +113,6 @@ int Aca_Goal_State_Handler::update_subnet_states(GoalState &parsed_struct,
             std::launch::async, &Aca_Goal_State_Handler::update_subnet_state_workitem,
             this, current_SubnetState, std::ref(gsOperationReply)));
 
-    // keeping below just in case if we want to call it serially
-    // rc = update_subnet_state_workitem(current_SubnetState, gsOperationReply);
-    // if (rc != EXIT_SUCCESS)
-    //   overall_rc = rc;
   } // for (int i = 0; i < parsed_struct.subnet_states_size(); i++)
 
   for (int i = 0; i < parsed_struct.subnet_states_size(); i++) {
@@ -153,9 +139,6 @@ int Aca_Goal_State_Handler::update_port_states(GoalState &parsed_struct,
   int rc;
   int overall_rc = EXIT_SUCCESS;
 
-  // if (parsed_struct.port_states_size() == 0)
-  //   overall_rc = EXIT_SUCCESS in the current logic
-
   for (int i = 0; i < parsed_struct.port_states_size(); i++) {
     ACA_LOG_DEBUG("=====>parsing port states #%d\n", i);
 
@@ -180,6 +163,75 @@ int Aca_Goal_State_Handler::update_port_states(GoalState &parsed_struct,
   return overall_rc;
 }
 
+int Aca_Goal_State_Handler::update_neighbor_state_workitem(const NeighborState current_NeighborState,
+                                                           GoalState &parsed_struct,
+                                                           GoalStateOperationReply &gsOperationReply)
+{
+  return this->core_net_programming_if->update_neighbor_state_workitem(
+          current_NeighborState, std::ref(parsed_struct), std::ref(gsOperationReply));
+}
+
+int Aca_Goal_State_Handler::update_neighbor_states(GoalState &parsed_struct,
+                                                   GoalStateOperationReply &gsOperationReply)
+{
+  std::vector<std::future<int> > workitem_future;
+  int rc;
+  int overall_rc = EXIT_SUCCESS;
+
+  for (int i = 0; i < parsed_struct.neighbor_states_size(); i++) {
+    ACA_LOG_DEBUG("=====>parsing neighbor states #%d\n", i);
+
+    NeighborState current_NeighborState = parsed_struct.neighbor_states(i);
+
+    workitem_future.push_back(std::async(
+            std::launch::async, &Aca_Goal_State_Handler::update_neighbor_state_workitem,
+            this, current_NeighborState, std::ref(parsed_struct),
+            std::ref(gsOperationReply)));
+  }
+
+  for (int i = 0; i < parsed_struct.neighbor_states_size(); i++) {
+    rc = workitem_future[i].get();
+    if (rc != EXIT_SUCCESS)
+      overall_rc = rc;
+  }
+
+  return overall_rc;
+}
+
+int Aca_Goal_State_Handler::update_router_state_workitem(const RouterState current_RouterState,
+                                                         GoalState &parsed_struct,
+                                                         GoalStateOperationReply &gsOperationReply)
+{
+  return this->core_net_programming_if->update_router_state_workitem(
+          current_RouterState, std::ref(parsed_struct), std::ref(gsOperationReply));
+}
+
+int Aca_Goal_State_Handler::update_router_states(GoalState &parsed_struct,
+                                                 GoalStateOperationReply &gsOperationReply)
+{
+  std::vector<std::future<int> > workitem_future;
+  int rc;
+  int overall_rc = EXIT_SUCCESS;
+
+  for (int i = 0; i < parsed_struct.router_states_size(); i++) {
+    ACA_LOG_DEBUG("=====>parsing router states #%d\n", i);
+
+    RouterState current_RouterState = parsed_struct.router_states(i);
+
+    workitem_future.push_back(std::async(
+            std::launch::async, &Aca_Goal_State_Handler::update_router_state_workitem, this,
+            current_RouterState, std::ref(parsed_struct), std::ref(gsOperationReply)));
+  }
+
+  for (int i = 0; i < parsed_struct.router_states_size(); i++) {
+    rc = workitem_future[i].get();
+    if (rc != EXIT_SUCCESS)
+      overall_rc = rc;
+  }
+
+  return overall_rc;
+}
+
 void Aca_Goal_State_Handler::add_goal_state_operation_status(
         GoalStateOperationReply &gsOperationReply, std::string id,
         ResourceType resource_type, OperationType operation_type,
@@ -190,6 +242,9 @@ void Aca_Goal_State_Handler::add_goal_state_operation_status(
 
   if (operation_rc == EXIT_SUCCESS)
     overall_operation_status = OperationStatus::SUCCESS;
+  else if (operation_rc == EINPROGRESS && resource_type == PORT &&
+           operation_type == OperationType::CREATE)
+    overall_operation_status = OperationStatus::PENDING;
   else if (operation_rc == -EINVAL)
     overall_operation_status = OperationStatus::INVALID_ARG;
   else

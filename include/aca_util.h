@@ -15,6 +15,7 @@
 #ifndef ACA_UTIL_H
 #define ACA_UTIL_H
 
+#include "aca_net_config.h"
 #include "aca_log.h"
 #include "goalstateprovisioner.grpc.pb.h"
 #include <string>
@@ -23,7 +24,35 @@
 // it should be more than enough for the number of hosts in a region
 #define MAX_OUTPORT_NAME_POSTFIX 99999999
 
+#define TAP_PREFIX "tap" // vm tap device prefix
+#define PORT_NAME_LEN 14 // Nova generated port name length
+
 #define cast_to_nanoseconds(x) chrono::duration_cast<chrono::nanoseconds>(x)
+
+static inline const char *aca_get_operation_string(alcor::schema::OperationType operation)
+{
+  switch (operation) {
+  case alcor::schema::OperationType::CREATE:
+    return "CREATE";
+  case alcor::schema::OperationType::UPDATE:
+    return "UPDATE";
+  case alcor::schema::OperationType::GET:
+    return "GET";
+  case alcor::schema::OperationType::DELETE:
+    return "DELETE";
+  case alcor::schema::OperationType::INFO:
+    return "INFO";
+  case alcor::schema::OperationType::NEIGHBOR_CREATE_UPDATE:
+    return "NEIGHBOR_CREATE_UPDATE";
+  case alcor::schema::OperationType::NEIGHBOR_GET:
+    return "NEIGHBOR_GET";
+  case alcor::schema::OperationType::NEIGHBOR_DELETE:
+    return "NEIGHBOR_DELETE";
+
+  default:
+    return "ERROR: unknown operation type!";
+  }
+}
 
 static inline std::string aca_get_network_type_string(alcor::schema::NetworkType network_type)
 {
@@ -55,38 +84,38 @@ aca_get_outport_name(alcor::schema::NetworkType network_type, std::string remote
   return aca_get_network_type_string(network_type) + "-" + std::to_string(hash_value);
 }
 
-static inline const char *aca_get_operation_string(alcor::schema::OperationType operation)
+static inline std::string aca_get_port_name(std::string port_id)
 {
-  switch (operation) {
-  case alcor::schema::OperationType::CREATE:
-    return "CREATE";
-  case alcor::schema::OperationType::UPDATE:
-    return "UPDATE";
-  case alcor::schema::OperationType::GET:
-    return "GET";
-  case alcor::schema::OperationType::DELETE:
-    return "DELETE";
-  case alcor::schema::OperationType::INFO:
-    return "INFO";
-  case alcor::schema::OperationType::NEIGHBOR_CREATE_UPDATE:
-    return "NEIGHBOR_CREATE_UPDATE";
-  case alcor::schema::OperationType::NEIGHBOR_GET:
-    return "NEIGHBOR_GET";
-  case alcor::schema::OperationType::NEIGHBOR_DELETE:
-    return "NEIGHBOR_DELETE";
-  case alcor::schema::OperationType::CREATE_UPDATE_GATEWAY:
-    return "CREATE_UPDATE_GATEWAY";
+  std::string port_name = TAP_PREFIX + port_id;
+  port_name = port_name.substr(0, PORT_NAME_LEN);
 
-  case alcor::schema::OperationType::FINALIZE:
-    return "FINALIZE";
-  case alcor::schema::OperationType::CREATE_UPDATE_SWITCH:
-    return "CREATE_UPDATE_SWITCH";
-  case alcor::schema::OperationType::CREATE_UPDATE_ROUTER:
-    return "CREATE_UPDATE_ROUTER";
+  return port_name;
+}
+
+static inline const char *aca_get_neighbor_type_string(alcor::schema::NeighborType neighbor_type)
+{
+  switch (neighbor_type) {
+  case alcor::schema::NeighborType::L2:
+    return "L2";
+  case alcor::schema::NeighborType::L3:
+    return "L3";
 
   default:
-    return "ERROR: unknown operation type!";
+    return "ERROR: unknown neighbor type!";
   }
+}
+
+static inline bool aca_is_port_on_same_host(const std::string hosting_port_ip)
+{
+  if (hosting_port_ip.empty()) {
+    return false;
+  }
+
+  const std::string IFCONFIG_PREFIX = "ifconfig ";
+  std::string cmd_string = IFCONFIG_PREFIX + " | grep " + hosting_port_ip;
+  int rc = aca_net_config::Aca_Net_Config::get_instance().execute_system_command(cmd_string);
+
+  return (rc == EXIT_SUCCESS);
 }
 
 #endif

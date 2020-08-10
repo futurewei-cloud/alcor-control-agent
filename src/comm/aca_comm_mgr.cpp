@@ -26,8 +26,6 @@ using namespace aca_dhcp_state_handler;
 
 extern string g_rpc_server;
 extern string g_rpc_protocol;
-extern std::atomic_ulong g_total_rpc_call_time;
-extern std::atomic_ulong g_total_rpc_client_time;
 extern std::atomic_ulong g_total_update_GS_time;
 
 namespace aca_comm_manager
@@ -85,25 +83,32 @@ int Aca_Comm_Manager::update_goal_state(GoalState &goal_state_message,
 
   this->print_goal_state(goal_state_message);
 
-  exec_command_rc = Aca_Goal_State_Handler::get_instance().update_vpc_states(
-          goal_state_message, gsOperationReply);
-  if (exec_command_rc != EXIT_SUCCESS) {
-    ACA_LOG_ERROR("Failed to update vpc state. Failed with error code %d\n", exec_command_rc);
-    rc = exec_command_rc;
+  if (goal_state_message.router_states_size() > 0) {
+    exec_command_rc = Aca_Goal_State_Handler::get_instance().update_router_states(
+            goal_state_message, gsOperationReply);
+    if (exec_command_rc != EXIT_SUCCESS) {
+      ACA_LOG_ERROR("Failed to update router state. Failed with error code %d\n", exec_command_rc);
+      rc = exec_command_rc;
+    }
   }
 
-  exec_command_rc = Aca_Goal_State_Handler::get_instance().update_subnet_states(
-          goal_state_message, gsOperationReply);
-  if (exec_command_rc != EXIT_SUCCESS) {
-    ACA_LOG_ERROR("Failed to update subnet state. Failed with error code %d\n", exec_command_rc);
-    rc = exec_command_rc;
+  if (goal_state_message.port_states_size() > 0) {
+    exec_command_rc = Aca_Goal_State_Handler::get_instance().update_port_states(
+            goal_state_message, gsOperationReply);
+    if (exec_command_rc != EXIT_SUCCESS) {
+      ACA_LOG_ERROR("Failed to update port state. Failed with error code %d\n", exec_command_rc);
+      rc = exec_command_rc;
+    }
   }
 
-  exec_command_rc = Aca_Goal_State_Handler::get_instance().update_port_states(
-          goal_state_message, gsOperationReply);
-  if (exec_command_rc != EXIT_SUCCESS) {
-    ACA_LOG_ERROR("Failed to update port state. Failed with error code %d\n", exec_command_rc);
-    rc = exec_command_rc;
+  if (goal_state_message.neighbor_states_size() > 0) {
+    exec_command_rc = Aca_Goal_State_Handler::get_instance().update_neighbor_states(
+            goal_state_message, gsOperationReply);
+    if (exec_command_rc != EXIT_SUCCESS) {
+      ACA_LOG_ERROR("Failed to update neighbor state. Failed with error code %d\n",
+                    exec_command_rc);
+      rc = exec_command_rc;
+    }
   }
 
   exec_command_rc = Aca_Dhcp_State_Handler::get_instance().update_dhcp_states(
@@ -131,125 +136,6 @@ void Aca_Comm_Manager::print_goal_state(GoalState parsed_struct)
 {
   if (g_debug_mode == false) {
     return;
-  }
-
-  for (int i = 0; i < parsed_struct.port_states_size(); i++) {
-    fprintf(stdout, "parsed_struct.port_states(%d).operation_type(): %s\n", i,
-            aca_get_operation_string(parsed_struct.port_states(i).operation_type()));
-
-    PortConfiguration current_PortConfiguration =
-            parsed_struct.port_states(i).configuration();
-
-    fprintf(stdout, "current_PortConfiguration.format_version(): %d\n",
-            current_PortConfiguration.format_version());
-
-    fprintf(stdout, "current_PortConfiguration.revision_number(): %d\n",
-            current_PortConfiguration.revision_number());
-
-    fprintf(stdout, "current_PortConfiguration.message_type(): %d\n",
-            current_PortConfiguration.message_type());
-
-    fprintf(stdout, "current_PortConfiguration.id(): %s\n",
-            current_PortConfiguration.id().c_str());
-
-    fprintf(stdout, "current_PortConfiguration.network_type(): %d\n",
-            current_PortConfiguration.network_type());
-
-    fprintf(stdout, "current_PortConfiguration.project_id(): %s\n",
-            current_PortConfiguration.project_id().c_str());
-
-    fprintf(stdout, "current_PortConfiguration.vpc_id(): %s\n",
-            current_PortConfiguration.vpc_id().c_str());
-
-    fprintf(stdout, "current_PortConfiguration.name(): %s \n",
-            current_PortConfiguration.name().c_str());
-
-    fprintf(stdout, "current_PortConfiguration.network_ns(): %s \n",
-            current_PortConfiguration.network_ns().c_str());
-
-    fprintf(stdout, "current_PortConfiguration.mac_address(): %s \n",
-            current_PortConfiguration.mac_address().c_str());
-
-    fprintf(stdout, "current_PortConfiguration.admin_state_up(): %d \n",
-            current_PortConfiguration.admin_state_up());
-
-    fprintf(stdout, "current_PortConfiguration.host_info().ip_address(): %s \n",
-            current_PortConfiguration.host_info().ip_address().c_str());
-
-    fprintf(stdout, "current_PortConfiguration.host_info().mac_address(): %s \n",
-            current_PortConfiguration.host_info().mac_address().c_str());
-
-    fprintf(stdout, "current_PortConfiguration.fixed_ips_size(): %u \n",
-            current_PortConfiguration.fixed_ips_size());
-
-    for (int j = 0; j < current_PortConfiguration.fixed_ips_size(); j++) {
-      fprintf(stdout, "current_PortConfiguration.fixed_ips(%d): subnet_id %s, ip_address %s \n",
-              j, current_PortConfiguration.fixed_ips(j).subnet_id().c_str(),
-              current_PortConfiguration.fixed_ips(j).ip_address().c_str());
-    }
-
-    for (int j = 0; j < current_PortConfiguration.allow_address_pairs_size(); j++) {
-      fprintf(stdout, "current_PortConfiguration.allow_address_pairs(%d): ip_address %s, mac_address %s \n",
-              j, current_PortConfiguration.allow_address_pairs(j).ip_address().c_str(),
-              current_PortConfiguration.allow_address_pairs(j).mac_address().c_str());
-    }
-
-    for (int j = 0; j < current_PortConfiguration.security_group_ids_size(); j++) {
-      fprintf(stdout, "current_PortConfiguration.security_group_ids(%d): id %s \n",
-              j, current_PortConfiguration.security_group_ids(j).id().c_str());
-    }
-
-    fprintf(stdout, "current_PortConfiguration.veth_name(): %s \n",
-            current_PortConfiguration.veth_name().c_str());
-
-    printf("\n");
-  }
-
-  for (int i = 0; i < parsed_struct.subnet_states_size(); i++) {
-    fprintf(stdout, "parsed_struct.subnet_states(%d).operation_type(): %s\n", i,
-            aca_get_operation_string(parsed_struct.subnet_states(i).operation_type()));
-
-    SubnetConfiguration current_SubnetConfiguration =
-            parsed_struct.subnet_states(i).configuration();
-
-    fprintf(stdout, "current_SubnetConfiguration.format_version(): %d\n",
-            current_SubnetConfiguration.format_version());
-
-    fprintf(stdout, "current_SubnetConfiguration.revision_number(): %d\n",
-            current_SubnetConfiguration.revision_number());
-
-    fprintf(stdout, "current_SubnetConfiguration.project_id(): %s\n",
-            current_SubnetConfiguration.project_id().c_str());
-
-    fprintf(stdout, "current_SubnetConfiguration.vpc_id(): %s\n",
-            current_SubnetConfiguration.vpc_id().c_str());
-
-    fprintf(stdout, "current_SubnetConfiguration.id(): %s\n",
-            current_SubnetConfiguration.id().c_str());
-
-    fprintf(stdout, "current_SubnetConfiguration.name(): %s \n",
-            current_SubnetConfiguration.name().c_str());
-
-    fprintf(stdout, "current_SubnetConfiguration.cidr(): %s \n",
-            current_SubnetConfiguration.cidr().c_str());
-
-    fprintf(stdout, "current_SubnetConfiguration.tunnel_id(): %ld \n",
-            current_SubnetConfiguration.tunnel_id());
-
-    for (int j = 0; j < current_SubnetConfiguration.transit_switches_size(); j++) {
-      fprintf(stdout, "current_SubnetConfiguration.transit_switches(%d).vpc_id(): %s \n",
-              j, current_SubnetConfiguration.transit_switches(j).vpc_id().c_str());
-
-      fprintf(stdout, "current_SubnetConfiguration.transit_switches(%d).subnet_id(): %s \n",
-              j, current_SubnetConfiguration.transit_switches(j).subnet_id().c_str());
-
-      fprintf(stdout, "current_SubnetConfiguration.transit_switches(%d).ip_address(): %s \n",
-              j, current_SubnetConfiguration.transit_switches(j).ip_address().c_str());
-
-      fprintf(stdout, "current_SubnetConfiguration.transit_switches(%d).mac_address(): %s \n",
-              j, current_SubnetConfiguration.transit_switches(j).mac_address().c_str());
-    }
-    printf("\n");
   }
 
   for (int i = 0; i < parsed_struct.vpc_states_size(); i++) {
@@ -297,22 +183,266 @@ void Aca_Comm_Manager::print_goal_state(GoalState parsed_struct)
               k, current_VpcConfiguration.routes(k).next_hop().c_str());
     }
 
-    for (int l = 0; l < current_VpcConfiguration.transit_routers_size(); l++) {
-      fprintf(stdout,
-              "current_VpcConfiguration.transit_routers(%d).vpc_id(): "
-              "%s \n",
-              l, current_VpcConfiguration.transit_routers(l).vpc_id().c_str());
+    printf("\n");
+  }
 
-      fprintf(stdout,
-              "current_VpcConfiguration.transit_routers(%d).ip_address(): "
-              "%s \n",
-              l, current_VpcConfiguration.transit_routers(l).ip_address().c_str());
+  for (int i = 0; i < parsed_struct.subnet_states_size(); i++) {
+    fprintf(stdout, "parsed_struct.subnet_states(%d).operation_type(): %s\n", i,
+            aca_get_operation_string(parsed_struct.subnet_states(i).operation_type()));
 
-      fprintf(stdout,
-              "current_VpcConfiguration.transit_routers(%d).mac_address(): "
-              "%s \n",
-              l, current_VpcConfiguration.transit_routers(l).mac_address().c_str());
+    SubnetConfiguration current_SubnetConfiguration =
+            parsed_struct.subnet_states(i).configuration();
+
+    fprintf(stdout, "current_SubnetConfiguration.format_version(): %d\n",
+            current_SubnetConfiguration.format_version());
+
+    fprintf(stdout, "current_SubnetConfiguration.revision_number(): %d\n",
+            current_SubnetConfiguration.revision_number());
+
+    fprintf(stdout, "current_SubnetConfiguration.id(): %s\n",
+            current_SubnetConfiguration.id().c_str());
+
+    fprintf(stdout, "current_SubnetConfiguration.project_id(): %s\n",
+            current_SubnetConfiguration.project_id().c_str());
+
+    fprintf(stdout, "current_SubnetConfiguration.vpc_id(): %s\n",
+            current_SubnetConfiguration.vpc_id().c_str());
+
+    fprintf(stdout, "current_SubnetConfiguration.name(): %s \n",
+            current_SubnetConfiguration.name().c_str());
+
+    fprintf(stdout, "current_SubnetConfiguration.cidr(): %s \n",
+            current_SubnetConfiguration.cidr().c_str());
+
+    fprintf(stdout, "current_SubnetConfiguration.tunnel_id(): %ld \n",
+            current_SubnetConfiguration.tunnel_id());
+
+    fprintf(stdout, "current_SubnetConfiguration.gateway().ip_address(): %s \n",
+            current_SubnetConfiguration.gateway().ip_address().c_str());
+
+    fprintf(stdout, "current_SubnetConfiguration.gateway().mac_address(): %s \n",
+            current_SubnetConfiguration.gateway().mac_address().c_str());
+
+    fprintf(stdout, "current_SubnetConfiguration.dhcp_enable(): %d \n",
+            current_SubnetConfiguration.dhcp_enable());
+
+    fprintf(stdout, "current_SubnetConfiguration.availability_zone(): %s \n",
+            current_SubnetConfiguration.availability_zone().c_str());
+
+    fprintf(stdout, "current_SubnetConfiguration.primary_dns(): %s \n",
+            current_SubnetConfiguration.primary_dns().c_str());
+
+    fprintf(stdout, "current_SubnetConfiguration.secondary_dns(): %s \n",
+            current_SubnetConfiguration.secondary_dns().c_str());
+
+    printf("\n");
+  }
+
+  for (int i = 0; i < parsed_struct.port_states_size(); i++) {
+    fprintf(stdout, "parsed_struct.port_states(%d).operation_type(): %s\n", i,
+            aca_get_operation_string(parsed_struct.port_states(i).operation_type()));
+
+    PortConfiguration current_PortConfiguration =
+            parsed_struct.port_states(i).configuration();
+
+    fprintf(stdout, "current_PortConfiguration.format_version(): %d\n",
+            current_PortConfiguration.format_version());
+
+    fprintf(stdout, "current_PortConfiguration.revision_number(): %d\n",
+            current_PortConfiguration.revision_number());
+
+    fprintf(stdout, "current_PortConfiguration.message_type(): %d\n",
+            current_PortConfiguration.message_type());
+
+    fprintf(stdout, "current_PortConfiguration.id(): %s\n",
+            current_PortConfiguration.id().c_str());
+
+    fprintf(stdout, "current_PortConfiguration.network_type(): %d\n",
+            current_PortConfiguration.network_type());
+
+    fprintf(stdout, "current_PortConfiguration.project_id(): %s\n",
+            current_PortConfiguration.project_id().c_str());
+
+    fprintf(stdout, "current_PortConfiguration.vpc_id(): %s\n",
+            current_PortConfiguration.vpc_id().c_str());
+
+    fprintf(stdout, "current_PortConfiguration.name(): %s \n",
+            current_PortConfiguration.name().c_str());
+
+    fprintf(stdout, "current_PortConfiguration.mac_address(): %s \n",
+            current_PortConfiguration.mac_address().c_str());
+
+    fprintf(stdout, "current_PortConfiguration.admin_state_up(): %d \n",
+            current_PortConfiguration.admin_state_up());
+
+    fprintf(stdout, "current_PortConfiguration.host_info().ip_address(): %s \n",
+            current_PortConfiguration.host_info().ip_address().c_str());
+
+    fprintf(stdout, "current_PortConfiguration.host_info().mac_address(): %s \n",
+            current_PortConfiguration.host_info().mac_address().c_str());
+
+    fprintf(stdout, "current_PortConfiguration.fixed_ips_size(): %u \n",
+            current_PortConfiguration.fixed_ips_size());
+
+    for (int j = 0; j < current_PortConfiguration.fixed_ips_size(); j++) {
+      fprintf(stdout, "current_PortConfiguration.fixed_ips(%d): subnet_id %s, ip_address %s \n",
+              j, current_PortConfiguration.fixed_ips(j).subnet_id().c_str(),
+              current_PortConfiguration.fixed_ips(j).ip_address().c_str());
     }
+
+    for (int j = 0; j < current_PortConfiguration.allow_address_pairs_size(); j++) {
+      fprintf(stdout, "current_PortConfiguration.allow_address_pairs(%d): ip_address %s, mac_address %s \n",
+              j, current_PortConfiguration.allow_address_pairs(j).ip_address().c_str(),
+              current_PortConfiguration.allow_address_pairs(j).mac_address().c_str());
+    }
+
+    for (int j = 0; j < current_PortConfiguration.security_group_ids_size(); j++) {
+      fprintf(stdout, "current_PortConfiguration.security_group_ids(%d): id %s \n",
+              j, current_PortConfiguration.security_group_ids(j).id().c_str());
+    }
+
+    printf("\n");
+  }
+
+  for (int i = 0; i < parsed_struct.neighbor_states_size(); i++) {
+    fprintf(stdout, "parsed_struct.neighbor_states(%d).operation_type(): %s\n", i,
+            aca_get_operation_string(parsed_struct.neighbor_states(i).operation_type()));
+
+    NeighborConfiguration current_NeighborConfiguration =
+            parsed_struct.neighbor_states(i).configuration();
+
+    fprintf(stdout, "current_NeighborConfiguration.format_version(): %d\n",
+            current_NeighborConfiguration.format_version());
+
+    fprintf(stdout, "current_NeighborConfiguration.revision_number(): %d\n",
+            current_NeighborConfiguration.revision_number());
+
+    fprintf(stdout, "current_NeighborConfiguration.id(): %s\n",
+            current_NeighborConfiguration.id().c_str());
+
+    fprintf(stdout, "current_NeighborConfiguration.neighbor_type(): %d\n",
+            current_NeighborConfiguration.neighbor_type());
+
+    fprintf(stdout, "current_NeighborConfiguration.project_id(): %s\n",
+            current_NeighborConfiguration.project_id().c_str());
+
+    fprintf(stdout, "current_NeighborConfiguration.vpc_id(): %s\n",
+            current_NeighborConfiguration.vpc_id().c_str());
+
+    fprintf(stdout, "current_NeighborConfiguration.name(): %s \n",
+            current_NeighborConfiguration.name().c_str());
+
+    fprintf(stdout, "current_NeighborConfiguration.mac_address(): %s \n",
+            current_NeighborConfiguration.mac_address().c_str());
+
+    fprintf(stdout, "current_NeighborConfiguration.host_ip_address(): %s \n",
+            current_NeighborConfiguration.host_ip_address().c_str());
+
+    fprintf(stdout, "current_NeighborConfiguration.neighbor_host_dvr_mac(): %s \n",
+            current_NeighborConfiguration.neighbor_host_dvr_mac().c_str());
+
+    fprintf(stdout, "current_NeighborConfiguration.fixed_ips_size(): %u \n",
+            current_NeighborConfiguration.fixed_ips_size());
+
+    for (int j = 0; j < current_NeighborConfiguration.fixed_ips_size(); j++) {
+      fprintf(stdout, "current_NeighborConfiguration.fixed_ips(%d): subnet_id %s, ip_address %s \n",
+              j, current_NeighborConfiguration.fixed_ips(j).subnet_id().c_str(),
+              current_NeighborConfiguration.fixed_ips(j).ip_address().c_str());
+    }
+
+    for (int j = 0; j < current_NeighborConfiguration.allow_address_pairs_size(); j++) {
+      fprintf(stdout, "current_NeighborConfiguration.allow_address_pairs(%d): ip_address %s, mac_address %s \n",
+              j,
+              current_NeighborConfiguration.allow_address_pairs(j).ip_address().c_str(),
+              current_NeighborConfiguration.allow_address_pairs(j).mac_address().c_str());
+    }
+
+    printf("\n");
+  }
+
+  for (int i = 0; i < parsed_struct.security_group_states_size(); i++) {
+    fprintf(stdout, "parsed_struct.neighbor_states(%d).operation_type(): %s\n", i,
+            aca_get_operation_string(parsed_struct.security_group_states(i).operation_type()));
+
+    SecurityGroupConfiguration current_SecurityGroupConfiguration =
+            parsed_struct.security_group_states(i).configuration();
+
+    fprintf(stdout, "current_SecurityGroupConfiguration.format_version(): %d\n",
+            current_SecurityGroupConfiguration.format_version());
+
+    fprintf(stdout, "current_SecurityGroupConfiguration.revision_number(): %d\n",
+            current_SecurityGroupConfiguration.revision_number());
+
+    fprintf(stdout, "current_SecurityGroupConfiguration.id(): %s\n",
+            current_SecurityGroupConfiguration.id().c_str());
+
+    fprintf(stdout, "current_SecurityGroupConfiguration.project_id(): %s\n",
+            current_SecurityGroupConfiguration.project_id().c_str());
+
+    fprintf(stdout, "current_SecurityGroupConfiguration.vpc_id(): %s\n",
+            current_SecurityGroupConfiguration.vpc_id().c_str());
+
+    fprintf(stdout, "current_SecurityGroupConfiguration.name(): %s \n",
+            current_SecurityGroupConfiguration.name().c_str());
+
+    fprintf(stdout, "current_SecurityGroupConfiguration.security_group_rules_size(): %u \n",
+            current_SecurityGroupConfiguration.security_group_rules_size());
+
+    for (int j = 0;
+         j < current_SecurityGroupConfiguration.security_group_rules_size(); j++) {
+      fprintf(stdout,
+              "current_SecurityGroupConfiguration.security_group_rules(%d): security_group_id: %s, id: %s, direction: %d, "
+              "ethertype: %d, protocol: %d, port_range_min: %u, port_range_max: %u, remote_ip_prefix: %s, remote_group_id: %s\n",
+              j,
+              current_SecurityGroupConfiguration.security_group_rules(j)
+                      .security_group_id()
+                      .c_str(),
+              current_SecurityGroupConfiguration.security_group_rules(j).id().c_str(),
+              current_SecurityGroupConfiguration.security_group_rules(j).direction(),
+              current_SecurityGroupConfiguration.security_group_rules(j).ethertype(),
+              current_SecurityGroupConfiguration.security_group_rules(j).protocol(),
+              current_SecurityGroupConfiguration.security_group_rules(j).port_range_min(),
+              current_SecurityGroupConfiguration.security_group_rules(j).port_range_max(),
+              current_SecurityGroupConfiguration.security_group_rules(j)
+                      .remote_ip_prefix()
+                      .c_str(),
+              current_SecurityGroupConfiguration.security_group_rules(j)
+                      .remote_group_id()
+                      .c_str());
+    }
+
+    printf("\n");
+  }
+
+  // TODO: add the print out of DHCP message
+
+  for (int i = 0; i < parsed_struct.router_states_size(); i++) {
+    fprintf(stdout, "parsed_struct.router_states(%d).operation_type(): %s\n", i,
+            aca_get_operation_string(parsed_struct.router_states(i).operation_type()));
+
+    RouterConfiguration current_RouterConfiguration =
+            parsed_struct.router_states(i).configuration();
+
+    fprintf(stdout, "current_RouterConfiguration.format_version(): %d\n",
+            current_RouterConfiguration.format_version());
+
+    fprintf(stdout, "current_RouterConfiguration.revision_number(): %d\n",
+            current_RouterConfiguration.revision_number());
+
+    fprintf(stdout, "current_RouterConfiguration.id(): %s\n",
+            current_RouterConfiguration.id().c_str());
+
+    fprintf(stdout, "current_RouterConfiguration.host_dvr_mac_address(): %s \n",
+            current_RouterConfiguration.host_dvr_mac_address().c_str());
+
+    fprintf(stdout, "current_RouterConfiguration.subnet_ids_size(): %u \n",
+            current_RouterConfiguration.subnet_ids_size());
+
+    for (int j = 0; j < current_RouterConfiguration.subnet_ids_size(); j++) {
+      fprintf(stdout, "current_RouterConfiguration.subnet_ids(%d): %s\n", j,
+              current_RouterConfiguration.subnet_ids(j).c_str());
+    }
+
     printf("\n");
   }
 }

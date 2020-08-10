@@ -49,6 +49,24 @@ class Aca_Goal_State_Handler {
   int update_port_states(alcor::schema::GoalState &parsed_struct,
                          alcor::schema::GoalStateOperationReply &gsOperationReply);
 
+  // process ONE neighbor state
+  int update_neighbor_state_workitem(const alcor::schema::NeighborState current_NeighborState,
+                                     alcor::schema::GoalState &parsed_struct,
+                                     alcor::schema::GoalStateOperationReply &gsOperationReply);
+
+  // process 0 to N neighbor states
+  int update_neighbor_states(alcor::schema::GoalState &parsed_struct,
+                             alcor::schema::GoalStateOperationReply &gsOperationReply);
+
+  // process ONE router state
+  int update_router_state_workitem(const alcor::schema::RouterState current_RouterState,
+                                   alcor::schema::GoalState &parsed_struct,
+                                   alcor::schema::GoalStateOperationReply &gsOperationReply);
+
+  // process 0 to N router states
+  int update_router_states(alcor::schema::GoalState &parsed_struct,
+                           alcor::schema::GoalStateOperationReply &gsOperationReply);
+
   int update_goal_state(alcor::schema::GoalState &parsed_struct,
                         alcor::schema::GoalStateOperationReply &gsOperationReply);
 
