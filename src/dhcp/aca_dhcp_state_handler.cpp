@@ -81,8 +81,8 @@ int Aca_Dhcp_State_Handler::update_dhcp_state_workitem(const DHCPState current_D
     overall_rc = this->dhcp_programming_if->delete_dhcp_entry(&stDhcpCfg);
     break;
   default:
-    ACA_LOG_DEBUG("=====>wrong dhcp operation\n");
-    return EXIT_FAILURE;
+    ACA_LOG_ERROR("=====>wrong dhcp operation\n");
+    break;
   }
 
   auto operation_end = chrono::steady_clock::now();

@@ -59,29 +59,25 @@ void ACA_Dhcp_Server::_deinit_dhcp_db()
 
 void ACA_Dhcp_Server::_init_dhcp_ofp()
 {
-  aca_ovs_l2_programmer::ACA_OVS_L2_Programmer *pL2Prog = nullptr;
   unsigned long not_care_culminative_time;
   int overall_rc = EXIT_SUCCESS;
 
-  pL2Prog = &(aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance());
-
   // adding dhcp default flows
-  pL2Prog->execute_openflow_command("add-flow br-int \"table=0,priority=25,udp,udp_src=68,udp_dst=67,actions=CONTROLLER\"",
-                                    not_care_culminative_time, overall_rc);
+  aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
+          "add-flow br-int \"table=0,priority=25,udp,udp_src=68,udp_dst=67,actions=CONTROLLER\"",
+          not_care_culminative_time, overall_rc);
   return;
 }
 
 void ACA_Dhcp_Server::_deinit_dhcp_ofp()
 {
-  aca_ovs_l2_programmer::ACA_OVS_L2_Programmer *pL2Prog = nullptr;
   unsigned long not_care_culminative_time;
   int overall_rc = EXIT_SUCCESS;
 
-  pL2Prog = &(aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance());
-
-  // adding dhcp default flows
-  pL2Prog->execute_openflow_command("del-flow br-int \"udp,udp_src=68,udp_dst=67\"",
-                                    not_care_culminative_time, overall_rc);
+  // deleting dhcp default flows
+  aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
+          "del-flow br-int \"udp,udp_src=68,udp_dst=67\"",
+          not_care_culminative_time, overall_rc);
   return;
 }
 
@@ -147,7 +143,6 @@ int ACA_Dhcp_Server::delete_dhcp_entry(dhcp_config *dhcp_cfg_in)
 
 int ACA_Dhcp_Server::update_dhcp_entry(dhcp_config *dhcp_cfg_in)
 {
-  //dhcp_entry_data stData = {0};
   std::unordered_map<string, dhcp_entry_data>::iterator pos;
   dhcp_entry_data *pData = nullptr;
 
