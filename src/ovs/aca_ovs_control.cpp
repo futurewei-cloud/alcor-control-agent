@@ -223,7 +223,8 @@ void ACA_OVS_Control::parse_packet(void *packet)
     /* dhcp message procedure */
     if (udp_sport == 68 && udp_dport == 67) {
       ACA_LOG_INFO("   Message Type: DHCP\n");
-      aca_dhcp_server::ACA_Dhcp_Server::get_instance().dhcps_recv(const_cast<void *>(payload));
+      aca_dhcp_server::ACA_Dhcp_Server::get_instance().dhcps_recv(
+              const_cast<unsigned char *>(payload));
     }
   }
 }

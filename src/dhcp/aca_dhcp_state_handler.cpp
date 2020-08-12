@@ -29,16 +29,6 @@ Aca_Dhcp_State_Handler::Aca_Dhcp_State_Handler()
 {
   ACA_LOG_INFO("DHCP State Handler: using dhcp server\n");
   this->dhcp_programming_if = &(aca_dhcp_server::ACA_Dhcp_Server::get_instance());
-
-  int rc = this->dhcp_programming_if->initialize();
-
-  if (rc == EXIT_SUCCESS) {
-    ACA_LOG_INFO("DHCP Programming initialization succeed\n");
-  } else {
-    ACA_LOG_ERROR("DHCP Programming initialization failed\n");
-    throw std::system_error(ENXIO, std::generic_category(),
-                            "DHCP Programming initialization failed\n");
-  }
 }
 
 Aca_Dhcp_State_Handler::~Aca_Dhcp_State_Handler()

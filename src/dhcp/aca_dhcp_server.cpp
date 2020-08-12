@@ -604,7 +604,6 @@ void ACA_Dhcp_Server::_parse_dhcp_request(dhcp_message *dhcpmsg)
 dhcp_message *ACA_Dhcp_Server::_pack_dhcp_ack(dhcp_message *dhcpreq)
 {
   dhcp_message *dhcpack = nullptr;
-  struct sockaddr_in sa;
   uint8_t *pos = nullptr;
   int opts_len = 0;
 
@@ -613,10 +612,7 @@ dhcp_message *ACA_Dhcp_Server::_pack_dhcp_ack(dhcp_message *dhcpreq)
   //Pack DHCP header
   _pack_dhcp_message(dhcpack, dhcpreq);
 
-  if (inet_pton(AF_INET, pData->ipv4_address, &(sa.sin_addr)) != 1) {
-    throw std::invalid_argument("Virtual ipv4 address is not in the expect format");
-  }
-  dhcpack->yiaddr = htonl(sa.sin_addr);
+  dhcpack->yiaddr = _get_requested_ip(dhcpreq);
 
   //DHCP Options
   pos = dhcpack->options;
