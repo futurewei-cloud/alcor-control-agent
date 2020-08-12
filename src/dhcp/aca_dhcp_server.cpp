@@ -254,7 +254,7 @@ int ACA_Dhcp_Server::_get_db_size() const
 
 void ACA_Dhcp_Server::dhcps_recv(void *message)
 {
-  const dhcp_message *dhcpmsg = nullptr;
+  dhcp_message *dhcpmsg = nullptr;
   uint8_t msg_type = 0;
 
   if (nullptr == message) {
