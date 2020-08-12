@@ -718,7 +718,7 @@ TEST(ovs_dataplane_test_cases, 10_l2_neighbor_CREATE)
 {
   string port_name_postfix = "11111111-2222-3333-4444-555555555555";
   string ip_address_prefix = "10.0.0.";
-  string remote_ip_address_prefix = "172.0.0.";
+  string remote_ip_address_prefix = "123.0.0.";
   ulong not_care_culminative_time = 0;
   int overall_rc;
 
@@ -737,6 +737,22 @@ TEST(ovs_dataplane_test_cases, 10_l2_neighbor_CREATE)
   GoalState GoalState_builder;
   NeighborState *new_neighbor_states;
   SubnetState *new_subnet_states = GoalState_builder.add_subnet_states();
+  new_subnet_states->set_operation_type(OperationType::INFO);
+
+  SubnetConfiguration *SubnetConiguration_builder =
+          new_subnet_states->mutable_configuration();
+  SubnetConiguration_builder->set_format_version(1);
+  SubnetConiguration_builder->set_revision_number(1);
+  SubnetConiguration_builder->set_project_id(project_id);
+  SubnetConiguration_builder->set_vpc_id("1b08a5bc-b718-11ea-b3de-111122223333");
+  SubnetConiguration_builder->set_id(subnet_id_1);
+  SubnetConiguration_builder->set_cidr("10.0.0.0/24");
+  SubnetConiguration_builder->set_tunnel_id(123);
+
+  auto *subnetConfig_GatewayBuilder(new SubnetConfiguration_Gateway);
+  subnetConfig_GatewayBuilder->set_ip_address(subnet1_gw_ip);
+  subnetConfig_GatewayBuilder->set_mac_address(subnet1_gw_mac);
+  SubnetConiguration_builder->set_allocated_gateway(subnetConfig_GatewayBuilder);
 
   const int L2_NEIGHBOR_TO_CREATE = 10;
 
@@ -754,7 +770,7 @@ TEST(ovs_dataplane_test_cases, 10_l2_neighbor_CREATE)
     NeighborConfiguration_builder->set_neighbor_type(NeighborType::L2);
 
     NeighborConfiguration_builder->set_project_id(project_id);
-    NeighborConfiguration_builder->set_vpc_id(vpc_id_1);
+    NeighborConfiguration_builder->set_vpc_id("1b08a5bc-b718-11ea-b3de-111122223333");
     NeighborConfiguration_builder->set_name(port_name);
     NeighborConfiguration_builder->set_mac_address(vmac_address_1);
     NeighborConfiguration_builder->set_host_ip_address(remote_ip_address_prefix + i_string);
@@ -764,9 +780,6 @@ TEST(ovs_dataplane_test_cases, 10_l2_neighbor_CREATE)
     FixedIp_builder->set_subnet_id(subnet_id_1);
     FixedIp_builder->set_ip_address(ip_address_prefix + i_string);
   }
-
-  // fill in the subnet state structs
-  aca_test_create_default_subnet_state(new_subnet_states);
 
   bool previous_demo_mode = g_demo_mode;
   g_demo_mode = false;
