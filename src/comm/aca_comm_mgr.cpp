@@ -70,7 +70,7 @@ int Aca_Comm_Manager::deserialize(const cppkafka::Buffer *kafka_buffer, GoalStat
 int Aca_Comm_Manager::update_goal_state(GoalState &goal_state_message,
                                         GoalStateOperationReply &gsOperationReply)
 {
-  int exec_command_rc = -EXIT_FAILURE;
+  int exec_command_rc;
   int rc = EXIT_SUCCESS;
   auto start = chrono::steady_clock::now();
 
@@ -84,8 +84,10 @@ int Aca_Comm_Manager::update_goal_state(GoalState &goal_state_message,
   if (goal_state_message.router_states_size() > 0) {
     exec_command_rc = Aca_Goal_State_Handler::get_instance().update_router_states(
             goal_state_message, gsOperationReply);
-    if (exec_command_rc != EXIT_SUCCESS) {
-      ACA_LOG_ERROR("Failed to update router state. Failed with error code %d\n", exec_command_rc);
+    if (exec_command_rc == EXIT_SUCCESS) {
+      ACA_LOG_INFO("Successfully updated router states, rc: %d\n", exec_command_rc);
+    } else {
+      ACA_LOG_ERROR("Failed to update router states. rc: %d\n", exec_command_rc);
       rc = exec_command_rc;
     }
   }
@@ -93,8 +95,13 @@ int Aca_Comm_Manager::update_goal_state(GoalState &goal_state_message,
   if (goal_state_message.port_states_size() > 0) {
     exec_command_rc = Aca_Goal_State_Handler::get_instance().update_port_states(
             goal_state_message, gsOperationReply);
-    if (exec_command_rc != EXIT_SUCCESS) {
-      ACA_LOG_ERROR("Failed to update port state. Failed with error code %d\n", exec_command_rc);
+    if (exec_command_rc == EXIT_SUCCESS) {
+      ACA_LOG_INFO("Successfully updated port states, rc: %d\n", exec_command_rc);
+    } else if (exec_command_rc == EINPROGRESS) {
+      ACA_LOG_INFO("Update port states returned pending, rc: %d\n", exec_command_rc);
+      rc = exec_command_rc;
+    } else {
+      ACA_LOG_ERROR("Failed to update port states. rc: %d\n", exec_command_rc);
       rc = exec_command_rc;
     }
   }
@@ -102,9 +109,10 @@ int Aca_Comm_Manager::update_goal_state(GoalState &goal_state_message,
   if (goal_state_message.neighbor_states_size() > 0) {
     exec_command_rc = Aca_Goal_State_Handler::get_instance().update_neighbor_states(
             goal_state_message, gsOperationReply);
-    if (exec_command_rc != EXIT_SUCCESS) {
-      ACA_LOG_ERROR("Failed to update neighbor state. Failed with error code %d\n",
-                    exec_command_rc);
+    if (exec_command_rc == EXIT_SUCCESS) {
+      ACA_LOG_INFO("Successfully updated neighbor states, rc: %d\n", exec_command_rc);
+    } else {
+      ACA_LOG_ERROR("Failed to update neighbor states. rc: %d\n", exec_command_rc);
       rc = exec_command_rc;
     }
   }
@@ -121,7 +129,7 @@ int Aca_Comm_Manager::update_goal_state(GoalState &goal_state_message,
                message_total_operation_time, message_total_operation_time / 1000000);
 
   return rc;
-}
+} // namespace aca_comm_manager
 
 void Aca_Comm_Manager::print_goal_state(GoalState parsed_struct)
 {

@@ -354,18 +354,20 @@ int ACA_Dataplane_OVS::update_port_state_workitem(const PortState current_PortSt
 
   if (overall_rc == EXIT_SUCCESS) {
     ACA_LOG_INFO("Successfully configured the port state.\n");
+  } else if (overall_rc == EINPROGRESS) {
+    ACA_LOG_INFO("Port state returned pending: rc=%d\n", overall_rc);
   } else {
     ACA_LOG_ERROR("Unable to configure the port state: rc=%d\n", overall_rc);
   }
 
   return overall_rc;
-}
+} // namespace aca_dataplane_ovs
 
 int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_NeighborState,
                                                       GoalState &parsed_struct,
                                                       GoalStateOperationReply &gsOperationReply)
 {
-  int rc, overall_rc;
+  int overall_rc;
   struct sockaddr_in sa;
   string virtual_ip_address;
   string virtual_mac_address;
@@ -414,8 +416,11 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
         }
 
         neighbor_host_dvr_mac = current_NeighborConfiguration.neighbor_host_dvr_mac();
-        // the below will throw invalid_argument exceptions if mac string is invalid
-        aca_validate_mac_address(neighbor_host_dvr_mac.c_str());
+        if (current_NeighborConfiguration.neighbor_type() == NeighborType::L3) {
+          // neighbor_host_dvr_mac is only needed for L3 neighbor
+          // the below will throw invalid_argument exceptions if mac string is invalid
+          aca_validate_mac_address(neighbor_host_dvr_mac.c_str());
+        }
 
         // Look up the subnet configuration to query for tunnel_id
         for (int j = 0; j < parsed_struct.subnet_states_size(); j++) {
@@ -465,9 +470,9 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
           if (is_neighbor_port_on_same_host) {
             ACA_LOG_DEBUG("neighbor host: %s is on the same compute node, don't need to update L2 neighbor info.\n",
                           host_ip_address.c_str());
-            rc = EXIT_SUCCESS;
+            overall_rc = EXIT_SUCCESS;
           } else {
-            rc = ACA_OVS_L2_Programmer::get_instance().create_update_neighbor_port(
+            overall_rc = ACA_OVS_L2_Programmer::get_instance().create_update_neighbor_port(
                     current_NeighborConfiguration.vpc_id(), found_network_type, host_ip_address,
                     found_tunnel_id, culminative_dataplane_programming_time);
             // we can consider doing this L2 neighbor creation as an on demand rule to support scale
@@ -475,18 +480,14 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
             // as on demand also
           }
 
-          if (rc != EXIT_SUCCESS) {
-            overall_rc = rc;
-          } else {
-            {
-              if (current_NeighborConfiguration.neighbor_type() == NeighborType::L3) {
-                overall_rc = ACA_OVS_L3_Programmer::get_instance().create_neighbor_l3(
-                        current_NeighborConfiguration.vpc_id(),
-                        current_NeighborConfiguration.fixed_ips(0).subnet_id(),
-                        found_network_type, virtual_ip_address, virtual_mac_address,
-                        host_ip_address, found_tunnel_id, neighbor_host_dvr_mac,
-                        culminative_dataplane_programming_time);
-              }
+          if (overall_rc == EXIT_SUCCESS) {
+            if (current_NeighborConfiguration.neighbor_type() == NeighborType::L3) {
+              overall_rc = ACA_OVS_L3_Programmer::get_instance().create_neighbor_l3(
+                      current_NeighborConfiguration.vpc_id(),
+                      current_NeighborConfiguration.fixed_ips(0).subnet_id(),
+                      found_network_type, virtual_ip_address, virtual_mac_address,
+                      host_ip_address, found_tunnel_id, neighbor_host_dvr_mac,
+                      culminative_dataplane_programming_time);
             }
           }
         }

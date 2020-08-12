@@ -189,8 +189,6 @@ int ACA_OVS_L2_Programmer::configure_port(const string vpc_id, const string port
     throw std::invalid_argument("tunnel_id is 0");
   }
 
-  overall_rc = setup_ovs_bridges_if_need();
-
   if (overall_rc != EXIT_SUCCESS) {
     throw std::runtime_error("Invalid environment with br-int and br-tun");
   }
@@ -281,8 +279,6 @@ int ACA_OVS_L2_Programmer::create_update_neighbor_port(const string vpc_id,
     throw std::invalid_argument("tunnel_id is 0");
   }
 
-  overall_rc = setup_ovs_bridges_if_need();
-
   if (overall_rc != EXIT_SUCCESS) {
     throw std::runtime_error("Invalid environment with br-int and br-tun");
   }
@@ -307,12 +303,12 @@ int ACA_OVS_L2_Programmer::create_update_neighbor_port(const string vpc_id,
   overall_rc = ACA_Vlan_Manager::get_instance().get_outports(vpc_id, full_outport_list);
 
   if (overall_rc != EXIT_SUCCESS) {
-    throw std::runtime_error("vpc_id entry not find in vpc_table");
+    throw std::runtime_error("vpc_id entry not found in vpc_table");
   }
 
   cmd_string = "add-flow br-tun \"table=22,priority=1,dl_vlan=" + to_string(internal_vlan_id) +
                " actions=strip_vlan,load:" + to_string(tunnel_id) +
-               "->NXM_NX_TUN_ID[],output:\"" + full_outport_list + "\"\"";
+               "->NXM_NX_TUN_ID[]," + full_outport_list + "\"";
 
   execute_openflow_command(cmd_string, culminative_time, overall_rc);
 

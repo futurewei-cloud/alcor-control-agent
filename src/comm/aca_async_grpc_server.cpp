@@ -82,12 +82,15 @@ void Aca_Async_GRPC_Server::CallData::Proceed()
   } else if (status_ == PROCESS) {
     new CallData(service_, cq_);
     int rc = Aca_Comm_Manager::get_instance().update_goal_state(request_, reply_);
-    if (rc != EXIT_SUCCESS) {
-      ACA_LOG_ERROR("Control Fast Path - Failed to update host with latest goal state, rc=%d.\n",
-                    rc);
-    } else {
+    if (rc == EXIT_SUCCESS) {
       ACA_LOG_INFO("Control Fast Path - Successfully updated host with latest goal state %d.\n",
                    rc);
+    } else if (rc == EINPROGRESS) {
+      ACA_LOG_INFO("Control Fast Path - Update host with latest goal state returned pending, rc=%d.\n",
+                   rc);
+    } else {
+      ACA_LOG_ERROR("Control Fast Path - Failed to update host with latest goal state, rc=%d.\n",
+                    rc);
     }
     status_ = FINISH;
     responder_.Finish(reply_, Status::OK, this);
