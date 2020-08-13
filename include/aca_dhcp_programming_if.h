@@ -37,8 +37,6 @@ class ACA_Dhcp_Programming_Interface {
   virtual int update_dhcp_entry(dhcp_config *dhcp_config_in) = 0;
 
   virtual int delete_dhcp_entry(dhcp_config *dhcp_config_in) = 0;
-
-  virtual ~ACA_Dhcp_Programming_Interface() = 0;
 };
 } // namespace aca_dhcp_programming_if
 #endif // #ifndef ACA_DHCP_PROGRAMMING_IF_H

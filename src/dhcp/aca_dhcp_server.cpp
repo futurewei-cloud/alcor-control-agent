@@ -270,13 +270,14 @@ void ACA_Dhcp_Server::dhcps_recv(void *message)
   }
 
   msg_type = _get_message_type(dhcpmsg);
-  _parse_dhcp_msg_ops[msg_type](dhcpmsg);
+  (this->*_parse_dhcp_msg_ops[msg_type])(dhcpmsg);
 
   return;
 }
 
 void ACA_Dhcp_Server::dhcps_xmit(void *message)
 {
+  dhcp_message *dhcpmsg = nullptr;
   string bridge = "br-int";
   string in_port = "in port=controller";
   string whitespace = " ";
@@ -285,11 +286,12 @@ void ACA_Dhcp_Server::dhcps_xmit(void *message)
   string packet;
   string options;
 
-  if (!message) {
+  dhcpmsg = (dhcp_message *)message;
+  if (!dhcpmsg) {
     return;
   }
 
-  packet = _serialize_dhcp_message((dhcp_message *)message);
+  packet = _serialize_dhcp_message(dhcpmsg);
   if (packet.empty()) {
     return;
   }
@@ -300,7 +302,7 @@ void ACA_Dhcp_Server::dhcps_xmit(void *message)
   aca_ovs_control::ACA_OVS_Control::get_instance().packet_out(bridge.c_str(),
                                                               options.c_str());
 
-  delete message;
+  delete dhcpmsg;
 }
 
 int ACA_Dhcp_Server::_validate_dhcp_message(dhcp_message *dhcpmsg)
@@ -483,15 +485,17 @@ void ACA_Dhcp_Server::_pack_dhcp_opt_server_id(uint8_t *option, uint32_t server_
 
 void ACA_Dhcp_Server::_init_dhcp_msg_ops()
 {
-  _parse_dhcp_msg_ops[DHCP_MSG_NONE] = _parse_dhcp_none;
-  _parse_dhcp_msg_ops[DHCP_MSG_DHCPDISCOVER] = _parse_dhcp_discover;
-  _parse_dhcp_msg_ops[DHCP_MSG_DHCPOFFER] = _parse_dhcp_none;
-  _parse_dhcp_msg_ops[DHCP_MSG_DHCPREQUEST] = _parse_dhcp_request;
-  _parse_dhcp_msg_ops[DHCP_MSG_DHCPDECLINE] = _parse_dhcp_none;
-  _parse_dhcp_msg_ops[DHCP_MSG_DHCPACK] = _parse_dhcp_none;
-  _parse_dhcp_msg_ops[DHCP_MSG_DHCPNAK] = _parse_dhcp_none;
-  _parse_dhcp_msg_ops[DHCP_MSG_DHCPRELEASE] = _parse_dhcp_none;
-  _parse_dhcp_msg_ops[DHCP_MSG_DHCPINFORM] = _parse_dhcp_none;
+  _parse_dhcp_msg_ops[DHCP_MSG_NONE] = &aca_dhcp_server::ACA_Dhcp_Server::_parse_dhcp_none;
+  _parse_dhcp_msg_ops[DHCP_MSG_DHCPDISCOVER] =
+          &aca_dhcp_server::ACA_Dhcp_Server::_parse_dhcp_discover;
+  _parse_dhcp_msg_ops[DHCP_MSG_DHCPOFFER] = &aca_dhcp_server::ACA_Dhcp_Server::_parse_dhcp_none;
+  _parse_dhcp_msg_ops[DHCP_MSG_DHCPREQUEST] =
+          &aca_dhcp_server::ACA_Dhcp_Server::_parse_dhcp_request;
+  _parse_dhcp_msg_ops[DHCP_MSG_DHCPDECLINE] = &aca_dhcp_server::ACA_Dhcp_Server::_parse_dhcp_none;
+  _parse_dhcp_msg_ops[DHCP_MSG_DHCPACK] = &aca_dhcp_server::ACA_Dhcp_Server::_parse_dhcp_none;
+  _parse_dhcp_msg_ops[DHCP_MSG_DHCPNAK] = &aca_dhcp_server::ACA_Dhcp_Server::_parse_dhcp_none;
+  _parse_dhcp_msg_ops[DHCP_MSG_DHCPRELEASE] = &aca_dhcp_server::ACA_Dhcp_Server::_parse_dhcp_none;
+  _parse_dhcp_msg_ops[DHCP_MSG_DHCPINFORM] = &aca_dhcp_server::ACA_Dhcp_Server::_parse_dhcp_none;
 }
 
 void ACA_Dhcp_Server::_parse_dhcp_none(dhcp_message *dhcpmsg)
@@ -507,7 +511,7 @@ void ACA_Dhcp_Server::_parse_dhcp_discover(dhcp_message *dhcpmsg)
   dhcp_entry_data *pData = nullptr;
   dhcp_message *dhcpoffer = nullptr;
 
-  mac_address = dhcpmsg->chaddr;
+  mac_address = (char *)dhcpmsg->chaddr;
   mac_address.substr(0, dhcpmsg->hlen);
   pData = _search_dhcp_entry(mac_address);
   if (!pData) {
@@ -536,10 +540,10 @@ ACA_Dhcp_Server::_pack_dhcp_offer(dhcp_message *dhcpdiscover, dhcp_entry_data *p
   //Pack DHCP header
   _pack_dhcp_message(dhcpoffer, dhcpdiscover);
 
-  if (inet_pton(AF_INET, pData->ipv4_address, &(sa.sin_addr)) != 1) {
+  if (inet_pton(AF_INET, pData->ipv4_address.c_str(), &(sa.sin_addr)) != 1) {
     throw std::invalid_argument("Virtual ipv4 address is not in the expect format");
   }
-  dhcpoffer->yiaddr = htonl(sa.sin_addr);
+  dhcpoffer->yiaddr = htonl(sa.sin_addr.s_addr);
 
   //DHCP Options
   pos = dhcpoffer->options;
@@ -572,7 +576,7 @@ void ACA_Dhcp_Server::_parse_dhcp_request(dhcp_message *dhcpmsg)
   uint32_t self_sid = 0;
 
   // Fetch the record in DB
-  mac_address = dhcpmsg->chaddr;
+  mac_address = (char *)dhcpmsg->chaddr;
   mac_address.substr(0, dhcpmsg->hlen);
   pData = _search_dhcp_entry(mac_address);
   if (!pData) {
@@ -584,10 +588,10 @@ void ACA_Dhcp_Server::_parse_dhcp_request(dhcp_message *dhcpmsg)
   //Need the fetch self server id here!!
   if (self_sid == _get_server_id(dhcpmsg)) { //request to me
     //Verify the ip address from client is the one assigned in DHCPOFFER
-    if (inet_pton(AF_INET, pData->ipv4_address, &(sa.sin_addr)) != 1) {
+    if (inet_pton(AF_INET, pData->ipv4_address.c_str(), &(sa.sin_addr)) != 1) {
       throw std::invalid_argument("Virtual ipv4 address is not in the expect format");
     }
-    if (sa.sin_addr != _get_requested_ip(dhcpmsg)) {
+    if (sa.sin_addr.s_addr != _get_requested_ip(dhcpmsg)) {
       ACA_LOG_ERROR("IP address %u in DHCP request is not same as the one in DB!", sa.sin_addr);
       dhcpnak = _pack_dhcp_nak(dhcpmsg);
       dhcps_xmit(dhcpnak);
@@ -638,7 +642,6 @@ dhcp_message *ACA_Dhcp_Server::_pack_dhcp_ack(dhcp_message *dhcpreq)
 dhcp_message *ACA_Dhcp_Server::_pack_dhcp_nak(dhcp_message *dhcpreq)
 {
   dhcp_message *dhcpnak = nullptr;
-  struct sockaddr_in sa;
   uint8_t *pos = nullptr;
   int opts_len = 0;
 
