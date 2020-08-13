@@ -185,7 +185,7 @@ class ACA_Dhcp_Server : public aca_dhcp_programming_if::ACA_Dhcp_Programming_Int
   std::unordered_map<std::string, dhcp_entry_data> *_dhcp_db;
   std::mutex _dhcp_db_mutex;
 
-  void (*_parse_dhcp_msg_ops[DHCP_MSG_MAX])(dhcp_message *dhcpmsg);
+  void (aca_dhcp_server::ACA_Dhcp_Server ::*_parse_dhcp_msg_ops[DHCP_MSG_MAX])(dhcp_message *dhcpmsg);
 };
 
 } // namespace aca_dhcp_server

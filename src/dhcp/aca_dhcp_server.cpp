@@ -98,7 +98,7 @@ int ACA_Dhcp_Server::add_dhcp_entry(dhcp_config *dhcp_cfg_in)
   }
 
   if (DHCP_DB_SIZE >= _dhcp_entry_thresh) {
-    ACA_LOG_WARN("Exceed db threshold! (dhcp_db_size = %s)\n", DHCP_DB_SIZE);
+    ACA_LOG_WARN("Exceed db threshold! (dhcp_db_size = %d)\n", DHCP_DB_SIZE);
   }
 
   DHCP_ENTRY_DATA_SET((dhcp_entry_data *)&stData, dhcp_cfg_in);
@@ -290,7 +290,7 @@ void ACA_Dhcp_Server::dhcps_xmit(void *message)
   }
 
   packet = _serialize_dhcp_message((dhcp_message *)message);
-  if (!packet) {
+  if (packet.empty()) {
     return;
   }
 
@@ -393,7 +393,7 @@ uint32_t ACA_Dhcp_Server::_get_requested_ip(dhcp_message *dhcpmsg)
 {
   dhcp_message_options *popt = nullptr;
 
-  if (nullptr == dhcpmsg) {
+  if (!dhcpmsg) {
     ACA_LOG_ERROR("DHCP message is null!\n");
     return 0;
   }
@@ -588,7 +588,7 @@ void ACA_Dhcp_Server::_parse_dhcp_request(dhcp_message *dhcpmsg)
       throw std::invalid_argument("Virtual ipv4 address is not in the expect format");
     }
     if (sa.sin_addr != _get_requested_ip(dhcpmsg)) {
-      ACA_LOG_ERROR("IP address %d in DHCP request is not same as the one in DB!", sa.sin_addr);
+      ACA_LOG_ERROR("IP address %u in DHCP request is not same as the one in DB!", sa.sin_addr);
       dhcpnak = _pack_dhcp_nak(dhcpmsg);
       dhcps_xmit(dhcpnak);
       return;
@@ -671,7 +671,7 @@ string ACA_Dhcp_Server::_serialize_dhcp_message(dhcp_message *dhcpmsg)
   string packet;
 
   if (!dhcpmsg) {
-    return nullptr;
+    return string();
   }
 
   //fix header
