@@ -257,7 +257,7 @@ void ACA_Dhcp_Server::dhcps_recv(void *message)
   dhcp_message *dhcpmsg = nullptr;
   uint8_t msg_type = 0;
 
-  if (nullptr == message) {
+  if (!message) {
     ACA_LOG_ERROR("DHCP message is null!\n");
     return;
   }
@@ -285,12 +285,12 @@ void ACA_Dhcp_Server::dhcps_xmit(void *message)
   string packet;
   string options;
 
-  if (nullptr == message) {
+  if (!message) {
     return;
   }
 
   packet = _serialize_dhcp_message((dhcp_message *)message);
-  if (nullptr == packet) {
+  if (!packet) {
     return;
   }
 
@@ -307,7 +307,7 @@ int ACA_Dhcp_Server::_validate_dhcp_message(dhcp_message *dhcpmsg)
 {
   int retcode = 0;
 
-  if (nullptr == dhcpmsg) {
+  if (!dhcpmsg) {
     ACA_LOG_ERROR("DHCP message is null!\n");
     return EXIT_FAILURE;
   }
@@ -359,7 +359,7 @@ uint8_t ACA_Dhcp_Server::_get_message_type(dhcp_message *dhcpmsg)
 {
   dhcp_message_options *popt = nullptr;
 
-  if (nullptr == dhcpmsg) {
+  if (!dhcpmsg) {
     ACA_LOG_ERROR("DHCP message is null!\n");
     return DHCP_MSG_NONE;
   }
@@ -376,13 +376,13 @@ uint32_t ACA_Dhcp_Server::_get_server_id(dhcp_message *dhcpmsg)
 {
   dhcp_message_options *popt = nullptr;
 
-  if (nullptr == dhcpmsg) {
+  if (!dhcpmsg) {
     ACA_LOG_ERROR("DHCP message is null!\n");
     return 0;
   }
 
   popt->serverid = (dhcp_server_id *)_get_option(dhcpmsg, DHCP_OPT_CODE_SERVER_ID);
-  if (nullptr == popt->serverid) {
+  if (!popt->serverid) {
     return 0;
   }
 
@@ -399,7 +399,7 @@ uint32_t ACA_Dhcp_Server::_get_requested_ip(dhcp_message *dhcpmsg)
   }
 
   popt->reqip = (dhcp_req_ip *)_get_option(dhcpmsg, DHCP_OPT_CODE_REQ_IP);
-  if (nullptr == popt->reqip) {
+  if (!popt->reqip) {
     return 0;
   }
 
@@ -408,7 +408,7 @@ uint32_t ACA_Dhcp_Server::_get_requested_ip(dhcp_message *dhcpmsg)
 
 void ACA_Dhcp_Server::_pack_dhcp_message(dhcp_message *rpl, dhcp_message *req)
 {
-  if (nullptr == rpl || nullptr == req) {
+  if (!rpl || !req) {
     return;
   }
 
@@ -425,7 +425,7 @@ void ACA_Dhcp_Server::_pack_dhcp_message(dhcp_message *rpl, dhcp_message *req)
 
 void ACA_Dhcp_Server::_pack_dhcp_header(dhcp_message *dhcpmsg)
 {
-  if (nullptr == dhcpmsg) {
+  if (!dhcpmsg) {
     return;
   }
 
@@ -439,7 +439,7 @@ void ACA_Dhcp_Server::_pack_dhcp_opt_msgtype(uint8_t *option, uint8_t msg_type)
 {
   dhcp_message_type *msgtype = nullptr;
 
-  if (nullptr == option) {
+  if (!option) {
     return;
   }
 
@@ -453,7 +453,7 @@ void ACA_Dhcp_Server::_pack_dhcp_opt_ip_lease_time(uint8_t *option, uint32_t lea
 {
   dhcp_ip_lease_time *lt = nullptr;
 
-  if (nullptr == option) {
+  if (!option) {
     return;
   }
 
@@ -471,7 +471,7 @@ void ACA_Dhcp_Server::_pack_dhcp_opt_server_id(uint8_t *option, uint32_t server_
 {
   dhcp_server_id *sid = nullptr;
 
-  if (nullptr == option) {
+  if (!option) {
     return;
   }
 
@@ -510,13 +510,13 @@ void ACA_Dhcp_Server::_parse_dhcp_discover(dhcp_message *dhcpmsg)
   mac_address = dhcpmsg->chaddr;
   mac_address.substr(0, dhcpmsg->hlen);
   pData = _search_dhcp_entry(mac_address);
-  if (nullptr == pData) {
+  if (!pData) {
     ACA_LOG_ERROR("DHCP entry does not exist! (mac = %s)\n", mac_address.c_str());
     return;
   }
 
   dhcpoffer = _pack_dhcp_offer(dhcpmsg, pData);
-  if (nullptr == dhcpoffer) {
+  if (!dhcpoffer) {
     return;
   }
 
@@ -575,7 +575,7 @@ void ACA_Dhcp_Server::_parse_dhcp_request(dhcp_message *dhcpmsg)
   mac_address = dhcpmsg->chaddr;
   mac_address.substr(0, dhcpmsg->hlen);
   pData = _search_dhcp_entry(mac_address);
-  if (nullptr == pData) {
+  if (!pData) {
     ACA_LOG_ERROR("DHCP entry does not exist! (mac = %s)\n", mac_address.c_str());
     return;
   }
@@ -670,7 +670,7 @@ string ACA_Dhcp_Server::_serialize_dhcp_message(dhcp_message *dhcpmsg)
 {
   string packet;
 
-  if (nullptr == dhcpmsg) {
+  if (!dhcpmsg) {
     return nullptr;
   }
 
