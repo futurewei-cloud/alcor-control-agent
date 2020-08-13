@@ -10,6 +10,7 @@ In this README:
 - [Introduction](#introduction)
 - [Repositories](#repositories)
 - [Directory Structure](#directory-structure)
+- [Notes](#notes)
 
 ## Introduction
 
@@ -42,3 +43,7 @@ This main repository of Alcor Control Agent is organized as follows:
 * include: header files
 * src: source code
 * test: Unit and integration test code
+
+## Notes
+* ovs_control.h and ovs_control.cpp is based on https://github.com/openvswitch/ovs/blob/master/utilities/ovs-ofctl.c
+* aca_async_grpc_server.cpp is based on https://github.com/grpc/grpc/blob/v1.30.0/examples/cpp/helloworld/greeter_async_server.cc
