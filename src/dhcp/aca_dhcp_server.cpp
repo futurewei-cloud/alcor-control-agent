@@ -103,7 +103,7 @@ int ACA_Dhcp_Server::add_dhcp_entry(dhcp_config *dhcp_cfg_in)
 
   DHCP_ENTRY_DATA_SET((dhcp_entry_data *)&stData, dhcp_cfg_in);
 
-  if (nullptr != _search_dhcp_entry(dhcp_cfg_in->mac_address)) {
+  if (_search_dhcp_entry(dhcp_cfg_in->mac_address)) {
     ACA_LOG_ERROR("Entry already existed! (mac = %s)\n",
                   dhcp_cfg_in->mac_address.c_str());
     return EXIT_FAILURE;
@@ -129,7 +129,7 @@ int ACA_Dhcp_Server::delete_dhcp_entry(dhcp_config *dhcp_cfg_in)
     return EXIT_FAILURE;
   }
 
-  if (nullptr == _search_dhcp_entry(dhcp_cfg_in->mac_address)) {
+  if (!_search_dhcp_entry(dhcp_cfg_in->mac_address)) {
     ACA_LOG_INFO("Entry not exist!  (mac = %s)\n", dhcp_cfg_in->mac_address.c_str());
     return EXIT_SUCCESS;
   }
@@ -153,7 +153,7 @@ int ACA_Dhcp_Server::update_dhcp_entry(dhcp_config *dhcp_cfg_in)
   }
 
   pData = _search_dhcp_entry(dhcp_cfg_in->mac_address);
-  if (nullptr == pData) {
+  if (!pData) {
     ACA_LOG_ERROR("Entry not exist! (mac = %s)\n", dhcp_cfg_in->mac_address.c_str());
     return EXIT_FAILURE;
   }
@@ -181,7 +181,7 @@ void ACA_Dhcp_Server::_validate_mac_address(const char *mac_string)
 {
   unsigned char mac[6];
 
-  if (mac_string == nullptr) {
+  if (!mac_string) {
     throw std::invalid_argument("Input mac_string is null");
   }
 
@@ -242,7 +242,7 @@ int ACA_Dhcp_Server::_validate_dhcp_entry(dhcp_config *dhcp_cfg_in)
 
 int ACA_Dhcp_Server::_get_db_size() const
 {
-  if (nullptr != _dhcp_db) {
+  if (_dhcp_db) {
     return _dhcp_db->size();
   } else {
     ACA_LOG_ERROR("DHCP-DB does not exist!\n");
