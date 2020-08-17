@@ -45,7 +45,24 @@ Responsible to manage Networking QoS, to be done in software or hardware. Out of
 
 === Work Item Executor
 
-Work item executor is used to execute the configuration updates for different dataplane implementation. It runs the workitems in parallel by default. There is a huge performance improvement when updating thousands of ports in parallel instead of updating serially based on data.
+Work item executor is used to execute the configuration updates for different dataplane implementation. It runs the workitems in parallel by default. There is a huge performance improvement when updating 10s or 100s of ports in parallel instead of updating serially based on data. 
+
+Below is an example of how parallel port provision (create) operation would look like:
+[source,console]
+------------------------------------------------------------
+[METRICS] Elapsed time for message total operation took: 23478448 nanoseconds or 23 milliseconds
+Port State(0) took: 9416690 nanoseconds or 9 milliseconds
+Port State(1) took: 10072921 nanoseconds or 10 milliseconds
+Port State(2) took: 10360112 nanoseconds or 10 milliseconds
+Port State(3) took: 10428148 nanoseconds or 10 milliseconds
+Port State(4) took: 11855690 nanoseconds or 11 milliseconds
+Port State(5) took: 11567930 nanoseconds or 11 milliseconds
+Port State(6) took: 12690876 nanoseconds or 12 milliseconds
+Port State(7) took: 11301110 nanoseconds or 11 milliseconds
+Port State(8) took: 11171870 nanoseconds or 11 milliseconds
+Port State(9) took: 12853241 nanoseconds or 12 milliseconds
+Average Port Create of 10 took: 11171858 nanoseconds or 11 milliseconds
+------------------------------------------------------------
 
 == Unified Flow Manager
 

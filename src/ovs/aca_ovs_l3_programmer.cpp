@@ -73,8 +73,6 @@ int ACA_OVS_L3_Programmer::create_router(const string host_dvr_mac, const string
     throw std::invalid_argument("router_id is empty");
   }
 
-  overall_rc = ACA_OVS_L2_Programmer::get_instance().setup_ovs_bridges_if_need();
-
   if (overall_rc != EXIT_SUCCESS) {
     throw std::runtime_error("Invalid environment with br-int and br-tun");
   }
@@ -168,8 +166,6 @@ int ACA_OVS_L3_Programmer::create_neighbor_l3(
   if (tunnel_id == 0) {
     throw std::invalid_argument("tunnel_id is 0");
   }
-
-  overall_rc = ACA_OVS_L2_Programmer::get_instance().setup_ovs_bridges_if_need();
 
   if (overall_rc != EXIT_SUCCESS) {
     throw std::runtime_error("Invalid environment with br-int and br-tun");

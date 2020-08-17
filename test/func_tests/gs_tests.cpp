@@ -32,15 +32,15 @@
 #define ACALOGNAME "AlcorControlAgentTest"
 static char EMPTY_STRING[] = "";
 static char LOCALHOST[] = "localhost";
-static char UDP_PROTOCOL[] = "udp";
+static char GRPC_PORT[] = "50001";
 
 using namespace std;
 using namespace alcor::schema;
 using aca_comm_manager::Aca_Comm_Manager;
 
 // Global variables
-string g_rpc_server = EMPTY_STRING;
-string g_rpc_protocol = EMPTY_STRING;
+string g_grpc_server = EMPTY_STRING;
+string g_grpc_port = EMPTY_STRING;
 std::atomic_ulong g_total_network_configuration_time(0);
 std::atomic_ulong g_total_update_GS_time(0);
 bool g_demo_mode = false;
@@ -84,11 +84,41 @@ class GoalStateProvisionerClient {
     CompletionQueue cq;
     Status status;
 
+    auto before_rpc_ptr = std::chrono::steady_clock::now();
+
     std::unique_ptr<ClientAsyncResponseReader<GoalStateOperationReply> > rpc(
             stub_->PrepareAsyncPushNetworkResourceStates(&context, GoalState, &cq));
 
+    auto after_rpc_ptr = std::chrono::steady_clock::now();
+
+    auto rpc_ptr_ns = cast_to_nanoseconds(after_rpc_ptr - before_rpc_ptr).count();
+
+    ACA_LOG_INFO("[METRICS] rpc_ptr took: %ld nanoseconds or %ld milliseconds\n",
+                 rpc_ptr_ns, rpc_ptr_ns / 1000000);
+
     rpc->StartCall();
+
+    auto after_start_call = std::chrono::steady_clock::now();
+
+    auto start_call_ns = cast_to_nanoseconds(after_start_call - after_rpc_ptr).count();
+
+    ACA_LOG_INFO("[METRICS] start_call took: %ld nanoseconds or %ld milliseconds\n",
+                 start_call_ns, start_call_ns / 1000000);
+
     rpc->Finish(&reply, &status, (void *)1);
+
+    auto after_finish = std::chrono::steady_clock::now();
+
+    auto finish_ns = cast_to_nanoseconds(after_finish - after_start_call).count();
+
+    ACA_LOG_INFO("[METRICS] finish took: %ld nanoseconds or %ld milliseconds\n",
+                 finish_ns, finish_ns / 1000000);
+
+    auto total_ns = cast_to_nanoseconds(after_finish - before_rpc_ptr).count();
+
+    ACA_LOG_INFO("[METRICS] total async took: %ld nanoseconds or %ld milliseconds\n",
+                 total_ns, total_ns / 1000000);
+
     void *got_tag;
     bool ok = false;
 
@@ -273,10 +303,10 @@ int main(int argc, char *argv[])
   while ((option = getopt(argc, argv, "s:p:d")) != -1) {
     switch (option) {
     case 's':
-      g_rpc_server = optarg;
+      g_grpc_server = optarg;
       break;
     case 'p':
-      g_rpc_protocol = optarg;
+      g_grpc_port = optarg;
       break;
     case 'd':
       g_debug_mode = true;
@@ -284,21 +314,21 @@ int main(int argc, char *argv[])
     default: /* the '?' case when the option is not recognized */
       fprintf(stderr,
               "Usage: %s\n"
-              "\t\t[-s transitd RPC server]\n"
-              "\t\t[-p transitd RPC protocol]\n"
+              "\t\t[-s grpc server]\n"
+              "\t\t[-p grpc port]\n"
               "\t\t[-d enable debug mode]\n",
               argv[0]);
       exit(EXIT_FAILURE);
     }
   }
 
-  // fill in the transitd RPC server and protocol if it is not provided in
+  // fill in the grpc server and protocol if it is not provided in
   // command line arg
-  if (g_rpc_server == EMPTY_STRING) {
-    g_rpc_server = LOCALHOST;
+  if (g_grpc_server == EMPTY_STRING) {
+    g_grpc_server = LOCALHOST;
   }
-  if (g_rpc_protocol == EMPTY_STRING) {
-    g_rpc_protocol = UDP_PROTOCOL;
+  if (g_grpc_port == EMPTY_STRING) {
+    g_grpc_port = GRPC_PORT;
   }
 
   // Verify that the version of the library that we linked against is
@@ -316,15 +346,16 @@ int main(int argc, char *argv[])
   // this will allocate new PortConfiguration, will need to free it later
   PortConfiguration *PortConfiguration_builder = new_port_states->mutable_configuration();
   PortConfiguration_builder->set_format_version(1);
-  PortConfiguration_builder->set_project_id("dbf72700-5106-4a7a-918f-111111111111");
+
+  PortConfiguration_builder->set_revision_number(1);
+  PortConfiguration_builder->set_message_type(MessageType::FULL);
   PortConfiguration_builder->set_id("dd12d1dadad2g4h");
+
+  PortConfiguration_builder->set_project_id("dbf72700-5106-4a7a-918f-111111111111");
+  PortConfiguration_builder->set_vpc_id("vpc1");
   PortConfiguration_builder->set_name("Peer1");
   PortConfiguration_builder->set_mac_address("fa:16:3e:d7:f2:6c");
-
-  PortConfiguration_HostInfo *portConfig_HostInfoBuilder(new PortConfiguration_HostInfo);
-  portConfig_HostInfoBuilder->set_ip_address("172.0.0.2");
-  portConfig_HostInfoBuilder->set_mac_address("aa-bb-cc-dd-ee-ff");
-  PortConfiguration_builder->set_allocated_host_info(portConfig_HostInfoBuilder);
+  PortConfiguration_builder->set_admin_state_up(true);
 
   // this will allocate new PortConfiguration_FixedIp may need to free later
   PortConfiguration_FixedIp *PortIp_builder = PortConfiguration_builder->add_fixed_ips();
@@ -356,8 +387,6 @@ int main(int argc, char *argv[])
   SubnetConiguration_builder->set_tunnel_id(22222);
 
   // fill in the vpc state structs
-  new_vpc_states = GoalState_builder.add_vpc_states();
-
   new_vpc_states->set_operation_type(OperationType::CREATE);
 
   // this will allocate new VpcConfiguration, will need to free it later
@@ -365,7 +394,7 @@ int main(int argc, char *argv[])
   VpcConiguration_builder->set_format_version(1);
   VpcConiguration_builder->set_project_id("dbf72700-5106-4a7a-918f-a016853911f8");
   // VpcConiguration_builder->set_id("99d9d709-8478-4b46-9f3f-2206b1023fd3");
-  VpcConiguration_builder->set_id("1");
+  VpcConiguration_builder->set_id("vpc1");
   VpcConiguration_builder->set_name("SuperVpc");
   VpcConiguration_builder->set_cidr("192.168.0.0/24");
   VpcConiguration_builder->set_tunnel_id(11111);
@@ -401,14 +430,10 @@ int main(int argc, char *argv[])
   } else {
     fprintf(stdout, "Deserialize failed with error code: %u\n", rc);
   }
-  // free the allocated configurations since we are done with it now
-  new_port_states->clear_configuration();
-  new_subnet_states->clear_configuration();
-  new_vpc_states->clear_configuration();
 
   // send the goal state to a local client via grpc for testing
   GoalStateProvisionerClient async_client(grpc::CreateChannel(
-          "localhost:50001", grpc::InsecureChannelCredentials()));
+          g_grpc_server + ":" + g_grpc_port, grpc::InsecureChannelCredentials()));
 
   rc = async_client.send_goalstate(GoalState_builder);
   if (rc == EXIT_SUCCESS) {
@@ -416,6 +441,11 @@ int main(int argc, char *argv[])
   } else {
     fprintf(stdout, "RPC Failure\n");
   }
+
+  // free the allocated configurations since we are done with it now
+  new_port_states->clear_configuration();
+  new_subnet_states->clear_configuration();
+  new_vpc_states->clear_configuration();
 
   aca_cleanup();
 

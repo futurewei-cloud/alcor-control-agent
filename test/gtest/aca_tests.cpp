@@ -335,6 +335,18 @@ TEST(ovs_dataplane_test_cases, 1_port_NEIGHBOR_CREATE_UPDATE)
   string cmd_string;
   int overall_rc;
 
+  // delete br-int and br-tun bridges
+  ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
+          "del-br br-int", not_care_culminative_time, overall_rc);
+
+  ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
+          "del-br br-tun", not_care_culminative_time, overall_rc);
+
+  // create and setup br-int and br-tun bridges, and their patch ports
+  overall_rc = ACA_OVS_L2_Programmer::get_instance().setup_ovs_bridges_if_need();
+  ASSERT_EQ(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
+
   GoalState GoalState_builder;
   PortState *new_port_states = GoalState_builder.add_port_states();
   SubnetState *new_subnet_states = GoalState_builder.add_subnet_states();
@@ -363,13 +375,6 @@ TEST(ovs_dataplane_test_cases, 1_port_NEIGHBOR_CREATE_UPDATE)
 
   // fill in subnet state structs
   aca_test_create_default_subnet_state(new_subnet_states);
-
-  // delete br-int and br-tun bridges
-  ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
-          "del-br br-int", not_care_culminative_time, overall_rc);
-
-  ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
-          "del-br br-tun", not_care_culminative_time, overall_rc);
 
   // NEIGHBOR_CREATE_UPDATE
   GoalStateOperationReply gsOperationalReply;
@@ -410,6 +415,18 @@ TEST(ovs_dataplane_test_cases, 1_port_CREATE_plus_NEIGHBOR_CREATE_UPDATE)
   string cmd_string;
   int overall_rc;
 
+  // delete br-int and br-tun bridges
+  ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
+          "del-br br-int", not_care_culminative_time, overall_rc);
+
+  ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
+          "del-br br-tun", not_care_culminative_time, overall_rc);
+
+  // create and setup br-int and br-tun bridges, and their patch ports
+  overall_rc = ACA_OVS_L2_Programmer::get_instance().setup_ovs_bridges_if_need();
+  ASSERT_EQ(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
+
   GoalState GoalState_builder;
   PortState *new_port_states = GoalState_builder.add_port_states();
   SubnetState *new_subnet_states = GoalState_builder.add_subnet_states();
@@ -446,13 +463,6 @@ TEST(ovs_dataplane_test_cases, 1_port_CREATE_plus_NEIGHBOR_CREATE_UPDATE)
           PortConfiguration_builder2->add_fixed_ips();
   FixedIp_builder2->set_subnet_id(subnet_id_1);
   FixedIp_builder2->set_ip_address(vip_address_3);
-
-  // delete br-int and br-tun bridges
-  ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
-          "del-br br-int", not_care_culminative_time, overall_rc);
-
-  ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
-          "del-br br-tun", not_care_culminative_time, overall_rc);
 
   // set demo mode
   bool previous_demo_mode = g_demo_mode;
@@ -507,6 +517,18 @@ TEST(ovs_dataplane_test_cases, 2_ports_CREATE_test_traffic)
   string cmd_string;
   int overall_rc;
 
+  // delete br-int and br-tun bridges
+  ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
+          "del-br br-int", not_care_culminative_time, overall_rc);
+
+  ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
+          "del-br br-tun", not_care_culminative_time, overall_rc);
+
+  // create and setup br-int and br-tun bridges, and their patch ports
+  overall_rc = ACA_OVS_L2_Programmer::get_instance().setup_ovs_bridges_if_need();
+  ASSERT_EQ(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
+
   GoalState GoalState_builder;
   PortState *new_port_states = GoalState_builder.add_port_states();
   SubnetState *new_subnet_states = GoalState_builder.add_subnet_states();
@@ -537,13 +559,6 @@ TEST(ovs_dataplane_test_cases, 2_ports_CREATE_test_traffic)
 
   // fill in subnet state structs
   aca_test_create_default_subnet_state(new_subnet_states);
-
-  // delete br-int and br-tun bridges
-  ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
-          "del-br br-int", not_care_culminative_time, overall_rc);
-
-  ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
-          "del-br br-tun", not_care_culminative_time, overall_rc);
 
   // set demo mode
   bool previous_demo_mode = g_demo_mode;
@@ -613,7 +628,20 @@ TEST(ovs_dataplane_test_cases, 10_ports_CREATE)
 {
   string port_name_postfix = "11111111-2222-3333-4444-555555555555";
   string ip_address_prefix = "10.0.0.";
-  int rc;
+  ulong not_care_culminative_time = 0;
+  int overall_rc;
+
+  // delete br-int and br-tun bridges
+  ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
+          "del-br br-int", not_care_culminative_time, overall_rc);
+
+  ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
+          "del-br br-tun", not_care_culminative_time, overall_rc);
+
+  // create and setup br-int and br-tun bridges, and their patch ports
+  overall_rc = ACA_OVS_L2_Programmer::get_instance().setup_ovs_bridges_if_need();
+  ASSERT_EQ(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
 
   GoalState GoalState_builder;
   PortState *new_port_states;
@@ -628,7 +656,6 @@ TEST(ovs_dataplane_test_cases, 10_ports_CREATE)
     new_port_states = GoalState_builder.add_port_states();
     new_port_states->set_operation_type(OperationType::CREATE);
 
-    // this will allocate new PortConfiguration, may need to free it later
     PortConfiguration *PortConfiguration_builder =
             new_port_states->mutable_configuration();
     PortConfiguration_builder->set_format_version(1);
@@ -658,9 +685,10 @@ TEST(ovs_dataplane_test_cases, 10_ports_CREATE)
   bool previous_demo_mode = g_demo_mode;
   g_demo_mode = false;
 
-  GoalStateOperationReply gsOperationalReply;
-  rc = Aca_Comm_Manager::get_instance().update_goal_state(GoalState_builder, gsOperationalReply);
-  EXPECT_NE(rc, EXIT_SUCCESS);
+  GoalStateOperationReply gsOperationReply;
+  overall_rc = Aca_Comm_Manager::get_instance().update_goal_state(
+          GoalState_builder, gsOperationReply);
+  EXPECT_EQ(overall_rc, EINPROGRESS);
 
   g_demo_mode = previous_demo_mode;
 
@@ -669,18 +697,121 @@ TEST(ovs_dataplane_test_cases, 10_ports_CREATE)
 
   for (int i = 0; i < PORTS_TO_CREATE; i++) {
     ACA_LOG_DEBUG("Port State(%d) took: %u nanoseconds or %u milliseconds\n", i,
-                  gsOperationalReply.operation_statuses(i).state_elapse_time(),
-                  gsOperationalReply.operation_statuses(i).state_elapse_time() / 1000000);
+                  gsOperationReply.operation_statuses(i).state_elapse_time(),
+                  gsOperationReply.operation_statuses(i).state_elapse_time() / 1000000);
 
-    total_port_create_time +=
-            gsOperationalReply.operation_statuses(i).state_elapse_time();
+    total_port_create_time += gsOperationReply.operation_statuses(i).state_elapse_time();
   }
 
   ulong average_port_create_time = total_port_create_time / PORTS_TO_CREATE;
 
-  ACA_LOG_DEBUG("Average Port Create of %d took: %lu nanoseconds or %lu milliseconds\n",
-                PORTS_TO_CREATE, average_port_create_time,
-                average_port_create_time / 1000000);
+  ACA_LOG_INFO("Average Port Create of %d took: %lu nanoseconds or %lu milliseconds\n",
+               PORTS_TO_CREATE, average_port_create_time,
+               average_port_create_time / 1000000);
+
+  ACA_LOG_INFO("[TEST METRICS] Elapsed time for message total operation took: %u nanoseconds or %u milliseconds\n",
+               gsOperationReply.message_total_operation_time(),
+               gsOperationReply.message_total_operation_time() / 1000000);
+}
+
+TEST(ovs_dataplane_test_cases, 10_l2_neighbor_CREATE)
+{
+  string port_name_postfix = "11111111-2222-3333-4444-555555555555";
+  string ip_address_prefix = "10.0.0.";
+  string remote_ip_address_prefix = "123.0.0.";
+  ulong not_care_culminative_time = 0;
+  int overall_rc;
+
+  // delete br-int and br-tun bridges
+  ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
+          "del-br br-int", not_care_culminative_time, overall_rc);
+
+  ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
+          "del-br br-tun", not_care_culminative_time, overall_rc);
+
+  // create and setup br-int and br-tun bridges, and their patch ports
+  overall_rc = ACA_OVS_L2_Programmer::get_instance().setup_ovs_bridges_if_need();
+  ASSERT_EQ(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
+
+  GoalState GoalState_builder;
+  NeighborState *new_neighbor_states;
+  SubnetState *new_subnet_states = GoalState_builder.add_subnet_states();
+  new_subnet_states->set_operation_type(OperationType::INFO);
+
+  SubnetConfiguration *SubnetConiguration_builder =
+          new_subnet_states->mutable_configuration();
+  SubnetConiguration_builder->set_format_version(1);
+  SubnetConiguration_builder->set_revision_number(1);
+  SubnetConiguration_builder->set_project_id(project_id);
+  SubnetConiguration_builder->set_vpc_id("1b08a5bc-b718-11ea-b3de-111122223333");
+  SubnetConiguration_builder->set_id(subnet_id_1);
+  SubnetConiguration_builder->set_cidr("10.0.0.0/24");
+  SubnetConiguration_builder->set_tunnel_id(123);
+
+  auto *subnetConfig_GatewayBuilder(new SubnetConfiguration_Gateway);
+  subnetConfig_GatewayBuilder->set_ip_address(subnet1_gw_ip);
+  subnetConfig_GatewayBuilder->set_mac_address(subnet1_gw_mac);
+  SubnetConiguration_builder->set_allocated_gateway(subnetConfig_GatewayBuilder);
+
+  const int L2_NEIGHBOR_TO_CREATE = 10;
+
+  for (int i = 0; i < L2_NEIGHBOR_TO_CREATE; i++) {
+    string i_string = std::to_string(i);
+    string port_name = i_string + port_name_postfix;
+
+    new_neighbor_states = GoalState_builder.add_neighbor_states();
+    new_neighbor_states->set_operation_type(OperationType::CREATE);
+
+    NeighborConfiguration *NeighborConfiguration_builder =
+            new_neighbor_states->mutable_configuration();
+    NeighborConfiguration_builder->set_format_version(1);
+    NeighborConfiguration_builder->set_revision_number(1);
+    NeighborConfiguration_builder->set_neighbor_type(NeighborType::L2);
+
+    NeighborConfiguration_builder->set_project_id(project_id);
+    NeighborConfiguration_builder->set_vpc_id("1b08a5bc-b718-11ea-b3de-111122223333");
+    NeighborConfiguration_builder->set_name(port_name);
+    NeighborConfiguration_builder->set_mac_address(vmac_address_1);
+    NeighborConfiguration_builder->set_host_ip_address(remote_ip_address_prefix + i_string);
+
+    NeighborConfiguration_FixedIp *FixedIp_builder =
+            NeighborConfiguration_builder->add_fixed_ips();
+    FixedIp_builder->set_subnet_id(subnet_id_1);
+    FixedIp_builder->set_ip_address(ip_address_prefix + i_string);
+  }
+
+  bool previous_demo_mode = g_demo_mode;
+  g_demo_mode = false;
+
+  GoalStateOperationReply gsOperationReply;
+  overall_rc = Aca_Comm_Manager::get_instance().update_goal_state(
+          GoalState_builder, gsOperationReply);
+  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
+
+  g_demo_mode = previous_demo_mode;
+
+  // calculate the average latency
+  ulong total_neighbor_create_time = 0;
+
+  for (int i = 0; i < L2_NEIGHBOR_TO_CREATE; i++) {
+    ACA_LOG_DEBUG("Neighbor State(%d) took: %u nanoseconds or %u milliseconds\n",
+                  i, gsOperationReply.operation_statuses(i).state_elapse_time(),
+                  gsOperationReply.operation_statuses(i).state_elapse_time() / 1000000);
+
+    total_neighbor_create_time +=
+            gsOperationReply.operation_statuses(i).state_elapse_time();
+  }
+
+  ulong average_neighbor_create_time = total_neighbor_create_time / L2_NEIGHBOR_TO_CREATE;
+
+  ACA_LOG_INFO("Average L2 Neighbor Create of %d took: %lu nanoseconds or %lu milliseconds\n",
+               L2_NEIGHBOR_TO_CREATE, average_neighbor_create_time,
+               average_neighbor_create_time / 1000000);
+
+  ACA_LOG_INFO("[TEST METRICS] Elapsed time for message total operation took: %u nanoseconds or %u milliseconds\n",
+               gsOperationReply.message_total_operation_time(),
+               gsOperationReply.message_total_operation_time() / 1000000);
 }
 
 TEST(ovs_dataplane_test_cases, DISABLED_2_ports_CREATE_test_traffic_MASTER)
@@ -695,6 +826,11 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_CREATE_test_traffic_MASTER)
 
   ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
           "del-br br-tun", not_care_culminative_time, overall_rc);
+
+  // create and setup br-int and br-tun bridges, and their patch ports
+  overall_rc = ACA_OVS_L2_Programmer::get_instance().setup_ovs_bridges_if_need();
+  ASSERT_EQ(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
 
   GoalState GoalState_builder;
   PortState *new_port_states = GoalState_builder.add_port_states();
@@ -875,12 +1011,17 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_CREATE_test_traffic_SLAVE)
   string cmd_string;
   int overall_rc;
 
-  // delete and add br-int and br-tun bridges to clear everything
+  // delete br-int and br-tun bridges
   ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
           "del-br br-int", not_care_culminative_time, overall_rc);
 
   ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
           "del-br br-tun", not_care_culminative_time, overall_rc);
+
+  // create and setup br-int and br-tun bridges, and their patch ports
+  overall_rc = ACA_OVS_L2_Programmer::get_instance().setup_ovs_bridges_if_need();
+  ASSERT_EQ(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
 
   GoalState GoalState_builder;
   PortState *new_port_states = GoalState_builder.add_port_states();
