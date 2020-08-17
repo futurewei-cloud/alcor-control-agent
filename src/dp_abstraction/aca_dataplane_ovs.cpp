@@ -504,7 +504,7 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
         throw; // rethrowing
       }
       break;
-    } else { // (current_NeighborConfiguration.neighbor_type()==NeighborType::HOST_DVR)
+    } else {
       ACA_LOG_ERROR("Unknown neighbor_type: %d.\n", current_NeighborState.operation_type());
       overall_rc = -EINVAL;
     }
