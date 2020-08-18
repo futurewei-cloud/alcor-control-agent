@@ -12,6 +12,7 @@ set(RDKAFKA_MIN_VERSION 0x00090400)
 
 #add_compile_options(-O0) # enable no optimization during development
 add_compile_options(-Wall)
+add_compile_definitions(-D_GLIBCXX_USE_CXX11_ABI=0)
 
 add_subdirectory(src)
 add_subdirectory(test)
