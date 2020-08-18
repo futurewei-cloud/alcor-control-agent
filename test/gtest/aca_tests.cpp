@@ -2592,29 +2592,6 @@ TEST(dhcp_config_test_cases, update_dhcp_entry_invalid)
   EXPECT_EQ(retcode, EXIT_FAILURE);
 }
 
-void ACA_Dhcp_Server::dhcps_recv(void *message)
-{
-  dhcp_message *dhcpmsg = nullptr;
-  uint8_t msg_type = 0;
-
-  if (!message) {
-    ACA_LOG_ERROR("DHCP message is null!\n");
-    return;
-  }
-
-  dhcpmsg = (dhcp_message *)message;
-
-  if (_validate_dhcp_message(dhcpmsg)) {
-    ACA_LOG_ERROR("Invalid DHCP message!\n");
-    return;
-  }
-
-  msg_type = _get_message_type(dhcpmsg);
-  (this->*_parse_dhcp_msg_ops[msg_type])(dhcpmsg);
-
-  return;
-}
-
 TEST(dhcp_message_test_cases, dhcps_recv_valid)
 {
   int retcode = 0;
