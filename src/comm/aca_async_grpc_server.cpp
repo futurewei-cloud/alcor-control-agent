@@ -1,16 +1,21 @@
-// Copyright 2019 The Alcor Authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+/*
+ *
+ * Copyright 2015 gRPC authors.
+ * Copyright 2019 The Alcor Authors - file modified.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ */
 
 #include <memory>
 #include <iostream>
@@ -82,12 +87,15 @@ void Aca_Async_GRPC_Server::CallData::Proceed()
   } else if (status_ == PROCESS) {
     new CallData(service_, cq_);
     int rc = Aca_Comm_Manager::get_instance().update_goal_state(request_, reply_);
-    if (rc != EXIT_SUCCESS) {
-      ACA_LOG_ERROR("Control Fast Path - Failed to update host with latest goal state, rc=%d.\n",
-                    rc);
-    } else {
+    if (rc == EXIT_SUCCESS) {
       ACA_LOG_INFO("Control Fast Path - Successfully updated host with latest goal state %d.\n",
                    rc);
+    } else if (rc == EINPROGRESS) {
+      ACA_LOG_INFO("Control Fast Path - Update host with latest goal state returned pending, rc=%d.\n",
+                   rc);
+    } else {
+      ACA_LOG_ERROR("Control Fast Path - Failed to update host with latest goal state, rc=%d.\n",
+                    rc);
     }
     status_ = FINISH;
     responder_.Finish(reply_, Status::OK, this);

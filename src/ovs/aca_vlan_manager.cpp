@@ -160,6 +160,7 @@ int ACA_Vlan_Manager::get_outports(string vpc_id, string &outports)
   ACA_LOG_DEBUG("ACA_Vlan_Manager::get_outports ---> Entering\n");
 
   int overall_rc;
+  static string OUTPUT = "output:\"";
 
   // -----critical section starts-----
   _vpcs_table_mutex.lock();
@@ -172,9 +173,9 @@ int ACA_Vlan_Manager::get_outports(string vpc_id, string &outports)
 
     for (auto it = current_outports.begin(); it != current_outports.end(); it++) {
       if (it == current_outports.begin()) {
-        outports += *it;
+        outports = OUTPUT + *it + "\"";
       } else {
-        outports += ' ' + *it;
+        outports += ',' + OUTPUT + *it + "\"";
       }
     }
     overall_rc = EXIT_SUCCESS;
