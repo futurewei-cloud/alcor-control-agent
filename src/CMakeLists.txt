@@ -58,5 +58,3 @@ target_link_libraries(AlcorControlAgent ${_GRPC_GRPCPP_UNSECURE})
 add_dependencies(AlcorControlAgentLib proto grpc)
 add_subdirectory(proto3)
 add_subdirectory(grpc)
-
-add_compile_definitions(-D_GLIBCXX_USE_CXX11_ABI=0)
