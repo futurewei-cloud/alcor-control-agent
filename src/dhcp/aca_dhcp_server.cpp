@@ -367,7 +367,7 @@ uint8_t ACA_Dhcp_Server::_get_message_type(dhcp_message *dhcpmsg)
   }
 
   popt->dhcpmsgtype = (dhcp_message_type *)_get_option(dhcpmsg, DHCP_OPT_CODE_MSGTYPE);
-  if (nullptr == popt->dhcpmsgtype) {
+  if (!popt->dhcpmsgtype) {
     return DHCP_MSG_NONE;
   }
 
@@ -592,7 +592,8 @@ void ACA_Dhcp_Server::_parse_dhcp_request(dhcp_message *dhcpmsg)
       throw std::invalid_argument("Virtual ipv4 address is not in the expect format");
     }
     if (sa.sin_addr.s_addr != _get_requested_ip(dhcpmsg)) {
-      ACA_LOG_ERROR("IP address %u in DHCP request is not same as the one in DB!", sa.sin_addr);
+      ACA_LOG_ERROR("IP address %u in DHCP request is not same as the one in DB!",
+                    sa.sin_addr.s_addr);
       dhcpnak = _pack_dhcp_nak(dhcpmsg);
       dhcps_xmit(dhcpnak);
       return;
