@@ -121,12 +121,13 @@ int Aca_Comm_Manager::update_goal_state(GoalState &goal_state_message,
 
   auto message_total_operation_time = cast_to_nanoseconds(end - start).count();
 
-  gsOperationReply.set_message_total_operation_time(message_total_operation_time);
-
-  g_total_update_GS_time += message_total_operation_time;
-
   ACA_LOG_INFO("[METRICS] Elapsed time for message total operation took: %ld nanoseconds or %ld milliseconds\n",
                message_total_operation_time, message_total_operation_time / 1000000);
+
+  gsOperationReply.set_message_total_operation_time(
+          message_total_operation_time + gsOperationReply.message_total_operation_time());
+
+  g_total_update_GS_time += message_total_operation_time;
 
   return rc;
 } // namespace aca_comm_manager

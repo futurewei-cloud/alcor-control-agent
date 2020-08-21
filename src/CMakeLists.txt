@@ -4,7 +4,7 @@ set(SOURCES
     ./comm/aca_message_producer.cpp
     ./comm/aca_message_consumer.cpp
     ./comm/aca_comm_mgr.cpp
-    ./comm/aca_async_grpc_server.cpp
+    ./comm/aca_grpc.cpp
     ./dp_abstraction/aca_goal_state_handler.cpp
     ./dp_abstraction/aca_dataplane_ovs.cpp
     ./net_config/aca_net_config.cpp

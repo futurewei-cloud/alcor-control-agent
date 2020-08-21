@@ -16,7 +16,7 @@
 #include "aca_util.h"
 #include "aca_ovs_control.h"
 #include "aca_message_consumer.h"
-#include "aca_async_grpc_server.h"
+#include "aca_grpc.h"
 #include "goalstateprovisioner.grpc.pb.h"
 #include "cppkafka/utils/consumer_dispatcher.h"
 #include <thread>
@@ -42,8 +42,8 @@ using namespace std;
 
 // Global variables
 cppkafka::ConsumerDispatcher *dispatcher = NULL;
-std::thread *async_grpc_server_thread = NULL;
-Aca_Async_GRPC_Server *async_grpc_server = NULL;
+std::thread *g_grpc_server_thread = NULL;
+GoalStateProvisionerImpl *g_grpc_server = NULL;
 string g_broker_list = EMPTY_STRING;
 string g_kafka_topic = EMPTY_STRING;
 string g_kafka_group_id = EMPTY_STRING;
@@ -81,31 +81,18 @@ static void aca_cleanup()
     dispatcher = NULL;
     ACA_LOG_INFO("Cleaned up Kafka dispatched consumer.\n");
   } else {
-    ACA_LOG_ERROR("Unable to call delete, dispatcher pointer is null");
+    ACA_LOG_ERROR("Unable to call delete, dispatcher pointer is null.\n");
   }
 
-  if (async_grpc_server != NULL) {
-    async_grpc_server->StopServer();
-    delete async_grpc_server;
-    async_grpc_server = NULL;
-    ACA_LOG_INFO("Cleaned up async grpc server.\n");
+  if (g_grpc_server != NULL) {
+    // g_grpc_server->Shutdown();
+    delete g_grpc_server;
+    g_grpc_server = NULL;
+    ACA_LOG_INFO("Cleaned up grpc server.\n");
   } else {
-    ACA_LOG_ERROR("Unable to call delete, async grpc server pointer is null.\n");
+    ACA_LOG_ERROR("Unable to call delete, grpc server pointer is null.\n");
   }
 
-  if (async_grpc_server_thread != NULL) {
-    if (async_grpc_server_thread->joinable()) {
-      async_grpc_server_thread->join();
-      ACA_LOG_INFO("Joined GRPC server thread.\n");
-    } else {
-      ACA_LOG_ERROR("Async grpc server thread is not joinable.\n");
-    }
-    delete async_grpc_server_thread;
-    async_grpc_server_thread = NULL;
-    ACA_LOG_INFO("Cleaned up async grpc server thread.\n");
-  } else {
-    ACA_LOG_ERROR("Unable to call delete, async grpc server thread pointer is null.\n");
-  }
   ACA_LOG_CLOSE();
 }
 
@@ -204,9 +191,9 @@ int main(int argc, char *argv[])
     g_ofctl_target = OFCTL_TARGET;
   }
 
-  async_grpc_server = new Aca_Async_GRPC_Server();
-  async_grpc_server_thread =
-          new std::thread(std::bind(&Aca_Async_GRPC_Server::Run, async_grpc_server));
+  g_grpc_server = new GoalStateProvisionerImpl();
+  g_grpc_server_thread =
+          new std::thread(std::bind(&GoalStateProvisionerImpl::RunServer, g_grpc_server));
 
   ACA_OVS_Control::get_instance().monitor("br-tun", "resume");
 
