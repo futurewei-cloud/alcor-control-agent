@@ -35,8 +35,8 @@ class GoalStateProvisionerImpl final : public GoalStateProvisioner::Service {
                                    GoalStateOperationReply *goalStateOperationReply) override;
 
   Status
-  PushNetworkResourceStatesStream(ServerContext *context, ServerReader<GoalState> *reader,
-                                  GoalStateOperationReply *goalStateOperationReply) override;
+  PushNetworkResourceStatesStream(ServerContext *context,
+                                  ServerReaderWriter<GoalStateOperationReply, GoalState> *stream) override;
 
   void RunServer();
 };

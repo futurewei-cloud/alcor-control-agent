@@ -22,7 +22,6 @@
 #include <string>
 #include <thread>
 
-#include <grpcpp/grpcpp.h>
 #include <grpcpp/server.h>
 #include <grpcpp/server_builder.h>
 #include <grpcpp/server_context.h>
@@ -59,14 +58,14 @@ Status GoalStateProvisionerImpl::PushNetworkResourceStates(ServerContext *contex
 }
 
 Status GoalStateProvisionerImpl::PushNetworkResourceStatesStream(
-        ServerContext *context, ServerReader<GoalState> *reader,
-        GoalStateOperationReply *goalStateOperationReply)
+        ServerContext *context, ServerReaderWriter<GoalStateOperationReply, GoalState> *stream)
 {
   GoalState goalState;
+  GoalStateOperationReply gsOperationReply;
   int rc = EXIT_FAILURE;
 
-  while (reader->Read(&goalState)) {
-    rc = Aca_Comm_Manager::get_instance().update_goal_state(goalState, *goalStateOperationReply);
+  while (stream->Read(&goalState)) {
+    rc = Aca_Comm_Manager::get_instance().update_goal_state(goalState, gsOperationReply);
     if (rc == EXIT_SUCCESS) {
       ACA_LOG_INFO("Control Fast Path streaming - Successfully updated host with latest goal state %d.\n",
                    rc);
@@ -77,6 +76,7 @@ Status GoalStateProvisionerImpl::PushNetworkResourceStatesStream(
       ACA_LOG_ERROR("Control Fast Path streaming - Failed to update host with latest goal state, rc=%d.\n",
                     rc);
     }
+    stream->Write(gsOperationReply);
   }
 
   return Status::OK;

@@ -49,7 +49,7 @@ bool g_debug_mode = false;
 using grpc::Channel;
 using grpc::ClientAsyncResponseReader;
 using grpc::ClientContext;
-using grpc::ClientWriter;
+using grpc::ClientReaderWriter;
 using grpc::CompletionQueue;
 using grpc::Status;
 using std::string;
@@ -155,45 +155,42 @@ class GoalStateProvisionerClient {
     }
   }
 
-  int send_goalstate_stream_one(GoalState &goalState, GoalStateOperationReply &reply)
+  int send_goalstate_stream_one(GoalState &goalState, GoalStateOperationReply &gsOperationReply)
   {
     ClientContext context;
 
-    auto before_writer_create = std::chrono::steady_clock::now();
+    auto before_stream_create = std::chrono::steady_clock::now();
 
-    std::unique_ptr<ClientWriter<GoalState> > writer(
-            stub_->PushNetworkResourceStatesStream(&context, &reply));
+    std::shared_ptr<ClientReaderWriter<GoalState, GoalStateOperationReply> > stream(
+            stub_->PushNetworkResourceStatesStream(&context));
 
-    auto after_writer_create = std::chrono::steady_clock::now();
+    auto after_stream_create = std::chrono::steady_clock::now();
 
-    auto writer_create_ns =
-            cast_to_nanoseconds(after_writer_create - before_writer_create).count();
+    auto stream_create_ns =
+            cast_to_nanoseconds(after_stream_create - before_stream_create).count();
 
-    ACA_LOG_INFO("[METRICS] writer_create call took: %ld nanoseconds or %ld milliseconds\n",
-                 writer_create_ns, writer_create_ns / 1000000);
+    ACA_LOG_INFO("[METRICS] stream_create call took: %ld nanoseconds or %ld milliseconds\n",
+                 stream_create_ns, stream_create_ns / 1000000);
 
-    if (!writer->Write(goalState)) {
-      ACA_LOG_ERROR("PushNetworkResourceStatesStream broken stream");
-    }
-
-    auto after_write_stream = std::chrono::steady_clock::now();
-
-    auto write_stream_ns =
-            cast_to_nanoseconds(after_write_stream - after_writer_create).count();
-
-    ACA_LOG_INFO("[METRICS] write_stream call took: %ld nanoseconds or %ld milliseconds\n",
-                 write_stream_ns, write_stream_ns / 1000000);
-
-    writer->WritesDone();
-    Status status = writer->Finish();
+    std::thread writer([stream, goalState]() {
+      stream->Write(goalState);
+      stream->WritesDone();
+    });
 
     auto after_write_done = std::chrono::steady_clock::now();
 
     auto write_done_ns =
-            cast_to_nanoseconds(after_write_done - after_write_stream).count();
+            cast_to_nanoseconds(after_write_done - after_stream_create).count();
 
     ACA_LOG_INFO("[METRICS] write_done call took: %ld nanoseconds or %ld milliseconds\n",
                  write_done_ns, write_done_ns / 1000000);
+
+    while (stream->Read(&gsOperationReply)) {
+      ACA_LOG_INFO("Received one streaming GoalStateOperationReply\n");
+    }
+
+    writer.join();
+    Status status = stream->Finish();
 
     if (status.ok()) {
       return EXIT_SUCCESS;
