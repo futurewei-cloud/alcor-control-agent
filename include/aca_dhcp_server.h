@@ -93,6 +93,7 @@ struct dhcp_message {
 #define DHCP_OPT_CLV_HEADER (0x2) //CLV = Code + Length + Value
 #define DHCP_OPT_DEFAULT_IP_LEASE_TIME (86400) //One day
 
+#pragma pack(push, 1)
 struct dhcp_message_type {
   uint8_t code;
   uint8_t len;
@@ -116,6 +117,7 @@ struct dhcp_req_ip {
   uint8_t len;
   uint32_t req_ip;
 };
+#pragma pack(pop)
 
 union dhcp_message_options {
   dhcp_message_type *dhcpmsgtype;

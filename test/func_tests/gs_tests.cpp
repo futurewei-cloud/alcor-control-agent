@@ -46,6 +46,10 @@ std::atomic_ulong g_total_update_GS_time(0);
 bool g_demo_mode = false;
 bool g_debug_mode = false;
 
+string g_ofctl_command = EMPTY_STRING;
+string g_ofctl_target = EMPTY_STRING;
+string g_ofctl_options = EMPTY_STRING;
+
 using grpc::Channel;
 using grpc::ClientAsyncResponseReader;
 using grpc::ClientContext;

@@ -344,7 +344,7 @@ uint8_t *ACA_Dhcp_Server::_get_option(dhcp_message *dhcpmsg, uint8_t code)
 
   for (int i = 0; i < DHCP_MSG_OPTS_LENGTH;) {
     if (options[i] == code) {
-      return options + i;
+      return &options[i];
     } else if (options[i] == DHCP_OPT_PAD) {
       i++;
     } else if (options[i] == DHCP_OPT_END) {
@@ -359,53 +359,57 @@ uint8_t *ACA_Dhcp_Server::_get_option(dhcp_message *dhcpmsg, uint8_t code)
 
 uint8_t ACA_Dhcp_Server::_get_message_type(dhcp_message *dhcpmsg)
 {
-  dhcp_message_options *popt = nullptr;
+  dhcp_message_options unopt;
 
   if (!dhcpmsg) {
     ACA_LOG_ERROR("DHCP message is null!\n");
     return DHCP_MSG_NONE;
   }
 
-  popt->dhcpmsgtype = (dhcp_message_type *)_get_option(dhcpmsg, DHCP_OPT_CODE_MSGTYPE);
-  if (!popt->dhcpmsgtype) {
+  unopt.dhcpmsgtype = (dhcp_message_type *)_get_option(dhcpmsg, DHCP_OPT_CODE_MSGTYPE);
+  if (!unopt.dhcpmsgtype) {
     return DHCP_MSG_NONE;
   }
 
-  return popt->dhcpmsgtype->msg_type;
+  return unopt.dhcpmsgtype->msg_type;
 }
 
 uint32_t ACA_Dhcp_Server::_get_server_id(dhcp_message *dhcpmsg)
 {
-  dhcp_message_options *popt = nullptr;
+  dhcp_message_options unopt;
 
   if (!dhcpmsg) {
     ACA_LOG_ERROR("DHCP message is null!\n");
     return 0;
   }
 
-  popt->serverid = (dhcp_server_id *)_get_option(dhcpmsg, DHCP_OPT_CODE_SERVER_ID);
-  if (!popt->serverid) {
+  unopt.serverid = (dhcp_server_id *)_get_option(dhcpmsg, DHCP_OPT_CODE_SERVER_ID);
+  if (!unopt.serverid) {
     return 0;
   }
 
-  return popt->serverid->sid;
+  unopt.serverid->sid = ntohl(unopt.serverid->sid);
+
+  return unopt.serverid->sid;
 }
 
 uint32_t ACA_Dhcp_Server::_get_requested_ip(dhcp_message *dhcpmsg)
 {
-  dhcp_message_options *popt = nullptr;
+  dhcp_message_options unopt;
 
   if (!dhcpmsg) {
     ACA_LOG_ERROR("DHCP message is null!\n");
     return 0;
   }
 
-  popt->reqip = (dhcp_req_ip *)_get_option(dhcpmsg, DHCP_OPT_CODE_REQ_IP);
-  if (!popt->reqip) {
+  unopt.reqip = (dhcp_req_ip *)_get_option(dhcpmsg, DHCP_OPT_CODE_REQ_IP);
+  if (!unopt.reqip) {
     return 0;
   }
 
-  return popt->reqip->req_ip;
+  unopt.reqip->req_ip = ntohl(unopt.reqip->req_ip);
+
+  return unopt.reqip->req_ip;
 }
 
 void ACA_Dhcp_Server::_pack_dhcp_message(dhcp_message *rpl, dhcp_message *req)

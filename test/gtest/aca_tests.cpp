@@ -79,6 +79,10 @@ std::atomic_ulong g_total_update_GS_time(0);
 bool g_debug_mode = true;
 bool g_demo_mode = false;
 
+string g_ofctl_command = EMPTY_STRING;
+string g_ofctl_target = EMPTY_STRING;
+string g_ofctl_options = EMPTY_STRING;
+
 // TODO: setup bridge when br-int is up and br-tun is gone
 
 // TODO: invalid IP
@@ -2518,7 +2522,7 @@ TEST(net_config_test_cases, rename_veth_device_valid)
 TEST(dhcp_config_test_cases, add_dhcp_entry_valid)
 {
   int retcode = 0;
-  dhcp_config stDhcpCfgIn = { 0 };
+  dhcp_config stDhcpCfgIn;
 
   stDhcpCfgIn.ipv4_address = "10.0.0.1";
   stDhcpCfgIn.mac_address = "AA:BB:CC:DD:EE:FF";
@@ -2531,8 +2535,8 @@ TEST(dhcp_config_test_cases, add_dhcp_entry_valid)
 TEST(dhcp_config_test_cases, add_dhcp_entry_invalid)
 {
   int retcode = 0;
-  dhcp_config stDhcpCfgIn1 = { 0 };
-  dhcp_config stDhcpCfgIn2 = { 0 };
+  dhcp_config stDhcpCfgIn1;
+  dhcp_config stDhcpCfgIn2;
 
   stDhcpCfgIn1.ipv4_address = "10.0.0.1";
   stDhcpCfgIn1.mac_address = "AA:BB:CC:DD:EE:FF";
@@ -2551,7 +2555,7 @@ TEST(dhcp_config_test_cases, add_dhcp_entry_invalid)
 TEST(dhcp_config_test_cases, delete_dhcp_entry_valid)
 {
   int retcode = 0;
-  dhcp_config stDhcpCfgIn = { 0 };
+  dhcp_config stDhcpCfgIn;
 
   stDhcpCfgIn.ipv4_address = "10.0.0.1";
   stDhcpCfgIn.mac_address = "AA:BB:CC:DD:EE:FF";
@@ -2566,7 +2570,7 @@ TEST(dhcp_config_test_cases, delete_dhcp_entry_valid)
 TEST(dhcp_config_test_cases, update_dhcp_entry_valid)
 {
   int retcode = 0;
-  dhcp_config stDhcpCfgIn = { 0 };
+  dhcp_config stDhcpCfgIn;
 
   stDhcpCfgIn.ipv4_address = "10.0.0.1";
   stDhcpCfgIn.mac_address = "AA:BB:CC:DD:EE:FF";
@@ -2582,12 +2586,13 @@ TEST(dhcp_config_test_cases, update_dhcp_entry_valid)
 TEST(dhcp_config_test_cases, update_dhcp_entry_invalid)
 {
   int retcode = 0;
-  dhcp_config stDhcpCfgIn = { 0 };
+  dhcp_config stDhcpCfgIn;
 
   stDhcpCfgIn.ipv4_address = "10.0.0.1";
   stDhcpCfgIn.mac_address = "AA:BB:CC:DD:EE:FF";
   stDhcpCfgIn.port_host_name = "Port1";
 
+  (void)ACA_Dhcp_Server::get_instance().delete_dhcp_entry(&stDhcpCfgIn);
   retcode = ACA_Dhcp_Server::get_instance().update_dhcp_entry(&stDhcpCfgIn);
   EXPECT_EQ(retcode, EXIT_FAILURE);
 }
