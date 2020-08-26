@@ -77,6 +77,7 @@ Status GoalStateProvisionerImpl::PushNetworkResourceStatesStream(
                     rc);
     }
     stream->Write(gsOperationReply);
+    gsOperationReply.Clear();
   }
 
   return Status::OK;
