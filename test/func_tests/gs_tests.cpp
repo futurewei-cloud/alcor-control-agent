@@ -254,6 +254,10 @@ class GoalStateProvisionerClient {
 
     ACA_LOG_INFO("[***METRICS***] GRPC E2E send_goalstate_sync call took: %ld nanoseconds or %ld milliseconds\n",
                  send_goalstate_ns, send_goalstate_ns / 1000000);
+
+    ACA_LOG_INFO("[***METRICS***] Total GRPC latency/usage for sync call: %ld nanoseconds or %ld milliseconds\n",
+                 send_goalstate_ns - g_total_ACA_Message_time.load(),
+                 (send_goalstate_ns - g_total_ACA_Message_time.load()) / 1000000);
   }
 
   int send_goalstate_stream_one(GoalState &goalState, GoalStateOperationReply &gsOperationReply)
@@ -402,6 +406,10 @@ class GoalStateProvisionerClient {
 
     ACA_LOG_INFO("[***METRICS***] Grand send_goalstate_sync call took: %ld nanoseconds or %ld milliseconds\n",
                  send_goalstate_ns, send_goalstate_ns / 1000000);
+
+    ACA_LOG_INFO("[***METRICS***] Total GRPC latency/usage for stream call: %ld nanoseconds or %ld milliseconds\n",
+                 send_goalstate_ns - g_total_ACA_Message_time.load(),
+                 (send_goalstate_ns - g_total_ACA_Message_time.load()) / 1000000);
 
     if (!status.ok()) {
       ACA_LOG_ERROR("RPC call failed");
@@ -726,45 +734,51 @@ int main(int argc, char *argv[])
     ACA_LOG_INFO("1 goal state async grpc call failed!!!\n");
   }
 
-  ACA_LOG_INFO("-------------- sending one goal state sync --------------\n");
+  const uint TEST_ITERATIONS = 10;
 
-  grpc_client.send_goalstate_sync(1, "21");
+  for (uint i = 0; i < TEST_ITERATIONS; i++) {
+    ACA_LOG_INFO("************** Iteration #%u **************\n", i);
 
-  ACA_LOG_INFO("-------------- sending 10 goal state sync --------------\n");
+    ACA_LOG_INFO("-------------- sending one goal state sync --------------\n");
 
-  grpc_client.send_goalstate_sync(10, "22");
+    grpc_client.send_goalstate_sync(1, "21");
 
-  ACA_LOG_INFO("-------------- sending 1 goal state stream --------------\n");
+    ACA_LOG_INFO("-------------- sending 10 goal state sync --------------\n");
 
-  NeighborConfiguration_builder->set_name("portname3");
-  NeighborConfiguration_builder->set_host_ip_address("223.0.0.33");
-  FixedIp_builder->set_ip_address("33.0.0.33");
+    grpc_client.send_goalstate_sync(10, "22");
 
-  GoalStateOperationReply stream_reply;
+    ACA_LOG_INFO("-------------- sending 1 goal state stream --------------\n");
 
-  before_send_goalstate = std::chrono::steady_clock::now();
+    NeighborConfiguration_builder->set_name("portname3");
+    NeighborConfiguration_builder->set_host_ip_address("223.0.0.33");
+    FixedIp_builder->set_ip_address("33.0.0.33");
 
-  rc = grpc_client.send_goalstate_stream_one(GoalState_builder, stream_reply);
+    GoalStateOperationReply stream_reply;
 
-  after_send_goalstate = std::chrono::steady_clock::now();
+    before_send_goalstate = std::chrono::steady_clock::now();
 
-  send_goalstate_ns =
-          cast_to_nanoseconds(after_send_goalstate - before_send_goalstate).count();
+    rc = grpc_client.send_goalstate_stream_one(GoalState_builder, stream_reply);
 
-  ACA_LOG_INFO("[***METRICS***] send_goalstate_stream_one call took: %ld nanoseconds or %ld milliseconds\n",
-               send_goalstate_ns, send_goalstate_ns / 1000000);
+    after_send_goalstate = std::chrono::steady_clock::now();
 
-  print_goalstateReply(stream_reply);
+    send_goalstate_ns =
+            cast_to_nanoseconds(after_send_goalstate - before_send_goalstate).count();
 
-  if (rc == EXIT_SUCCESS) {
-    ACA_LOG_INFO("1 goal state stream grpc call succeed\n");
-  } else {
-    ACA_LOG_INFO("1 goal state stream grpc call failed!!!\n");
+    ACA_LOG_INFO("[***METRICS***] send_goalstate_stream_one call took: %ld nanoseconds or %ld milliseconds\n",
+                 send_goalstate_ns, send_goalstate_ns / 1000000);
+
+    print_goalstateReply(stream_reply);
+
+    if (rc == EXIT_SUCCESS) {
+      ACA_LOG_INFO("1 goal state stream grpc call succeed\n");
+    } else {
+      ACA_LOG_INFO("1 goal state stream grpc call failed!!!\n");
+    }
+
+    ACA_LOG_INFO("-------------- sending 10 goal state stream --------------\n");
+
+    grpc_client.send_goalstate_stream(10, "32");
   }
-
-  ACA_LOG_INFO("-------------- sending 10 goal state stream --------------\n");
-
-  grpc_client.send_goalstate_stream(10, "32");
 
   aca_cleanup();
 
