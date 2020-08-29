@@ -61,6 +61,7 @@ struct dhcp_entry_data {
 #define DHCP_MSG_HWTYPE_ETH_LEN (0x6)
 #define DHCP_MSG_MAGIC_COOKIE (0x63825363) //magic cookie per RFC2131
 
+#pragma pack(push, 1)
 struct dhcp_message {
   uint8_t op;
   uint8_t htype;
@@ -89,11 +90,11 @@ struct dhcp_message {
 #define DHCP_OPT_CODE_IP_LEASE_TIME (0x33)
 #define DHCP_OPT_CODE_SERVER_ID (0x36)
 #define DHCP_OPT_CODE_REQ_IP (0x32)
+#define DHCP_OPT_CODE_CLIENT_ID (0x3d)
 
 #define DHCP_OPT_CLV_HEADER (0x2) //CLV = Code + Length + Value
 #define DHCP_OPT_DEFAULT_IP_LEASE_TIME (86400) //One day
 
-#pragma pack(push, 1)
 struct dhcp_message_type {
   uint8_t code;
   uint8_t len;
@@ -117,6 +118,13 @@ struct dhcp_req_ip {
   uint8_t len;
   uint32_t req_ip;
 };
+
+struct dhcp_client_id {
+  uint8_t code;
+  uint8_t len;
+  uint8_t type;
+  uint8_t *client_id;
+};
 #pragma pack(pop)
 
 union dhcp_message_options {
@@ -124,6 +132,7 @@ union dhcp_message_options {
   dhcp_ip_lease_time *ipleasetime;
   dhcp_server_id *serverid;
   dhcp_req_ip *reqip;
+  dhcp_client_id *clientid;
 };
 
 class ACA_Dhcp_Server : public aca_dhcp_programming_if::ACA_Dhcp_Programming_Interface {
@@ -163,6 +172,7 @@ class ACA_Dhcp_Server : public aca_dhcp_programming_if::ACA_Dhcp_Programming_Int
   uint8_t _get_message_type(dhcp_message *dhcpmsg);
   uint32_t _get_server_id(dhcp_message *dhcpmsg);
   uint32_t _get_requested_ip(dhcp_message *dhcpmsg);
+  string _get_client_id(dhcp_message *dhcpmsg);
 
   void _parse_dhcp_none(dhcp_message *dhcpmsg);
   void _parse_dhcp_discover(dhcp_message *dhcpmsg);

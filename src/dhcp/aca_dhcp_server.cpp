@@ -412,6 +412,38 @@ uint32_t ACA_Dhcp_Server::_get_requested_ip(dhcp_message *dhcpmsg)
   return unopt.reqip->req_ip;
 }
 
+string ACA_Dhcp_Server::_get_client_id(dhcp_message *dhcpmsg)
+{
+  dhcp_message_options unopt;
+  string cid;
+
+  if (!dhcpmsg) {
+    ACA_LOG_ERROR("DHCP message is null!\n");
+    return nullptr;
+  }
+
+  // get client identifier from option
+  unopt.clientid = (dhcp_client_id *)_get_option(dhcpmsg, DHCP_OPT_CODE_CLIENT_ID);
+  if (unopt.clientid) {
+    for (int i = 0; i < unopt.clientid->len - 1; i++) {
+      cid.push_back(unopt.clientid->client_id[i]);
+      cid.push_back(':');
+    }
+    cid.pop_back();
+
+    return cid;
+  }
+
+  // get client identifier from chaddr
+  for (int i = 0; i < dhcpmsg->hlen; i++) {
+    cid.push_back(dhcpmsg->chaddr[i]);
+    cid.push_back(':');
+  }
+  cid.pop_back();
+
+  return cid;
+}
+
 void ACA_Dhcp_Server::_pack_dhcp_message(dhcp_message *rpl, dhcp_message *req)
 {
   if (!rpl || !req) {
@@ -515,8 +547,7 @@ void ACA_Dhcp_Server::_parse_dhcp_discover(dhcp_message *dhcpmsg)
   dhcp_entry_data *pData = nullptr;
   dhcp_message *dhcpoffer = nullptr;
 
-  mac_address = (char *)dhcpmsg->chaddr;
-  mac_address.substr(0, dhcpmsg->hlen);
+  mac_address = _get_client_id(dhcpmsg);
   pData = _search_dhcp_entry(mac_address);
   if (!pData) {
     ACA_LOG_ERROR("DHCP entry does not exist! (mac = %s)\n", mac_address.c_str());
