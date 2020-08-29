@@ -17,6 +17,8 @@
 #include "goalstateprovisioner.grpc.pb.h"
 #include <errno.h>
 #include <arpa/inet.h>
+#include <sstream>
+#include <iomanip>
 #include "aca_ovs_control.h"
 #include "aca_ovs_l2_programmer.h"
 
@@ -416,6 +418,7 @@ string ACA_Dhcp_Server::_get_client_id(dhcp_message *dhcpmsg)
 {
   dhcp_message_options unopt;
   string cid;
+  stringstream ss;
 
   if (!dhcpmsg) {
     ACA_LOG_ERROR("DHCP message is null!\n");
@@ -426,9 +429,11 @@ string ACA_Dhcp_Server::_get_client_id(dhcp_message *dhcpmsg)
   unopt.clientid = (dhcp_client_id *)_get_option(dhcpmsg, DHCP_OPT_CODE_CLIENT_ID);
   if (unopt.clientid) {
     for (int i = 0; i < unopt.clientid->len - 1; i++) {
-      cid.push_back(unopt.clientid->cid[i]);
-      cid.push_back(':');
+      ss << std::hex << std::setw(2) << std::setfill('0')
+         << static_cast<unsigned int>(unopt.clientid->cid[i]);
+      ss << ":";
     }
+    ss >> cid;
     cid.pop_back();
 
     return cid;
@@ -436,9 +441,11 @@ string ACA_Dhcp_Server::_get_client_id(dhcp_message *dhcpmsg)
 
   // get client identifier from chaddr
   for (int i = 0; i < dhcpmsg->hlen; i++) {
-    cid.push_back(dhcpmsg->chaddr[i]);
-    cid.push_back(':');
+    ss << std::hex << std::setw(2) << std::setfill('0')
+       << static_cast<unsigned int>(dhcpmsg->chaddr[i]);
+    ss << ":";
   }
+  ss >> cid;
   cid.pop_back();
 
   return cid;
