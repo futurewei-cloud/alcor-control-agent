@@ -281,7 +281,7 @@ void ACA_Dhcp_Server::dhcps_xmit(void *message)
 {
   dhcp_message *dhcpmsg = nullptr;
   string bridge = "br-int";
-  string in_port = "in port=controller";
+  string in_port = "in_port=controller";
   string whitespace = " ";
   string action = "actions=normal";
   string packetpre = "packet=";
