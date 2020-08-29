@@ -123,7 +123,7 @@ struct dhcp_client_id {
   uint8_t code;
   uint8_t len;
   uint8_t type;
-  uint8_t *client_id;
+  uint8_t cid[0];
 };
 #pragma pack(pop)
 

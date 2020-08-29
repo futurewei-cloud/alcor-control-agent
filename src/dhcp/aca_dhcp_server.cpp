@@ -426,7 +426,7 @@ string ACA_Dhcp_Server::_get_client_id(dhcp_message *dhcpmsg)
   unopt.clientid = (dhcp_client_id *)_get_option(dhcpmsg, DHCP_OPT_CODE_CLIENT_ID);
   if (unopt.clientid) {
     for (int i = 0; i < unopt.clientid->len - 1; i++) {
-      cid.push_back(unopt.clientid->client_id[i]);
+      cid.push_back(unopt.clientid->cid[i]);
       cid.push_back(':');
     }
     cid.pop_back();
