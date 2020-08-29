@@ -85,8 +85,6 @@ Status GoalStateProvisionerImpl::PushNetworkResourceStatesStream(
 
 void GoalStateProvisionerImpl::RunServer()
 {
-  // GoalStateProvisionerImpl service;
-
   ServerBuilder builder;
   builder.AddListeningPort(GRPC_SERVER_ADDRESS, grpc::InsecureServerCredentials());
   builder.RegisterService(this);

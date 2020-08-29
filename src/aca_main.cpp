@@ -85,7 +85,6 @@ static void aca_cleanup()
   }
 
   if (g_grpc_server != NULL) {
-    // g_grpc_server->Shutdown();
     delete g_grpc_server;
     g_grpc_server = NULL;
     ACA_LOG_INFO("Cleaned up grpc server.\n");
