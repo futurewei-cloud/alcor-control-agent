@@ -78,7 +78,7 @@ void ACA_Dhcp_Server::_deinit_dhcp_ofp()
 
   // deleting dhcp default flows
   aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
-          "del-flow br-int \"udp,udp_src=68,udp_dst=67\"",
+          "del-flows br-int \"udp,udp_src=68,udp_dst=67\"",
           not_care_culminative_time, overall_rc);
   return;
 }
@@ -254,7 +254,7 @@ int ACA_Dhcp_Server::_get_db_size() const
 
 /************* Operation and procedure for dataplane *******************/
 
-void ACA_Dhcp_Server::dhcps_recv(void *message)
+void ACA_Dhcp_Server::dhcps_recv(uint32_t in_port, void *message)
 {
   dhcp_message *dhcpmsg = nullptr;
   uint8_t msg_type = 0;
@@ -272,18 +272,18 @@ void ACA_Dhcp_Server::dhcps_recv(void *message)
   }
 
   msg_type = _get_message_type(dhcpmsg);
-  (this->*_parse_dhcp_msg_ops[msg_type])(dhcpmsg);
+  (this->*_parse_dhcp_msg_ops[msg_type])(in_port, dhcpmsg);
 
   return;
 }
 
-void ACA_Dhcp_Server::dhcps_xmit(void *message)
+void ACA_Dhcp_Server::dhcps_xmit(uint32_t inport, void *message)
 {
   dhcp_message *dhcpmsg = nullptr;
   string bridge = "br-int";
   string in_port = "in_port=controller";
   string whitespace = " ";
-  string action = "actions=normal";
+  string action = "actions=output:" + to_string(inport);
   string packetpre = "packet=";
   string packet;
   string options;
@@ -427,7 +427,7 @@ string ACA_Dhcp_Server::_get_client_id(dhcp_message *dhcpmsg)
 
   // get client identifier from option
   unopt.clientid = (dhcp_client_id *)_get_option(dhcpmsg, DHCP_OPT_CODE_CLIENT_ID);
-  if (unopt.clientid) {
+  if (unopt.clientid && unopt.clientid->type == 1) {
     for (int i = 0; i < unopt.clientid->len - 1; i++) {
       ss << std::hex << std::setw(2) << std::setfill('0')
          << static_cast<unsigned int>(unopt.clientid->cid[i]);
@@ -509,7 +509,7 @@ void ACA_Dhcp_Server::_pack_dhcp_opt_ip_lease_time(uint8_t *option, uint32_t lea
   lt = (dhcp_ip_lease_time *)option;
   lt->code = DHCP_OPT_CODE_IP_LEASE_TIME;
   lt->len = DHCP_OPT_LEN_4BYTE;
-  lt->lease_time = lease;
+  lt->lease_time = htonl(lease);
 }
 
 void ACA_Dhcp_Server::_pack_dhcp_opt_server_id(uint8_t *option, uint32_t server_id)
@@ -523,7 +523,7 @@ void ACA_Dhcp_Server::_pack_dhcp_opt_server_id(uint8_t *option, uint32_t server_
   sid = (dhcp_server_id *)option;
   sid->code = DHCP_OPT_CODE_SERVER_ID;
   sid->len = DHCP_OPT_LEN_4BYTE;
-  sid->sid = server_id;
+  sid->sid = htonl(server_id);
 }
 
 void ACA_Dhcp_Server::_init_dhcp_msg_ops()
@@ -541,14 +541,14 @@ void ACA_Dhcp_Server::_init_dhcp_msg_ops()
   _parse_dhcp_msg_ops[DHCP_MSG_DHCPINFORM] = &aca_dhcp_server::ACA_Dhcp_Server::_parse_dhcp_none;
 }
 
-void ACA_Dhcp_Server::_parse_dhcp_none(dhcp_message *dhcpmsg)
+void ACA_Dhcp_Server::_parse_dhcp_none(uint32_t in_port, dhcp_message *dhcpmsg)
 {
   ACA_LOG_ERROR("Wrong DHCP message type! (Message type = %d)\n",
                 _get_message_type(dhcpmsg));
   return;
 }
 
-void ACA_Dhcp_Server::_parse_dhcp_discover(dhcp_message *dhcpmsg)
+void ACA_Dhcp_Server::_parse_dhcp_discover(uint32_t in_port, dhcp_message *dhcpmsg)
 {
   string mac_address;
   dhcp_entry_data *pData = nullptr;
@@ -566,7 +566,7 @@ void ACA_Dhcp_Server::_parse_dhcp_discover(dhcp_message *dhcpmsg)
     return;
   }
 
-  dhcps_xmit(dhcpoffer);
+  dhcps_xmit(in_port, dhcpoffer);
 }
 
 dhcp_message *
@@ -608,18 +608,17 @@ ACA_Dhcp_Server::_pack_dhcp_offer(dhcp_message *dhcpdiscover, dhcp_entry_data *p
   return dhcpoffer;
 }
 
-void ACA_Dhcp_Server::_parse_dhcp_request(dhcp_message *dhcpmsg)
+void ACA_Dhcp_Server::_parse_dhcp_request(uint32_t in_port, dhcp_message *dhcpmsg)
 {
   string mac_address;
   dhcp_entry_data *pData = nullptr;
   dhcp_message *dhcpack = nullptr;
   dhcp_message *dhcpnak = nullptr;
   struct sockaddr_in sa;
-  uint32_t self_sid = 0;
+  uint32_t self_sid = 2130706433;
 
   // Fetch the record in DB
-  mac_address = (char *)dhcpmsg->chaddr;
-  mac_address.substr(0, dhcpmsg->hlen);
+  mac_address = _get_client_id(dhcpmsg);
   pData = _search_dhcp_entry(mac_address);
   if (!pData) {
     ACA_LOG_ERROR("DHCP entry does not exist! (mac = %s)\n", mac_address.c_str());
@@ -633,16 +632,16 @@ void ACA_Dhcp_Server::_parse_dhcp_request(dhcp_message *dhcpmsg)
     if (inet_pton(AF_INET, pData->ipv4_address.c_str(), &(sa.sin_addr)) != 1) {
       throw std::invalid_argument("Virtual ipv4 address is not in the expect format");
     }
-    if (sa.sin_addr.s_addr != _get_requested_ip(dhcpmsg)) {
+    if (htonl(sa.sin_addr.s_addr) != _get_requested_ip(dhcpmsg)) {
       ACA_LOG_ERROR("IP address %u in DHCP request is not same as the one in DB!",
                     sa.sin_addr.s_addr);
       dhcpnak = _pack_dhcp_nak(dhcpmsg);
-      dhcps_xmit(dhcpnak);
+      dhcps_xmit(in_port, dhcpnak);
       return;
     }
 
     dhcpack = _pack_dhcp_ack(dhcpmsg);
-    dhcps_xmit(dhcpack);
+    dhcps_xmit(in_port, dhcpack);
 
   } else { //not to me
   }
@@ -659,7 +658,7 @@ dhcp_message *ACA_Dhcp_Server::_pack_dhcp_ack(dhcp_message *dhcpreq)
   //Pack DHCP header
   _pack_dhcp_message(dhcpack, dhcpreq);
 
-  dhcpack->yiaddr = _get_requested_ip(dhcpreq);
+  dhcpack->yiaddr = htonl(_get_requested_ip(dhcpreq));
 
   //DHCP Options
   pos = dhcpack->options;
@@ -712,6 +711,27 @@ dhcp_message *ACA_Dhcp_Server::_pack_dhcp_nak(dhcp_message *dhcpreq)
   return dhcpnak;
 }
 
+unsigned short ACA_Dhcp_Server::check_sum(unsigned char *a, int len)
+{
+   unsigned int sum = 0;
+   unsigned short tmp = 16*16;
+   while (len>1) {
+      unsigned short tmp1 = *a++*tmp;
+      sum += tmp1 + *a++;
+      len -= 2;
+   }
+
+   if (len) {
+      sum += *(unsigned char *)a;
+   }
+
+   while (sum >> 16) {
+      sum = (sum >> 16) + (sum & 0xffff);
+   }
+
+   return (unsigned short)(~sum);
+}
+
 string ACA_Dhcp_Server::_serialize_dhcp_message(dhcp_message *dhcpmsg)
 {
   string packet;
@@ -721,51 +741,208 @@ string ACA_Dhcp_Server::_serialize_dhcp_message(dhcp_message *dhcpmsg)
   }
 
   //fix header
-  packet.append(to_string(dhcpmsg->op));
-  packet.append(to_string(dhcpmsg->htype));
-  packet.append(to_string(dhcpmsg->hlen));
-  packet.append(to_string(dhcpmsg->hops));
+  char str[80];
+  sprintf(str, "%02x", dhcpmsg->op);
+  packet.append(str);
+  sprintf(str, "%02x", dhcpmsg->htype);
+  packet.append(str);
+  sprintf(str, "%02x", dhcpmsg->hlen);
+  packet.append(str);
+  sprintf(str, "%02x", dhcpmsg->hops);
+  packet.append(str);
 
-  packet.append(to_string(htonl(dhcpmsg->xid)));
-  packet.append(to_string(htons(dhcpmsg->secs)));
-  packet.append(to_string(htons(dhcpmsg->flags)));
-  packet.append(to_string(htonl(dhcpmsg->ciaddr)));
-  packet.append(to_string(htonl(dhcpmsg->yiaddr)));
-  packet.append(to_string(htonl(dhcpmsg->siaddr)));
-  packet.append(to_string(htonl(dhcpmsg->giaddr)));
+  sprintf(str, "%08x", htonl(dhcpmsg->xid));
+  packet.append(str);
+  sprintf(str, "%04x", htons(dhcpmsg->secs));
+  packet.append(str);
+  sprintf(str, "%04x", htons(dhcpmsg->flags));
+  packet.append(str);
+  sprintf(str, "%08x", dhcpmsg->ciaddr);
+  packet.append(str);
+  sprintf(str, "%08x", dhcpmsg->yiaddr);
+  packet.append(str);
+  sprintf(str, "%08x", htonl(dhcpmsg->siaddr));
+  packet.append(str);
+  sprintf(str, "%08x", dhcpmsg->giaddr);
+  packet.append(str);
 
   for (int i = 0; i < 16; i++) {
-    packet.append(to_string(dhcpmsg->chaddr[i]));
+    sprintf(str, "%02x", dhcpmsg->chaddr[i]);
+    packet.append(str);
   }
   for (int i = 0; i < 64; i++) {
-    packet.append(to_string(dhcpmsg->sname[i]));
+    sprintf(str, "%02x", dhcpmsg->sname[i]);
+    packet.append(str);
   }
   for (int i = 0; i < 128; i++) {
-    packet.append(to_string(dhcpmsg->file[i]));
+    sprintf(str, "%02x", dhcpmsg->file[i]);
+    packet.append(str);
   }
 
-  packet.append(to_string(htonl(dhcpmsg->cookie)));
+  int len = 28 + 16 + 64 + 128 + 4;
+
+  sprintf(str, "%08x", htonl(dhcpmsg->cookie));
+  packet.append(str);
 
   //options part
   for (int i = 0; i < DHCP_MSG_OPTS_LENGTH;) {
     if (DHCP_OPT_END == dhcpmsg->options[i]) {
-      packet.append(to_string(dhcpmsg->options[i]));
+      sprintf(str, "%02x", dhcpmsg->options[i]);
+      packet.append(str);
+      len += 1;
       break;
     }
-    packet.append(to_string(dhcpmsg->options[i]));
-    packet.append(to_string(dhcpmsg->options[i + 1]));
+    sprintf(str, "%02x", dhcpmsg->options[i]);
+    packet.append(str);
+    sprintf(str, "%02x", dhcpmsg->options[i + 1]);
+    packet.append(str);
+    len += 2;
     if (DHCP_OPT_LEN_1BYTE == dhcpmsg->options[i + 1]) {
-      packet.append(to_string(dhcpmsg->options[i + 2]));
+      sprintf(str, "%02x", dhcpmsg->options[i + 2]);
+      packet.append(str);
       i += DHCP_OPT_CLV_HEADER + DHCP_OPT_LEN_1BYTE;
+      len += 1;
       continue;
     }
     if (DHCP_OPT_LEN_4BYTE == dhcpmsg->options[i + 1]) {
-      packet.append(to_string(htonl(*(uint32_t *)(&dhcpmsg->options[i + 2]))));
+      sprintf(str, "%08x", htonl(*(uint32_t *)(&dhcpmsg->options[i + 2])));
+      packet.append(str);
+      //packet.append(to_string(htonl(*(uint32_t *)(&dhcpmsg->options[i + 2]))));
       i += DHCP_OPT_CLV_HEADER + DHCP_OPT_LEN_4BYTE;
+      len += 4;
       continue;
     }
   }
 
+  struct iphear {
+    uint8_t version;
+    uint8_t ds;
+    uint16_t total_len;
+    uint16_t identi;
+    uint16_t fregment;
+    uint8_t tol;
+    uint8_t protocol;
+    uint16_t checksum;
+    uint32_t src_ip;
+    uint32_t dst_ip;
+    uint16_t src_port;
+    uint16_t dst_port;
+    uint16_t len;
+    uint16_t udp_checksum;
+  };
+
+  struct udphear {
+    uint32_t srcIp;
+    uint32_t dstIp;
+    uint16_t udp_len;
+    uint8_t rsv;
+    uint8_t protocol;
+    uint16_t src_port;
+    uint16_t dst_port;
+    uint16_t len;
+    uint16_t checksum;
+    uint8_t op;
+    uint8_t htype;
+    uint8_t hlen;
+    uint8_t hops;
+    uint32_t xid;
+    uint16_t secs;
+    uint16_t flags;
+    uint32_t ciaddr;
+    uint32_t yiaddr;
+    uint32_t siaddr;
+    uint32_t giaddr;
+    uint8_t chaddr[16];
+    uint8_t sname[64];
+    uint8_t file[128];
+    uint32_t cookie;
+    uint8_t options[308];
+  };
+
+  udphear udphdr = {0};
+  udphdr.srcIp = inet_addr("127.0.1.1");
+  udphdr.dstIp = inet_addr("255.255.255.255");
+  udphdr.udp_len = htons(8 + len);
+  udphdr.protocol = 17;
+  udphdr.rsv = 0;
+  udphdr.src_port = htons(67);
+  udphdr.dst_port = htons(68);
+  udphdr.len = htons(8 + len);
+  udphdr.checksum = htons(0);
+  udphdr.op = dhcpmsg->op;
+  udphdr.htype = dhcpmsg->htype;
+  udphdr.hlen = dhcpmsg->hlen;
+  udphdr.hops = dhcpmsg->hops;
+  udphdr.xid = dhcpmsg->xid;
+  udphdr.secs = htons(dhcpmsg->secs);
+  udphdr.flags = htons(dhcpmsg->flags);
+  udphdr.ciaddr = htonl(dhcpmsg->ciaddr);
+  udphdr.yiaddr = htonl(dhcpmsg->yiaddr);
+  udphdr.siaddr = htonl(dhcpmsg->siaddr);
+  udphdr.giaddr = htonl(dhcpmsg->giaddr);
+  memcpy(udphdr.chaddr, dhcpmsg->chaddr, 16);
+  memcpy(udphdr.sname, dhcpmsg->sname, 64);
+  memcpy(udphdr.file, dhcpmsg->file, 128);
+  //udphdr.chaddr = dhcpmsg->chaddr;
+  //udphdr.sname = dhcpmsg->sname;
+  //udphdr.file = dhcpmsg->file;
+  udphdr.cookie = dhcpmsg->cookie;
+  //udphdr.options = dhcpmsg->options;
+  memcpy(udphdr.options, dhcpmsg->options, 308);
+
+  iphear iphr = {0};
+  iphr.version = 69;
+  iphr.ds = 0;
+  iphr.total_len = htons(28 + len);
+  iphr.identi = htons(0);
+  iphr.fregment = htons(16384);
+  iphr.tol = 16;
+  iphr.protocol = 17;
+  iphr.checksum = 0;
+  iphr.src_ip = inet_addr("127.0.1.1");
+  iphr.dst_ip = inet_addr("255.255.255.255");
+  iphr.src_port = htons(67);
+  iphr.dst_port = htons(68);
+  iphr.len = htons(8 + len);
+  iphr.udp_checksum = htons(0);
+
+  iphr.udp_checksum = check_sum((unsigned char *)&udphdr, 20 + len);
+
+  iphr.checksum = check_sum((unsigned char *)&iphr, 20);
+  string packet_header;
+  packet_header.append("ffffffffffff");
+  packet_header.append("60d755f7c209");
+  packet_header.append("0800");
+  sprintf(str, "%02x", iphr.version);
+  packet_header.append(str);
+  sprintf(str, "%02x", iphr.ds);
+  packet_header.append(str);
+  sprintf(str, "%04x", ntohs(iphr.total_len));
+  packet_header.append(str);
+  sprintf(str, "%04x", ntohs(iphr.identi));
+  packet_header.append(str);
+  sprintf(str, "%04x", ntohs(iphr.fregment));
+  packet_header.append(str);
+  sprintf(str, "%02x", iphr.tol);
+  packet_header.append(str);
+  sprintf(str, "%02x", iphr.protocol);
+  packet_header.append(str);
+  sprintf(str, "%04x", iphr.checksum);
+  packet_header.append(str);
+  sprintf(str, "%08x", htonl(iphr.src_ip));
+  packet_header.append(str);
+  sprintf(str, "%08x", htonl(iphr.dst_ip));
+  packet_header.append(str);
+  sprintf(str, "%04x", ntohs(iphr.src_port));
+  packet_header.append(str);
+  sprintf(str, "%04x", ntohs(iphr.dst_port));
+  packet_header.append(str);
+  sprintf(str, "%04x", ntohs(iphr.len));
+  packet_header.append(str);
+  sprintf(str, "%04x", iphr.udp_checksum);
+  packet_header.append(str);
+
+  packet.insert(0, packet_header);
   return packet;
 }
 

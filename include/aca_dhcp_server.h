@@ -148,8 +148,8 @@ class ACA_Dhcp_Server : public aca_dhcp_programming_if::ACA_Dhcp_Programming_Int
   int delete_dhcp_entry(dhcp_config *dhcp_cfg_in);
 
   /* Dataplane Ops */
-  void dhcps_recv(void *message);
-  void dhcps_xmit(void *message);
+  void dhcps_recv(uint32_t in_port, void *message);
+  void dhcps_xmit(uint32_t in_port, void *message);
 
   private:
   /*************** Initialization and De-initialization ***********************/
@@ -174,9 +174,9 @@ class ACA_Dhcp_Server : public aca_dhcp_programming_if::ACA_Dhcp_Programming_Int
   uint32_t _get_requested_ip(dhcp_message *dhcpmsg);
   string _get_client_id(dhcp_message *dhcpmsg);
 
-  void _parse_dhcp_none(dhcp_message *dhcpmsg);
-  void _parse_dhcp_discover(dhcp_message *dhcpmsg);
-  void _parse_dhcp_request(dhcp_message *dhcpmsg);
+  void _parse_dhcp_none(uint32_t in_port, dhcp_message *dhcpmsg);
+  void _parse_dhcp_discover(uint32_t in_port, dhcp_message *dhcpmsg);
+  void _parse_dhcp_request(uint32_t in_port, dhcp_message *dhcpmsg);
 
   dhcp_message *_pack_dhcp_offer(dhcp_message *dhcpdiscover, dhcp_entry_data *pData);
   dhcp_message *_pack_dhcp_ack(dhcp_message *dhcpreq);
@@ -187,6 +187,7 @@ class ACA_Dhcp_Server : public aca_dhcp_programming_if::ACA_Dhcp_Programming_Int
   void _pack_dhcp_opt_ip_lease_time(uint8_t *option, uint32_t lease);
   void _pack_dhcp_opt_server_id(uint8_t *option, uint32_t server_id);
 
+  unsigned short check_sum(unsigned char *a, int len);
   string _serialize_dhcp_message(dhcp_message *dhcpmsg);
 
   /****************** Private variables ******************/
@@ -197,7 +198,7 @@ class ACA_Dhcp_Server : public aca_dhcp_programming_if::ACA_Dhcp_Programming_Int
   std::unordered_map<std::string, dhcp_entry_data> *_dhcp_db;
   std::mutex _dhcp_db_mutex;
 
-  void (aca_dhcp_server::ACA_Dhcp_Server ::*_parse_dhcp_msg_ops[DHCP_MSG_MAX])(dhcp_message *dhcpmsg);
+  void (aca_dhcp_server::ACA_Dhcp_Server ::*_parse_dhcp_msg_ops[DHCP_MSG_MAX])(uint32_t in_port, dhcp_message *dhcpmsg);
 };
 
 } // namespace aca_dhcp_server

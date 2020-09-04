@@ -66,7 +66,7 @@ class ACA_OVS_Control {
   void packet_out(const char *bridge, const char *opt);
 
   void dump_flows(const char *bridge, const char *opt); 
-  void parse_packet(void *packet);
+  void parse_packet(uint32_t in_port, void *packet);
   void print_payload(const u_char *payload, int len);
   void print_hex_ascii_line(const u_char *payload, int len, int offset);
 

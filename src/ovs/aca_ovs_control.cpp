@@ -98,7 +98,7 @@ void ACA_OVS_Control::packet_out(const char *bridge, const char *opt)
   OVS_Control::get_instance().packet_out(bridge, opt);
 }
 
-void ACA_OVS_Control::parse_packet(void *packet)
+void ACA_OVS_Control::parse_packet(uint32_t in_port, void *packet)
 {
   const struct ether_header *eth_header;
   /* The packet is larger than the ether_header struct,
@@ -223,7 +223,7 @@ void ACA_OVS_Control::parse_packet(void *packet)
     /* dhcp message procedure */
     if (udp_sport == 68 && udp_dport == 67) {
       ACA_LOG_INFO("   Message Type: DHCP\n");
-      aca_dhcp_server::ACA_Dhcp_Server::get_instance().dhcps_recv(
+      aca_dhcp_server::ACA_Dhcp_Server::get_instance().dhcps_recv(in_port, 
               const_cast<unsigned char *>(payload));
     }
   }
