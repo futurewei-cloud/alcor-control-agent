@@ -194,7 +194,8 @@ int main(int argc, char *argv[])
   g_grpc_server_thread =
           new std::thread(std::bind(&GoalStateProvisionerImpl::RunServer, g_grpc_server));
 
-  ACA_OVS_Control::get_instance().monitor("br-tun", "resume");
+  //ACA_OVS_Control::get_instance().monitor("br-tun", "resume");
+  ACA_OVS_Control::get_instance().monitor("br-int", "resume");
 
   MessageConsumer network_config_consumer(g_broker_list, g_kafka_group_id);
   rc = network_config_consumer.consumeDispatched(g_kafka_topic);

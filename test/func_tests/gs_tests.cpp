@@ -41,6 +41,9 @@ using aca_comm_manager::Aca_Comm_Manager;
 // Global variables
 string g_grpc_server = EMPTY_STRING;
 string g_grpc_port = EMPTY_STRING;
+string g_ofctl_command = EMPTY_STRING;
+string g_ofctl_target = EMPTY_STRING;
+string g_ofctl_options = EMPTY_STRING;
 std::atomic_ulong g_total_network_configuration_time(0);
 std::atomic_ulong g_total_update_GS_time(0);
 std::atomic_ulong g_total_ACA_Message_time(0);

@@ -13,6 +13,8 @@ set(SOURCES
     ./ovs/aca_vlan_manager.cpp
     ./ovs/ovs_control.cpp
     ./ovs/aca_ovs_control.cpp
+    ./dhcp/aca_dhcp_state_handler.cpp
+    ./dhcp/aca_dhcp_server.cpp    
 )
 FIND_LIBRARY(RDKAFKA rdkafka /usr/lib/x86_64-linux-gnu NO_DEFAULT_PATH)
 FIND_LIBRARY(CPPKAFKA cppkafka /usr/local/lib NO_DEFAULT_PATH)
