@@ -22,23 +22,21 @@ using namespace std;
 namespace aca_dhcp_programming_if
 {
 struct dhcp_config {
-  string network_id;
   string mac_address;
-  string ip_address;
-  string ep_host_name;
+  string ipv4_address;
+  string ipv6_address;
+  string port_host_name;
 };
 
 // DHCP programming interface class
-class Dhcp_Programming_Interface {
+class ACA_Dhcp_Programming_Interface {
   public:
   // pure virtual functions providing interface framework.
-  virtual int initialize() = 0;
-
   virtual int add_dhcp_entry(dhcp_config *dhcp_config_in) = 0;
 
   virtual int update_dhcp_entry(dhcp_config *dhcp_config_in) = 0;
 
-  virtual int delete_dhcp_entry(string network_id, string mac_address) = 0;
+  virtual int delete_dhcp_entry(dhcp_config *dhcp_config_in) = 0;
 };
 } // namespace aca_dhcp_programming_if
 #endif // #ifndef ACA_DHCP_PROGRAMMING_IF_H

@@ -37,6 +37,7 @@
 #include <openvswitch/ofp-util.h>
 #include <openvswitch/poll-loop.h>
 #include <openvswitch/vlog.h>
+#include "aca_log.h"
 
 using namespace std;
 using namespace aca_ovs_control;
@@ -919,8 +920,8 @@ OVS_Control::monitor_vconn(vconn *vconn, bool reply_to_echo_requests,
                                                      true, NULL, NULL,
                                                      &pin, &total_lenp, &buffer_idp,
                                                      &continuation);
-               
-                    ACA_OVS_Control::get_instance().parse_packet(pin.packet);
+                    uint32_t in_port = pin.flow_metadata.flow.in_port.ofp_port;
+                    ACA_OVS_Control::get_instance().parse_packet(in_port, pin.packet);
 
                     if (error) {
                         fprintf(stderr, "decoding packet-in failed: %s",
