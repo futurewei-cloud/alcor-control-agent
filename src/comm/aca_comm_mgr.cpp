@@ -329,9 +329,6 @@ void Aca_Comm_Manager::print_goal_state(GoalState parsed_struct)
     fprintf(stdout, "current_NeighborConfiguration.id(): %s\n",
             current_NeighborConfiguration.id().c_str());
 
-    fprintf(stdout, "current_NeighborConfiguration.neighbor_type(): %d\n",
-            current_NeighborConfiguration.neighbor_type());
-
     fprintf(stdout, "current_NeighborConfiguration.project_id(): %s\n",
             current_NeighborConfiguration.project_id().c_str());
 
@@ -354,8 +351,9 @@ void Aca_Comm_Manager::print_goal_state(GoalState parsed_struct)
             current_NeighborConfiguration.fixed_ips_size());
 
     for (int j = 0; j < current_NeighborConfiguration.fixed_ips_size(); j++) {
-      fprintf(stdout, "current_NeighborConfiguration.fixed_ips(%d): subnet_id %s, ip_address %s \n",
-              j, current_NeighborConfiguration.fixed_ips(j).subnet_id().c_str(),
+      fprintf(stdout, "current_NeighborConfiguration.fixed_ips(%d): neighbor_type: %d, subnet_id %s, ip_address %s \n",
+              j, current_NeighborConfiguration.fixed_ips(j).neighbor_type(),
+              current_NeighborConfiguration.fixed_ips(j).subnet_id().c_str(),
               current_NeighborConfiguration.fixed_ips(j).ip_address().c_str());
     }
 
@@ -444,12 +442,14 @@ void Aca_Comm_Manager::print_goal_state(GoalState parsed_struct)
     fprintf(stdout, "current_RouterConfiguration.host_dvr_mac_address(): %s \n",
             current_RouterConfiguration.host_dvr_mac_address().c_str());
 
-    fprintf(stdout, "current_RouterConfiguration.subnet_ids_size(): %u \n",
-            current_RouterConfiguration.subnet_ids_size());
+    fprintf(stdout, "current_RouterConfiguration.subnet_routing_tables_size(): %u \n",
+            current_RouterConfiguration.subnet_routing_tables_size());
 
-    for (int j = 0; j < current_RouterConfiguration.subnet_ids_size(); j++) {
-      fprintf(stdout, "current_RouterConfiguration.subnet_ids(%d): %s\n", j,
-              current_RouterConfiguration.subnet_ids(j).c_str());
+    for (int j = 0; j < current_RouterConfiguration.subnet_routing_tables_size(); j++) {
+      fprintf(stdout, "current_RouterConfiguration.subnet_routing_tables(%d): %s\n", j,
+              current_RouterConfiguration.subnet_routing_tables(j).subnet_id().c_str());
+
+      // TODO: add the print out each RoutingRule
     }
 
     printf("\n");

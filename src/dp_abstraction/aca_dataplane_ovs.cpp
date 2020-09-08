@@ -393,8 +393,11 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
   switch (current_NeighborState.operation_type()) {
   case OperationType::CREATE:
 
-    if (current_NeighborConfiguration.neighbor_type() == NeighborType::L2 ||
-        current_NeighborConfiguration.neighbor_type() == NeighborType::L3) {
+    // TODO: add support for more than one fixed_ips in the future
+    assert(current_NeighborConfiguration.fixed_ips_size() == 1);
+
+    if (current_NeighborConfiguration.fixed_ips(0).neighbor_type() == NeighborType::L2 ||
+        current_NeighborConfiguration.fixed_ips(0).neighbor_type() == NeighborType::L3) {
       try {
         assert(current_NeighborConfiguration.fixed_ips_size() == 1);
         virtual_ip_address = current_NeighborConfiguration.fixed_ips(0).ip_address();
@@ -416,7 +419,7 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
         }
 
         neighbor_host_dvr_mac = current_NeighborConfiguration.neighbor_host_dvr_mac();
-        if (current_NeighborConfiguration.neighbor_type() == NeighborType::L3) {
+        if (current_NeighborConfiguration.fixed_ips(0).neighbor_type() == NeighborType::L3) {
           // neighbor_host_dvr_mac is only needed for L3 neighbor
           // the below will throw invalid_argument exceptions if mac string is invalid
           aca_validate_mac_address(neighbor_host_dvr_mac.c_str());
@@ -453,7 +456,8 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
                   "Neighbor Operation:%s: neighbor_type:%s, project_id:%s, vpc_id:%s, network_type:%d, virtual_ip_address:%s, "
                   "virtual_mac_address:%s, neighbor_host_ip_address:%s, tunnel_id:%d, neighbor_host_dvr_mac:%s\n ",
                   aca_get_operation_string(current_NeighborState.operation_type()),
-                  aca_get_neighbor_type_string(current_NeighborConfiguration.neighbor_type()),
+                  aca_get_neighbor_type_string(
+                          current_NeighborConfiguration.fixed_ips(0).neighbor_type()),
                   current_NeighborConfiguration.project_id().c_str(),
                   current_NeighborConfiguration.vpc_id().c_str(),
                   found_network_type, virtual_ip_address.c_str(),
@@ -481,7 +485,8 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
           }
 
           if (overall_rc == EXIT_SUCCESS) {
-            if (current_NeighborConfiguration.neighbor_type() == NeighborType::L3) {
+            if (current_NeighborConfiguration.fixed_ips(0).neighbor_type() ==
+                NeighborType::L3) {
               overall_rc = ACA_OVS_L3_Programmer::get_instance().create_neighbor_l3(
                       current_NeighborConfiguration.vpc_id(),
                       current_NeighborConfiguration.fixed_ips(0).subnet_id(),
@@ -575,8 +580,9 @@ int ACA_Dataplane_OVS::update_router_state_workitem(RouterState current_RouterSt
       overall_rc = EXIT_SUCCESS;
 
       // it is okay for have subnet_ids_size = 0
-      for (int i = 0; i < current_RouterConfiguration.subnet_ids_size(); i++) {
-        string current_router_subnet_id = current_RouterConfiguration.subnet_ids(i);
+      for (int i = 0; i < current_RouterConfiguration.subnet_routing_tables_size(); i++) {
+        string current_router_subnet_id =
+                current_RouterConfiguration.subnet_routing_tables(i).subnet_id();
 
         ACA_LOG_DEBUG("Processing subnet ID: %s for router ID: %s.\n",
                       current_router_subnet_id.c_str(),

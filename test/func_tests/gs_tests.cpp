@@ -222,7 +222,6 @@ class GoalStateProvisionerClient {
             new_neighbor_states->mutable_configuration();
     NeighborConfiguration_builder->set_format_version(1);
     NeighborConfiguration_builder->set_revision_number(1);
-    NeighborConfiguration_builder->set_neighbor_type(NeighborType::L2);
 
     NeighborConfiguration_builder->set_project_id(project_id);
     NeighborConfiguration_builder->set_vpc_id(vpc_id_1);
@@ -230,6 +229,7 @@ class GoalStateProvisionerClient {
 
     NeighborConfiguration_FixedIp *FixedIp_builder =
             NeighborConfiguration_builder->add_fixed_ips();
+    FixedIp_builder->set_neighbor_type(NeighborType::L2);
     FixedIp_builder->set_subnet_id(subnet_id_1);
 
     for (uint i = 0; i < states_to_create; i++) {
@@ -356,7 +356,6 @@ class GoalStateProvisionerClient {
               new_neighbor_states->mutable_configuration();
       NeighborConfiguration_builder->set_format_version(1);
       NeighborConfiguration_builder->set_revision_number(1);
-      NeighborConfiguration_builder->set_neighbor_type(NeighborType::L2);
 
       NeighborConfiguration_builder->set_project_id(project_id);
       NeighborConfiguration_builder->set_vpc_id(vpc_id_1);
@@ -364,6 +363,7 @@ class GoalStateProvisionerClient {
 
       NeighborConfiguration_FixedIp *FixedIp_builder =
               NeighborConfiguration_builder->add_fixed_ips();
+      FixedIp_builder->set_neighbor_type(NeighborType::L2);
       FixedIp_builder->set_subnet_id(subnet_id_1);
 
       for (uint i = 0; i < states_to_create; i++) {
@@ -653,7 +653,6 @@ int main(int argc, char *argv[])
           new_neighbor_states->mutable_configuration();
   NeighborConfiguration_builder->set_format_version(1);
   NeighborConfiguration_builder->set_revision_number(1);
-  NeighborConfiguration_builder->set_neighbor_type(NeighborType::L2);
 
   NeighborConfiguration_builder->set_project_id("99d9d709-8478-4b46-9f3f-000000000000");
   NeighborConfiguration_builder->set_vpc_id("1b08a5bc-b718-11ea-b3de-111122223333");
@@ -663,6 +662,7 @@ int main(int argc, char *argv[])
 
   NeighborConfiguration_FixedIp *FixedIp_builder =
           NeighborConfiguration_builder->add_fixed_ips();
+  FixedIp_builder->set_neighbor_type(NeighborType::L2);
   FixedIp_builder->set_subnet_id("27330ae4-b718-11ea-b3de-111111111111");
   FixedIp_builder->set_ip_address("11.0.0.11");
 
