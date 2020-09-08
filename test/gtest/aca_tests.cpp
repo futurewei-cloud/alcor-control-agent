@@ -776,7 +776,6 @@ TEST(ovs_dataplane_test_cases, 10_l2_neighbor_CREATE)
             new_neighbor_states->mutable_configuration();
     NeighborConfiguration_builder->set_format_version(1);
     NeighborConfiguration_builder->set_revision_number(1);
-    NeighborConfiguration_builder->set_neighbor_type(NeighborType::L2);
 
     NeighborConfiguration_builder->set_project_id(project_id);
     NeighborConfiguration_builder->set_vpc_id("1b08a5bc-b718-11ea-b3de-111122223333");
@@ -786,6 +785,7 @@ TEST(ovs_dataplane_test_cases, 10_l2_neighbor_CREATE)
 
     NeighborConfiguration_FixedIp *FixedIp_builder =
             NeighborConfiguration_builder->add_fixed_ips();
+    FixedIp_builder->set_neighbor_type(NeighborType::L2);
     FixedIp_builder->set_subnet_id(subnet_id_1);
     FixedIp_builder->set_ip_address(ip_address_prefix + i_string);
   }
@@ -1356,8 +1356,13 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_ROUTING_test_traffic_one_machine
 
   RouterConfiguration_builder->set_id("router_id1");
   RouterConfiguration_builder->set_host_dvr_mac_address("fa:16:3e:d7:f2:02");
-  RouterConfiguration_builder->add_subnet_ids(subnet_id_1);
-  RouterConfiguration_builder->add_subnet_ids(subnet_id_2);
+
+  auto *RouterConfiguration_SubnetRoutingTable_builder =
+          RouterConfiguration_builder->add_subnet_routing_tables();
+  RouterConfiguration_SubnetRoutingTable_builder->set_subnet_id(subnet_id_1);
+  auto *RouterConfiguration_SubnetRoutingTable_builder2 =
+          RouterConfiguration_builder->add_subnet_routing_tables();
+  RouterConfiguration_SubnetRoutingTable_builder2->set_subnet_id(subnet_id_2);
 
   // fill in subnet state structs
   aca_test_create_default_subnet_state(new_subnet_states1);
@@ -1415,7 +1420,6 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_ROUTING_test_traffic_one_machine
   NeighborConfiguration_builder3->set_format_version(1);
   NeighborConfiguration_builder3->set_revision_number(1);
 
-  NeighborConfiguration_builder3->set_neighbor_type(NeighborType::L3);
   NeighborConfiguration_builder3->set_project_id(project_id);
   NeighborConfiguration_builder3->set_vpc_id(vpc_id_1);
   NeighborConfiguration_builder3->set_name(port_name_3);
@@ -1426,6 +1430,7 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_ROUTING_test_traffic_one_machine
 
   NeighborConfiguration_FixedIp *FixedIp_builder3 =
           NeighborConfiguration_builder3->add_fixed_ips();
+  FixedIp_builder3->set_neighbor_type(NeighborType::L3);
   FixedIp_builder3->set_subnet_id(subnet_id_1);
   FixedIp_builder3->set_ip_address(vip_address_3);
 
@@ -1437,7 +1442,6 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_ROUTING_test_traffic_one_machine
   NeighborConfiguration_builder4->set_format_version(1);
   NeighborConfiguration_builder4->set_revision_number(1);
 
-  NeighborConfiguration_builder4->set_neighbor_type(NeighborType::L3);
   NeighborConfiguration_builder4->set_project_id(project_id);
   NeighborConfiguration_builder4->set_vpc_id(vpc_id_2);
   NeighborConfiguration_builder4->set_name(port_name_4);
@@ -1448,6 +1452,7 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_ROUTING_test_traffic_one_machine
 
   NeighborConfiguration_FixedIp *FixedIp_builder4 =
           NeighborConfiguration_builder4->add_fixed_ips();
+  FixedIp_builder4->set_neighbor_type(NeighborType::L3);
   FixedIp_builder4->set_subnet_id(subnet_id_2);
   FixedIp_builder4->set_ip_address(vip_address_4);
 
@@ -1690,8 +1695,13 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_ROUTING_test_traffic_MASTER)
 
   RouterConfiguration_builder->set_id("router_id1");
   RouterConfiguration_builder->set_host_dvr_mac_address(host1_dvr_mac_address);
-  RouterConfiguration_builder->add_subnet_ids(subnet_id_1);
-  RouterConfiguration_builder->add_subnet_ids(subnet_id_2);
+
+  auto *RouterConfiguration_SubnetRoutingTable_builder =
+          RouterConfiguration_builder->add_subnet_routing_tables();
+  RouterConfiguration_SubnetRoutingTable_builder->set_subnet_id(subnet_id_1);
+  auto *RouterConfiguration_SubnetRoutingTable_builder2 =
+          RouterConfiguration_builder->add_subnet_routing_tables();
+  RouterConfiguration_SubnetRoutingTable_builder2->set_subnet_id(subnet_id_2);
 
   // fill in subnet state structs
   aca_test_create_default_subnet_state(new_subnet_states1);
@@ -1749,7 +1759,6 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_ROUTING_test_traffic_MASTER)
   NeighborConfiguration_builder3->set_format_version(1);
   NeighborConfiguration_builder3->set_revision_number(1);
 
-  NeighborConfiguration_builder3->set_neighbor_type(NeighborType::L3);
   NeighborConfiguration_builder3->set_project_id(project_id);
   NeighborConfiguration_builder3->set_vpc_id(vpc_id_1);
   NeighborConfiguration_builder3->set_name(port_name_3);
@@ -1760,6 +1769,7 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_ROUTING_test_traffic_MASTER)
 
   NeighborConfiguration_FixedIp *FixedIp_builder3 =
           NeighborConfiguration_builder3->add_fixed_ips();
+  FixedIp_builder3->set_neighbor_type(NeighborType::L3);
   FixedIp_builder3->set_subnet_id(subnet_id_1);
   FixedIp_builder3->set_ip_address(vip_address_3);
 
@@ -1771,7 +1781,6 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_ROUTING_test_traffic_MASTER)
   NeighborConfiguration_builder4->set_format_version(1);
   NeighborConfiguration_builder4->set_revision_number(1);
 
-  NeighborConfiguration_builder4->set_neighbor_type(NeighborType::L3);
   NeighborConfiguration_builder4->set_project_id(project_id);
   NeighborConfiguration_builder4->set_vpc_id(vpc_id_2);
   NeighborConfiguration_builder4->set_name(port_name_4);
@@ -1782,6 +1791,7 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_ROUTING_test_traffic_MASTER)
 
   NeighborConfiguration_FixedIp *FixedIp_builder4 =
           NeighborConfiguration_builder4->add_fixed_ips();
+  FixedIp_builder4->set_neighbor_type(NeighborType::L3);
   FixedIp_builder4->set_subnet_id(subnet_id_2);
   FixedIp_builder4->set_ip_address(vip_address_4);
 
@@ -2011,8 +2021,13 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_ROUTING_test_traffic_SLAVE)
 
   RouterConfiguration_builder->set_id("router_id2");
   RouterConfiguration_builder->set_host_dvr_mac_address(host2_dvr_mac_address);
-  RouterConfiguration_builder->add_subnet_ids(subnet_id_1);
-  RouterConfiguration_builder->add_subnet_ids(subnet_id_2);
+
+  auto *RouterConfiguration_SubnetRoutingTable_builder =
+          RouterConfiguration_builder->add_subnet_routing_tables();
+  RouterConfiguration_SubnetRoutingTable_builder->set_subnet_id(subnet_id_1);
+  auto *RouterConfiguration_SubnetRoutingTable_builder2 =
+          RouterConfiguration_builder->add_subnet_routing_tables();
+  RouterConfiguration_SubnetRoutingTable_builder2->set_subnet_id(subnet_id_2);
 
   // fill in subnet state structs
   aca_test_create_default_subnet_state(new_subnet_states1);
@@ -2070,7 +2085,6 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_ROUTING_test_traffic_SLAVE)
   NeighborConfiguration_builder3->set_format_version(1);
   NeighborConfiguration_builder3->set_revision_number(1);
 
-  NeighborConfiguration_builder3->set_neighbor_type(NeighborType::L3);
   NeighborConfiguration_builder3->set_project_id(project_id);
   NeighborConfiguration_builder3->set_vpc_id(vpc_id_1);
   NeighborConfiguration_builder3->set_name(port_name_1);
@@ -2081,6 +2095,7 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_ROUTING_test_traffic_SLAVE)
 
   NeighborConfiguration_FixedIp *FixedIp_builder3 =
           NeighborConfiguration_builder3->add_fixed_ips();
+  FixedIp_builder3->set_neighbor_type(NeighborType::L3);
   FixedIp_builder3->set_subnet_id(subnet_id_1);
   FixedIp_builder3->set_ip_address(vip_address_1);
 
@@ -2092,7 +2107,6 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_ROUTING_test_traffic_SLAVE)
   NeighborConfiguration_builder4->set_format_version(1);
   NeighborConfiguration_builder4->set_revision_number(1);
 
-  NeighborConfiguration_builder4->set_neighbor_type(NeighborType::L3);
   NeighborConfiguration_builder4->set_project_id(project_id);
   NeighborConfiguration_builder4->set_vpc_id(vpc_id_2);
   NeighborConfiguration_builder4->set_name(port_name_2);
@@ -2103,6 +2117,7 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_ROUTING_test_traffic_SLAVE)
 
   NeighborConfiguration_FixedIp *FixedIp_builder4 =
           NeighborConfiguration_builder4->add_fixed_ips();
+  FixedIp_builder4->set_neighbor_type(NeighborType::L3);
   FixedIp_builder4->set_subnet_id(subnet_id_2);
   FixedIp_builder4->set_ip_address(vip_address_2);
 
