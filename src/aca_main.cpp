@@ -33,8 +33,7 @@ static char EMPTY_STRING[] = "";
 static char BROKER_LIST[] = "172.17.0.1:9092";
 static char KAFKA_TOPIC[] = "Host-ts-1";
 static char KAFKA_GROUP_ID[] = "test-group-id";
-static char LOCALHOST[] = "localhost";
-static char UDP_PROTOCOL[] = "udp";
+static char GRPC_SERVER_PORT[] = "50001";
 static char OFCTL_COMMAND[] = "monitor";
 static char OFCTL_TARGET[] = "br-int";
 
@@ -47,8 +46,7 @@ GoalStateProvisionerImpl *g_grpc_server = NULL;
 string g_broker_list = EMPTY_STRING;
 string g_kafka_topic = EMPTY_STRING;
 string g_kafka_group_id = EMPTY_STRING;
-string g_rpc_server = EMPTY_STRING;
-string g_rpc_protocol = EMPTY_STRING;
+string g_grpc_server_port = EMPTY_STRING;
 string g_ofctl_command = EMPTY_STRING;
 string g_ofctl_target = EMPTY_STRING;
 string g_ofctl_options = EMPTY_STRING;
@@ -129,11 +127,8 @@ int main(int argc, char *argv[])
     case 'g':
       g_kafka_group_id = optarg;
       break;
-    case 's':
-      g_rpc_server = optarg;
-      break;
     case 'p':
-      g_rpc_protocol = optarg;
+      g_grpc_server_port = optarg;
       break;
     case 'c':
       g_ofctl_command = optarg;
@@ -156,8 +151,7 @@ int main(int argc, char *argv[])
               "\t\t[-b kafka broker list]\n"
               "\t\t[-h kafka host topic to listen]\n"
               "\t\t[-g kafka group id]\n"
-              "\t\t[-s transitd RPC server]\n"
-              "\t\t[-p transitd RPC protocol]\n"
+              "\t\t[-p gRPC server port\n"
               "\t\t[-c ofctl command]\n"
               "\t\t[-t ofctl target]\n"
               "\t\t[-m enable demo mode]\n"
@@ -177,11 +171,8 @@ int main(int argc, char *argv[])
   if (g_kafka_group_id == EMPTY_STRING) {
     g_kafka_group_id = KAFKA_GROUP_ID;
   }
-  if (g_rpc_server == EMPTY_STRING) {
-    g_rpc_server = LOCALHOST;
-  }
-  if (g_rpc_protocol == EMPTY_STRING) {
-    g_rpc_protocol = UDP_PROTOCOL;
+  if (g_grpc_server_port == EMPTY_STRING) {
+    g_grpc_server_port = GRPC_SERVER_PORT;
   }
   if (g_ofctl_command == EMPTY_STRING) {
     g_ofctl_command = OFCTL_COMMAND;
