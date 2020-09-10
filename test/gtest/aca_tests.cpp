@@ -14,8 +14,8 @@
 
 #include "aca_log.h"
 #include "aca_util.h"
+#include "aca_config.h"
 #include "aca_ovs_l2_programmer.h"
-// #include "aca_ovs_l3_programmer.h"
 #include "aca_comm_mgr.h"
 #include "aca_net_config.h"
 #include "gtest/gtest.h"
@@ -37,7 +37,6 @@ using namespace aca_dhcp_programming_if;
 
 // Defines
 #define ACALOGNAME "AlcorControlAgentTest"
-#define HOST_DVR_MAC_PREFIX "fe:16:11:"
 
 static char EMPTY_STRING[] = "";
 static char VALID_STRING[] = "VALID_STRING";

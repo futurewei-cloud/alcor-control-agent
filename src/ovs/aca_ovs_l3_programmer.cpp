@@ -14,6 +14,7 @@
 
 #include "aca_log.h"
 #include "aca_util.h"
+#include "aca_config.h"
 #include "aca_net_config.h"
 #include "aca_vlan_manager.h"
 #include "aca_ovs_l2_programmer.h"
@@ -26,11 +27,6 @@
 #include <arpa/inet.h>
 
 #define HEX_IP_BUFFER_SIZE 12
-
-// prefix to indicate it is an Alcor Distributed Router host mac
-// (aka host DVR mac)
-#define HOST_DVR_MAC_PREFIX "fe:16:11:"
-#define HOST_DVR_MAC_MATCH HOST_DVR_MAC_PREFIX + "00:00:00/ff:ff:ff:00:00:00"
 
 using namespace std;
 using namespace aca_vlan_manager;
