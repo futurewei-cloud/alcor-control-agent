@@ -14,8 +14,8 @@
 
 #include "aca_log.h"
 #include "aca_util.h"
+#include "aca_config.h"
 #include "aca_ovs_l2_programmer.h"
-// #include "aca_ovs_l3_programmer.h"
 #include "aca_comm_mgr.h"
 #include "aca_net_config.h"
 #include "gtest/gtest.h"
@@ -69,8 +69,8 @@ static string subnet1_gw_ip = "10.10.0.1";
 static string subnet2_gw_ip = "10.10.1.1";
 static string subnet1_gw_mac = "fa:16:3e:d7:f2:11";
 static string subnet2_gw_mac = "fa:16:3e:d7:f2:21";
-static string host1_dvr_mac_address = "fa:16:3e:d7:f2:01";
-static string host2_dvr_mac_address = "fa:16:3e:d7:f2:02";
+static string host1_dvr_mac_address = HOST_DVR_MAC_PREFIX + string("d7:f2:01");
+static string host2_dvr_mac_address = HOST_DVR_MAC_PREFIX + string("d7:f2:02");
 static NetworkType vxlan_type = NetworkType::VXLAN;
 
 // Global variables

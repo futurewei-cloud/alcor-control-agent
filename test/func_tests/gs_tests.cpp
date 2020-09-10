@@ -183,7 +183,7 @@ class GoalStateProvisionerClient {
                  sync_call_ns, sync_call_ns / 1000000);
 
     if (!status.ok()) {
-      ACA_LOG_ERROR("RPC call failed");
+      ACA_LOG_ERROR("RPC call failed\n");
     }
   }
 
@@ -415,7 +415,7 @@ class GoalStateProvisionerClient {
                  (send_goalstate_ns - g_total_ACA_Message_time.load()) / 1000000);
 
     if (!status.ok()) {
-      ACA_LOG_ERROR("RPC call failed");
+      ACA_LOG_ERROR("RPC call failed\n");
     }
   }
 

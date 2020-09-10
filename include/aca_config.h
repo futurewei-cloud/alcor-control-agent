@@ -18,4 +18,9 @@
 #define MAX_PORT_SCAN_RETRY 300
 #define PORT_SCAN_SLEEP_INTERVAL 1000 // 1000ms = 1s
 
+// prefix to indicate it is an Alcor Distributed Router host mac
+// (aka host DVR mac)
+#define HOST_DVR_MAC_PREFIX "fe:16:11:"
+#define HOST_DVR_MAC_MATCH HOST_DVR_MAC_PREFIX + "00:00:00/ff:ff:ff:00:00:00"
+
 #endif // #ifndef ACA_CONFIG_H
