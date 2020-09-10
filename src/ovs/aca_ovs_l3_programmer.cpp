@@ -30,7 +30,7 @@
 // prefix to indicate it is an Alcor Distributed Router host mac
 // (aka host DVR mac)
 #define HOST_DVR_MAC_PREFIX "fe:16:11:"
-#define HOST_DVR_MAC_MATCH HOST_DVR_MAC_PREFIX + ":00:00:00/ff:ff:ff:00:00:00"
+#define HOST_DVR_MAC_MATCH HOST_DVR_MAC_PREFIX + "00:00:00/ff:ff:ff:00:00:00"
 
 using namespace std;
 using namespace aca_vlan_manager;
