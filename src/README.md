@@ -4,18 +4,20 @@ Next Generation Cloud Network Control Agent
 # Summary
 Source code folder:
 
-- Comm: Library for communication with network controllers and transit daemon
+- comm: Library for communication with Alcor controllers, includes gRPC and MQ implementation
+- dhcp: DHCP server implementation
+- dp_abstraction: Data plane abstraction layer implementation
 - grpc: Auto generated source codes and library for gRPC interface with Alcor Controllers
 - net_config: Library for configurating host networking components
+- ovs: OVS data plane implementation
 - proto3: Auto generated source codes and library for proto3 scheme for communication with Alcor Controllers
-- transit_rpc: Library for RPC interface with transit daemon
 - test: Unit and integration test code
 
 # Build and Execution Instructions using Dockerfile
 Since the Alcor Control Agent relies on a few external dependencies, Dockerfile was used for fast build and test environment setup.
 
 ## Setting up a Development Environment
-The Alcor Control Agent project currently uses cmake for building. It includes the Alcor controller and Transit submodules to consume the needed proto3 schemas and RPC definitions.
+The Alcor Control Agent project currently uses cmake for building. It includes the Alcor controller submodule to consume the needed proto3 schemas and gRPC definitions.
 
 To set up your local development environment, we recommend to use fork-and-branch git workflow.
 
@@ -65,6 +67,14 @@ Assuming alcor-control-agent was cloned into ~/dev/alcor-control-agent directory
 cd ~/dev/alcor-control-agent
 ./build/build.sh
 ```
+
+## You can also setup a physical machine or VM to compile the alcor-control-agent
+Assuming alcor-control-agent was cloned into ~/dev/alcor-control-agent directory:
+```Shell
+cd ~/dev/alcor-control-agent
+./build/aca-machine-init.sh
+```
+
 ## Running alcor-control-agent and tests
 You can run the test (optional):
 ```Shell
