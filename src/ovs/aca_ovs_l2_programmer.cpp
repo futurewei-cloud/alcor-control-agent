@@ -189,10 +189,6 @@ int ACA_OVS_L2_Programmer::configure_port(const string vpc_id, const string port
     throw std::invalid_argument("tunnel_id is 0");
   }
 
-  if (overall_rc != EXIT_SUCCESS) {
-    throw std::runtime_error("Invalid environment with br-int and br-tun");
-  }
-
   // TODO: if ovs_port already exist in vlan manager, that means it is a duplicated
   // port CREATE operation, we have the following options to handle it:
   // 1. Reject call with error message
@@ -277,10 +273,6 @@ int ACA_OVS_L2_Programmer::create_update_neighbor_port(const string vpc_id,
 
   if (tunnel_id == 0) {
     throw std::invalid_argument("tunnel_id is 0");
-  }
-
-  if (overall_rc != EXIT_SUCCESS) {
-    throw std::runtime_error("Invalid environment with br-int and br-tun");
   }
 
   string outport_name = aca_get_outport_name(network_type, remote_host_ip);

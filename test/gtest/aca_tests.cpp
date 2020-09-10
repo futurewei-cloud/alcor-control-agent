@@ -37,6 +37,7 @@ using namespace aca_dhcp_programming_if;
 
 // Defines
 #define ACALOGNAME "AlcorControlAgentTest"
+#define HOST_DVR_MAC_PREFIX "fe:16:11:"
 
 static char EMPTY_STRING[] = "";
 static char VALID_STRING[] = "VALID_STRING";
@@ -69,8 +70,8 @@ static string subnet1_gw_ip = "10.10.0.1";
 static string subnet2_gw_ip = "10.10.1.1";
 static string subnet1_gw_mac = "fa:16:3e:d7:f2:11";
 static string subnet2_gw_mac = "fa:16:3e:d7:f2:21";
-static string host1_dvr_mac_address = "fa:16:3e:d7:f2:01";
-static string host2_dvr_mac_address = "fa:16:3e:d7:f2:02";
+static string host1_dvr_mac_address = HOST_DVR_MAC_PREFIX + string("d7:f2:01");
+static string host2_dvr_mac_address = HOST_DVR_MAC_PREFIX + string("d7:f2:02");
 static NetworkType vxlan_type = NetworkType::VXLAN;
 
 // Global variables

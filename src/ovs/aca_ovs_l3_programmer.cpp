@@ -27,6 +27,11 @@
 
 #define HEX_IP_BUFFER_SIZE 12
 
+// prefix to indicate it is an Alcor Distributed Router host mac
+// (aka host DVR mac)
+#define HOST_DVR_MAC_PREFIX "fe:16:11:"
+#define HOST_DVR_MAC_MATCH HOST_DVR_MAC_PREFIX + ":00:00:00/ff:ff:ff:00:00:00"
+
 using namespace std;
 using namespace aca_vlan_manager;
 using namespace aca_ovs_l2_programmer;
@@ -71,10 +76,6 @@ int ACA_OVS_L3_Programmer::create_router(const string host_dvr_mac, const string
 
   if (router_id.empty()) {
     throw std::invalid_argument("router_id is empty");
-  }
-
-  if (overall_rc != EXIT_SUCCESS) {
-    throw std::runtime_error("Invalid environment with br-int and br-tun");
   }
 
   // -----critical section starts-----
@@ -167,10 +168,6 @@ int ACA_OVS_L3_Programmer::create_neighbor_l3(
     throw std::invalid_argument("tunnel_id is 0");
   }
 
-  if (overall_rc != EXIT_SUCCESS) {
-    throw std::runtime_error("Invalid environment with br-int and br-tun");
-  }
-
   // TODO: insert the port info into _routers_table, for use with on demand rule programming later
 
   bool is_port_on_same_host = aca_is_port_on_same_host(remote_host_ip);
@@ -205,8 +202,9 @@ int ACA_OVS_L3_Programmer::create_neighbor_l3(
         // essential rule to restore from neighbor host DVR mac to destination GW mac:
         // not needed if the neighbor port is at the same compute host
         if (!is_port_on_same_host) {
+          // Note: all port from the same subnet on current host will share this rule
           cmd_string = "add-flow br-int \"table=0,priority=25,dl_vlan=" +
-                       to_string(source_vlan_id) + ",dl_src=" + neighbor_host_dvr_mac +
+                       to_string(source_vlan_id) + ",dl_src=" + HOST_DVR_MAC_MATCH +
                        " actions=mod_dl_src:" + subnet_it->second.gateway_mac +
                        " output:NORMAL\"";
 
@@ -242,7 +240,7 @@ int ACA_OVS_L3_Programmer::create_neighbor_l3(
       }
       // we found our interested router from _routers_table which has the destination subnet GW connected to it.
       // Since each subnet GW can only be connected to one router, therefore, there is no point to look at other
-      // routers on the higher level for (auto router_it = _routers_table.begin() loop
+      // routers on the higher level for (auto router_it = _routers_table.begin();...) loop
       break;
     }
   }
