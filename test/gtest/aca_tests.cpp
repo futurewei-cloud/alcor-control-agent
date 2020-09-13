@@ -1426,8 +1426,6 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_ROUTING_test_traffic_one_machine
   NeighborConfiguration_builder3->set_mac_address(vmac_address_3);
   NeighborConfiguration_builder3->set_host_ip_address(remote_ip_2);
 
-  NeighborConfiguration_builder3->set_neighbor_host_dvr_mac(host2_dvr_mac_address);
-
   NeighborConfiguration_FixedIp *FixedIp_builder3 =
           NeighborConfiguration_builder3->add_fixed_ips();
   FixedIp_builder3->set_neighbor_type(NeighborType::L3);
@@ -1447,8 +1445,6 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_ROUTING_test_traffic_one_machine
   NeighborConfiguration_builder4->set_name(port_name_4);
   NeighborConfiguration_builder4->set_mac_address(vmac_address_4);
   NeighborConfiguration_builder4->set_host_ip_address(remote_ip_2);
-
-  NeighborConfiguration_builder4->set_neighbor_host_dvr_mac(host2_dvr_mac_address);
 
   NeighborConfiguration_FixedIp *FixedIp_builder4 =
           NeighborConfiguration_builder4->add_fixed_ips();
@@ -1765,8 +1761,6 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_ROUTING_test_traffic_MASTER)
   NeighborConfiguration_builder3->set_mac_address(vmac_address_3);
   NeighborConfiguration_builder3->set_host_ip_address(remote_ip_2);
 
-  NeighborConfiguration_builder3->set_neighbor_host_dvr_mac(host2_dvr_mac_address);
-
   NeighborConfiguration_FixedIp *FixedIp_builder3 =
           NeighborConfiguration_builder3->add_fixed_ips();
   FixedIp_builder3->set_neighbor_type(NeighborType::L3);
@@ -1786,8 +1780,6 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_ROUTING_test_traffic_MASTER)
   NeighborConfiguration_builder4->set_name(port_name_4);
   NeighborConfiguration_builder4->set_mac_address(vmac_address_4);
   NeighborConfiguration_builder4->set_host_ip_address(remote_ip_2);
-
-  NeighborConfiguration_builder4->set_neighbor_host_dvr_mac(host2_dvr_mac_address);
 
   NeighborConfiguration_FixedIp *FixedIp_builder4 =
           NeighborConfiguration_builder4->add_fixed_ips();
@@ -2091,8 +2083,6 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_ROUTING_test_traffic_SLAVE)
   NeighborConfiguration_builder3->set_mac_address(vmac_address_1);
   NeighborConfiguration_builder3->set_host_ip_address(remote_ip_1);
 
-  NeighborConfiguration_builder3->set_neighbor_host_dvr_mac(host1_dvr_mac_address);
-
   NeighborConfiguration_FixedIp *FixedIp_builder3 =
           NeighborConfiguration_builder3->add_fixed_ips();
   FixedIp_builder3->set_neighbor_type(NeighborType::L3);
@@ -2112,8 +2102,6 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_ROUTING_test_traffic_SLAVE)
   NeighborConfiguration_builder4->set_name(port_name_2);
   NeighborConfiguration_builder4->set_mac_address(vmac_address_2);
   NeighborConfiguration_builder4->set_host_ip_address(remote_ip_1);
-
-  NeighborConfiguration_builder4->set_neighbor_host_dvr_mac(host1_dvr_mac_address);
 
   NeighborConfiguration_FixedIp *FixedIp_builder4 =
           NeighborConfiguration_builder4->add_fixed_ips();

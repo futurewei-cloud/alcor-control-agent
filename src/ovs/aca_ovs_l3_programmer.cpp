@@ -43,7 +43,7 @@ ACA_OVS_L3_Programmer &ACA_OVS_L3_Programmer::get_instance()
 }
 
 int ACA_OVS_L3_Programmer::create_router(const string host_dvr_mac, const string router_id,
-                                         unordered_map<std::string, subnet_table_entry> subnets_table,
+                                         unordered_map<std::string, subnet_routing_table_entry> subnet_routing_tables,
                                          ulong &culminative_time)
 {
   ACA_LOG_DEBUG("ACA_OVS_L3_Programmer::create_router ---> Entering\n");
@@ -77,13 +77,14 @@ int ACA_OVS_L3_Programmer::create_router(const string host_dvr_mac, const string
   // -----critical section starts-----
   _routers_table_mutex.lock();
   if (_routers_table.find(router_id) == _routers_table.end()) {
-    _routers_table.emplace(router_id, subnets_table);
+    _routers_table.emplace(router_id, subnet_routing_tables);
   }
   _routers_table_mutex.unlock();
   // -----critical section ends-----
 
   // for each subnet's gateway:
-  for (auto subnet_it = subnets_table.begin(); subnet_it != subnets_table.end(); subnet_it++) {
+  for (auto subnet_it = subnet_routing_tables.begin();
+       subnet_it != subnet_routing_tables.end(); subnet_it++) {
     ACA_LOG_DEBUG("subnet_id:%s\n ", subnet_it->first.c_str());
 
     source_vlan_id = ACA_Vlan_Manager::get_instance().get_or_create_vlan_id(
@@ -130,11 +131,11 @@ int ACA_OVS_L3_Programmer::create_router(const string host_dvr_mac, const string
   return overall_rc;
 }
 
-int ACA_OVS_L3_Programmer::create_neighbor_l3(
-        const string vpc_id, const string subnet_id,
-        alcor::schema::NetworkType network_type, const string virtual_ip,
-        const string virtual_mac, const string remote_host_ip, uint tunnel_id,
-        const string neighbor_host_dvr_mac, ulong &culminative_time)
+int ACA_OVS_L3_Programmer::create_neighbor_l3(const string vpc_id, const string subnet_id,
+                                              alcor::schema::NetworkType network_type,
+                                              const string virtual_ip, const string virtual_mac,
+                                              const string remote_host_ip,
+                                              uint tunnel_id, ulong &culminative_time)
 {
   ACA_LOG_DEBUG("ACA_OVS_L3_Programmer::create_neighbor_l3 ---> Entering\n");
 

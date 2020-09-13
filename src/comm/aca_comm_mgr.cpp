@@ -344,9 +344,6 @@ void Aca_Comm_Manager::print_goal_state(GoalState parsed_struct)
     fprintf(stdout, "current_NeighborConfiguration.host_ip_address(): %s \n",
             current_NeighborConfiguration.host_ip_address().c_str());
 
-    fprintf(stdout, "current_NeighborConfiguration.neighbor_host_dvr_mac(): %s \n",
-            current_NeighborConfiguration.neighbor_host_dvr_mac().c_str());
-
     fprintf(stdout, "current_NeighborConfiguration.fixed_ips_size(): %u \n",
             current_NeighborConfiguration.fixed_ips_size());
 

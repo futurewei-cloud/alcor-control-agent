@@ -361,7 +361,7 @@ int ACA_Dataplane_OVS::update_port_state_workitem(const PortState current_PortSt
   }
 
   return overall_rc;
-} // namespace aca_dataplane_ovs
+}
 
 int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_NeighborState,
                                                       GoalState &parsed_struct,
@@ -375,7 +375,6 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
   NetworkType found_network_type;
   uint found_tunnel_id;
   string found_gateway_mac;
-  string neighbor_host_dvr_mac;
   bool subnet_info_found = false;
   ulong culminative_dataplane_programming_time = 0;
   ulong culminative_network_configuration_time = 0;
@@ -418,13 +417,6 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
           throw std::invalid_argument("Neighbor host ip address is not in the expect format");
         }
 
-        neighbor_host_dvr_mac = current_NeighborConfiguration.neighbor_host_dvr_mac();
-        if (current_NeighborConfiguration.fixed_ips(0).neighbor_type() == NeighborType::L3) {
-          // neighbor_host_dvr_mac is only needed for L3 neighbor
-          // the below will throw invalid_argument exceptions if mac string is invalid
-          aca_validate_mac_address(neighbor_host_dvr_mac.c_str());
-        }
-
         // Look up the subnet configuration to query for tunnel_id
         for (int j = 0; j < parsed_struct.subnet_states_size(); j++) {
           SubnetConfiguration current_SubnetConfiguration =
@@ -454,15 +446,14 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
         } else {
           ACA_LOG_DEBUG(
                   "Neighbor Operation:%s: neighbor_type:%s, project_id:%s, vpc_id:%s, network_type:%d, virtual_ip_address:%s, "
-                  "virtual_mac_address:%s, neighbor_host_ip_address:%s, tunnel_id:%d, neighbor_host_dvr_mac:%s\n ",
+                  "virtual_mac_address:%s, neighbor_host_ip_address:%s, tunnel_id:%d\n ",
                   aca_get_operation_string(current_NeighborState.operation_type()),
                   aca_get_neighbor_type_string(
                           current_NeighborConfiguration.fixed_ips(0).neighbor_type()),
                   current_NeighborConfiguration.project_id().c_str(),
-                  current_NeighborConfiguration.vpc_id().c_str(),
-                  found_network_type, virtual_ip_address.c_str(),
-                  virtual_mac_address.c_str(), host_ip_address.c_str(),
-                  found_tunnel_id, neighbor_host_dvr_mac.c_str());
+                  current_NeighborConfiguration.vpc_id().c_str(), found_network_type,
+                  virtual_ip_address.c_str(), virtual_mac_address.c_str(),
+                  host_ip_address.c_str(), found_tunnel_id);
 
           // with Alcor DVR, a cross subnet packet will be routed to the destination subnet.
           // that means a L3 neighbor will become a L2 neighbor, therefore, call the below
@@ -489,10 +480,9 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
                 NeighborType::L3) {
               overall_rc = ACA_OVS_L3_Programmer::get_instance().create_neighbor_l3(
                       current_NeighborConfiguration.vpc_id(),
-                      current_NeighborConfiguration.fixed_ips(0).subnet_id(),
-                      found_network_type, virtual_ip_address, virtual_mac_address,
-                      host_ip_address, found_tunnel_id, neighbor_host_dvr_mac,
-                      culminative_dataplane_programming_time);
+                      current_NeighborConfiguration.fixed_ips(0).subnet_id(), found_network_type,
+                      virtual_ip_address, virtual_mac_address, host_ip_address,
+                      found_tunnel_id, culminative_dataplane_programming_time);
             }
           }
         }
@@ -568,30 +558,34 @@ int ACA_Dataplane_OVS::update_router_state_workitem(RouterState current_RouterSt
 
   switch (current_RouterState.operation_type()) {
   case OperationType::CREATE:
-
+    [[fallthrough]];
+  case OperationType::INFO:
     try {
       host_dvr_mac = current_RouterConfiguration.host_dvr_mac_address();
       // the below will throw invalid_argument exceptions if mac string is invalid
       aca_validate_mac_address(host_dvr_mac.c_str());
 
-      unordered_map<string, subnet_table_entry> new_subnet_table;
+      unordered_map<string, subnet_routing_table_entry> new_subnet_routing_tables;
 
       // assume EXIT_SUCCESS unless we run into error
       overall_rc = EXIT_SUCCESS;
 
-      // it is okay for have subnet_ids_size = 0
+      // it is okay for have subnet_routing_tables_size = 0
       for (int i = 0; i < current_RouterConfiguration.subnet_routing_tables_size(); i++) {
-        string current_router_subnet_id =
-                current_RouterConfiguration.subnet_routing_tables(i).subnet_id();
+        auto current_subnet_routing_table =
+                current_RouterConfiguration.subnet_routing_tables(i);
+
+        string current_router_subnet_id = current_subnet_routing_table.subnet_id();
 
         ACA_LOG_DEBUG("Processing subnet ID: %s for router ID: %s.\n",
                       current_router_subnet_id.c_str(),
                       current_RouterConfiguration.id().c_str());
 
         // check if current_router_subnet_id has already been added to new_subnet_table
-        if (new_subnet_table.find(current_router_subnet_id) != new_subnet_table.end()) {
+        if (new_subnet_routing_tables.find(current_router_subnet_id) !=
+            new_subnet_routing_tables.end()) {
           throw std::invalid_argument("subnet id: " + current_router_subnet_id +
-                                      " already existed on the router");
+                                      " already existed on current router configuration");
         }
 
         // Look up the subnet configuration to query for additional info
@@ -626,17 +620,37 @@ int ACA_Dataplane_OVS::update_router_state_workitem(RouterState current_RouterSt
               // the below will throw invalid_argument exceptions if mac string is invalid
               aca_validate_mac_address(found_gateway_mac.c_str());
 
-              // populate the subnet table entry and then add that to new_subnet_table
-              subnet_table_entry new_subnet_table_entry;
-              new_subnet_table_entry.vpc_id = current_SubnetConfiguration.vpc_id();
-              new_subnet_table_entry.network_type =
+              // populate the subnet routing table entry and then add that to new_subnet_routing_table
+              subnet_routing_table_entry new_subnet_routing_table_entry;
+              new_subnet_routing_table_entry.vpc_id =
+                      current_SubnetConfiguration.vpc_id();
+              new_subnet_routing_table_entry.network_type =
                       current_SubnetConfiguration.network_type();
-              new_subnet_table_entry.cidr = found_cidr;
-              new_subnet_table_entry.tunnel_id = found_tunnel_id;
-              new_subnet_table_entry.gateway_ip = found_gateway_ip;
-              new_subnet_table_entry.gateway_mac = found_gateway_mac;
+              new_subnet_routing_table_entry.cidr = found_cidr;
+              new_subnet_routing_table_entry.tunnel_id = found_tunnel_id;
+              new_subnet_routing_table_entry.gateway_ip = found_gateway_ip;
+              new_subnet_routing_table_entry.gateway_mac = found_gateway_mac;
 
-              new_subnet_table.emplace(current_router_subnet_id, new_subnet_table_entry);
+              for (int k = 0; k < current_subnet_routing_table.routing_rules_size(); k++) {
+                auto current_routing_rule =
+                        current_subnet_routing_table.routing_rules(k);
+
+                // populate the routing_rule_table_entry and then add that to
+                // new_subnet_routing_table_entry.routing_rules
+                routing_rule_table_entry routing_rule_table_entry;
+                routing_rule_table_entry.next_hop_ip = current_routing_rule.next_hop_ip();
+                routing_rule_table_entry.priority = current_routing_rule.priority();
+                routing_rule_table_entry.destination_type =
+                        current_routing_rule.routing_rule_extra_info().destination_type();
+                routing_rule_table_entry.next_hop_mac =
+                        current_routing_rule.routing_rule_extra_info().next_hop_mac();
+
+                new_subnet_routing_table_entry.routing_rules.emplace(
+                        current_routing_rule.id(), routing_rule_table_entry);
+              }
+
+              new_subnet_routing_tables.emplace(current_router_subnet_id,
+                                                new_subnet_routing_table_entry);
 
               subnet_info_found = true;
               break;
@@ -652,22 +666,35 @@ int ACA_Dataplane_OVS::update_router_state_workitem(RouterState current_RouterSt
       }
 
       if (overall_rc == EXIT_SUCCESS) {
-        ACA_LOG_DEBUG("Router Operation:%s: id:%s, host_dev_mac:%s\n ",
+        ACA_LOG_DEBUG("Router Operation:%s: id:%s, host_dvr_mac:%s\n ",
                       aca_get_operation_string(current_RouterState.operation_type()),
                       current_RouterConfiguration.id().c_str(), host_dvr_mac.c_str());
 
-        for (auto it = new_subnet_table.begin(); it != new_subnet_table.end(); it++) {
+        for (auto subnet_it = new_subnet_routing_tables.begin();
+             subnet_it != new_subnet_routing_tables.end(); subnet_it++) {
           ACA_LOG_DEBUG("Subnet ID:%s: vpc_id:%s, cidr:%s, tunnel_id:%d, gateway_ip:%s, gateway_mac:%s\n ",
-                        it->first.c_str(), it->second.vpc_id.c_str(),
-                        it->second.cidr.c_str(), it->second.tunnel_id,
-                        it->second.gateway_ip.c_str(), it->second.gateway_mac.c_str());
+                        subnet_it->first.c_str(), subnet_it->second.vpc_id.c_str(),
+                        subnet_it->second.cidr.c_str(), subnet_it->second.tunnel_id,
+                        subnet_it->second.gateway_ip.c_str(),
+                        subnet_it->second.gateway_mac.c_str());
+
+          for (auto routing_rule_it = subnet_it->second.routing_rules.begin();
+               routing_rule_it != subnet_it->second.routing_rules.end();
+               routing_rule_it++) {
+            ACA_LOG_DEBUG("Routing rule ID:%s: destination:%s, next_hop_ip:%s, priority:%d, priority:%d, next_hop_mac:%s\n ",
+                          routing_rule_it->first.c_str(),
+                          routing_rule_it->second.destination.c_str(),
+                          routing_rule_it->second.next_hop_ip.c_str(),
+                          routing_rule_it->second.priority,
+                          routing_rule_it->second.destination_type,
+                          routing_rule_it->second.next_hop_mac.c_str());
+          }
         }
 
         ACA_OVS_L3_Programmer::get_instance().create_router(
                 host_dvr_mac, current_RouterConfiguration.id(),
-                new_subnet_table, culminative_dataplane_programming_time);
+                new_subnet_routing_tables, culminative_dataplane_programming_time);
       }
-
     } catch (const std::invalid_argument &e) {
       ACA_LOG_ERROR("Invalid argument exception caught while parsing router configuration, message: %s.\n",
                     e.what());
