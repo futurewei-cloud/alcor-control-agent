@@ -505,10 +505,6 @@ int ACA_Dataplane_OVS::update_router_state_workitem(RouterState current_RouterSt
                                                     GoalStateOperationReply &gsOperationReply)
 {
   int overall_rc;
-  // string host_dvr_mac;
-  // string found_cidr;
-  // string found_gateway_ip;
-  // string found_gateway_mac;
   ulong culminative_dataplane_programming_time = 0;
   ulong culminative_network_configuration_time = 0;
 

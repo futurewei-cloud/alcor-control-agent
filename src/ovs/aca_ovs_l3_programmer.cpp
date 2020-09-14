@@ -72,9 +72,9 @@ int ACA_OVS_L3_Programmer::create_or_update_router(RouterConfiguration &current_
     return -EINVAL;
   }
 
-  if (aca_validate_mac_address(
+  if (!aca_validate_mac_address(
               current_RouterConfiguration.host_dvr_mac_address().c_str())) {
-    ACA_LOG_ERROR("host_dvr_mac_address is invalid");
+    ACA_LOG_ERROR("host_dvr_mac_address is invalid\n");
     return -EINVAL;
   }
 
