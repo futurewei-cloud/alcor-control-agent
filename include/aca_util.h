@@ -105,6 +105,48 @@ static inline const char *aca_get_neighbor_type_string(alcor::schema::NeighborTy
   }
 }
 
+static inline bool aca_validate_mac_address(const char *mac_string)
+{
+  unsigned char mac[6];
+
+  if (mac_string == nullptr) {
+    ACA_LOG_ERROR("Input mac_string is null\n");
+    return false;
+  }
+
+  if (sscanf(mac_string, "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx", &mac[0], &mac[1],
+             &mac[2], &mac[3], &mac[4], &mac[5]) == 6) {
+    return true;
+  }
+
+  if (sscanf(mac_string, "%hhx-%hhx-%hhx-%hhx-%hhx-%hhx", &mac[0], &mac[1],
+             &mac[2], &mac[3], &mac[4], &mac[5]) == 6) {
+    return true;
+  }
+
+  // nothing matched
+  ACA_LOG_ERROR("Invalid mac address: %s\n", mac_string);
+  return false;
+}
+
+static inline bool aca_validate_tunnel_id(const uint tunnel_id)
+{
+  uint MAX_VALID_VNI = 16777215;
+
+  if (tunnel_id == 0) {
+    ACA_LOG_ERROR("Input tunnel_id is 0\n");
+    return false;
+  }
+
+  if (tunnel_id > MAX_VALID_VNI) {
+    ACA_LOG_ERROR("Input tunnel_id is greater than valid maximun %s\n",
+                  std::to_string(MAX_VALID_VNI).c_str());
+    return false;
+  }
+
+  return true;
+}
+
 static inline bool aca_is_port_on_same_host(const std::string hosting_port_ip)
 {
   if (hosting_port_ip.empty()) {

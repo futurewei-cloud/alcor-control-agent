@@ -20,6 +20,7 @@
 #include <string>
 
 using namespace std;
+using namespace alcor::schema;
 
 // port id is stored as the key to ports table
 struct port_table_entry {
@@ -58,17 +59,20 @@ class ACA_OVS_L3_Programmer {
   public:
   static ACA_OVS_L3_Programmer &get_instance();
 
+  int create_or_update_router(RouterConfiguration &current_RouterConfiguration,
+                              GoalState &parsed_struct,
+                              ulong &culminative_time_dataplane_programming_time);
+
+  int delete_router(RouterConfiguration &current_RouterConfiguration,
+                    ulong &culminative_time_dataplane_programming_time);
+
   // TODO: also need to add the corresponding update and delete operations
   // at least the prototype but ideally the full implementation
-
-  int create_router(const string host_dvr_mac, const string router_id,
-                    unordered_map<string, subnet_routing_table_entry> subnet_routing_tables,
-                    ulong &culminative_time);
-
   int create_neighbor_l3(const string vpc_id, const string subnet_id,
-                         alcor::schema::NetworkType network_type, const string virtual_ip,
-                         const string virtual_mac, const string remote_host_ip,
-                         uint tunnel_id, ulong &culminative_time);
+                         alcor::schema::NetworkType network_type,
+                         const string virtual_ip, const string virtual_mac,
+                         const string remote_host_ip, uint tunnel_id,
+                         ulong &culminative_time_dataplane_programming_time);
 
   // compiler will flag the error when below is called.
   ACA_OVS_L3_Programmer(ACA_OVS_L3_Programmer const &) = delete;
