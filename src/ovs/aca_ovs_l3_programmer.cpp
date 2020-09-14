@@ -105,7 +105,6 @@ int ACA_OVS_L3_Programmer::create_or_update_router(RouterConfiguration &current_
 
   try {
     if (is_router_exist) {
-      // depends on current_RouterConfiguration.message_type() == MessageType::DELTA or FULL
       if (current_RouterConfiguration.message_type() == MessageType::FULL) {
         // since message_type is full, we can simply remove the existing entry
         // and use the next (!is_router_exist) block to create a new entry
@@ -197,8 +196,8 @@ int ACA_OVS_L3_Programmer::create_or_update_router(RouterConfiguration &current_
 
           current_gateway_mac = found_gateway_mac;
           current_gateway_mac.erase(
-                  remove(found_gateway_mac.begin(), found_gateway_mac.end(), ':'),
-                  found_gateway_mac.end());
+                  remove(current_gateway_mac.begin(), current_gateway_mac.end(), ':'),
+                  current_gateway_mac.end());
 
           addr = inet_network(found_gateway_ip.c_str());
           snprintf(hex_ip_buffer, HEX_IP_BUFFER_SIZE, "0x%08x", addr);
@@ -297,17 +296,17 @@ int ACA_OVS_L3_Programmer::create_or_update_router(RouterConfiguration &current_
           overall_rc = -EXIT_FAILURE;
         }
       } // for (int j = 0; j < parsed_struct.subnet_states_size(); j++)
-
-      if (!is_router_exist ||
-          (current_RouterConfiguration.message_type() == MessageType::FULL)) {
-        // -----critical section starts-----
-        _routers_table_mutex.lock();
-        _routers_table.emplace(router_id, new_subnet_routing_tables);
-        _routers_table_mutex.unlock();
-        // -----critical section ends-----
-      }
-
     } // for (int i = 0; i < current_RouterConfiguration.subnet_routing_tables_size(); i++)
+
+    if (!is_router_exist ||
+        (current_RouterConfiguration.message_type() == MessageType::FULL)) {
+      // -----critical section starts-----
+      _routers_table_mutex.lock();
+      _routers_table.emplace(router_id, new_subnet_routing_tables);
+      _routers_table_mutex.unlock();
+      // -----critical section ends-----
+    }
+
   } catch (const std::invalid_argument &e) {
     ACA_LOG_ERROR("Invalid argument exception caught while parsing router configuration, message: %s.\n",
                   e.what());
@@ -518,7 +517,7 @@ int ACA_OVS_L3_Programmer::create_neighbor_l3(const string vpc_id, const string 
   }
 
   if (!found_subnet_in_router) {
-    ACA_LOG_ERROR("subnet_id %s not find in our local routers\n", subnet_id.c_str());
+    ACA_LOG_ERROR("subnet_id %s not found in our local routers\n", subnet_id.c_str());
     overall_rc = ENOENT;
   }
 
