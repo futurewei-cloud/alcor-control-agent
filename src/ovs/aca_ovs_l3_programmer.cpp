@@ -237,7 +237,7 @@ int ACA_OVS_L3_Programmer::create_or_update_router(RouterConfiguration &current_
               is_routing_rule_exist = true;
             }
 
-            // populate the routing_rule_table_entry and then add that to
+            // populate the routing_rule_table_entry and add that to
             // new_subnet_routing_table_entry.routing_rules only if the
             // operation type for that routing_rule is CREATE/UPDATE/INFO
             if ((current_routing_rule.operation_type() == OperationType::CREATE) ||
@@ -373,15 +373,15 @@ int ACA_OVS_L3_Programmer::delete_router(RouterConfiguration &current_RouterConf
             current_gateway_mac.end());
 
     // Delete Arp responder:
-    cmd_string = "del-flows br-tun \"table=51,priority=50,arp,dl_vlan=" +
-                 to_string(source_vlan_id) + ",nw_dst=" + subnet_it->second.gateway_ip;
+    cmd_string = "del-flows br-tun \"table=51,arp,dl_vlan=" + to_string(source_vlan_id) +
+                 ",nw_dst=" + subnet_it->second.gateway_ip + "\"";
 
     ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
             cmd_string, dataplane_programming_time, overall_rc);
 
     // Delete ICMP responder:
-    cmd_string = "del-flows br-tun \"table=52,priority=50,icmp,dl_vlan=" +
-                 to_string(source_vlan_id) + ",nw_dst=" + subnet_it->second.gateway_ip;
+    cmd_string = "del-flows br-tun \"table=52,icmp,dl_vlan=" + to_string(source_vlan_id) +
+                 ",nw_dst=" + subnet_it->second.gateway_ip + "\"";
 
     ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
             cmd_string, dataplane_programming_time, overall_rc);

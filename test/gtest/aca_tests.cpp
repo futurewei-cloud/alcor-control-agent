@@ -122,7 +122,6 @@ static void aca_test_create_default_port_state(PortState *new_port_states)
   PortConfiguration_builder->set_format_version(1);
   PortConfiguration_builder->set_revision_number(1);
   PortConfiguration_builder->set_message_type(MessageType::FULL);
-  // PortConfiguration_builder->set_network_type(NetworkType::VXLAN); // should default to VXLAN
   PortConfiguration_builder->set_id(port_id_1);
 
   PortConfiguration_builder->set_project_id(project_id);
@@ -549,7 +548,6 @@ TEST(ovs_dataplane_test_cases, 2_ports_CREATE_test_traffic)
   PortConfiguration_builder->set_format_version(1);
   PortConfiguration_builder->set_revision_number(1);
   PortConfiguration_builder->set_message_type(MessageType::FULL);
-  // PortConfiguration_builder->set_network_type(NetworkType::VXLAN); // should default to VXLAN
   PortConfiguration_builder->set_id(port_id_1);
 
   PortConfiguration_builder->set_project_id(project_id);
@@ -852,7 +850,6 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_CREATE_test_traffic_MASTER)
   PortConfiguration_builder->set_format_version(1);
   PortConfiguration_builder->set_revision_number(1);
   PortConfiguration_builder->set_message_type(MessageType::FULL);
-  // PortConfiguration_builder->set_network_type(NetworkType::VXLAN); // should default to VXLAN
   PortConfiguration_builder->set_id(port_id_1);
 
   PortConfiguration_builder->set_project_id(project_id);
@@ -1043,7 +1040,6 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_CREATE_test_traffic_SLAVE)
   PortConfiguration_builder->set_format_version(1);
   PortConfiguration_builder->set_revision_number(1);
   PortConfiguration_builder->set_message_type(MessageType::FULL);
-  // PortConfiguration_builder->set_network_type(NetworkType::VXLAN); // should default to VXLAN
   PortConfiguration_builder->set_id(port_id_3);
 
   PortConfiguration_builder->set_project_id(project_id);
@@ -1181,6 +1177,115 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_CREATE_test_traffic_SLAVE)
   // not deleting br-int and br-tun bridges so that master can ping the two new ports
 }
 
+TEST(ovs_dataplane_test_cases, ADD_DELETE_ROUTER_test_no_traffic)
+{
+  ulong not_care_culminative_time = 0;
+  string cmd_string;
+  int overall_rc;
+
+  // delete and add br-int and br-tun bridges to clear everything
+  ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
+          "del-br br-int", not_care_culminative_time, overall_rc);
+
+  ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
+          "del-br br-tun", not_care_culminative_time, overall_rc);
+
+  // create and setup br-int and br-tun bridges, and their patch ports
+  overall_rc = ACA_OVS_L2_Programmer::get_instance().setup_ovs_bridges_if_need();
+  ASSERT_EQ(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
+
+  // program the router
+  GoalState GoalState_builder2;
+  RouterState *new_router_states = GoalState_builder2.add_router_states();
+  SubnetState *new_subnet_states1 = GoalState_builder2.add_subnet_states();
+  SubnetState *new_subnet_states2 = GoalState_builder2.add_subnet_states();
+
+  // fill in router state structs
+  RouterConfiguration *RouterConfiguration_builder =
+          new_router_states->mutable_configuration();
+  RouterConfiguration_builder->set_format_version(1);
+  RouterConfiguration_builder->set_revision_number(1);
+
+  RouterConfiguration_builder->set_id("router_id1");
+  RouterConfiguration_builder->set_host_dvr_mac_address("fa:16:3e:d7:f2:02");
+
+  auto *RouterConfiguration_SubnetRoutingTable_builder1 =
+          RouterConfiguration_builder->add_subnet_routing_tables();
+  RouterConfiguration_SubnetRoutingTable_builder1->set_subnet_id(subnet_id_1);
+  auto *RouterConfiguration_SubnetRoutingRule_builder1 =
+          RouterConfiguration_SubnetRoutingTable_builder1->add_routing_rules();
+  RouterConfiguration_SubnetRoutingRule_builder1->set_operation_type(OperationType::CREATE);
+  RouterConfiguration_SubnetRoutingRule_builder1->set_id("12345");
+  RouterConfiguration_SubnetRoutingRule_builder1->set_name("routing_rule_1");
+  RouterConfiguration_SubnetRoutingRule_builder1->set_destination("154.12.42.24/32");
+  RouterConfiguration_SubnetRoutingRule_builder1->set_next_hop_ip("154.12.42.101");
+  auto *routerConfiguration_RoutingRuleExtraInfo_builder1(new RouterConfiguration_RoutingRuleExtraInfo);
+  routerConfiguration_RoutingRuleExtraInfo_builder1->set_destination_type(
+          DestinationType::INTERNET);
+  routerConfiguration_RoutingRuleExtraInfo_builder1->set_next_hop_mac("fa:16:3e:d7:aa:02");
+  RouterConfiguration_SubnetRoutingRule_builder1->set_allocated_routing_rule_extra_info(
+          routerConfiguration_RoutingRuleExtraInfo_builder1);
+
+  auto *RouterConfiguration_SubnetRoutingTable_builder2 =
+          RouterConfiguration_builder->add_subnet_routing_tables();
+  RouterConfiguration_SubnetRoutingTable_builder2->set_subnet_id(subnet_id_2);
+  auto *RouterConfiguration_SubnetRoutingRule_builder2 =
+          RouterConfiguration_SubnetRoutingTable_builder2->add_routing_rules();
+  RouterConfiguration_SubnetRoutingRule_builder2->set_operation_type(OperationType::UPDATE);
+  RouterConfiguration_SubnetRoutingRule_builder2->set_id("23456");
+  RouterConfiguration_SubnetRoutingRule_builder2->set_name("routing_rule_2");
+  RouterConfiguration_SubnetRoutingRule_builder2->set_destination("154.12.54.24/32");
+  RouterConfiguration_SubnetRoutingRule_builder2->set_next_hop_ip("154.12.54.101");
+  auto *routerConfiguration_RoutingRuleExtraInfo_builder2(new RouterConfiguration_RoutingRuleExtraInfo);
+  routerConfiguration_RoutingRuleExtraInfo_builder2->set_destination_type(DestinationType::VPC_GW);
+  routerConfiguration_RoutingRuleExtraInfo_builder2->set_next_hop_mac("fa:16:3e:d7:bb:02");
+  RouterConfiguration_SubnetRoutingRule_builder2->set_allocated_routing_rule_extra_info(
+          routerConfiguration_RoutingRuleExtraInfo_builder2);
+
+  // fill in subnet state1 structs
+  aca_test_create_default_subnet_state(new_subnet_states1);
+
+  // fill in subnet state2 structs
+  new_subnet_states2->set_operation_type(OperationType::INFO);
+
+  SubnetConfiguration *SubnetConiguration_builder2 =
+          new_subnet_states2->mutable_configuration();
+  SubnetConiguration_builder2->set_format_version(1);
+  SubnetConiguration_builder2->set_revision_number(1);
+  SubnetConiguration_builder2->set_project_id(project_id);
+  SubnetConiguration_builder2->set_vpc_id(vpc_id_2);
+  SubnetConiguration_builder2->set_id(subnet_id_2);
+  SubnetConiguration_builder2->set_cidr("10.10.1.0/24");
+  SubnetConiguration_builder2->set_tunnel_id(30);
+
+  auto *subnetConfig_GatewayBuilder2(new SubnetConfiguration_Gateway);
+  subnetConfig_GatewayBuilder2->set_ip_address(subnet2_gw_ip);
+  subnetConfig_GatewayBuilder2->set_mac_address(subnet2_gw_mac);
+  SubnetConiguration_builder2->set_allocated_gateway(subnetConfig_GatewayBuilder2);
+
+  // create the router
+  GoalStateOperationReply gsOperationalReply;
+
+  // try to delete a non-existant router now
+  new_router_states->set_operation_type(OperationType::DELETE);
+  overall_rc = Aca_Comm_Manager::get_instance().update_goal_state(
+          GoalState_builder2, gsOperationalReply);
+  EXPECT_NE(overall_rc, EXIT_SUCCESS);
+
+  // create the router
+  new_router_states->set_operation_type(OperationType::CREATE);
+  overall_rc = Aca_Comm_Manager::get_instance().update_goal_state(
+          GoalState_builder2, gsOperationalReply);
+  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
+
+  // try to delete a valid router
+  new_router_states->set_operation_type(OperationType::DELETE);
+  overall_rc = Aca_Comm_Manager::get_instance().update_goal_state(
+          GoalState_builder2, gsOperationalReply);
+  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
+}
+
 TEST(ovs_dataplane_test_cases, DISABLED_2_ports_ROUTING_test_traffic_one_machine)
 {
   ulong not_care_culminative_time = 0;
@@ -1219,7 +1324,6 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_ROUTING_test_traffic_one_machine
   PortConfiguration_builder->set_format_version(1);
   PortConfiguration_builder->set_revision_number(1);
   PortConfiguration_builder->set_message_type(MessageType::FULL);
-  // PortConfiguration_builder->set_network_type(NetworkType::VXLAN); // should default to VXLAN
   PortConfiguration_builder->set_id(port_id_3);
 
   PortConfiguration_builder->set_project_id(project_id);
@@ -1357,17 +1461,43 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_ROUTING_test_traffic_one_machine
   RouterConfiguration_builder->set_id("router_id1");
   RouterConfiguration_builder->set_host_dvr_mac_address("fa:16:3e:d7:f2:02");
 
-  auto *RouterConfiguration_SubnetRoutingTable_builder =
+  auto *RouterConfiguration_SubnetRoutingTable_builder1 =
           RouterConfiguration_builder->add_subnet_routing_tables();
-  RouterConfiguration_SubnetRoutingTable_builder->set_subnet_id(subnet_id_1);
+  RouterConfiguration_SubnetRoutingTable_builder1->set_subnet_id(subnet_id_1);
+  auto *RouterConfiguration_SubnetRoutingRule_builder1 =
+          RouterConfiguration_SubnetRoutingTable_builder1->add_routing_rules();
+  RouterConfiguration_SubnetRoutingRule_builder1->set_operation_type(OperationType::CREATE);
+  RouterConfiguration_SubnetRoutingRule_builder1->set_id("12345");
+  RouterConfiguration_SubnetRoutingRule_builder1->set_name("routing_rule_1");
+  RouterConfiguration_SubnetRoutingRule_builder1->set_destination("154.12.42.24/32");
+  RouterConfiguration_SubnetRoutingRule_builder1->set_next_hop_ip("154.12.42.101");
+  auto *routerConfiguration_RoutingRuleExtraInfo_builder1(new RouterConfiguration_RoutingRuleExtraInfo);
+  routerConfiguration_RoutingRuleExtraInfo_builder1->set_destination_type(
+          DestinationType::INTERNET);
+  routerConfiguration_RoutingRuleExtraInfo_builder1->set_next_hop_mac("fa:16:3e:d7:aa:02");
+  RouterConfiguration_SubnetRoutingRule_builder1->set_allocated_routing_rule_extra_info(
+          routerConfiguration_RoutingRuleExtraInfo_builder1);
+
   auto *RouterConfiguration_SubnetRoutingTable_builder2 =
           RouterConfiguration_builder->add_subnet_routing_tables();
   RouterConfiguration_SubnetRoutingTable_builder2->set_subnet_id(subnet_id_2);
+  auto *RouterConfiguration_SubnetRoutingRule_builder2 =
+          RouterConfiguration_SubnetRoutingTable_builder2->add_routing_rules();
+  RouterConfiguration_SubnetRoutingRule_builder2->set_operation_type(OperationType::UPDATE);
+  RouterConfiguration_SubnetRoutingRule_builder2->set_id("23456");
+  RouterConfiguration_SubnetRoutingRule_builder2->set_name("routing_rule_2");
+  RouterConfiguration_SubnetRoutingRule_builder2->set_destination("154.12.54.24/32");
+  RouterConfiguration_SubnetRoutingRule_builder2->set_next_hop_ip("154.12.54.101");
+  auto *routerConfiguration_RoutingRuleExtraInfo_builder2(new RouterConfiguration_RoutingRuleExtraInfo);
+  routerConfiguration_RoutingRuleExtraInfo_builder2->set_destination_type(DestinationType::VPC_GW);
+  routerConfiguration_RoutingRuleExtraInfo_builder2->set_next_hop_mac("fa:16:3e:d7:bb:02");
+  RouterConfiguration_SubnetRoutingRule_builder2->set_allocated_routing_rule_extra_info(
+          routerConfiguration_RoutingRuleExtraInfo_builder2);
 
-  // fill in subnet state structs
+  // fill in subnet state1 structs
   aca_test_create_default_subnet_state(new_subnet_states1);
 
-  // fill in subnet state structs
+  // fill in subnet state2 structs
   new_subnet_states2->set_operation_type(OperationType::INFO);
 
   SubnetConfiguration *SubnetConiguration_builder2 =
@@ -1543,7 +1673,6 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_ROUTING_test_traffic_MASTER)
   PortConfiguration_builder->set_format_version(1);
   PortConfiguration_builder->set_revision_number(1);
   PortConfiguration_builder->set_message_type(MessageType::FULL);
-  // PortConfiguration_builder->set_network_type(NetworkType::VXLAN); // should default to VXLAN
   PortConfiguration_builder->set_id(port_id_1);
 
   PortConfiguration_builder->set_project_id(project_id);
