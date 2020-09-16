@@ -106,8 +106,8 @@ int ACA_OVS_L3_Programmer::create_or_update_router(RouterConfiguration &current_
   try {
     if (is_router_exist) {
       if (current_RouterConfiguration.message_type() == MessageType::FULL) {
-        // since message_type is full, we can simply remove the existing entry
-        // and use the next (!is_router_exist) block to create a new entry
+        // since message_type is full, we can simply remove the existing entry and use
+        // the next router entry population block
         overall_rc = delete_router(current_RouterConfiguration, dataplane_programming_time);
         if (overall_rc != EXIT_SUCCESS) {
           throw std::runtime_error("Failed to delete an existing router entry");
@@ -118,6 +118,10 @@ int ACA_OVS_L3_Programmer::create_or_update_router(RouterConfiguration &current_
         new_subnet_routing_tables = _routers_table[router_id];
       }
     }
+
+    // ==============================
+    // router entry population block
+    // ==============================
 
     // it is okay for have subnet_routing_tables_size = 0
     for (int i = 0; i < current_RouterConfiguration.subnet_routing_tables_size(); i++) {
