@@ -261,6 +261,12 @@ int ACA_OVS_L3_Programmer::create_or_update_router(RouterConfiguration &current_
               if (!is_routing_rule_exist) {
                 new_subnet_routing_table_entry.routing_rules.emplace(
                         current_routing_rule.id(), routing_rule_table_entry);
+
+                ACA_LOG_INFO("Added routing table entry for routering rule id %s\n",
+                             current_routing_rule.id().c_str());
+              } else {
+                ACA_LOG_INFO("Using existing routing table entry for routering rule id %s\n",
+                             current_routing_rule.id().c_str());
               }
 
             } else if (current_routing_rule.operation_type() == OperationType::DELETE) {
@@ -284,6 +290,12 @@ int ACA_OVS_L3_Programmer::create_or_update_router(RouterConfiguration &current_
           if (!is_subnet_routing_table_exist) {
             new_subnet_routing_tables.emplace(current_router_subnet_id,
                                               new_subnet_routing_table_entry);
+
+            ACA_LOG_INFO("Added router subnet table entry for subnet id %s\n",
+                         current_router_subnet_id.c_str());
+          } else {
+            ACA_LOG_INFO("Using existing router subnet table entry for subnet id %s\n",
+                         current_router_subnet_id.c_str());
           }
 
           subnet_info_found = true;
@@ -305,6 +317,9 @@ int ACA_OVS_L3_Programmer::create_or_update_router(RouterConfiguration &current_
       _routers_table.emplace(router_id, new_subnet_routing_tables);
       _routers_table_mutex.unlock();
       // -----critical section ends-----
+      ACA_LOG_INFO("Added router entry for router id %s\n", router_id.c_str());
+    } else {
+      ACA_LOG_INFO("Using existing router entry for router id %s\n", router_id.c_str());
     }
 
   } catch (const std::invalid_argument &e) {
