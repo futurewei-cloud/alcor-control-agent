@@ -30,12 +30,12 @@ struct port_table_entry {
 };
 
 // routing rule id is stored as the key to routing_rules table
-struct routing_rule_table_entry {
+struct routing_rule_entry {
   string destination; // destination IP, could be 154.12.42.24/32 (host address) or 0.0.0.0/0 (network address)
-  string next_hop_ip;
-  uint priority;
   alcor::schema::DestinationType destination_type;
+  string next_hop_ip;
   string next_hop_mac;
+  uint priority;
 };
 
 // subnet id is stored as the key to subnet_routing_table
@@ -49,7 +49,7 @@ struct subnet_routing_table_entry {
   // list of ports within the subnet
   unordered_map<string, port_table_entry> ports;
   // list of routing rules for this subnet
-  unordered_map<string, routing_rule_table_entry> routing_rules;
+  unordered_map<string, routing_rule_entry> routing_rules;
 };
 
 // OVS L3 programmer implementation class

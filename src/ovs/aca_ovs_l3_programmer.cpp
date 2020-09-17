@@ -56,6 +56,7 @@ int ACA_OVS_L3_Programmer::create_or_update_router(RouterConfiguration &current_
   struct sockaddr_in sa;
   size_t slash_pos;
   string found_vpc_id;
+  NetworkType found_network_type;
   uint found_tunnel_id;
   string found_gateway_ip;
   string found_gateway_mac;
@@ -158,9 +159,9 @@ int ACA_OVS_L3_Programmer::create_or_update_router(RouterConfiguration &current_
           if (slash_pos == string::npos) {
             throw std::invalid_argument("'/' not found in cidr");
           }
-
+          found_network_type = current_SubnetConfiguration.network_type();
           found_tunnel_id = current_SubnetConfiguration.tunnel_id();
-          if (!aca_validate_tunnel_id(found_tunnel_id)) {
+          if (!aca_validate_tunnel_id(found_tunnel_id, found_network_type)) {
             throw std::invalid_argument("found_tunnel_id is invalid");
           }
 
@@ -187,8 +188,7 @@ int ACA_OVS_L3_Programmer::create_or_update_router(RouterConfiguration &current_
 
           // update the subnet routing table entry
           new_subnet_routing_table_entry.vpc_id = found_vpc_id;
-          new_subnet_routing_table_entry.network_type =
-                  current_SubnetConfiguration.network_type();
+          new_subnet_routing_table_entry.network_type = found_network_type;
           new_subnet_routing_table_entry.cidr = found_cidr;
           new_subnet_routing_table_entry.tunnel_id = found_tunnel_id;
           new_subnet_routing_table_entry.gateway_ip = found_gateway_ip;
@@ -241,30 +241,30 @@ int ACA_OVS_L3_Programmer::create_or_update_router(RouterConfiguration &current_
               is_routing_rule_exist = true;
             }
 
-            // populate the routing_rule_table_entry and add that to
+            // populate the routing_rule_entry and add that to
             // new_subnet_routing_table_entry.routing_rules only if the
             // operation type for that routing_rule is CREATE/UPDATE/INFO
             if ((current_routing_rule.operation_type() == OperationType::CREATE) ||
                 (current_routing_rule.operation_type() == OperationType::UPDATE) ||
                 (current_routing_rule.operation_type() == OperationType::INFO)) {
-              routing_rule_table_entry routing_rule_table_entry;
+              routing_rule_entry new_routing_rule_entry;
 
               if (is_routing_rule_exist) {
-                routing_rule_table_entry =
+                new_routing_rule_entry =
                         new_subnet_routing_table_entry
                                 .routing_rules[current_routing_rule.id()];
               }
 
-              routing_rule_table_entry.next_hop_ip = current_routing_rule.next_hop_ip();
-              routing_rule_table_entry.priority = current_routing_rule.priority();
-              routing_rule_table_entry.destination_type =
+              new_routing_rule_entry.next_hop_ip = current_routing_rule.next_hop_ip();
+              new_routing_rule_entry.priority = current_routing_rule.priority();
+              new_routing_rule_entry.destination_type =
                       current_routing_rule.routing_rule_extra_info().destination_type();
-              routing_rule_table_entry.next_hop_mac =
+              new_routing_rule_entry.next_hop_mac =
                       current_routing_rule.routing_rule_extra_info().next_hop_mac();
 
               if (!is_routing_rule_exist) {
                 new_subnet_routing_table_entry.routing_rules.emplace(
-                        current_routing_rule.id(), routing_rule_table_entry);
+                        current_routing_rule.id(), new_routing_rule_entry);
 
                 ACA_LOG_INFO("Added routing table entry for routering rule id %s\n",
                              current_routing_rule.id().c_str());
@@ -335,7 +335,7 @@ int ACA_OVS_L3_Programmer::create_or_update_router(RouterConfiguration &current_
                   e.what());
     overall_rc = -EFAULT;
   } catch (...) {
-    ACA_LOG_ERROR("Unknown exception caught while parsing router configuration, rethrowing.\n");
+    ACA_LOG_CRIT("Unknown exception caught while parsing router configuration.\n");
     overall_rc = -EFAULT;
   }
 

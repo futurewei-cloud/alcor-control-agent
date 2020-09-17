@@ -28,8 +28,10 @@
 #define PORT_NAME_LEN 14 // Nova generated port name length
 
 // maximun valid value of a VNI, that (2^24) - 1
-// applicable for VxLAN, VxLAN-GPE and Geneve
+// applicable for VxLAN, GRE, VxLAN-GPE and Geneve
 #define MAX_VALID_VNI 16777215
+
+#define MAX_VALID_VLAN_ID 4094
 
 #define cast_to_nanoseconds(x) chrono::duration_cast<chrono::nanoseconds>(x)
 
@@ -133,20 +135,43 @@ static inline bool aca_validate_mac_address(const char *mac_string)
   return false;
 }
 
-static inline bool aca_validate_tunnel_id(const uint tunnel_id)
+static inline bool
+aca_validate_tunnel_id(const uint tunnel_id, alcor::schema::NetworkType network_type)
 {
   if (tunnel_id == 0) {
     ACA_LOG_ERROR("Input tunnel_id is 0\n");
     return false;
   }
 
-  if (tunnel_id > MAX_VALID_VNI) {
-    ACA_LOG_ERROR("Input tunnel_id: %d is greater than valid maximun: %s\n",
-                  tunnel_id, std::to_string(MAX_VALID_VNI).c_str());
+  switch (network_type) {
+  case alcor::schema::NetworkType::VXLAN:
+    [[fallthrough]];
+  case alcor::schema::NetworkType::VXLAN_GPE:
+    [[fallthrough]];
+  case alcor::schema::NetworkType::GRE:
+    [[fallthrough]];
+  case alcor::schema::NetworkType::GENEVE:
+    if (tunnel_id <= MAX_VALID_VNI) {
+      return true;
+    } else {
+      ACA_LOG_ERROR("Input tunnel_id: %d is greater than valid maximun: %s\n",
+                    tunnel_id, std::to_string(MAX_VALID_VNI).c_str());
+      return false;
+    }
+
+  case alcor::schema::NetworkType::VLAN:
+    if (tunnel_id <= MAX_VALID_VLAN_ID) {
+      return true;
+    } else {
+      ACA_LOG_ERROR("Input tunnel_id: %d is greater than valid maximun: %s\n",
+                    tunnel_id, std::to_string(MAX_VALID_VNI).c_str());
+      return false;
+    }
+
+  default:
+    ACA_LOG_ERROR("ERROR: unknown network type!\n");
     return false;
   }
-
-  return true;
 }
 
 static inline bool aca_is_port_on_same_host(const std::string hosting_port_ip)
