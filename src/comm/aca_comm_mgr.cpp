@@ -344,9 +344,6 @@ void Aca_Comm_Manager::print_goal_state(GoalState parsed_struct)
     fprintf(stdout, "current_NeighborConfiguration.host_ip_address(): %s \n",
             current_NeighborConfiguration.host_ip_address().c_str());
 
-    fprintf(stdout, "current_NeighborConfiguration.neighbor_host_dvr_mac(): %s \n",
-            current_NeighborConfiguration.neighbor_host_dvr_mac().c_str());
-
     fprintf(stdout, "current_NeighborConfiguration.fixed_ips_size(): %u \n",
             current_NeighborConfiguration.fixed_ips_size());
 
@@ -446,10 +443,36 @@ void Aca_Comm_Manager::print_goal_state(GoalState parsed_struct)
             current_RouterConfiguration.subnet_routing_tables_size());
 
     for (int j = 0; j < current_RouterConfiguration.subnet_routing_tables_size(); j++) {
-      fprintf(stdout, "current_RouterConfiguration.subnet_routing_tables(%d): %s\n", j,
+      fprintf(stdout, "current_RouterConfiguration.subnet_routing_tables(%d).subnet_id: %s\n", j,
               current_RouterConfiguration.subnet_routing_tables(j).subnet_id().c_str());
 
-      // TODO: add the print out each RoutingRule
+      for (int k = 0;
+           k < current_RouterConfiguration.subnet_routing_tables(j).routing_rules_size();
+           k++) {
+        auto current_routing_rule =
+                current_RouterConfiguration.subnet_routing_tables(j).routing_rules(k);
+
+        fprintf(stdout, "current_routing_rule(%d).operation_type(): %s\n", k,
+                aca_get_operation_string(current_routing_rule.operation_type()));
+
+        fprintf(stdout, "current_routing_rule(%d).id(): %s\n", k,
+                current_routing_rule.id().c_str());
+
+        fprintf(stdout, "current_routing_rule(%d).name(): %s\n", k,
+                current_routing_rule.name().c_str());
+
+        fprintf(stdout, "current_routing_rule(%d).destination(): %s\n", k,
+                current_routing_rule.destination().c_str());
+
+        fprintf(stdout, "current_routing_rule(%d).next_hop_ip(): %s\n", k,
+                current_routing_rule.next_hop_ip().c_str());
+
+        fprintf(stdout, "current_routing_rule(%d).routing_rule_extra_info().destination_type(): %d\n",
+                k, current_routing_rule.routing_rule_extra_info().destination_type());
+
+        fprintf(stdout, "current_routing_rule(%d).routing_rule_extra_info().next_hop_mac()): %s\n",
+                k, current_routing_rule.routing_rule_extra_info().next_hop_mac().c_str());
+      }
     }
 
     printf("\n");
