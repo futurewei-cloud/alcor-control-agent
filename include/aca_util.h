@@ -27,6 +27,10 @@
 #define TAP_PREFIX "tap" // vm tap device prefix
 #define PORT_NAME_LEN 14 // Nova generated port name length
 
+// maximun valid value of a VNI, that (2^24) - 1
+// applicable for VxLAN, VxLAN-GPE and Geneve
+#define MAX_VALID_VNI 16777215
+
 #define cast_to_nanoseconds(x) chrono::duration_cast<chrono::nanoseconds>(x)
 
 static inline const char *aca_get_operation_string(alcor::schema::OperationType operation)
@@ -131,16 +135,14 @@ static inline bool aca_validate_mac_address(const char *mac_string)
 
 static inline bool aca_validate_tunnel_id(const uint tunnel_id)
 {
-  uint MAX_VALID_VNI = 16777215;
-
   if (tunnel_id == 0) {
     ACA_LOG_ERROR("Input tunnel_id is 0\n");
     return false;
   }
 
   if (tunnel_id > MAX_VALID_VNI) {
-    ACA_LOG_ERROR("Input tunnel_id is greater than valid maximun %s\n",
-                  std::to_string(MAX_VALID_VNI).c_str());
+    ACA_LOG_ERROR("Input tunnel_id: %d is greater than valid maximun: %s\n",
+                  tunnel_id, std::to_string(MAX_VALID_VNI).c_str());
     return false;
   }
 

@@ -193,8 +193,8 @@ int ACA_OVS_L3_Programmer::create_or_update_router(RouterConfiguration &current_
           new_subnet_routing_table_entry.tunnel_id = found_tunnel_id;
           new_subnet_routing_table_entry.gateway_ip = found_gateway_ip;
           new_subnet_routing_table_entry.gateway_mac = found_gateway_mac;
-          // TODO: handle the gateway_ip and gateway_mac changed, will that happen?
-          // need to remove the previous openflow ARP and ICMP responder rules
+          // don't need to handle the gateway_ip and gateway_mac change, because that will
+          // require the subnet to remove the gateway port and add in a new one
 
           source_vlan_id = ACA_Vlan_Manager::get_instance().get_or_create_vlan_id(found_vpc_id);
 

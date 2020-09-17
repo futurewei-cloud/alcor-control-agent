@@ -205,7 +205,7 @@ int ACA_Dataplane_OVS::update_port_state_workitem(const PortState current_PortSt
                     e.what());
       overall_rc = -EFAULT;
     } catch (...) {
-      ACA_LOG_ERROR("Unknown exception caught while parsing port configuration, rethrowing.\n");
+      ACA_LOG_CRIT("Unknown exception caught while parsing port configuration.\n");
       overall_rc = -EFAULT;
     }
 
@@ -295,7 +295,7 @@ int ACA_Dataplane_OVS::update_port_state_workitem(const PortState current_PortSt
                     e.what());
       overall_rc = -EFAULT;
     } catch (...) {
-      ACA_LOG_ERROR("Unknown exception caught while parsing port configuration, rethrowing.\n");
+      ACA_LOG_CRIT("Unknown exception caught while parsing port configuration.\n");
       overall_rc = -EFAULT;
     }
 
@@ -464,7 +464,7 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
                       e.what());
         overall_rc = -EFAULT;
       } catch (...) {
-        ACA_LOG_ERROR("Unknown exception caught while parsing neighbor configuration, rethrowing.\n");
+        ACA_LOG_CRIT("Unknown exception caught while parsing neighbor configuration.\n");
         overall_rc = -EFAULT;
       }
       break;
