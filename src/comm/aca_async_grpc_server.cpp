@@ -81,6 +81,8 @@ Aca_Async_GRPC_Server::CallData::CallData(GoalStateProvisioner::AsyncService *se
 
 void Aca_Async_GRPC_Server::CallData::Proceed()
 {
+  ACA_LOG_DEBUG("[METRICS] Received GRPC message to proceed\n");
+
   if (status_ == CREATE) {
     status_ = PROCESS;
     service_->RequestPushNetworkResourceStates(&ctx_, &request_, &responder_, cq_, cq_, this);
@@ -103,6 +105,8 @@ void Aca_Async_GRPC_Server::CallData::Proceed()
     GPR_ASSERT(status_ == FINISH);
     delete this;
   }
+
+  ACA_LOG_DEBUG("[METRICS] Finished proceeding the GRPC message\n");
 }
 
 void Aca_Async_GRPC_Server::HandleRpcs()

@@ -14,8 +14,8 @@
 
 #include "aca_log.h"
 #include "aca_util.h"
+#include "aca_config.h"
 #include "aca_ovs_l2_programmer.h"
-// #include "aca_ovs_l3_programmer.h"
 #include "aca_comm_mgr.h"
 #include "aca_net_config.h"
 #include "gtest/gtest.h"
@@ -23,12 +23,17 @@
 #include <unistd.h> /* for getopt */
 #include <iostream>
 #include <string>
+#include "aca_dhcp_programming_if.h"
+#define private public
+#include "aca_dhcp_server.h"
 
 using namespace std;
 using namespace alcor::schema;
 using aca_comm_manager::Aca_Comm_Manager;
 using aca_net_config::Aca_Net_Config;
 using aca_ovs_l2_programmer::ACA_OVS_L2_Programmer;
+using namespace aca_dhcp_server;
+using namespace aca_dhcp_programming_if;
 
 // Defines
 #define ACALOGNAME "AlcorControlAgentTest"
@@ -64,8 +69,8 @@ static string subnet1_gw_ip = "10.10.0.1";
 static string subnet2_gw_ip = "10.10.1.1";
 static string subnet1_gw_mac = "fa:16:3e:d7:f2:11";
 static string subnet2_gw_mac = "fa:16:3e:d7:f2:21";
-static string host1_dvr_mac_address = "fa:16:3e:d7:f2:01";
-static string host2_dvr_mac_address = "fa:16:3e:d7:f2:02";
+static string host1_dvr_mac_address = HOST_DVR_MAC_PREFIX + string("d7:f2:01");
+static string host2_dvr_mac_address = HOST_DVR_MAC_PREFIX + string("d7:f2:02");
 static NetworkType vxlan_type = NetworkType::VXLAN;
 
 // Global variables
@@ -73,6 +78,10 @@ std::atomic_ulong g_total_network_configuration_time(0);
 std::atomic_ulong g_total_update_GS_time(0);
 bool g_debug_mode = true;
 bool g_demo_mode = false;
+
+string g_ofctl_command = EMPTY_STRING;
+string g_ofctl_target = EMPTY_STRING;
+string g_ofctl_options = EMPTY_STRING;
 
 // TODO: setup bridge when br-int is up and br-tun is gone
 
@@ -113,7 +122,6 @@ static void aca_test_create_default_port_state(PortState *new_port_states)
   PortConfiguration_builder->set_format_version(1);
   PortConfiguration_builder->set_revision_number(1);
   PortConfiguration_builder->set_message_type(MessageType::FULL);
-  // PortConfiguration_builder->set_network_type(NetworkType::VXLAN); // should default to VXLAN
   PortConfiguration_builder->set_id(port_id_1);
 
   PortConfiguration_builder->set_project_id(project_id);
@@ -540,7 +548,6 @@ TEST(ovs_dataplane_test_cases, 2_ports_CREATE_test_traffic)
   PortConfiguration_builder->set_format_version(1);
   PortConfiguration_builder->set_revision_number(1);
   PortConfiguration_builder->set_message_type(MessageType::FULL);
-  // PortConfiguration_builder->set_network_type(NetworkType::VXLAN); // should default to VXLAN
   PortConfiguration_builder->set_id(port_id_1);
 
   PortConfiguration_builder->set_project_id(project_id);
@@ -767,7 +774,6 @@ TEST(ovs_dataplane_test_cases, 10_l2_neighbor_CREATE)
             new_neighbor_states->mutable_configuration();
     NeighborConfiguration_builder->set_format_version(1);
     NeighborConfiguration_builder->set_revision_number(1);
-    NeighborConfiguration_builder->set_neighbor_type(NeighborType::L2);
 
     NeighborConfiguration_builder->set_project_id(project_id);
     NeighborConfiguration_builder->set_vpc_id("1b08a5bc-b718-11ea-b3de-111122223333");
@@ -777,6 +783,7 @@ TEST(ovs_dataplane_test_cases, 10_l2_neighbor_CREATE)
 
     NeighborConfiguration_FixedIp *FixedIp_builder =
             NeighborConfiguration_builder->add_fixed_ips();
+    FixedIp_builder->set_neighbor_type(NeighborType::L2);
     FixedIp_builder->set_subnet_id(subnet_id_1);
     FixedIp_builder->set_ip_address(ip_address_prefix + i_string);
   }
@@ -843,7 +850,6 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_CREATE_test_traffic_MASTER)
   PortConfiguration_builder->set_format_version(1);
   PortConfiguration_builder->set_revision_number(1);
   PortConfiguration_builder->set_message_type(MessageType::FULL);
-  // PortConfiguration_builder->set_network_type(NetworkType::VXLAN); // should default to VXLAN
   PortConfiguration_builder->set_id(port_id_1);
 
   PortConfiguration_builder->set_project_id(project_id);
@@ -1034,7 +1040,6 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_CREATE_test_traffic_SLAVE)
   PortConfiguration_builder->set_format_version(1);
   PortConfiguration_builder->set_revision_number(1);
   PortConfiguration_builder->set_message_type(MessageType::FULL);
-  // PortConfiguration_builder->set_network_type(NetworkType::VXLAN); // should default to VXLAN
   PortConfiguration_builder->set_id(port_id_3);
 
   PortConfiguration_builder->set_project_id(project_id);
@@ -1172,6 +1177,115 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_CREATE_test_traffic_SLAVE)
   // not deleting br-int and br-tun bridges so that master can ping the two new ports
 }
 
+TEST(ovs_dataplane_test_cases, ADD_DELETE_ROUTER_test_no_traffic)
+{
+  ulong not_care_culminative_time = 0;
+  string cmd_string;
+  int overall_rc;
+
+  // delete and add br-int and br-tun bridges to clear everything
+  ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
+          "del-br br-int", not_care_culminative_time, overall_rc);
+
+  ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
+          "del-br br-tun", not_care_culminative_time, overall_rc);
+
+  // create and setup br-int and br-tun bridges, and their patch ports
+  overall_rc = ACA_OVS_L2_Programmer::get_instance().setup_ovs_bridges_if_need();
+  ASSERT_EQ(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
+
+  // program the router
+  GoalState GoalState_builder2;
+  RouterState *new_router_states = GoalState_builder2.add_router_states();
+  SubnetState *new_subnet_states1 = GoalState_builder2.add_subnet_states();
+  SubnetState *new_subnet_states2 = GoalState_builder2.add_subnet_states();
+
+  // fill in router state structs
+  RouterConfiguration *RouterConfiguration_builder =
+          new_router_states->mutable_configuration();
+  RouterConfiguration_builder->set_format_version(1);
+  RouterConfiguration_builder->set_revision_number(1);
+
+  RouterConfiguration_builder->set_id("router_id1");
+  RouterConfiguration_builder->set_host_dvr_mac_address("fa:16:3e:d7:f2:02");
+
+  auto *RouterConfiguration_SubnetRoutingTable_builder1 =
+          RouterConfiguration_builder->add_subnet_routing_tables();
+  RouterConfiguration_SubnetRoutingTable_builder1->set_subnet_id(subnet_id_1);
+  auto *RouterConfiguration_SubnetRoutingRule_builder1 =
+          RouterConfiguration_SubnetRoutingTable_builder1->add_routing_rules();
+  RouterConfiguration_SubnetRoutingRule_builder1->set_operation_type(OperationType::CREATE);
+  RouterConfiguration_SubnetRoutingRule_builder1->set_id("12345");
+  RouterConfiguration_SubnetRoutingRule_builder1->set_name("routing_rule_1");
+  RouterConfiguration_SubnetRoutingRule_builder1->set_destination("154.12.42.24/32");
+  RouterConfiguration_SubnetRoutingRule_builder1->set_next_hop_ip("154.12.42.101");
+  auto *routerConfiguration_RoutingRuleExtraInfo_builder1(new RouterConfiguration_RoutingRuleExtraInfo);
+  routerConfiguration_RoutingRuleExtraInfo_builder1->set_destination_type(
+          DestinationType::INTERNET);
+  routerConfiguration_RoutingRuleExtraInfo_builder1->set_next_hop_mac("fa:16:3e:d7:aa:02");
+  RouterConfiguration_SubnetRoutingRule_builder1->set_allocated_routing_rule_extra_info(
+          routerConfiguration_RoutingRuleExtraInfo_builder1);
+
+  auto *RouterConfiguration_SubnetRoutingTable_builder2 =
+          RouterConfiguration_builder->add_subnet_routing_tables();
+  RouterConfiguration_SubnetRoutingTable_builder2->set_subnet_id(subnet_id_2);
+  auto *RouterConfiguration_SubnetRoutingRule_builder2 =
+          RouterConfiguration_SubnetRoutingTable_builder2->add_routing_rules();
+  RouterConfiguration_SubnetRoutingRule_builder2->set_operation_type(OperationType::UPDATE);
+  RouterConfiguration_SubnetRoutingRule_builder2->set_id("23456");
+  RouterConfiguration_SubnetRoutingRule_builder2->set_name("routing_rule_2");
+  RouterConfiguration_SubnetRoutingRule_builder2->set_destination("154.12.54.24/32");
+  RouterConfiguration_SubnetRoutingRule_builder2->set_next_hop_ip("154.12.54.101");
+  auto *routerConfiguration_RoutingRuleExtraInfo_builder2(new RouterConfiguration_RoutingRuleExtraInfo);
+  routerConfiguration_RoutingRuleExtraInfo_builder2->set_destination_type(DestinationType::VPC_GW);
+  routerConfiguration_RoutingRuleExtraInfo_builder2->set_next_hop_mac("fa:16:3e:d7:bb:02");
+  RouterConfiguration_SubnetRoutingRule_builder2->set_allocated_routing_rule_extra_info(
+          routerConfiguration_RoutingRuleExtraInfo_builder2);
+
+  // fill in subnet state1 structs
+  aca_test_create_default_subnet_state(new_subnet_states1);
+
+  // fill in subnet state2 structs
+  new_subnet_states2->set_operation_type(OperationType::INFO);
+
+  SubnetConfiguration *SubnetConiguration_builder2 =
+          new_subnet_states2->mutable_configuration();
+  SubnetConiguration_builder2->set_format_version(1);
+  SubnetConiguration_builder2->set_revision_number(1);
+  SubnetConiguration_builder2->set_project_id(project_id);
+  SubnetConiguration_builder2->set_vpc_id(vpc_id_2);
+  SubnetConiguration_builder2->set_id(subnet_id_2);
+  SubnetConiguration_builder2->set_cidr("10.10.1.0/24");
+  SubnetConiguration_builder2->set_tunnel_id(30);
+
+  auto *subnetConfig_GatewayBuilder2(new SubnetConfiguration_Gateway);
+  subnetConfig_GatewayBuilder2->set_ip_address(subnet2_gw_ip);
+  subnetConfig_GatewayBuilder2->set_mac_address(subnet2_gw_mac);
+  SubnetConiguration_builder2->set_allocated_gateway(subnetConfig_GatewayBuilder2);
+
+  // create the router
+  GoalStateOperationReply gsOperationalReply;
+
+  // try to delete a non-existant router now
+  new_router_states->set_operation_type(OperationType::DELETE);
+  overall_rc = Aca_Comm_Manager::get_instance().update_goal_state(
+          GoalState_builder2, gsOperationalReply);
+  EXPECT_NE(overall_rc, EXIT_SUCCESS);
+
+  // create the router
+  new_router_states->set_operation_type(OperationType::CREATE);
+  overall_rc = Aca_Comm_Manager::get_instance().update_goal_state(
+          GoalState_builder2, gsOperationalReply);
+  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
+
+  // try to delete a valid router
+  new_router_states->set_operation_type(OperationType::DELETE);
+  overall_rc = Aca_Comm_Manager::get_instance().update_goal_state(
+          GoalState_builder2, gsOperationalReply);
+  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
+}
+
 TEST(ovs_dataplane_test_cases, DISABLED_2_ports_ROUTING_test_traffic_one_machine)
 {
   ulong not_care_culminative_time = 0;
@@ -1210,7 +1324,6 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_ROUTING_test_traffic_one_machine
   PortConfiguration_builder->set_format_version(1);
   PortConfiguration_builder->set_revision_number(1);
   PortConfiguration_builder->set_message_type(MessageType::FULL);
-  // PortConfiguration_builder->set_network_type(NetworkType::VXLAN); // should default to VXLAN
   PortConfiguration_builder->set_id(port_id_3);
 
   PortConfiguration_builder->set_project_id(project_id);
@@ -1347,13 +1460,44 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_ROUTING_test_traffic_one_machine
 
   RouterConfiguration_builder->set_id("router_id1");
   RouterConfiguration_builder->set_host_dvr_mac_address("fa:16:3e:d7:f2:02");
-  RouterConfiguration_builder->add_subnet_ids(subnet_id_1);
-  RouterConfiguration_builder->add_subnet_ids(subnet_id_2);
 
-  // fill in subnet state structs
+  auto *RouterConfiguration_SubnetRoutingTable_builder1 =
+          RouterConfiguration_builder->add_subnet_routing_tables();
+  RouterConfiguration_SubnetRoutingTable_builder1->set_subnet_id(subnet_id_1);
+  auto *RouterConfiguration_SubnetRoutingRule_builder1 =
+          RouterConfiguration_SubnetRoutingTable_builder1->add_routing_rules();
+  RouterConfiguration_SubnetRoutingRule_builder1->set_operation_type(OperationType::CREATE);
+  RouterConfiguration_SubnetRoutingRule_builder1->set_id("12345");
+  RouterConfiguration_SubnetRoutingRule_builder1->set_name("routing_rule_1");
+  RouterConfiguration_SubnetRoutingRule_builder1->set_destination("154.12.42.24/32");
+  RouterConfiguration_SubnetRoutingRule_builder1->set_next_hop_ip("154.12.42.101");
+  auto *routerConfiguration_RoutingRuleExtraInfo_builder1(new RouterConfiguration_RoutingRuleExtraInfo);
+  routerConfiguration_RoutingRuleExtraInfo_builder1->set_destination_type(
+          DestinationType::INTERNET);
+  routerConfiguration_RoutingRuleExtraInfo_builder1->set_next_hop_mac("fa:16:3e:d7:aa:02");
+  RouterConfiguration_SubnetRoutingRule_builder1->set_allocated_routing_rule_extra_info(
+          routerConfiguration_RoutingRuleExtraInfo_builder1);
+
+  auto *RouterConfiguration_SubnetRoutingTable_builder2 =
+          RouterConfiguration_builder->add_subnet_routing_tables();
+  RouterConfiguration_SubnetRoutingTable_builder2->set_subnet_id(subnet_id_2);
+  auto *RouterConfiguration_SubnetRoutingRule_builder2 =
+          RouterConfiguration_SubnetRoutingTable_builder2->add_routing_rules();
+  RouterConfiguration_SubnetRoutingRule_builder2->set_operation_type(OperationType::UPDATE);
+  RouterConfiguration_SubnetRoutingRule_builder2->set_id("23456");
+  RouterConfiguration_SubnetRoutingRule_builder2->set_name("routing_rule_2");
+  RouterConfiguration_SubnetRoutingRule_builder2->set_destination("154.12.54.24/32");
+  RouterConfiguration_SubnetRoutingRule_builder2->set_next_hop_ip("154.12.54.101");
+  auto *routerConfiguration_RoutingRuleExtraInfo_builder2(new RouterConfiguration_RoutingRuleExtraInfo);
+  routerConfiguration_RoutingRuleExtraInfo_builder2->set_destination_type(DestinationType::VPC_GW);
+  routerConfiguration_RoutingRuleExtraInfo_builder2->set_next_hop_mac("fa:16:3e:d7:bb:02");
+  RouterConfiguration_SubnetRoutingRule_builder2->set_allocated_routing_rule_extra_info(
+          routerConfiguration_RoutingRuleExtraInfo_builder2);
+
+  // fill in subnet state1 structs
   aca_test_create_default_subnet_state(new_subnet_states1);
 
-  // fill in subnet state structs
+  // fill in subnet state2 structs
   new_subnet_states2->set_operation_type(OperationType::INFO);
 
   SubnetConfiguration *SubnetConiguration_builder2 =
@@ -1406,17 +1550,15 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_ROUTING_test_traffic_one_machine
   NeighborConfiguration_builder3->set_format_version(1);
   NeighborConfiguration_builder3->set_revision_number(1);
 
-  NeighborConfiguration_builder3->set_neighbor_type(NeighborType::L3);
   NeighborConfiguration_builder3->set_project_id(project_id);
   NeighborConfiguration_builder3->set_vpc_id(vpc_id_1);
   NeighborConfiguration_builder3->set_name(port_name_3);
   NeighborConfiguration_builder3->set_mac_address(vmac_address_3);
   NeighborConfiguration_builder3->set_host_ip_address(remote_ip_2);
 
-  NeighborConfiguration_builder3->set_neighbor_host_dvr_mac(host2_dvr_mac_address);
-
   NeighborConfiguration_FixedIp *FixedIp_builder3 =
           NeighborConfiguration_builder3->add_fixed_ips();
+  FixedIp_builder3->set_neighbor_type(NeighborType::L3);
   FixedIp_builder3->set_subnet_id(subnet_id_1);
   FixedIp_builder3->set_ip_address(vip_address_3);
 
@@ -1428,17 +1570,15 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_ROUTING_test_traffic_one_machine
   NeighborConfiguration_builder4->set_format_version(1);
   NeighborConfiguration_builder4->set_revision_number(1);
 
-  NeighborConfiguration_builder4->set_neighbor_type(NeighborType::L3);
   NeighborConfiguration_builder4->set_project_id(project_id);
   NeighborConfiguration_builder4->set_vpc_id(vpc_id_2);
   NeighborConfiguration_builder4->set_name(port_name_4);
   NeighborConfiguration_builder4->set_mac_address(vmac_address_4);
   NeighborConfiguration_builder4->set_host_ip_address(remote_ip_2);
 
-  NeighborConfiguration_builder4->set_neighbor_host_dvr_mac(host2_dvr_mac_address);
-
   NeighborConfiguration_FixedIp *FixedIp_builder4 =
           NeighborConfiguration_builder4->add_fixed_ips();
+  FixedIp_builder4->set_neighbor_type(NeighborType::L3);
   FixedIp_builder4->set_subnet_id(subnet_id_2);
   FixedIp_builder4->set_ip_address(vip_address_4);
 
@@ -1533,7 +1673,6 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_ROUTING_test_traffic_MASTER)
   PortConfiguration_builder->set_format_version(1);
   PortConfiguration_builder->set_revision_number(1);
   PortConfiguration_builder->set_message_type(MessageType::FULL);
-  // PortConfiguration_builder->set_network_type(NetworkType::VXLAN); // should default to VXLAN
   PortConfiguration_builder->set_id(port_id_1);
 
   PortConfiguration_builder->set_project_id(project_id);
@@ -1681,8 +1820,13 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_ROUTING_test_traffic_MASTER)
 
   RouterConfiguration_builder->set_id("router_id1");
   RouterConfiguration_builder->set_host_dvr_mac_address(host1_dvr_mac_address);
-  RouterConfiguration_builder->add_subnet_ids(subnet_id_1);
-  RouterConfiguration_builder->add_subnet_ids(subnet_id_2);
+
+  auto *RouterConfiguration_SubnetRoutingTable_builder =
+          RouterConfiguration_builder->add_subnet_routing_tables();
+  RouterConfiguration_SubnetRoutingTable_builder->set_subnet_id(subnet_id_1);
+  auto *RouterConfiguration_SubnetRoutingTable_builder2 =
+          RouterConfiguration_builder->add_subnet_routing_tables();
+  RouterConfiguration_SubnetRoutingTable_builder2->set_subnet_id(subnet_id_2);
 
   // fill in subnet state structs
   aca_test_create_default_subnet_state(new_subnet_states1);
@@ -1740,17 +1884,15 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_ROUTING_test_traffic_MASTER)
   NeighborConfiguration_builder3->set_format_version(1);
   NeighborConfiguration_builder3->set_revision_number(1);
 
-  NeighborConfiguration_builder3->set_neighbor_type(NeighborType::L3);
   NeighborConfiguration_builder3->set_project_id(project_id);
   NeighborConfiguration_builder3->set_vpc_id(vpc_id_1);
   NeighborConfiguration_builder3->set_name(port_name_3);
   NeighborConfiguration_builder3->set_mac_address(vmac_address_3);
   NeighborConfiguration_builder3->set_host_ip_address(remote_ip_2);
 
-  NeighborConfiguration_builder3->set_neighbor_host_dvr_mac(host2_dvr_mac_address);
-
   NeighborConfiguration_FixedIp *FixedIp_builder3 =
           NeighborConfiguration_builder3->add_fixed_ips();
+  FixedIp_builder3->set_neighbor_type(NeighborType::L3);
   FixedIp_builder3->set_subnet_id(subnet_id_1);
   FixedIp_builder3->set_ip_address(vip_address_3);
 
@@ -1762,17 +1904,15 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_ROUTING_test_traffic_MASTER)
   NeighborConfiguration_builder4->set_format_version(1);
   NeighborConfiguration_builder4->set_revision_number(1);
 
-  NeighborConfiguration_builder4->set_neighbor_type(NeighborType::L3);
   NeighborConfiguration_builder4->set_project_id(project_id);
   NeighborConfiguration_builder4->set_vpc_id(vpc_id_2);
   NeighborConfiguration_builder4->set_name(port_name_4);
   NeighborConfiguration_builder4->set_mac_address(vmac_address_4);
   NeighborConfiguration_builder4->set_host_ip_address(remote_ip_2);
 
-  NeighborConfiguration_builder4->set_neighbor_host_dvr_mac(host2_dvr_mac_address);
-
   NeighborConfiguration_FixedIp *FixedIp_builder4 =
           NeighborConfiguration_builder4->add_fixed_ips();
+  FixedIp_builder4->set_neighbor_type(NeighborType::L3);
   FixedIp_builder4->set_subnet_id(subnet_id_2);
   FixedIp_builder4->set_ip_address(vip_address_4);
 
@@ -2002,8 +2142,13 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_ROUTING_test_traffic_SLAVE)
 
   RouterConfiguration_builder->set_id("router_id2");
   RouterConfiguration_builder->set_host_dvr_mac_address(host2_dvr_mac_address);
-  RouterConfiguration_builder->add_subnet_ids(subnet_id_1);
-  RouterConfiguration_builder->add_subnet_ids(subnet_id_2);
+
+  auto *RouterConfiguration_SubnetRoutingTable_builder =
+          RouterConfiguration_builder->add_subnet_routing_tables();
+  RouterConfiguration_SubnetRoutingTable_builder->set_subnet_id(subnet_id_1);
+  auto *RouterConfiguration_SubnetRoutingTable_builder2 =
+          RouterConfiguration_builder->add_subnet_routing_tables();
+  RouterConfiguration_SubnetRoutingTable_builder2->set_subnet_id(subnet_id_2);
 
   // fill in subnet state structs
   aca_test_create_default_subnet_state(new_subnet_states1);
@@ -2061,17 +2206,15 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_ROUTING_test_traffic_SLAVE)
   NeighborConfiguration_builder3->set_format_version(1);
   NeighborConfiguration_builder3->set_revision_number(1);
 
-  NeighborConfiguration_builder3->set_neighbor_type(NeighborType::L3);
   NeighborConfiguration_builder3->set_project_id(project_id);
   NeighborConfiguration_builder3->set_vpc_id(vpc_id_1);
   NeighborConfiguration_builder3->set_name(port_name_1);
   NeighborConfiguration_builder3->set_mac_address(vmac_address_1);
   NeighborConfiguration_builder3->set_host_ip_address(remote_ip_1);
 
-  NeighborConfiguration_builder3->set_neighbor_host_dvr_mac(host1_dvr_mac_address);
-
   NeighborConfiguration_FixedIp *FixedIp_builder3 =
           NeighborConfiguration_builder3->add_fixed_ips();
+  FixedIp_builder3->set_neighbor_type(NeighborType::L3);
   FixedIp_builder3->set_subnet_id(subnet_id_1);
   FixedIp_builder3->set_ip_address(vip_address_1);
 
@@ -2083,17 +2226,15 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_ROUTING_test_traffic_SLAVE)
   NeighborConfiguration_builder4->set_format_version(1);
   NeighborConfiguration_builder4->set_revision_number(1);
 
-  NeighborConfiguration_builder4->set_neighbor_type(NeighborType::L3);
   NeighborConfiguration_builder4->set_project_id(project_id);
   NeighborConfiguration_builder4->set_vpc_id(vpc_id_2);
   NeighborConfiguration_builder4->set_name(port_name_2);
   NeighborConfiguration_builder4->set_mac_address(vmac_address_2);
   NeighborConfiguration_builder4->set_host_ip_address(remote_ip_1);
 
-  NeighborConfiguration_builder4->set_neighbor_host_dvr_mac(host1_dvr_mac_address);
-
   NeighborConfiguration_FixedIp *FixedIp_builder4 =
           NeighborConfiguration_builder4->add_fixed_ips();
+  FixedIp_builder4->set_neighbor_type(NeighborType::L3);
   FixedIp_builder4->set_subnet_id(subnet_id_2);
   FixedIp_builder4->set_ip_address(vip_address_2);
 
@@ -2508,6 +2649,161 @@ TEST(net_config_test_cases, rename_veth_device_valid)
 
   rc = Aca_Net_Config::get_instance().execute_system_command(cmd_string);
   EXPECT_EQ(rc, EXIT_SUCCESS);
+}
+
+TEST(dhcp_config_test_cases, add_dhcp_entry_valid)
+{
+  int retcode = 0;
+  dhcp_config stDhcpCfgIn;
+
+  stDhcpCfgIn.ipv4_address = "10.0.0.1";
+  stDhcpCfgIn.mac_address = "AA:BB:CC:DD:EE:FF";
+  stDhcpCfgIn.port_host_name = "Port1";
+
+  retcode = ACA_Dhcp_Server::get_instance().add_dhcp_entry(&stDhcpCfgIn);
+  EXPECT_EQ(retcode, EXIT_SUCCESS);
+}
+
+TEST(dhcp_config_test_cases, add_dhcp_entry_invalid)
+{
+  int retcode = 0;
+  dhcp_config stDhcpCfgIn1;
+  dhcp_config stDhcpCfgIn2;
+
+  stDhcpCfgIn1.ipv4_address = "10.0.0.1";
+  stDhcpCfgIn1.mac_address = "AA:BB:CC:DD:EE:FF";
+  stDhcpCfgIn1.port_host_name = "Port1";
+
+  stDhcpCfgIn2.ipv4_address = "10.0.0.2";
+  stDhcpCfgIn2.mac_address = "AA:BB:CC:DD:EE:FF";
+  stDhcpCfgIn2.port_host_name = "Port2";
+
+  (void)ACA_Dhcp_Server::get_instance().add_dhcp_entry(&stDhcpCfgIn1);
+
+  retcode = ACA_Dhcp_Server::get_instance().add_dhcp_entry(&stDhcpCfgIn2);
+  EXPECT_EQ(retcode, EXIT_FAILURE);
+}
+
+TEST(dhcp_config_test_cases, delete_dhcp_entry_valid)
+{
+  int retcode = 0;
+  dhcp_config stDhcpCfgIn;
+
+  stDhcpCfgIn.ipv4_address = "10.0.0.1";
+  stDhcpCfgIn.mac_address = "AA:BB:CC:DD:EE:FF";
+  stDhcpCfgIn.port_host_name = "Port1";
+
+  (void)ACA_Dhcp_Server::get_instance().add_dhcp_entry(&stDhcpCfgIn);
+
+  retcode = ACA_Dhcp_Server::get_instance().delete_dhcp_entry(&stDhcpCfgIn);
+  EXPECT_EQ(retcode, EXIT_SUCCESS);
+}
+
+TEST(dhcp_config_test_cases, update_dhcp_entry_valid)
+{
+  int retcode = 0;
+  dhcp_config stDhcpCfgIn;
+
+  stDhcpCfgIn.ipv4_address = "10.0.0.1";
+  stDhcpCfgIn.mac_address = "AA:BB:CC:DD:EE:FF";
+  stDhcpCfgIn.port_host_name = "Port1";
+
+  (void)ACA_Dhcp_Server::get_instance().add_dhcp_entry(&stDhcpCfgIn);
+
+  stDhcpCfgIn.ipv4_address = "10.0.0.2";
+  retcode = ACA_Dhcp_Server::get_instance().update_dhcp_entry(&stDhcpCfgIn);
+  EXPECT_EQ(retcode, EXIT_SUCCESS);
+}
+
+TEST(dhcp_config_test_cases, update_dhcp_entry_invalid)
+{
+  int retcode = 0;
+  dhcp_config stDhcpCfgIn;
+
+  stDhcpCfgIn.ipv4_address = "10.0.0.1";
+  stDhcpCfgIn.mac_address = "AA:BB:CC:DD:EE:FF";
+  stDhcpCfgIn.port_host_name = "Port1";
+
+  (void)ACA_Dhcp_Server::get_instance().delete_dhcp_entry(&stDhcpCfgIn);
+  retcode = ACA_Dhcp_Server::get_instance().update_dhcp_entry(&stDhcpCfgIn);
+  EXPECT_EQ(retcode, EXIT_FAILURE);
+}
+
+TEST(dhcp_message_test_cases, dhcps_recv_valid)
+{
+  int retcode = 0;
+  dhcp_message stDhcpMsg = { 0 };
+
+  stDhcpMsg.op = BOOTP_MSG_BOOTREQUEST;
+  stDhcpMsg.htype = DHCP_MSG_HWTYPE_ETH;
+  stDhcpMsg.hlen = DHCP_MSG_HWTYPE_ETH_LEN;
+  stDhcpMsg.xid = 12345;
+  stDhcpMsg.flags = 0x8000;
+  stDhcpMsg.chaddr[0] = 0x3c;
+  stDhcpMsg.chaddr[1] = 0xf0;
+  stDhcpMsg.chaddr[2] = 0x11;
+  stDhcpMsg.chaddr[3] = 0x12;
+  stDhcpMsg.chaddr[4] = 0x56;
+  stDhcpMsg.chaddr[5] = 0x65;
+  stDhcpMsg.cookie = DHCP_MSG_MAGIC_COOKIE;
+  stDhcpMsg.options[0] = DHCP_OPT_CODE_MSGTYPE;
+  stDhcpMsg.options[1] = DHCP_OPT_LEN_1BYTE;
+  stDhcpMsg.options[2] = DHCP_MSG_DHCPDISCOVER;
+  stDhcpMsg.options[3] = DHCP_OPT_END;
+
+  retcode = ACA_Dhcp_Server::get_instance()._validate_dhcp_message(&stDhcpMsg);
+  EXPECT_EQ(retcode, EXIT_SUCCESS);
+
+  retcode = ACA_Dhcp_Server::get_instance()._get_message_type(&stDhcpMsg);
+  EXPECT_EQ(retcode, DHCP_MSG_DHCPDISCOVER);
+}
+
+TEST(dhcp_message_test_cases, get_options_valid)
+{
+  int retcode = 0;
+  dhcp_message stDhcpMsg = { 0 };
+
+  stDhcpMsg.op = BOOTP_MSG_BOOTREQUEST;
+  stDhcpMsg.htype = DHCP_MSG_HWTYPE_ETH;
+  stDhcpMsg.hlen = DHCP_MSG_HWTYPE_ETH_LEN;
+  stDhcpMsg.xid = 12345;
+  stDhcpMsg.flags = 0x8000;
+  stDhcpMsg.chaddr[0] = 0x3c;
+  stDhcpMsg.chaddr[1] = 0xf0;
+  stDhcpMsg.chaddr[2] = 0x11;
+  stDhcpMsg.chaddr[3] = 0x12;
+  stDhcpMsg.chaddr[4] = 0x56;
+  stDhcpMsg.chaddr[5] = 0x65;
+  stDhcpMsg.cookie = DHCP_MSG_MAGIC_COOKIE;
+
+  stDhcpMsg.options[0] = DHCP_OPT_CODE_MSGTYPE;
+  stDhcpMsg.options[1] = DHCP_OPT_LEN_1BYTE;
+  stDhcpMsg.options[2] = DHCP_MSG_DHCPDISCOVER;
+
+  stDhcpMsg.options[3] = DHCP_OPT_CODE_SERVER_ID;
+  stDhcpMsg.options[4] = DHCP_OPT_LEN_4BYTE;
+  stDhcpMsg.options[5] = 0x7f;
+  stDhcpMsg.options[6] = 0x00;
+  stDhcpMsg.options[7] = 0x00;
+  stDhcpMsg.options[8] = 0x01;
+
+  stDhcpMsg.options[9] = DHCP_OPT_CODE_REQ_IP;
+  stDhcpMsg.options[10] = DHCP_OPT_LEN_4BYTE;
+  stDhcpMsg.options[11] = 0x0a;
+  stDhcpMsg.options[12] = 0x00;
+  stDhcpMsg.options[13] = 0x00;
+  stDhcpMsg.options[14] = 0x01;
+
+  stDhcpMsg.options[15] = DHCP_OPT_END;
+
+  retcode = ACA_Dhcp_Server::get_instance()._get_message_type(&stDhcpMsg);
+  EXPECT_EQ(retcode, DHCP_MSG_DHCPDISCOVER);
+
+  retcode = ACA_Dhcp_Server::get_instance()._get_server_id(&stDhcpMsg);
+  EXPECT_EQ(retcode, 0x7f000001);
+
+  retcode = ACA_Dhcp_Server::get_instance()._get_requested_ip(&stDhcpMsg);
+  EXPECT_EQ(retcode, 0x0a000001);
 }
 
 int main(int argc, char **argv)

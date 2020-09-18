@@ -16,7 +16,7 @@
 #include "aca_util.h"
 #include "aca_ovs_control.h"
 #include "aca_message_consumer.h"
-#include "aca_async_grpc_server.h"
+#include "aca_grpc.h"
 #include "goalstateprovisioner.grpc.pb.h"
 #include "cppkafka/utils/consumer_dispatcher.h"
 #include <thread>
@@ -33,8 +33,7 @@ static char EMPTY_STRING[] = "";
 static char BROKER_LIST[] = "172.17.0.1:9092";
 static char KAFKA_TOPIC[] = "Host-ts-1";
 static char KAFKA_GROUP_ID[] = "test-group-id";
-static char LOCALHOST[] = "localhost";
-static char UDP_PROTOCOL[] = "udp";
+static char GRPC_SERVER_PORT[] = "50001";
 static char OFCTL_COMMAND[] = "monitor";
 static char OFCTL_TARGET[] = "br-int";
 
@@ -42,13 +41,12 @@ using namespace std;
 
 // Global variables
 cppkafka::ConsumerDispatcher *dispatcher = NULL;
-std::thread *async_grpc_server_thread = NULL;
-Aca_Async_GRPC_Server *async_grpc_server = NULL;
+std::thread *g_grpc_server_thread = NULL;
+GoalStateProvisionerImpl *g_grpc_server = NULL;
 string g_broker_list = EMPTY_STRING;
 string g_kafka_topic = EMPTY_STRING;
 string g_kafka_group_id = EMPTY_STRING;
-string g_rpc_server = EMPTY_STRING;
-string g_rpc_protocol = EMPTY_STRING;
+string g_grpc_server_port = EMPTY_STRING;
 string g_ofctl_command = EMPTY_STRING;
 string g_ofctl_target = EMPTY_STRING;
 string g_ofctl_options = EMPTY_STRING;
@@ -81,31 +79,17 @@ static void aca_cleanup()
     dispatcher = NULL;
     ACA_LOG_INFO("Cleaned up Kafka dispatched consumer.\n");
   } else {
-    ACA_LOG_ERROR("Unable to call delete, dispatcher pointer is null");
+    ACA_LOG_ERROR("Unable to call delete, dispatcher pointer is null.\n");
   }
 
-  if (async_grpc_server != NULL) {
-    async_grpc_server->StopServer();
-    delete async_grpc_server;
-    async_grpc_server = NULL;
-    ACA_LOG_INFO("Cleaned up async grpc server.\n");
+  if (g_grpc_server != NULL) {
+    delete g_grpc_server;
+    g_grpc_server = NULL;
+    ACA_LOG_INFO("Cleaned up grpc server.\n");
   } else {
-    ACA_LOG_ERROR("Unable to call delete, async grpc server pointer is null.\n");
+    ACA_LOG_ERROR("Unable to call delete, grpc server pointer is null.\n");
   }
 
-  if (async_grpc_server_thread != NULL) {
-    if (async_grpc_server_thread->joinable()) {
-      async_grpc_server_thread->join();
-      ACA_LOG_INFO("Joined GRPC server thread.\n");
-    } else {
-      ACA_LOG_ERROR("Async grpc server thread is not joinable.\n");
-    }
-    delete async_grpc_server_thread;
-    async_grpc_server_thread = NULL;
-    ACA_LOG_INFO("Cleaned up async grpc server thread.\n");
-  } else {
-    ACA_LOG_ERROR("Unable to call delete, async grpc server thread pointer is null.\n");
-  }
   ACA_LOG_CLOSE();
 }
 
@@ -143,11 +127,8 @@ int main(int argc, char *argv[])
     case 'g':
       g_kafka_group_id = optarg;
       break;
-    case 's':
-      g_rpc_server = optarg;
-      break;
     case 'p':
-      g_rpc_protocol = optarg;
+      g_grpc_server_port = optarg;
       break;
     case 'c':
       g_ofctl_command = optarg;
@@ -170,8 +151,7 @@ int main(int argc, char *argv[])
               "\t\t[-b kafka broker list]\n"
               "\t\t[-h kafka host topic to listen]\n"
               "\t\t[-g kafka group id]\n"
-              "\t\t[-s transitd RPC server]\n"
-              "\t\t[-p transitd RPC protocol]\n"
+              "\t\t[-p gRPC server port\n"
               "\t\t[-c ofctl command]\n"
               "\t\t[-t ofctl target]\n"
               "\t\t[-m enable demo mode]\n"
@@ -191,11 +171,8 @@ int main(int argc, char *argv[])
   if (g_kafka_group_id == EMPTY_STRING) {
     g_kafka_group_id = KAFKA_GROUP_ID;
   }
-  if (g_rpc_server == EMPTY_STRING) {
-    g_rpc_server = LOCALHOST;
-  }
-  if (g_rpc_protocol == EMPTY_STRING) {
-    g_rpc_protocol = UDP_PROTOCOL;
+  if (g_grpc_server_port == EMPTY_STRING) {
+    g_grpc_server_port = GRPC_SERVER_PORT;
   }
   if (g_ofctl_command == EMPTY_STRING) {
     g_ofctl_command = OFCTL_COMMAND;
@@ -204,11 +181,12 @@ int main(int argc, char *argv[])
     g_ofctl_target = OFCTL_TARGET;
   }
 
-  async_grpc_server = new Aca_Async_GRPC_Server();
-  async_grpc_server_thread =
-          new std::thread(std::bind(&Aca_Async_GRPC_Server::Run, async_grpc_server));
+  g_grpc_server = new GoalStateProvisionerImpl();
+  g_grpc_server_thread =
+          new std::thread(std::bind(&GoalStateProvisionerImpl::RunServer, g_grpc_server));
 
-  ACA_OVS_Control::get_instance().monitor("br-tun", "resume");
+  //ACA_OVS_Control::get_instance().monitor("br-tun", "resume");
+  ACA_OVS_Control::get_instance().monitor("br-int", "resume");
 
   MessageConsumer network_config_consumer(g_broker_list, g_kafka_group_id);
   rc = network_config_consumer.consumeDispatched(g_kafka_topic);

@@ -16,11 +16,13 @@
 #include "aca_util.h"
 #include "aca_comm_mgr.h"
 #include "aca_goal_state_handler.h"
+#include "aca_dhcp_state_handler.h"
 #include "goalstateprovisioner.grpc.pb.h"
 
 using namespace std;
 using namespace alcor::schema;
 using namespace aca_goal_state_handler;
+using namespace aca_dhcp_state_handler;
 
 extern string g_rpc_server;
 extern string g_rpc_protocol;
@@ -117,16 +119,24 @@ int Aca_Comm_Manager::update_goal_state(GoalState &goal_state_message,
     }
   }
 
+  exec_command_rc = Aca_Dhcp_State_Handler::get_instance().update_dhcp_states(
+          goal_state_message, gsOperationReply);
+  if (exec_command_rc != EXIT_SUCCESS) {
+    ACA_LOG_ERROR("Failed to update dhcp state. Failed with error code %d\n", exec_command_rc);
+    rc = exec_command_rc;
+  }
+
   auto end = chrono::steady_clock::now();
 
   auto message_total_operation_time = cast_to_nanoseconds(end - start).count();
 
-  gsOperationReply.set_message_total_operation_time(message_total_operation_time);
-
-  g_total_update_GS_time += message_total_operation_time;
-
   ACA_LOG_INFO("[METRICS] Elapsed time for message total operation took: %ld nanoseconds or %ld milliseconds\n",
                message_total_operation_time, message_total_operation_time / 1000000);
+
+  gsOperationReply.set_message_total_operation_time(
+          message_total_operation_time + gsOperationReply.message_total_operation_time());
+
+  g_total_update_GS_time += message_total_operation_time;
 
   return rc;
 } // namespace aca_comm_manager
@@ -319,9 +329,6 @@ void Aca_Comm_Manager::print_goal_state(GoalState parsed_struct)
     fprintf(stdout, "current_NeighborConfiguration.id(): %s\n",
             current_NeighborConfiguration.id().c_str());
 
-    fprintf(stdout, "current_NeighborConfiguration.neighbor_type(): %d\n",
-            current_NeighborConfiguration.neighbor_type());
-
     fprintf(stdout, "current_NeighborConfiguration.project_id(): %s\n",
             current_NeighborConfiguration.project_id().c_str());
 
@@ -337,15 +344,13 @@ void Aca_Comm_Manager::print_goal_state(GoalState parsed_struct)
     fprintf(stdout, "current_NeighborConfiguration.host_ip_address(): %s \n",
             current_NeighborConfiguration.host_ip_address().c_str());
 
-    fprintf(stdout, "current_NeighborConfiguration.neighbor_host_dvr_mac(): %s \n",
-            current_NeighborConfiguration.neighbor_host_dvr_mac().c_str());
-
     fprintf(stdout, "current_NeighborConfiguration.fixed_ips_size(): %u \n",
             current_NeighborConfiguration.fixed_ips_size());
 
     for (int j = 0; j < current_NeighborConfiguration.fixed_ips_size(); j++) {
-      fprintf(stdout, "current_NeighborConfiguration.fixed_ips(%d): subnet_id %s, ip_address %s \n",
-              j, current_NeighborConfiguration.fixed_ips(j).subnet_id().c_str(),
+      fprintf(stdout, "current_NeighborConfiguration.fixed_ips(%d): neighbor_type: %d, subnet_id %s, ip_address %s \n",
+              j, current_NeighborConfiguration.fixed_ips(j).neighbor_type(),
+              current_NeighborConfiguration.fixed_ips(j).subnet_id().c_str(),
               current_NeighborConfiguration.fixed_ips(j).ip_address().c_str());
     }
 
@@ -434,12 +439,40 @@ void Aca_Comm_Manager::print_goal_state(GoalState parsed_struct)
     fprintf(stdout, "current_RouterConfiguration.host_dvr_mac_address(): %s \n",
             current_RouterConfiguration.host_dvr_mac_address().c_str());
 
-    fprintf(stdout, "current_RouterConfiguration.subnet_ids_size(): %u \n",
-            current_RouterConfiguration.subnet_ids_size());
+    fprintf(stdout, "current_RouterConfiguration.subnet_routing_tables_size(): %u \n",
+            current_RouterConfiguration.subnet_routing_tables_size());
 
-    for (int j = 0; j < current_RouterConfiguration.subnet_ids_size(); j++) {
-      fprintf(stdout, "current_RouterConfiguration.subnet_ids(%d): %s\n", j,
-              current_RouterConfiguration.subnet_ids(j).c_str());
+    for (int j = 0; j < current_RouterConfiguration.subnet_routing_tables_size(); j++) {
+      fprintf(stdout, "current_RouterConfiguration.subnet_routing_tables(%d).subnet_id: %s\n", j,
+              current_RouterConfiguration.subnet_routing_tables(j).subnet_id().c_str());
+
+      for (int k = 0;
+           k < current_RouterConfiguration.subnet_routing_tables(j).routing_rules_size();
+           k++) {
+        auto current_routing_rule =
+                current_RouterConfiguration.subnet_routing_tables(j).routing_rules(k);
+
+        fprintf(stdout, "current_routing_rule(%d).operation_type(): %s\n", k,
+                aca_get_operation_string(current_routing_rule.operation_type()));
+
+        fprintf(stdout, "current_routing_rule(%d).id(): %s\n", k,
+                current_routing_rule.id().c_str());
+
+        fprintf(stdout, "current_routing_rule(%d).name(): %s\n", k,
+                current_routing_rule.name().c_str());
+
+        fprintf(stdout, "current_routing_rule(%d).destination(): %s\n", k,
+                current_routing_rule.destination().c_str());
+
+        fprintf(stdout, "current_routing_rule(%d).next_hop_ip(): %s\n", k,
+                current_routing_rule.next_hop_ip().c_str());
+
+        fprintf(stdout, "current_routing_rule(%d).routing_rule_extra_info().destination_type(): %d\n",
+                k, current_routing_rule.routing_rule_extra_info().destination_type());
+
+        fprintf(stdout, "current_routing_rule(%d).routing_rule_extra_info().next_hop_mac()): %s\n",
+                k, current_routing_rule.routing_rule_extra_info().next_hop_mac().c_str());
+      }
     }
 
     printf("\n");
