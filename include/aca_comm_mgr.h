@@ -29,6 +29,8 @@ class Aca_Comm_Manager {
 
   int deserialize(const cppkafka::Buffer *kafka_buffer, alcor::schema::GoalState &parsed_struct);
 
+  int deserialize(const void *pulsar_buffer, size_t buffer_length, alcor::schema::GoalState &parsed_struct);
+
   int update_goal_state(alcor::schema::GoalState &goal_state_message,
                         alcor::schema::GoalStateOperationReply &gsOperationReply);
 

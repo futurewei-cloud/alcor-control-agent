@@ -102,10 +102,34 @@ echo "6--- installing openvswitch dependancies ---" && \
     rm -rf \var\local\git\openvswitch
     cd ~
 
-echo "7--- building alcor-control-agent"
+OVS_RELEASE_TAG="branch-2.12"
+echo "6--- installing openvswitch dependancies ---" && \
+    git clone -b $OVS_RELEASE_TAG https://github.com/openvswitch/ovs.git /var/local/git/openvswitch && \
+    cd /var/local/git/openvswitch && \
+    ./boot.sh && \
+    ./configure --prefix=/usr/local --localstatedir=/var --sysconfdir=/etc --enable-shared && \
+    make && \
+    make install && \
+    cp /var/local/git/openvswitch/lib/vconn-provider.h /usr/local/include/openvswitch/vconn-provider.h && \
+    cd /usr/local/bin && \
+    rm ov* && \
+    rm -rf \var\local\git\openvswitch
+    cd ~
+
+PULSAR_RELEASE_TAG='pulsar-2.6.1'
+echo "7--- installing pulsar dependacies ---" && \
+    mkdir -p /var/local/git/pulsar && \
+    wget https://archive.apache.org/dist/pulsar/${PULSAR_RELEASE_TAG}/DEB/apache-pulsar-client.deb -O /var/local/git/pulsar/apache-pulsar-client.deb && \
+    wget https://archive.apache.org/dist/pulsar/${PULSAR_RELEASE_TAG}/DEB/apache-pulsar-client-dev.deb -O /var/local/git/pulsar/apache-pulsar-client-dev.deb && \
+    cd /var/local/git/pulsar && \
+    apt install -y ./apache-pulsar-client*.deb && \
+    rm -rf /var/local/git/pulsar 
+    cd ~
+
+echo "8--- building alcor-control-agent"
 cd ~/alcor-control-agent && cmake . && make
 
-echo "8--- rebuilding br-tun and br-int"
+echo "9--- rebuilding br-tun and br-int"
 ovs-vsctl add-br br-int
 ovs-vsctl add-br br-tun
 ovs-vsctl add-port br-int patch-tun
@@ -119,5 +143,5 @@ ovs-vsctl set interface patch-int options:peer=patch-tun
 ovs-ofctl add-flow br-tun "table=0, priority=1,in_port="patch-int" actions=resubmit(,2)"
 ovs-ofctl add-flow br-tun "table=2, priority=0 actions=resubmit(,22)"
 
-echo "9--- running alcor-control-agent"
+echo "10--- running alcor-control-agent"
 ./build/bin/AlcorControlAgent -d &
