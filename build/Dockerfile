@@ -22,7 +22,9 @@ RUN echo "--- installing mizar dependencies ---" && \
     autoconf \
     automake \
     dh-autoreconf \
-    libtool
+    libtool \
+    wget
+    
 RUN pip3 install httpserver netaddr
 
 ENV OVS_RELEASE_TAG branch-2.12
