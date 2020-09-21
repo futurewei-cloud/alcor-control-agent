@@ -22,7 +22,9 @@ RUN echo "--- installing mizar dependencies ---" && \
     autoconf \
     automake \
     dh-autoreconf \
-    libtool
+    libtool \
+    wget
+    
 RUN pip3 install httpserver netaddr
 
 ENV OVS_RELEASE_TAG branch-2.12
@@ -100,3 +102,12 @@ RUN echo "--- installing cppkafka ---" && \
     make install && \
     ldconfig && \
     rm -rf /var/local/git/cppkafka
+
+ENV PULSAR_RELEASE_TAG='pulsar-2.6.1'
+RUN echo "7--- installing pulsar dependacies ---" && \
+    mkdir -p /var/local/git/pulsar && \
+    wget https://archive.apache.org/dist/pulsar/${PULSAR_RELEASE_TAG}/DEB/apache-pulsar-client.deb -O /var/local/git/pulsar/apache-pulsar-client.deb && \
+    wget https://archive.apache.org/dist/pulsar/${PULSAR_RELEASE_TAG}/DEB/apache-pulsar-client-dev.deb -O /var/local/git/pulsar/apache-pulsar-client-dev.deb && \
+    cd /var/local/git/pulsar && \
+    apt install -y ./apache-pulsar-client*.deb && \
+    rm -rf /var/local/git/pulsar 
