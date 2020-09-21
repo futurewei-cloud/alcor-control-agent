@@ -100,3 +100,12 @@ RUN echo "--- installing cppkafka ---" && \
     make install && \
     ldconfig && \
     rm -rf /var/local/git/cppkafka
+
+ENV PULSAR_RELEASE_TAG='pulsar-2.6.1'
+RUN echo "7--- installing pulsar dependacies ---" && \
+    wget "https://www.apache.org/dyn/mirrors/mirrors.cgi?action=download&filename=pulsar/"${PULSAR_RELEASE_TAG}"/DEB/apache-pulsar-client.deb" -O /var/local/git/pulsar/apache-pulsar-client.deb && \
+    wget "https://www.apache.org/dyn/mirrors/mirrors.cgi?action=download&filename=pulsar/"${PULSAR_RELEASE_TAG}"/DEB/apache-pulsar-client-dev.deb" -O /var/local/git/pulsar/apache-pulsar-client-dev.deb && \
+    cd /var/local/git/pulsar && \
+    apt install ./apache-pulsar-client*.deb && \
+    mv /usr/lib/libpulsar* /usr/local/lib/ && \
+    rm -rf /var/local/git/pulsar 

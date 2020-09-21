@@ -3,6 +3,7 @@ set(EXECUTABLE_OUTPUT_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../build/bin)
 set(SOURCES
     ./comm/aca_message_producer.cpp
     ./comm/aca_message_consumer.cpp
+    ./comm/aca_message_pulsar_consumer.cpp
     ./comm/aca_comm_mgr.cpp
     ./comm/aca_grpc.cpp
     ./dp_abstraction/aca_goal_state_handler.cpp
@@ -18,10 +19,11 @@ set(SOURCES
 )
 FIND_LIBRARY(RDKAFKA rdkafka /usr/lib/x86_64-linux-gnu NO_DEFAULT_PATH)
 FIND_LIBRARY(CPPKAFKA cppkafka /usr/local/lib NO_DEFAULT_PATH)
+FIND_LIBRARY(PULSAR pulsar /usr/local/lib NO_DEFAULT_PATH)
 FIND_LIBRARY(OPENVSWITCH openvswitch /usr/local/lib NO_DEFAULT_PATH)
 FIND_LIBRARY(MESSAGEMANAGER messagemanager ${CMAKE_CURRENT_SOURCE_DIR}/../include NO_DEFAULT_PATH)
-link_libraries(${RDKAFKA} ${CPPKAFKA} ${OPENVSWITCH})
-include_directories(${RDKAFKA_INCLUDE_DIR} ${CPPKAFKA_INCLUDE_DIR} ${OPENVSWITCH_INCLUDE_DIR})
+link_libraries(${RDKAFKA} ${CPPKAFKA} ${OPENVSWITCH} ${PULSAR})
+include_directories(${RDKAFKA_INCLUDE_DIR} ${CPPKAFKA_INCLUDE_DIR} ${OPENVSWITCH_INCLUDE_DIR} ${PULSAR_INCLUDE_DIR})
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../include)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/proto3)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/grpc)
@@ -48,6 +50,7 @@ add_library(AlcorControlAgentLib STATIC ${SOURCES})
 add_executable(AlcorControlAgent aca_main.cpp)
 target_link_libraries(AlcorControlAgent cppkafka)
 target_link_libraries(AlcorControlAgent rdkafka)
+target_link_libraries(AlcorControlAgent pulsar)
 target_link_libraries(AlcorControlAgent openvswitch)
 target_link_libraries(AlcorControlAgent AlcorControlAgentLib)
 target_link_libraries(AlcorControlAgent proto)
