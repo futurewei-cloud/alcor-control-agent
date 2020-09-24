@@ -103,7 +103,7 @@ bool MessageConsumer::consumeDispatched(string topic)
                           string(message.get_payload()).c_str());
 
             rc = Aca_Comm_Manager::get_instance().deserialize(
-                    &(message.get_payload()), deserialized_GoalState);
+                    message.get_payload().get_data(), message.get_payload().get_size(), deserialized_GoalState);
             if (rc == EXIT_SUCCESS) {
               rc = Aca_Comm_Manager::get_instance().update_goal_state(
                       deserialized_GoalState, gsOperationalReply);
