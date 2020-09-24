@@ -16,7 +16,7 @@
 #define ACA_COMM_MGR_H
 
 // #include "aca_net_state_handler.h"
-#include "cppkafka/buffer.h"
+// #include "cppkafka/buffer.h"
 #include "goalstateprovisioner.grpc.pb.h"
 
 using std::string;
@@ -27,9 +27,7 @@ class Aca_Comm_Manager {
   public:
   static Aca_Comm_Manager &get_instance();
 
-  int deserialize(const cppkafka::Buffer *kafka_buffer, alcor::schema::GoalState &parsed_struct);
-
-  int deserialize(const void *pulsar_buffer, size_t buffer_length, alcor::schema::GoalState &parsed_struct);
+  int deserialize(const unsigned char *mq_buffer, size_t buffer_length, alcor::schema::GoalState &parsed_struct);
 
   int update_goal_state(alcor::schema::GoalState &goal_state_message,
                         alcor::schema::GoalStateOperationReply &gsOperationReply);

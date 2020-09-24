@@ -102,20 +102,6 @@ echo "6--- installing openvswitch dependancies ---" && \
     rm -rf \var\local\git\openvswitch
     cd ~
 
-OVS_RELEASE_TAG="branch-2.12"
-echo "6--- installing openvswitch dependancies ---" && \
-    git clone -b $OVS_RELEASE_TAG https://github.com/openvswitch/ovs.git /var/local/git/openvswitch && \
-    cd /var/local/git/openvswitch && \
-    ./boot.sh && \
-    ./configure --prefix=/usr/local --localstatedir=/var --sysconfdir=/etc --enable-shared && \
-    make && \
-    make install && \
-    cp /var/local/git/openvswitch/lib/vconn-provider.h /usr/local/include/openvswitch/vconn-provider.h && \
-    cd /usr/local/bin && \
-    rm ov* && \
-    rm -rf \var\local\git\openvswitch
-    cd ~
-
 PULSAR_RELEASE_TAG='pulsar-2.6.1'
 echo "7--- installing pulsar dependacies ---" && \
     mkdir -p /var/local/git/pulsar && \

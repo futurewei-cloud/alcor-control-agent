@@ -28,7 +28,7 @@ using pulsar::Result;
 
 namespace messagemanager
 {
-MessageConsumer::MessageConsumer(string brokers, string subscription_name)
+MessagePulsarConsumer::MessagePulsarConsumer(string brokers, string subscription_name)
 {
   setBrokers(brokers);
   setSubscriptionName(subscription_name);
@@ -43,33 +43,33 @@ MessageConsumer::MessageConsumer(string brokers, string subscription_name)
   this->ptr_client= new Client(brokers,this->client_config);
 }
 
-MessageConsumer::~MessageConsumer()
+MessagePulsarConsumer::~MessagePulsarConsumer()
 {
   //delete ptr_consumer;
   delete ptr_client;
 }
 
-string MessageConsumer::getBrokers() const
+string MessagePulsarConsumer::getBrokers() const
 {
   return this->brokers_list;
 }
 
-string MessageConsumer::getLastTopicName() const
+string MessagePulsarConsumer::getLastTopicName() const
 {
   return this->topic_name;
 }
 
-string MessageConsumer::getSubscriptionName() const
+string MessagePulsarConsumer::getSubscriptionName() const
 {
   return this->subscription_name;
 }
 
-void MessageConsumer::setSubscriptionName(string subscription_name)
+void MessagePulsarConsumer::setSubscriptionName(string subscription_name)
 {
   this->subscription_name = subscription_name;
 }
 
-bool MessageConsumer::consumeDispatched(string topic)
+bool MessagePulsarConsumer::consumeDispatched(string topic)
 {
   alcor::schema::GoalState deserialized_GoalState;
   alcor::schema::GoalStateOperationReply gsOperationalReply;
@@ -81,7 +81,7 @@ bool MessageConsumer::consumeDispatched(string topic)
 	result = this->ptr_client->subscribe(topic,this->subscription_name,this->consumer_config,*(this->ptr_consumer));
 
 	if (result != Result::ResultOk){
-		ACA_LOG_ERROR("Failed to  subscribe topic: %s\n", topic.c_str());
+		ACA_LOG_ERROR("Failed to subscribe topic: %s\n", topic.c_str());
 	}
 
   ACA_LOG_DEBUG("Consumer consuming messages from topic: %s\n", topic.c_str());
@@ -104,7 +104,7 @@ bool MessageConsumer::consumeDispatched(string topic)
                   message.getDataAsString().c_str());
 
     rc = Aca_Comm_Manager::get_instance().deserialize(
-            message.getData(),message.getLength(), deserialized_GoalState);
+            (unsigned char *)message.getData(),message.getLength(), deserialized_GoalState);
     if (rc == EXIT_SUCCESS) {
       rc = Aca_Comm_Manager::get_instance().update_goal_state(
                   deserialized_GoalState, gsOperationalReply);
@@ -128,13 +128,13 @@ bool MessageConsumer::consumeDispatched(string topic)
   return overall_rc;
 }
 
-void MessageConsumer::setBrokers(string brokers)
+void MessagePulsarConsumer::setBrokers(string brokers)
 {
   //TODO: validate string as IP address
   this->brokers_list = brokers;
 }
 
-void MessageConsumer::setLastTopicName(string topic)
+void MessagePulsarConsumer::setLastTopicName(string topic)
 {
   this->topic_name = topic;
 }
