@@ -30,7 +30,7 @@ using std::string;
 
 namespace messagemanager
 {
-class MessageConsumer {
+class MessagePulsarConsumer {
   private:
     string brokers_list; //IP addresses of pulsar brokers, format: pulsar:://<pulsar_host_ip>:<port>, example: pulsar://10.213.43.188:9092
 
@@ -47,9 +47,9 @@ class MessageConsumer {
     Client *ptr_client; //A pointer to the pulsar client
 
   public:
-    MessageConsumer(string brokers, string subscription_name);
+    MessagePulsarConsumer(string brokers, string subscription_name);
 
-    ~MessageConsumer();
+    ~MessagePulsarConsumer();
 
     string getBrokers() const;
 
