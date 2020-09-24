@@ -31,7 +31,7 @@ using std::string;
 static char EMPTY_STRING[] = "";
 static char BROKER_LIST[] = "pulsar://localhost:6502";
 static char PULSAR_TOPIC[] = "Host-ts-1";
-static char PULSAR_SUBSCRIPTION_NAME[] = "test-subscription"；
+static char PULSAR_SUBSCRIPTION_NAME[] = "test-subscription";
 // static char KAFKA_TOPIC[] = "Host-ts-1";
 // static char KAFKA_GROUP_ID[] = "test-group-id";
 static char GRPC_SERVER_PORT[] = "50001";
