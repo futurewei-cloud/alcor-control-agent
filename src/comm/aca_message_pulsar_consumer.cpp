@@ -82,6 +82,7 @@ bool MessagePulsarConsumer::consumeDispatched(string topic)
 
 	if (result != Result::ResultOk){
 		ACA_LOG_ERROR("Failed to subscribe topic: %s\n", topic.c_str());
+    return EXIT_FAILURE;
 	}
 
   ACA_LOG_DEBUG("Consumer consuming messages from topic: %s\n", topic.c_str());
@@ -92,6 +93,7 @@ bool MessagePulsarConsumer::consumeDispatched(string topic)
 
 	if (result != Result::ResultOk) {
     ACA_LOG_ERROR("Failed to receive message from topic: %s\n",topic.c_str());
+    return EXIT_FAILURE;
 	}
 
 	else{
