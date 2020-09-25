@@ -105,6 +105,8 @@ int ACA_Dhcp_Server::add_dhcp_entry(dhcp_config *dhcp_cfg_in)
 
   DHCP_ENTRY_DATA_SET((dhcp_entry_data *)&stData, dhcp_cfg_in);
 
+  _standardize_mac_address(dhcp_cfg_in->mac_address);
+
   if (_search_dhcp_entry(dhcp_cfg_in->mac_address)) {
     ACA_LOG_ERROR("Entry already existed! (mac = %s)\n",
                   dhcp_cfg_in->mac_address.c_str());
@@ -114,6 +116,7 @@ int ACA_Dhcp_Server::add_dhcp_entry(dhcp_config *dhcp_cfg_in)
   _dhcp_db_mutex.lock();
   _dhcp_db->insert(make_pair(dhcp_cfg_in->mac_address, stData));
   _dhcp_db_mutex.unlock();
+  ACA_LOG_DEBUG("DHCP Entry with mac: %s added\n", dhcp_cfg_in->mac_address.c_str());
 
   return EXIT_SUCCESS;
 }
@@ -130,6 +133,8 @@ int ACA_Dhcp_Server::delete_dhcp_entry(dhcp_config *dhcp_cfg_in)
     ACA_LOG_WARN("DHCP DB is empty! (mac = %s)\n", dhcp_cfg_in->mac_address.c_str());
     return EXIT_FAILURE;
   }
+
+  _standardize_mac_address(dhcp_cfg_in->mac_address);
 
   if (!_search_dhcp_entry(dhcp_cfg_in->mac_address)) {
     ACA_LOG_INFO("Entry not exist!  (mac = %s)\n", dhcp_cfg_in->mac_address.c_str());
@@ -153,6 +158,8 @@ int ACA_Dhcp_Server::update_dhcp_entry(dhcp_config *dhcp_cfg_in)
                   dhcp_cfg_in->mac_address.c_str());
     return EXIT_FAILURE;
   }
+
+  _standardize_mac_address(dhcp_cfg_in->mac_address);
 
   pData = _search_dhcp_entry(dhcp_cfg_in->mac_address);
   if (!pData) {
@@ -240,6 +247,14 @@ int ACA_Dhcp_Server::_validate_dhcp_entry(dhcp_config *dhcp_cfg_in)
   }
 
   return EXIT_SUCCESS;
+}
+
+void ACA_Dhcp_Server::_standardize_mac_address(string &mac_string)
+{
+  // standardize the mac address to aa:bb:cc:dd:ee:ff
+  std::transform(mac_string.begin(), mac_string.end(), mac_string.begin(),
+                 [](unsigned char c) { return std::tolower(c); });
+  std::replace(mac_string.begin(), mac_string.end(), '-', ':');
 }
 
 int ACA_Dhcp_Server::_get_db_size() const
@@ -555,6 +570,7 @@ void ACA_Dhcp_Server::_parse_dhcp_discover(uint32_t in_port, dhcp_message *dhcpm
   dhcp_message *dhcpoffer = nullptr;
 
   mac_address = _get_client_id(dhcpmsg);
+  _standardize_mac_address(mac_address);
   pData = _search_dhcp_entry(mac_address);
   if (!pData) {
     ACA_LOG_ERROR("DHCP entry does not exist! (mac = %s)\n", mac_address.c_str());
@@ -619,6 +635,7 @@ void ACA_Dhcp_Server::_parse_dhcp_request(uint32_t in_port, dhcp_message *dhcpms
 
   // Fetch the record in DB
   mac_address = _get_client_id(dhcpmsg);
+  _standardize_mac_address(mac_address);
   pData = _search_dhcp_entry(mac_address);
   if (!pData) {
     ACA_LOG_ERROR("DHCP entry does not exist! (mac = %s)\n", mac_address.c_str());
@@ -713,23 +730,23 @@ dhcp_message *ACA_Dhcp_Server::_pack_dhcp_nak(dhcp_message *dhcpreq)
 
 unsigned short ACA_Dhcp_Server::check_sum(unsigned char *a, int len)
 {
-   unsigned int sum = 0;
-   unsigned short tmp = 16*16;
-   while (len>1) {
-      unsigned short tmp1 = *a++*tmp;
-      sum += tmp1 + *a++;
-      len -= 2;
-   }
+  unsigned int sum = 0;
+  unsigned short tmp = 16 * 16;
+  while (len > 1) {
+    unsigned short tmp1 = *a++ * tmp;
+    sum += tmp1 + *a++;
+    len -= 2;
+  }
 
-   if (len) {
-      sum += *(unsigned char *)a;
-   }
+  if (len) {
+    sum += *(unsigned char *)a;
+  }
 
-   while (sum >> 16) {
-      sum = (sum >> 16) + (sum & 0xffff);
-   }
+  while (sum >> 16) {
+    sum = (sum >> 16) + (sum & 0xffff);
+  }
 
-   return (unsigned short)(~sum);
+  return (unsigned short)(~sum);
 }
 
 string ACA_Dhcp_Server::_serialize_dhcp_message(dhcp_message *dhcpmsg)
@@ -859,7 +876,7 @@ string ACA_Dhcp_Server::_serialize_dhcp_message(dhcp_message *dhcpmsg)
     uint8_t options[308];
   };
 
-  udphear udphdr = {0};
+  udphear udphdr = { 0 };
   udphdr.srcIp = inet_addr("127.0.1.1");
   udphdr.dstIp = inet_addr("255.255.255.255");
   udphdr.udp_len = htons(8 + len);
@@ -890,7 +907,7 @@ string ACA_Dhcp_Server::_serialize_dhcp_message(dhcp_message *dhcpmsg)
   //udphdr.options = dhcpmsg->options;
   memcpy(udphdr.options, dhcpmsg->options, 308);
 
-  iphear iphr = {0};
+  iphear iphr = { 0 };
   iphr.version = 69;
   iphr.ds = 0;
   iphr.total_len = htons(28 + len);
