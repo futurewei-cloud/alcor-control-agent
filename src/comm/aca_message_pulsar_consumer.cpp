@@ -26,9 +26,9 @@ using pulsar::Message;
 using pulsar::Result;
 
 
-namespace messagemanager
+namespace aca_message_pulsar
 {
-MessagePulsarConsumer::MessagePulsarConsumer(string brokers, string subscription_name)
+ACA_Message_Pulsar_Consumer::ACA_Message_Pulsar_Consumer(string brokers, string subscription_name)
 {
   setBrokers(brokers);
   setSubscriptionName(subscription_name);
@@ -43,61 +43,61 @@ MessagePulsarConsumer::MessagePulsarConsumer(string brokers, string subscription
   this->ptr_client= new Client(brokers,this->client_config);
 }
 
-MessagePulsarConsumer::~MessagePulsarConsumer()
+ACA_Message_Pulsar_Consumer::~ACA_Message_Pulsar_Consumer()
 {
   //delete ptr_consumer;
   delete ptr_client;
 }
 
-string MessagePulsarConsumer::getBrokers() const
+string ACA_Message_Pulsar_Consumer::getBrokers() const
 {
   return this->brokers_list;
 }
 
-string MessagePulsarConsumer::getLastTopicName() const
+string ACA_Message_Pulsar_Consumer::getLastTopicName() const
 {
   return this->topic_name;
 }
 
-string MessagePulsarConsumer::getSubscriptionName() const
+string ACA_Message_Pulsar_Consumer::getSubscriptionName() const
 {
   return this->subscription_name;
 }
 
-void MessagePulsarConsumer::setSubscriptionName(string subscription_name)
+void ACA_Message_Pulsar_Consumer::setSubscriptionName(string subscription_name)
 {
   this->subscription_name = subscription_name;
 }
 
-bool MessagePulsarConsumer::consumeDispatched(string topic)
+bool ACA_Message_Pulsar_Consumer::consumeDispatched(string topic)
 {
   alcor::schema::GoalState deserialized_GoalState;
   alcor::schema::GoalStateOperationReply gsOperationalReply;
   int rc;
   int overall_rc = EXIT_SUCCESS;
-	Result result;
-	Message message;
+  Result result;
+  Message message;
 
-	result = this->ptr_client->subscribe(topic,this->subscription_name,this->consumer_config,*(this->ptr_consumer));
+  result = this->ptr_client->subscribe(topic,this->subscription_name,this->consumer_config,*(this->ptr_consumer));
 
-	if (result != Result::ResultOk){
-		ACA_LOG_ERROR("Failed to subscribe topic: %s\n", topic.c_str());
+  if (result != Result::ResultOk){
+    ACA_LOG_ERROR("Failed to subscribe topic: %s\n", topic.c_str());
     return EXIT_FAILURE;
-	}
+  }
 
   ACA_LOG_DEBUG("Consumer consuming messages from topic: %s\n", topic.c_str());
 
   
-	//Receive message
-	result = this->ptr_consumer->receive(message);
+  //Receive message
+  result = this->ptr_consumer->receive(message);
 
-	if (result != Result::ResultOk) {
+  if (result != Result::ResultOk) {
     ACA_LOG_ERROR("Failed to receive message from topic: %s\n",topic.c_str());
     return EXIT_FAILURE;
-	}
+  }
 
-	else{
-		// Print the ordering key (if any)
+  else{
+    // Print the ordering key (if any)
     if (message.hasOrderingKey()) {
       ACA_LOG_DEBUG("%s  -> ", message.getOrderingKey().c_str());
     }
@@ -113,12 +113,12 @@ bool MessagePulsarConsumer::consumeDispatched(string topic)
 
     // TODO: send gsOperationalReply back to controller 
 
-    	if (rc != EXIT_SUCCESS) {
-      	ACA_LOG_ERROR("Failed to update host with latest goal state, rc=%d.\n", rc);
-      	overall_rc = rc;
-    	} else {
-      	ACA_LOG_INFO("Successfully updated host with latest goal state %d.\n", rc);
-    	}
+      if (rc != EXIT_SUCCESS) {
+        ACA_LOG_ERROR("Failed to update host with latest goal state, rc=%d.\n", rc);
+        overall_rc = rc;
+      } else {
+        ACA_LOG_INFO("Successfully updated host with latest goal state %d.\n", rc);
+      }
     } else {
       ACA_LOG_ERROR("Deserialization failed with error code %d.\n", rc);
       overall_rc = rc;
@@ -126,19 +126,19 @@ bool MessagePulsarConsumer::consumeDispatched(string topic)
 
     // Now acknowledge message
     this->ptr_consumer->acknowledge(message);
-	}
+  }
   return overall_rc;
 }
 
-void MessagePulsarConsumer::setBrokers(string brokers)
+void ACA_Message_Pulsar_Consumer::setBrokers(string brokers)
 {
   //TODO: validate string as IP address
   this->brokers_list = brokers;
 }
 
-void MessagePulsarConsumer::setLastTopicName(string topic)
+void ACA_Message_Pulsar_Consumer::setLastTopicName(string topic)
 {
   this->topic_name = topic;
 }
 
-} // namespace messagemanager
+} // namespace aca_message_pulsar

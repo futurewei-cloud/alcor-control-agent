@@ -28,9 +28,9 @@ using pulsar::Client;
 using pulsar::Consumer;
 using std::string;
 
-namespace messagemanager
+namespace aca_message_pulsar
 {
-class MessagePulsarConsumer {
+class ACA_Message_Pulsar_Consumer {
   private:
     string brokers_list; //IP addresses of pulsar brokers, format: pulsar:://<pulsar_host_ip>:<port>, example: pulsar://10.213.43.188:9092
 
@@ -40,16 +40,16 @@ class MessagePulsarConsumer {
 
     ClientConfiguration client_config; //Configuration of the pulsar client
 
-		ConsumerConfiguration consumer_config; //Configuration of the pulsar consumer
+    ConsumerConfiguration consumer_config; //Configuration of the pulsar consumer
 
     Consumer *ptr_consumer; //A pointer to the pulsar consumer
 
     Client *ptr_client; //A pointer to the pulsar client
 
   public:
-    MessagePulsarConsumer(string brokers, string subscription_name);
+    ACA_Message_Pulsar_Consumer(string brokers, string subscription_name);
 
-    ~MessagePulsarConsumer();
+    ~ACA_Message_Pulsar_Consumer();
 
     string getBrokers() const;
 
@@ -67,6 +67,5 @@ class MessagePulsarConsumer {
     void setLastTopicName(string topic);
 };
 
-} // namespace messagemanager
-
+} // namespace aca_message_pulsar
 #endif

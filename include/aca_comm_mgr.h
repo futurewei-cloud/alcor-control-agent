@@ -15,8 +15,6 @@
 #ifndef ACA_COMM_MGR_H
 #define ACA_COMM_MGR_H
 
-// #include "aca_net_state_handler.h"
-// #include "cppkafka/buffer.h"
 #include "goalstateprovisioner.grpc.pb.h"
 
 using std::string;

@@ -23,7 +23,7 @@
 #include <grpcpp/grpcpp.h>
 
 using aca_ovs_control::ACA_OVS_Control;
-using messagemanager::MessagePulsarConsumer;
+using aca_message_pulsar::ACA_Message_Pulsar_Consumer;
 using std::string;
 
 // Defines
@@ -31,9 +31,6 @@ using std::string;
 static char EMPTY_STRING[] = "";
 static char BROKER_LIST[] = "pulsar://localhost:6502";
 static char PULSAR_TOPIC[] = "Host-ts-1";
-static char PULSAR_SUBSCRIPTION_NAME[] = "test-subscription";
-// static char KAFKA_TOPIC[] = "Host-ts-1";
-// static char KAFKA_GROUP_ID[] = "test-group-id";
 static char GRPC_SERVER_PORT[] = "50001";
 static char OFCTL_COMMAND[] = "monitor";
 static char OFCTL_TARGET[] = "br-int";
@@ -41,7 +38,6 @@ static char OFCTL_TARGET[] = "br-int";
 using namespace std;
 
 // Global variables
-//cppkafka::ConsumerDispatcher *dispatcher = NULL;
 std::thread *g_grpc_server_thread = NULL;
 GoalStateProvisionerImpl *g_grpc_server = NULL;
 string g_broker_list = EMPTY_STRING;
@@ -180,7 +176,7 @@ int main(int argc, char *argv[])
   //ACA_OVS_Control::get_instance().monitor("br-tun", "resume");
   ACA_OVS_Control::get_instance().monitor("br-int", "resume");
 
-  MessagePulsarConsumer network_config_consumer(g_broker_list, g_pulsar_subsription_name);
+  ACA_Message_Pulsar_Consumer network_config_consumer(g_broker_list, g_pulsar_subsription_name);
   rc = network_config_consumer.consumeDispatched(g_pulsar_topic);
 
   aca_cleanup();
