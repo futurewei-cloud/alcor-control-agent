@@ -31,6 +31,7 @@ using std::string;
 static char EMPTY_STRING[] = "";
 static char BROKER_LIST[] = "pulsar://localhost:6502";
 static char PULSAR_TOPIC[] = "Host-ts-1";
+static char PULSAR_SUBSCRIPTION_NAME[] = "Test-Subscription";
 static char GRPC_SERVER_PORT[] = "50001";
 static char OFCTL_COMMAND[] = "monitor";
 static char OFCTL_TARGET[] = "br-int";
