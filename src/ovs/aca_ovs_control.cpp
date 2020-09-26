@@ -277,7 +277,7 @@ void ACA_OVS_Control::parse_packet(uint32_t in_port, void *packet)
       aca_dhcp_server::ACA_Dhcp_Server::get_instance().dhcps_recv(
               in_port, const_cast<unsigned char *>(payload));
     }
-  }
+  }  
 }
 
 /*
