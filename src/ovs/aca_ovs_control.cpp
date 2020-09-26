@@ -241,35 +241,35 @@ void ACA_OVS_Control::parse_packet(uint32_t in_port, void *packet)
       ACA_LOG_INFO("   Payload (%d bytes):\n", size_payload);
       print_payload(payload, size_payload);
     }
-  } else if (ip->ip_p == IPPROTO_UDP) {
-    /* define/compute udp header offset */
-    const struct sniff_udp *udp =
-            (struct sniff_udp *)(base + SIZE_ETHERNET + vlan_len + size_ip);
-    const unsigned char *payload;
-    int size_payload;
-    int size_udp = ntohs(udp->uh_ulen);
+  } 
+  
+  /* define/compute udp header offset */
+  const struct sniff_udp *udp =
+          (struct sniff_udp *)(base + SIZE_ETHERNET + vlan_len + size_ip);
+  const unsigned char *payload;
+  int size_payload;
+  int size_udp = ntohs(udp->uh_ulen);
 
-    if (size_udp < 20) {
-      return;
-    } else {
-      int udp_sport = ntohs(udp->uh_sport);
-      int udp_dport = ntohs(udp->uh_dport);
-      ACA_LOG_INFO("   Src port: %d\n", udp_sport);
-      ACA_LOG_INFO("   Dst port: %d\n", udp_dport);
+  if (size_udp < 20) {
+    ACA_LOG_ERROR("size_udp < 20: %d\n", size_udp);
+    return;
+  } else {
+    int udp_sport = ntohs(udp->uh_sport);
+    int udp_dport = ntohs(udp->uh_dport);
+    ACA_LOG_INFO("   Src port: %d\n", udp_sport);
+    ACA_LOG_INFO("   Dst port: %d\n", udp_dport);
 
-      /* define/compute udp payload (daragram) offset */
-      payload = (u_char *)(base + SIZE_ETHERNET + vlan_len + size_ip + 8);
+    /* define/compute udp payload (daragram) offset */
+    payload = (u_char *)(base + SIZE_ETHERNET + vlan_len + size_ip + 8);
 
-      /* compute udp payload (datagram) size */
-      size_payload = ntohs(ip->ip_len) - (size_ip + 8);
+    /* compute udp payload (datagram) size */
+    size_payload = ntohs(ip->ip_len) - (size_ip + 8);
 
-      /*
-          * Print payload data.
-          */
-      if (size_payload > 0) {
-        ACA_LOG_INFO("   Payload (%d bytes):\n", size_payload);
-        print_payload(payload, size_payload);
-      }
+    /* Print payload data. */
+    if (size_payload > 0) {
+      ACA_LOG_INFO("   Payload (%d bytes):\n", size_payload);
+      print_payload(payload, size_payload);
+    }
 
     /* dhcp message procedure */
     if (udp_sport == 68 && udp_dport == 67) {
