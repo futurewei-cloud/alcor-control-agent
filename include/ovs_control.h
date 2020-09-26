@@ -28,6 +28,7 @@
 #include <openvswitch/ofp-table.h>
 #include <openvswitch/ofp-protocol.h>
 #include <openvswitch/ofp-switch.h>
+#include <openvswitch/ofp-flow.h>
 
 extern "C" { 
     struct unixctl_conn;
@@ -45,6 +46,7 @@ class OVS_Control {
  * console session.)  */
   static int use_names;
   static int verbosity;
+  static bool bundle;
   /* -F, --flow-format: Allowed protocols.  By default, any protocol is allowed. */
   static enum ofputil_protocol allowed_protocols;
   /* --unixctl-path: Path to use for unixctl server, for "monitor" and "snoop"
@@ -56,16 +58,24 @@ class OVS_Control {
    */
   void monitor(const char *bridge, const char *opt);
   void packet_out(const char *bridge, const char *opt);
-  void dump_flows(const char *bridge, const char *opt);
-  void dump_flows__(int argc, const char *argv, bool aggregate);
-  vconn *prepare_dump_flows(int argc, const char *argv, bool aggregate,
+  void dump_flows(const char *bridge, const char *flow;
+  void dump_flows__(const char *bridge, const char *flow, bool aggregate);
+  void add_flow(const char *bridge, const char *flow);
+  void mod_flows(const char *bridge, const char *flow, bool strict);
+  void del_flows(const char *bridge, const char *flow, bool strict);
+  void flow_mod(const char *bridge, const char *flow, unsigned short int command);
+  void flow_mod__(const char *remote, struct ofputil_flow_mod *fms, 
+                  size_t n_fms, enum ofputil_protocol usable_protocols);
+  void bundle_flow_mod__(const char *remote, struct ofputil_flow_mod *fms,
+                  size_t n_fms, enum ofputil_protocol usable_protocols);
+  vconn *prepare_dump_flows(const char *bridge, const char *flow, bool aggregate,
                     ofputil_flow_stats_request *fsr,
                     ofputil_protocol *protocolp);
   enum ofputil_protocol set_protocol_for_flow_dump(vconn *vconn,
                            ofputil_protocol cur_protocol,
                            ofputil_protocol usable_protocols);
   enum ofputil_protocol open_vconn_for_flow_mod(const char *remote, vconn **vconnp,
-                        ofputil_protocol usable_protocols);
+                        enum ofputil_protocol usable_protocols);
   bool try_set_protocol(struct vconn *vconn, enum ofputil_protocol want,
                  enum ofputil_protocol *cur);
   void fetch_switch_config(vconn *vconn, ofputil_switch_config *config);
@@ -73,6 +83,9 @@ class OVS_Control {
   int open_vconn_socket(const char *name, vconn **vconnp);
   void run(int retval, const char *message, ...);
   enum ofputil_protocol open_vconn(const char *name, vconn **vconnp);
+  void bundle_print_errors(struct ovs_list *errors, struct ovs_list *requests,
+                    const char *vconn_name);
+  void bundle_transact(struct vconn *vconn, struct ovs_list *requests, uint16_t flags);
   void transact_noreply(vconn *vconn, ofpbuf *request);
   void transact_multiple_noreply(vconn *vconn, ovs_list *requests);
   int monitor_set_invalid_ttl_to_controller(vconn *vconn);
