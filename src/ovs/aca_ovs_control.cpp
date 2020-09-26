@@ -242,7 +242,7 @@ void ACA_OVS_Control::parse_packet(uint32_t in_port, void *packet)
       print_payload(payload, size_payload);
     }
   } 
-
+  
   /* define/compute udp header offset */
   const struct sniff_udp *udp =
           (struct sniff_udp *)(base + SIZE_ETHERNET + vlan_len + size_ip);
@@ -251,6 +251,7 @@ void ACA_OVS_Control::parse_packet(uint32_t in_port, void *packet)
   int size_udp = ntohs(udp->uh_ulen);
 
   if (size_udp < 20) {
+    ACA_LOG_ERROR("size_udp < 20: %d\n", size_udp);
     return;
   } else {
     int udp_sport = ntohs(udp->uh_sport);
@@ -264,9 +265,7 @@ void ACA_OVS_Control::parse_packet(uint32_t in_port, void *packet)
     /* compute udp payload (datagram) size */
     size_payload = ntohs(ip->ip_len) - (size_ip + 8);
 
-    /*
-        * Print payload data.
-        */
+    /* Print payload data. */
     if (size_payload > 0) {
       ACA_LOG_INFO("   Payload (%d bytes):\n", size_payload);
       print_payload(payload, size_payload);
