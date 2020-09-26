@@ -215,12 +215,10 @@ void ACA_OVS_Control::parse_packet(uint32_t in_port, void *packet)
       print_payload(payload, size_payload);
     }
   }
-  
+
   /* define/compute udp header offset */
   const struct sniff_udp *udp =
           (struct sniff_udp *)(base + SIZE_ETHERNET + vlan_len + size_ip);
-  const unsigned char *payload;
-  int size_payload;
   int size_udp = ntohs(udp->uh_ulen);
 
   if (size_udp < 20) {
