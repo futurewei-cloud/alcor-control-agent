@@ -153,7 +153,6 @@ int main(int argc, char *argv[])
               "\t\t[-g kafka group id]\n"
               "\t\t[-p gRPC server port\n"
               "\t\t[-c ofctl command]\n"
-              "\t\t[-t ofctl target]\n"
               "\t\t[-m enable demo mode]\n"
               "\t\t[-d enable debug mode]\n",
               argv[0]);
@@ -187,7 +186,7 @@ int main(int argc, char *argv[])
 
   //ACA_OVS_Control::get_instance().monitor("br-tun", "resume");
   ACA_OVS_Control::get_instance().monitor("br-int", "resume");
-
+  
   MessageConsumer network_config_consumer(g_broker_list, g_kafka_group_id);
   rc = network_config_consumer.consumeDispatched(g_kafka_topic);
 

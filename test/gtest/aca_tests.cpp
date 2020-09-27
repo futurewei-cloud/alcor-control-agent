@@ -26,6 +26,8 @@
 #include "aca_dhcp_programming_if.h"
 #define private public
 #include "aca_dhcp_server.h"
+#include "aca_ovs_control.h"
+#include "ovs_control.h"
 
 using namespace std;
 using namespace alcor::schema;
@@ -34,6 +36,8 @@ using aca_net_config::Aca_Net_Config;
 using aca_ovs_l2_programmer::ACA_OVS_L2_Programmer;
 using namespace aca_dhcp_server;
 using namespace aca_dhcp_programming_if;
+using namespace aca_ovs_control;
+using namespace ovs_control;
 
 // Defines
 #define ACALOGNAME "AlcorControlAgentTest"
@@ -2804,6 +2808,68 @@ TEST(dhcp_message_test_cases, get_options_valid)
 
   retcode = ACA_Dhcp_Server::get_instance()._get_requested_ip(&stDhcpMsg);
   EXPECT_EQ(retcode, 0x0a000001);
+}
+
+TEST(ovs_flow_mod_cases, add_flows)
+{
+  // ulong culminative_network_configuration_time = 0;
+  // ulong not_care_culminative_time;
+  int overall_rc = EXIT_SUCCESS;
+
+  // create and setup br-int and br-tun bridges, and their patch ports
+  overall_rc = ACA_OVS_L2_Programmer::get_instance().setup_ovs_bridges_if_need();
+  ASSERT_EQ(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
+
+  // add flow
+  ACA_OVS_Control::get_instance().add_flow("br-tun", "ip,nw_dst=192.168.0.1,priority=1,actions=drop");
+ 
+  overall_rc = ACA_OVS_Control::get_instance().flow_exits("br-tun", "ip,nw_dst=192.168.0.1");
+  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
+
+}
+
+TEST(ovs_flow_mod_cases, mod_flows)
+{
+  // ulong culminative_network_configuration_time = 0;
+  // ulong not_care_culminative_time;
+  int overall_rc = EXIT_SUCCESS;
+
+  // create and setup br-int and br-tun bridges, and their patch ports
+  overall_rc = ACA_OVS_L2_Programmer::get_instance().setup_ovs_bridges_if_need();
+  ASSERT_EQ(overall_rc, EXIT_SUCCESS);
+  
+  // add flow
+  ACA_OVS_Control::get_instance().add_flow("br-tun", "tcp,nw_dst=192.168.0.1,priority=1,actions=drop");
+
+  // modify flow
+  ACA_OVS_Control::get_instance().mod_flows("br-tun", "tcp,nw_dst=192.168.0.1,priority=1,actions=resubmit(,2)");
+ 
+  overall_rc = ACA_OVS_Control::get_instance().flow_exits("br-tun", "tcp,nw_dst=192.168.0.1");
+  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
+}
+
+TEST(ovs_flow_mod_cases, del_flows)
+{
+  // ulong culminative_network_configuration_time = 0;
+  // ulong not_care_culminative_time;
+  int overall_rc = EXIT_SUCCESS;
+
+  // create and setup br-int and br-tun bridges, and their patch ports
+  overall_rc = ACA_OVS_L2_Programmer::get_instance().setup_ovs_bridges_if_need();
+  ASSERT_EQ(overall_rc, EXIT_SUCCESS);
+  
+  // add flow
+  ACA_OVS_Control::get_instance().add_flow("br-tun", "tcp,nw_dst=192.168.0.9,priority=1,actions=drop");
+
+  // delete flow
+  ACA_OVS_Control::get_instance().del_flows("br-tun", "tcp,nw_dst=192.168.0.9,priority=1");
+ 
+  overall_rc = ACA_OVS_Control::get_instance().flow_exits("br-tun", "tcp,nw_dst=192.168.0.9");
+  EXPECT_NE(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
 }
 
 int main(int argc, char **argv)

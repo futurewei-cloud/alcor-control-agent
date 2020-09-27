@@ -32,7 +32,7 @@
 #include <openvswitch/shash.h>
 #include <openvswitch/ofp-print.h>
 #include <openvswitch/ofp-monitor.h>
-#include <openvswitch/ofp-flow.h>
+//#include <openvswitch/ofp-flow.h>
 #include <openvswitch/ofp-msgs.h>
 #include <openvswitch/ofp-util.h>
 #include <openvswitch/poll-loop.h>
@@ -74,7 +74,6 @@ extern "C" {
     void ds_put_hex_dump(struct ds *ds, const void *buf_, size_t size,
                      uintptr_t ofs, bool ascii);
     char *ds_steal_cstr(struct ds *);
-
 }
 
 VLOG_DEFINE_THIS_MODULE(ovs_control);
@@ -89,6 +88,7 @@ OVS_Control &OVS_Control::get_instance()
 
   /* -F, --flow-format: Allowed protocols.  By default, any protocol is allowed. */
   allowed_protocols = static_cast<ofputil_protocol>(OFPUTIL_P_ANY);
+  bundle = false;
 
   return instance;
 }
@@ -96,6 +96,7 @@ OVS_Control &OVS_Control::get_instance()
 int OVS_Control::use_names;
 int OVS_Control::verbosity;
 enum ofputil_protocol OVS_Control::allowed_protocols;
+bool OVS_Control::bundle;
 
 void OVS_Control::monitor(const char *bridge, const char *opt)
 {
@@ -235,23 +236,22 @@ OVS_Control::packet_out(const char *bridge, const char *options)
     free(po.ofpacts);
 }
 
-void
-OVS_Control::dump_flows(const char *bridge, const char *opt)
+int
+OVS_Control::dump_flows(const char *bridge, const char *flow, bool show_stats)
 {
+    int rc = EXIT_FAILURE;
     int n_criteria = 0;
-    int show_stats = 1;
+    //int show_stats = 1;
 
     if (!n_criteria && !should_show_names() && show_stats) {
-        dump_flows__(1, bridge, false);
-        //dump_flows__(ctx->argc, ctx->argv, false)
-        return;
+        dump_flows__(bridge, flow, false);
+        rc = EXIT_SUCCESS;
     } else {
         ofputil_flow_stats_request fsr;
         enum ofputil_protocol protocol;
         struct vconn *vconn;
 
-        vconn = prepare_dump_flows(1, bridge, false, &fsr, &protocol);
-        //vconn = prepare_dump_flows(ctx->argc, ctx->argv, false, &fsr, &protocol);
+        vconn = prepare_dump_flows(bridge, flow, false, &fsr, &protocol);
         struct ofputil_flow_stats *fses;
         size_t n_fses;
         run(vconn_dump_flows(vconn, &fsr, protocol, &fses, &n_fses),
@@ -307,7 +307,7 @@ OVS_Control::dump_flows(const char *bridge, const char *opt)
         //     qsort(fses, n_fses, sizeof *fses, X::compare_flows);
         // }
 
-        struct ds s = DS_EMPTY_INITIALIZER;
+        struct ds s = DS_EMPTY_INITIALIZER; 
         for (size_t i = 0; i < n_fses; i++) {
             ds_clear(&s);
             ofputil_flow_stats_format(&s, &fses[i],
@@ -316,8 +316,10 @@ OVS_Control::dump_flows(const char *bridge, const char *opt)
                                       //ports_to_show(ctx->argv[1]),
                                       //tables_to_show(ctx->argv[1]),
                                       show_stats);
-            printf(" %s\n", ds_cstr(&s));
+            printf(" %s\n", ds_cstr(&s));;
         }
+        if (n_fses > 0) rc = EXIT_SUCCESS;
+
         ds_destroy(&s);
 
         for (size_t i = 0; i < n_fses; i++) {
@@ -327,33 +329,34 @@ OVS_Control::dump_flows(const char *bridge, const char *opt)
 
         vconn_close(vconn);
     }
+    return rc;
 }
 
 void
-OVS_Control::dump_flows__(int argc, const char *argv, bool aggregate)
+OVS_Control::dump_flows__(const char *bridge, const char *flow, bool aggregate)
 {
     struct ofputil_flow_stats_request fsr;
     enum ofputil_protocol protocol;
     struct vconn *vconn;
 
-    vconn = prepare_dump_flows(argc, argv, aggregate, &fsr, &protocol);
-    dump_transaction(vconn, ofputil_encode_flow_stats_request(&fsr, protocol), argv);
+    vconn = prepare_dump_flows(bridge, flow, aggregate, &fsr, &protocol);
+    dump_transaction(vconn, ofputil_encode_flow_stats_request(&fsr, protocol), bridge);
     vconn_close(vconn);
 }
 
 vconn *
-OVS_Control::prepare_dump_flows(int argc, const char *argv, bool aggregate,
+OVS_Control::prepare_dump_flows(const char *bridge, const char *flow, bool aggregate,
                     ofputil_flow_stats_request *fsr,
                     ofputil_protocol *protocolp)
 {
     // const char *vconn_name = argv[1];
-    const char *vconn_name = argv;
+    const char *vconn_name = bridge;
     enum ofputil_protocol usable_protocols, protocol;
     struct vconn *vconn;
     char *error;
 
     // const char *match = argc > 2 ? argv[2] : "";
-    const char *match = "";
+    const char *match = flow;
     const struct ofputil_port_map *port_map
         = *match ? ports_to_accept(vconn_name) : NULL;
     const struct ofputil_table_map *table_map
@@ -395,11 +398,101 @@ OVS_Control::set_protocol_for_flow_dump(vconn *vconn,
         ovs_fatal(0, "none of the usable flow formats (%s) is among the "
                   "allowed flow formats (%s)", usable_s, allowed_s);
     }
+    return (ofputil_protocol) 0;
+}
+
+void
+OVS_Control::add_flow(const char *bridge, const char *flow)
+{
+    flow_mod(bridge, flow, OFPFC_ADD);
+}
+
+void
+OVS_Control::mod_flows(const char *bridge, const char *flow, bool strict)
+{
+    flow_mod(bridge, flow, strict ? OFPFC_MODIFY_STRICT : OFPFC_MODIFY);
+}
+
+void
+OVS_Control::del_flows(const char *bridge, const char *flow, bool strict)
+{
+    flow_mod(bridge, flow, strict ? OFPFC_DELETE_STRICT : OFPFC_DELETE);
+}
+
+void
+OVS_Control::flow_mod(const char *bridge, const char *flow, unsigned short int command)
+{
+    struct ofputil_flow_mod fm;
+    char *error;
+    enum ofputil_protocol usable_protocols;
+    
+    error = parse_ofp_flow_mod_str(&fm, flow,
+                                    ports_to_accept(bridge),
+                                    tables_to_accept(bridge), command,
+                                    &usable_protocols);
+    if (error) {
+        ovs_fatal(0, "%s", error);
+    }
+    flow_mod__(bridge, &fm, 1, usable_protocols);
+}
+
+void
+OVS_Control::flow_mod__(const char *remote, struct ofputil_flow_mod *fms,
+                 size_t n_fms, enum ofputil_protocol usable_protocols)
+{
+    enum ofputil_protocol protocol;
+    struct vconn *vconn;
+    size_t i;
+
+    if (bundle) {
+        bundle_flow_mod__(remote, fms, n_fms, usable_protocols);
+        return;
+    }
+
+    protocol = open_vconn_for_flow_mod(remote, &vconn, usable_protocols);
+
+    for (i = 0; i < n_fms; i++) {
+        struct ofputil_flow_mod *fm = &fms[i];
+
+        transact_noreply(vconn, ofputil_encode_flow_mod(fm, protocol));
+        free(CONST_CAST(struct ofpact *, fm->ofpacts));
+        minimatch_destroy(&fm->match);
+    }
+    vconn_close(vconn);
+}
+
+void
+OVS_Control::bundle_flow_mod__(const char *remote, struct ofputil_flow_mod *fms,
+                  size_t n_fms, enum ofputil_protocol usable_protocols)
+{
+    enum ofputil_protocol protocol;
+    struct vconn *vconn;
+    struct ovs_list requests;
+    size_t i;
+
+    ovs_list_init(&requests);
+
+    /* Bundles need OpenFlow 1.3+. */
+    // usable_protocols &= OFPUTIL_P_OF13_UP;
+    protocol = open_vconn_for_flow_mod(remote, &vconn, usable_protocols);
+
+    for (i = 0; i < n_fms; i++) {
+        struct ofputil_flow_mod *fm = &fms[i];
+        struct ofpbuf *request = ofputil_encode_flow_mod(fm, protocol);
+
+        ovs_list_push_back(&requests, &request->list_node);
+        free(CONST_CAST(struct ofpact *, fm->ofpacts));
+        minimatch_destroy(&fm->match);
+    }
+
+    bundle_transact(vconn, &requests, OFPBF_ORDERED | OFPBF_ATOMIC);
+    ofpbuf_list_delete(&requests);
+    vconn_close(vconn);
 }
 
 enum ofputil_protocol
 OVS_Control::open_vconn_for_flow_mod(const char *remote, vconn **vconnp,
-                        ofputil_protocol usable_protocols)
+                        enum ofputil_protocol usable_protocols)
 {
     enum ofputil_protocol cur_protocol;
     char *usable_s;
@@ -432,6 +525,7 @@ OVS_Control::open_vconn_for_flow_mod(const char *remote, vconn **vconnp,
     usable_s = ofputil_protocols_to_string(usable_protocols);
     ovs_fatal(0, "switch does not support any of the usable flow "
               "formats (%s)", usable_s);
+    return (ofputil_protocol) 0;
 }
 
 /* Returns the port number corresponding to 'port_name' (which may be a port
@@ -446,6 +540,7 @@ OVS_Control::str_to_port_no(const char *vconn_name, const char *port_name)
         return port_no;
     }
     ovs_fatal(0, "%s: unknown port `%s'", vconn_name, port_name);
+    return (ofputil_protocol) 0;
 }
 
 bool
@@ -1011,6 +1106,67 @@ OVS_Control::set_packet_in_format(vconn *vconn,
         }
     }
     return true;
+}
+
+void
+OVS_Control::bundle_transact(struct vconn *vconn, struct ovs_list *requests, uint16_t flags)
+{
+    struct ovs_list errors;
+    int retval = vconn_bundle_transact(vconn, requests, flags, &errors);
+
+    bundle_print_errors(&errors, requests, vconn_get_name(vconn));
+
+    if (retval) {
+        ovs_fatal(retval, "talking to %s", vconn_get_name(vconn));
+    }
+}
+
+/* Frees the error messages as they are printed. */
+void
+OVS_Control::bundle_print_errors(struct ovs_list *errors, struct ovs_list *requests,
+                    const char *vconn_name)
+{
+    struct ofpbuf *error, *next;
+    struct ofpbuf *bmsg;
+
+    INIT_CONTAINER(bmsg, requests, list_node);
+
+    LIST_FOR_EACH_SAFE (error, next, list_node, errors) {
+        const struct ofp_header *error_oh = (ofp_header *) error->data;
+        ovs_be32 error_xid = error_oh->xid;
+        enum ofperr ofperr;
+        struct ofpbuf payload;
+
+        ofperr = ofperr_decode_msg(error_oh, &payload);
+        if (!ofperr) {
+            fprintf(stderr, "***decode error***");
+        } else {
+            /* Default to the likely truncated message. */
+            const struct ofp_header *ofp_msg = (ofp_header *) payload.data;
+            size_t msg_len = payload.size;
+
+            /* Find the failing message from the requests list to be able to
+             * dump the whole message.  We assume the errors are returned in
+             * the same order as in which the messages are sent to get O(n)
+             * rather than O(n^2) processing here.  If this heuristics fails we
+             * may print the truncated hexdumps instead. */
+            LIST_FOR_EACH_CONTINUE (bmsg, list_node, requests) {
+                const struct ofp_header *oh = (ofp_header *) bmsg->data;
+
+                if (oh->xid == error_xid) {
+                    ofp_msg = oh;
+                    msg_len = bmsg->size;
+                    break;
+                }
+            }
+            fprintf(stderr, "Error %s for: ", ofperr_get_name(ofperr));
+            ofp_print(stderr, ofp_msg, msg_len, ports_to_show(vconn_name),
+                      tables_to_show(vconn_name), verbosity + 1);
+        }
+        ofpbuf_uninit(&payload);
+        ofpbuf_delete(error);
+    }
+    fflush(stderr);
 }
 
 /* Sends 'request', which should be a request that only has a reply if an error
