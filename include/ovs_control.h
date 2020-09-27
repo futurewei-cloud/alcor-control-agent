@@ -58,7 +58,7 @@ class OVS_Control {
    */
   void monitor(const char *bridge, const char *opt);
   void packet_out(const char *bridge, const char *opt);
-  void dump_flows(const char *bridge, const char *flow;
+  int dump_flows(const char *bridge, const char *flow, bool show_stats);
   void dump_flows__(const char *bridge, const char *flow, bool aggregate);
   void add_flow(const char *bridge, const char *flow);
   void mod_flows(const char *bridge, const char *flow, bool strict);

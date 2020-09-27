@@ -236,23 +236,22 @@ OVS_Control::packet_out(const char *bridge, const char *options)
     free(po.ofpacts);
 }
 
-void
-OVS_Control::dump_flows(const char *bridge, const char *opt)
+int
+OVS_Control::dump_flows(const char *bridge, const char *flow, bool show_stats)
 {
+    int rc = EXIT_FAILURE;
     int n_criteria = 0;
-    int show_stats = 1;
+    //int show_stats = 1;
 
     if (!n_criteria && !should_show_names() && show_stats) {
-        dump_flows__(bridge, opt, false);
-        //dump_flows__(ctx->argc, ctx->argv, false)
-        return;
+        dump_flows__(bridge, flow, false);
+        rc = EXIT_SUCCESS;
     } else {
         ofputil_flow_stats_request fsr;
         enum ofputil_protocol protocol;
         struct vconn *vconn;
 
-        vconn = prepare_dump_flows(bridge, "", false, &fsr, &protocol);
-        //vconn = prepare_dump_flows(ctx->argc, ctx->argv, false, &fsr, &protocol);
+        vconn = prepare_dump_flows(bridge, flow, false, &fsr, &protocol);
         struct ofputil_flow_stats *fses;
         size_t n_fses;
         run(vconn_dump_flows(vconn, &fsr, protocol, &fses, &n_fses),
@@ -308,7 +307,7 @@ OVS_Control::dump_flows(const char *bridge, const char *opt)
         //     qsort(fses, n_fses, sizeof *fses, X::compare_flows);
         // }
 
-        struct ds s = DS_EMPTY_INITIALIZER;
+        struct ds s = DS_EMPTY_INITIALIZER; 
         for (size_t i = 0; i < n_fses; i++) {
             ds_clear(&s);
             ofputil_flow_stats_format(&s, &fses[i],
@@ -317,8 +316,10 @@ OVS_Control::dump_flows(const char *bridge, const char *opt)
                                       //ports_to_show(ctx->argv[1]),
                                       //tables_to_show(ctx->argv[1]),
                                       show_stats);
-            printf(" %s\n", ds_cstr(&s));
+            printf(" %s\n", ds_cstr(&s));;
         }
+        if (n_fses > 0) rc = EXIT_SUCCESS;
+
         ds_destroy(&s);
 
         for (size_t i = 0; i < n_fses; i++) {
@@ -328,6 +329,7 @@ OVS_Control::dump_flows(const char *bridge, const char *opt)
 
         vconn_close(vconn);
     }
+    return rc;
 }
 
 void

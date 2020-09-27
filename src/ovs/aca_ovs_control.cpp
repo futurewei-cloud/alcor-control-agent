@@ -68,12 +68,14 @@ int ACA_OVS_Control::control()
     monitor(target, options);
   } else if (g_ofctl_command.compare("dump-flows") == 0) {
     dump_flows(target, options);
+  } else if (g_ofctl_command.compare("flow-exists") == 0) {
+    flow_exits(target, options);
   } else if (g_ofctl_command.compare("add-flow") == 0) {
     add_flow(target, options);
   } else if (g_ofctl_command.compare("mod-flows") == 0) {
-    modify_flows(target, options);
+    mod_flows(target, options);
   } else if (g_ofctl_command.compare("del-flows") == 0) {
-    delete_flows(target, options);
+    del_flows(target, options);
   } else if (g_ofctl_command.compare("packet-out") == 0) {
     packet_out(target, options);
   } else {
@@ -91,7 +93,18 @@ int ACA_OVS_Control::control()
 
 void ACA_OVS_Control::dump_flows(const char *bridge, const char *opt)
 {
-  OVS_Control::get_instance().dump_flows(bridge, opt);
+  bool show_stats = true;
+  OVS_Control::get_instance().dump_flows(bridge, opt, show_stats);
+}
+
+int ACA_OVS_Control::flow_exits(const char *bridge, const char *flow)
+{
+  int rc = -EINVAL;
+  bool show_stats = false;
+  
+  rc = OVS_Control::get_instance().dump_flows(bridge, flow, show_stats);
+
+  return rc;
 }
 
 void ACA_OVS_Control::add_flow(const char *bridge, const char *opt)
@@ -99,13 +112,13 @@ void ACA_OVS_Control::add_flow(const char *bridge, const char *opt)
   OVS_Control::get_instance().add_flow(bridge, opt);
 }
 
-void ACA_OVS_Control::modify_flows(const char *bridge, const char *opt)
+void ACA_OVS_Control::mod_flows(const char *bridge, const char *opt)
 {
   bool strict = true;
   OVS_Control::get_instance().mod_flows(bridge, opt, strict);
 }
 
-void ACA_OVS_Control::delete_flows(const char *bridge, const char *opt)
+void ACA_OVS_Control::del_flows(const char *bridge, const char *opt)
 {
   bool strict = true;
   OVS_Control::get_instance().del_flows(bridge, opt, strict);
