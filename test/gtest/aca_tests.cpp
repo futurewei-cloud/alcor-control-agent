@@ -2824,7 +2824,7 @@ TEST(ovs_flow_mod_cases, add_flows)
   // add flow
   ACA_OVS_Control::get_instance().add_flow("br-tun", "ip,nw_dst=192.168.0.1,priority=1,actions=drop");
  
-  overall_rc = ACA_OVS_Control::get_instance().flow_exits("br-tun", "ip,nw_dst=192.168.0.1");
+  overall_rc = ACA_OVS_Control::get_instance().flow_exists("br-tun", "ip,nw_dst=192.168.0.1");
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
 
@@ -2846,7 +2846,7 @@ TEST(ovs_flow_mod_cases, mod_flows)
   // modify flow
   ACA_OVS_Control::get_instance().mod_flows("br-tun", "tcp,nw_dst=192.168.0.1,priority=1,actions=resubmit(,2)");
  
-  overall_rc = ACA_OVS_Control::get_instance().flow_exits("br-tun", "tcp,nw_dst=192.168.0.1");
+  overall_rc = ACA_OVS_Control::get_instance().flow_exists("br-tun", "tcp,nw_dst=192.168.0.1");
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
 }
@@ -2867,7 +2867,7 @@ TEST(ovs_flow_mod_cases, del_flows)
   // delete flow
   ACA_OVS_Control::get_instance().del_flows("br-tun", "tcp,nw_dst=192.168.0.9,priority=1");
  
-  overall_rc = ACA_OVS_Control::get_instance().flow_exits("br-tun", "tcp,nw_dst=192.168.0.9");
+  overall_rc = ACA_OVS_Control::get_instance().flow_exists("br-tun", "tcp,nw_dst=192.168.0.9");
   EXPECT_NE(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
 }

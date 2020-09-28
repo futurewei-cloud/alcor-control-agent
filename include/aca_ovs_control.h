@@ -64,7 +64,7 @@ class ACA_OVS_Control {
    *                            "in_port=controller packet=<hex-string> actions=normal"
    */
   void packet_out(const char *bridge, const char *opt);
-  int flow_exits(const char *bridge, const char *flow); 
+  int flow_exists(const char *bridge, const char *flow); 
   void dump_flows(const char *bridge, const char *opt); 
   void add_flow(const char *bridge, const char *opt); 
   void mod_flows(const char *bridge, const char *opt); 

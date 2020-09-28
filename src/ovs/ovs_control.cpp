@@ -132,8 +132,11 @@ void OVS_Control::monitor(const char *bridge, const char *opt)
                 struct ds versions = DS_EMPTY_INITIALIZER;
                 ofputil_format_version_bitmap_names(&versions,
                                                     usable_versions);
-                ovs_fatal(0, "invalid_ttl requires one of the OpenFlow "
-                          "versions %s but none is enabled (use -O)",
+                // ovs_fatal(0, "invalid_ttl requires one of the OpenFlow "
+                //           "versions %s but none is enabled (use -O)",
+                //           ds_cstr(&versions));
+                ACA_LOG_ERROR("invalid_ttl requires one of the OpenFlow "
+                          "versions %s but none is enabled (use -O)\n",
                           ds_cstr(&versions));
             }
             mask_allowed_ofp_versions(usable_versions);
@@ -169,8 +172,10 @@ void OVS_Control::monitor(const char *bridge, const char *opt)
             if (!(usable_protocols & allowed_protocols)) {
                 char *allowed_s = ofputil_protocols_to_string(allowed_protocols);
                 char *usable_s = ofputil_protocols_to_string(usable_protocols);
-               ovs_fatal(0, "none of the usable flow formats (%s) is among "
-                         "the allowed flow formats (%s)", usable_s, allowed_s);
+            //    ovs_fatal(0, "none of the usable flow formats (%s) is among "
+            //              "the allowed flow formats (%s)", usable_s, allowed_s);
+                ACA_LOG_ERROR("none of the usable flow formats (%s) is among "
+                          "the allowed flow formats (%s)", usable_s, allowed_s);
             }
 
             msg = ofpbuf_new(0);
@@ -187,7 +192,8 @@ void OVS_Control::monitor(const char *bridge, const char *opt)
             config.miss_send_len = UINT16_MAX;
             set_switch_config(vconn, &config);
         } else {
-            ovs_fatal(0, "%s: unsupported \"monitor\" argument", option);
+            //ovs_fatal(0, "%s: unsupported \"monitor\" argument", option);
+            ACA_LOG_ERROR("%s: unsupported \"monitor\" argument", option);
         }
     }
 
@@ -225,7 +231,8 @@ OVS_Control::packet_out(const char *bridge, const char *options)
                                          tables_to_accept(bridge),
                                          &usable_protocols);
     if (error) {
-        ovs_fatal(0, "%s", error);
+        //ovs_fatal(0, "%s", error);
+        ACA_LOG_ERROR(0, "%s", error);
     }
     protocol = open_vconn_for_flow_mod(bridge, &vconn,
                                         usable_protocols);
@@ -349,7 +356,6 @@ OVS_Control::prepare_dump_flows(const char *bridge, const char *flow, bool aggre
                     ofputil_flow_stats_request *fsr,
                     ofputil_protocol *protocolp)
 {
-    // const char *vconn_name = argv[1];
     const char *vconn_name = bridge;
     enum ofputil_protocol usable_protocols, protocol;
     struct vconn *vconn;
@@ -365,7 +371,8 @@ OVS_Control::prepare_dump_flows(const char *bridge, const char *flow, bool aggre
                                              port_map, table_map,
                                              &usable_protocols);
     if (error) {
-        ovs_fatal(0, "%s", error);
+        //ovs_fatal(0, "%s", error);
+        ACA_LOG_ERROR("%s", error);
     }
 
     protocol = open_vconn(vconn_name, &vconn);
@@ -391,11 +398,15 @@ OVS_Control::set_protocol_for_flow_dump(vconn *vconn,
 
     usable_s = ofputil_protocols_to_string(usable_protocols);
     if (usable_protocols & allowed_protocols) {
-        ovs_fatal(0, "switch does not support any of the usable flow "
-                  "formats (%s)", usable_s);
+        // ovs_fatal(0, "switch does not support any of the usable flow "
+        //           "formats (%s)", usable_s);
+        ACA_LOG_ERROR("switch does not support any of the usable flow "
+                      "formats (%s)", usable_s);        
     } else {
         char *allowed_s = ofputil_protocols_to_string(allowed_protocols);
-        ovs_fatal(0, "none of the usable flow formats (%s) is among the "
+        // ovs_fatal(0, "none of the usable flow formats (%s) is among the "
+        //           "allowed flow formats (%s)", usable_s, allowed_s);
+        ACA_LOG_ERROR("none of the usable flow formats (%s) is among the "
                   "allowed flow formats (%s)", usable_s, allowed_s);
     }
     return (ofputil_protocol) 0;
@@ -431,7 +442,8 @@ OVS_Control::flow_mod(const char *bridge, const char *flow, unsigned short int c
                                     tables_to_accept(bridge), command,
                                     &usable_protocols);
     if (error) {
-        ovs_fatal(0, "%s", error);
+        // ovs_fatal(0, "%s", error);
+        ACA_LOG_ERROR("%s", error);
     }
     flow_mod__(bridge, &fm, 1, usable_protocols);
 }
@@ -501,8 +513,10 @@ OVS_Control::open_vconn_for_flow_mod(const char *remote, vconn **vconnp,
     if (!(usable_protocols & allowed_protocols)) {
         char *allowed_s = ofputil_protocols_to_string(allowed_protocols);
         usable_s = ofputil_protocols_to_string(usable_protocols);
-        ovs_fatal(0, "none of the usable flow formats (%s) is among the "
-                  "allowed flow formats (%s)", usable_s, allowed_s);
+        // ovs_fatal(0, "none of the usable flow formats (%s) is among the "
+        //           "allowed flow formats (%s)", usable_s, allowed_s);
+        ACA_LOG_ERROR("none of the usable flow formats (%s) is among the "
+                      "allowed flow formats (%s)", usable_s, allowed_s);
     }
 
     /* If the initial flow format is allowed and usable, keep it. */
@@ -523,8 +537,10 @@ OVS_Control::open_vconn_for_flow_mod(const char *remote, vconn **vconnp,
     }
 
     usable_s = ofputil_protocols_to_string(usable_protocols);
-    ovs_fatal(0, "switch does not support any of the usable flow "
-              "formats (%s)", usable_s);
+    // ovs_fatal(0, "switch does not support any of the usable flow "
+    //           "formats (%s)", usable_s);
+    ACA_LOG_ERROR("switch does not support any of the usable flow "
+                  "formats (%s)", usable_s);
     return (ofputil_protocol) 0;
 }
 
@@ -539,7 +555,8 @@ OVS_Control::str_to_port_no(const char *vconn_name, const char *port_name)
                                  &port_no)) {
         return port_no;
     }
-    ovs_fatal(0, "%s: unknown port `%s'", vconn_name, port_name);
+    // ovs_fatal(0, "%s: unknown port `%s'", vconn_name, port_name);
+    ACA_LOG_ERROR("%s: unknown port `%s'", vconn_name, port_name);
     return (ofputil_protocol) 0;
 }
 
@@ -585,7 +602,8 @@ OVS_Control::fetch_switch_config(vconn *vconn, ofputil_switch_config *config)
 
     if (ofptype_decode(&type, (ofp_header *) reply->data)
         || type != OFPTYPE_GET_CONFIG_REPLY) {
-        ovs_fatal(0, "%s: bad reply to config request", vconn_get_name(vconn));
+        // ovs_fatal(0, "%s: bad reply to config request", vconn_get_name(vconn));
+        ACA_LOG_ERROR("%s: bad reply to config request", vconn_get_name(vconn));        
     }
     ofputil_decode_get_config_reply((ofp_header *) reply->data, config);
     ofpbuf_delete(reply);
@@ -608,10 +626,12 @@ OVS_Control::open_vconn_socket(const char *name, vconn **vconnp)
     error = vconn_open(vconn_name, get_allowed_ofp_versions(), DSCP_DEFAULT,
                        vconnp);
     if (error && error != ENOENT) {
-        ovs_fatal(0, "%s: failed to open socket (%s)", name,
-                  ovs_strerror(error));
+        // ovs_fatal(0, "%s: failed to open socket (%s)", name,
+        //           ovs_strerror(error));
+        ACA_LOG_ERROR("%s: failed to open socket (%s)", name,
+                      ovs_strerror(error));
     }
-    //free(vconn_name);
+    // free(vconn_name);
     return error;
 }
 
@@ -642,7 +662,8 @@ OVS_Control::open_vconn(const char *name, vconn **vconnp)
     } else {
         // free(bridge_path);
         // free(socket_name);
-        ovs_fatal(0, "%s is not a bridge or a socket", name);
+        // ovs_fatal(0, "%s is not a bridge or a socket", name);
+        ACA_LOG_ERROR("%s is not a bridge or a socket", name);
     }
 
     // if (target == SNOOP) {
@@ -655,15 +676,19 @@ OVS_Control::open_vconn(const char *name, vconn **vconnp)
     VLOG_DBG("connecting to %s", vconn_get_name(*vconnp));
     error = vconn_connect_block(*vconnp, -1);
     if (error) {
-        ovs_fatal(0, "%s: failed to connect to socket (%s)", name,
-                   ovs_strerror(error));
+        // ovs_fatal(0, "%s: failed to connect to socket (%s)", name,
+        //            ovs_strerror(error));
+        ACA_LOG_ERROR("%s: failed to connect to socket (%s)", name,
+                      ovs_strerror(error));
     }
 
     version = vconn_get_version(*vconnp);
     protocol = ofputil_protocol_from_ofp_version(static_cast<ofp_version>(version));
     if (!protocol) {
-        ovs_fatal(0, "%s: unsupported OpenFlow version 0x%02x",
-                   name, version);
+        // ovs_fatal(0, "%s: unsupported OpenFlow version 0x%02x",
+        //            name, version);
+        ACA_LOG_ERROR("%s: unsupported OpenFlow version 0x%02x",
+                      name, version);                   
     }
     return protocol;
 }
@@ -683,8 +708,10 @@ OVS_Control::monitor_set_invalid_ttl_to_controller(vconn *vconn)
          * best we can do. */
         fetch_switch_config(vconn, &config);
         if (!config.invalid_ttl_to_controller) {
-            ovs_fatal(0, "setting invalid_ttl_to_controller failed (this "
-                      "switch probably doesn't support this flag)");
+            // ovs_fatal(0, "setting invalid_ttl_to_controller failed (this "
+            //           "switch probably doesn't support this flag)");
+            ACA_LOG_ERROR("setting invalid_ttl_to_controller failed (this "
+                          "switch probably doesn't support this flag)");                      
         }
     }
     return 0;
@@ -933,6 +960,7 @@ OVS_Control::monitor_vconn(vconn *vconn, bool reply_to_echo_requests,
     error = unixctl_server_create(unixctl_path, &server);
     if (error) {
         ovs_fatal(error, "failed to create unixctl server");
+        ACA_LOG_ERROR("failed to create unixctl server");        
     }
     unixctl_command_register("exit", "", 0, 0, X::ofctl_exit, &exiting);
     unixctl_command_register("ofctl/send", "OFMSG...", 1, INT_MAX,
@@ -999,7 +1027,8 @@ OVS_Control::monitor_vconn(vconn *vconn, bool reply_to_echo_requests,
                     reply = ofputil_encode_echo_reply((ofp_header *) b->data);
                     retval = vconn_send_block(vconn, reply);
                     if (retval) {
-                        ovs_fatal(retval, "failed to send echo reply");
+                        // ovs_fatal(retval, "failed to send echo reply");
+                        ACA_LOG_ERROR("failed to send echo reply");
                     }
                 }
                 break;
@@ -1038,7 +1067,8 @@ OVS_Control::monitor_vconn(vconn *vconn, bool reply_to_echo_requests,
 
                         retval = vconn_send_block(vconn, reply);
                         if (retval) {
-                            ovs_fatal(retval, "failed to send NXT_RESUME");
+                            // ovs_fatal(retval, "failed to send NXT_RESUME");
+                            ACA_LOG_ERROR("failed to send NXT_RESUME");
                         }
                     }
                 }
@@ -1117,7 +1147,8 @@ OVS_Control::bundle_transact(struct vconn *vconn, struct ovs_list *requests, uin
     bundle_print_errors(&errors, requests, vconn_get_name(vconn));
 
     if (retval) {
-        ovs_fatal(retval, "talking to %s", vconn_get_name(vconn));
+        // ovs_fatal(retval, "talking to %s", vconn_get_name(vconn));
+        ACA_LOG_ERROR("talking to %s", vconn_get_name(vconn));        
     }
 }
 
@@ -1248,12 +1279,18 @@ OVS_Control::dump_transaction(vconn *vconn, ofpbuf *request, const char *bridge)
                 } else if (ofpraw == reply_raw) {
                     done = !ofpmp_more((struct ofp_header *) reply->data);
                 } else {
-                    ovs_fatal(0, "received bad reply: %s",
-                              ofp_to_string(
-                                  reply->data, reply->size,
-                                  ports_to_show(vconn_get_name(vconn)),
-                                  tables_to_show(vconn_get_name(vconn)),
-                                  OVS_Control::verbosity + 1));
+                    // ovs_fatal(0, "received bad reply: %s",
+                    //           ofp_to_string(
+                    //               reply->data, reply->size,
+                    //               ports_to_show(vconn_get_name(vconn)),
+                    //               tables_to_show(vconn_get_name(vconn)),
+                    //               OVS_Control::verbosity + 1));
+                    ACA_LOG_ERROR("received bad reply: %s",
+                                  ofp_to_string(
+                                    reply->data, reply->size,
+                                    ports_to_show(vconn_get_name(vconn)),
+                                    tables_to_show(vconn_get_name(vconn)),
+                                    OVS_Control::verbosity + 1));
                 }
             } else {
                 VLOG_DBG("received reply with xid %08" PRIx32 " "
@@ -1311,8 +1348,10 @@ OVS_Control::port_iterator_fetch_features(port_iterator *pi)
     enum ofptype type;
     if (ofptype_decode(&type, (struct ofp_header *) pi->reply->data)
         || type != OFPTYPE_FEATURES_REPLY) {
-        ovs_fatal(0, "%s: received bad features reply",
-                  vconn_get_name(pi->vconn));
+        // ovs_fatal(0, "%s: received bad features reply",
+        //           vconn_get_name(pi->vconn));
+        ACA_LOG_ERROR("%s: received bad features reply",
+                      vconn_get_name(pi->vconn));
     }
     if (!ofputil_switch_features_has_ports(pi->reply)) {
         /* The switch features reply does not contain a complete list of ports.
@@ -1328,8 +1367,10 @@ OVS_Control::port_iterator_fetch_features(port_iterator *pi)
     struct ofputil_switch_features features;
     enum ofperr error = ofputil_pull_switch_features(pi->reply, &features);
     if (error) {
-        ovs_fatal(0, "%s: failed to decode features reply (%s)",
-                  vconn_get_name(pi->vconn), ofperr_to_string(error));
+        // ovs_fatal(0, "%s: failed to decode features reply (%s)",
+        //           vconn_get_name(pi->vconn), ofperr_to_string(error));
+        ACA_LOG_ERROR("%s: failed to decode features reply (%s)",
+                      vconn_get_name(pi->vconn), ofperr_to_string(error));                  
     }
 }
 
@@ -1365,8 +1406,11 @@ OVS_Control::port_iterator_next(port_iterator *pi, ofputil_phy_port *pp)
             if (!retval) {
                 return true;
             } else if (retval != EOF) {
-                ovs_fatal(0, "received bad reply: %s",
-                          ofp_to_string(pi->reply->data, pi->reply->size,
+                // ovs_fatal(0, "received bad reply: %s",
+                //           ofp_to_string(pi->reply->data, pi->reply->size,
+                //                         NULL, NULL, verbosity + 1));
+                ACA_LOG_ERROR("received bad reply: %s",
+                              ofp_to_string(pi->reply->data, pi->reply->size,
                                         NULL, NULL, verbosity + 1));
             }
         }
@@ -1387,9 +1431,12 @@ OVS_Control::port_iterator_next(port_iterator *pi, ofputil_phy_port *pp)
         enum ofptype type;
         if (ofptype_pull(&type, pi->reply)
             || type != OFPTYPE_PORT_DESC_STATS_REPLY) {
-            ovs_fatal(0, "received bad reply: %s",
-                      ofp_to_string(pi->reply->data, pi->reply->size, NULL,
-                                    NULL, verbosity + 1));
+            // ovs_fatal(0, "received bad reply: %s",
+            //           ofp_to_string(pi->reply->data, pi->reply->size, NULL,
+            //                         NULL, verbosity + 1));
+            ACA_LOG_ERROR("received bad reply: %s",
+                          ofp_to_string(pi->reply->data, pi->reply->size, NULL,
+                                    NULL, verbosity + 1));                                    
         }
 
         pi->more = (ofpmp_flags(oh) & OFPSF_REPLY_MORE) != 0;
@@ -1444,7 +1491,8 @@ OVS_Control::fetch_ofputil_phy_port(const char *vconn_name, const char *port_nam
     vconn_close(vconn);
 
     if (!found) {
-        ovs_fatal(0, "%s: couldn't find port `%s'", vconn_name, port_name);
+        // ovs_fatal(0, "%s: couldn't find port `%s'", vconn_name, port_name);
+        ACA_LOG_ERROR("%s: couldn't find port `%s'", vconn_name, port_name);        
     }
 }
 
@@ -1492,8 +1540,11 @@ OVS_Control::table_iterator_next(table_iterator *ti)
             if (!retval) {
                 return &ti->features;
             } else if (retval != EOF) {
-                ovs_fatal(0, "received bad reply: %s",
-                          ofp_to_string(ti->reply->data, ti->reply->size,
+                // ovs_fatal(0, "received bad reply: %s",
+                //           ofp_to_string(ti->reply->data, ti->reply->size,
+                //                         NULL, NULL, verbosity + 1));
+                ACA_LOG_ERROR("received bad reply: %s",
+                            ofp_to_string(ti->reply->data, ti->reply->size,
                                         NULL, NULL, verbosity + 1));
             }
         }
@@ -1516,8 +1567,11 @@ OVS_Control::table_iterator_next(table_iterator *ti)
             || type != (ti->variant == TI_STATS
                         ? OFPTYPE_TABLE_STATS_REPLY
                         : OFPTYPE_TABLE_FEATURES_STATS_REPLY)) {
-            ovs_fatal(0, "received bad reply: %s",
-                      ofp_to_string(ti->reply->data, ti->reply->size, NULL,
+            // ovs_fatal(0, "received bad reply: %s",
+            //           ofp_to_string(ti->reply->data, ti->reply->size, NULL,
+            //                         NULL, verbosity + 1));
+            ACA_LOG_ERROR("received bad reply: %s",
+                          ofp_to_string(ti->reply->data, ti->reply->size, NULL,
                                     NULL, verbosity + 1));
         }
 
