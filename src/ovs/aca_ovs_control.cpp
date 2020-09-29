@@ -69,7 +69,7 @@ int ACA_OVS_Control::control()
   } else if (g_ofctl_command.compare("dump-flows") == 0) {
     dump_flows(target, options);
   } else if (g_ofctl_command.compare("flow-exists") == 0) {
-    flow_exits(target, options);
+    flow_exists(target, options);
   } else if (g_ofctl_command.compare("add-flow") == 0) {
     add_flow(target, options);
   } else if (g_ofctl_command.compare("mod-flows") == 0) {
@@ -97,7 +97,7 @@ void ACA_OVS_Control::dump_flows(const char *bridge, const char *opt)
   OVS_Control::get_instance().dump_flows(bridge, opt, show_stats);
 }
 
-int ACA_OVS_Control::flow_exits(const char *bridge, const char *flow)
+int ACA_OVS_Control::flow_exists(const char *bridge, const char *flow)
 {
   int rc = -EINVAL;
   bool show_stats = false;
@@ -210,7 +210,7 @@ void ACA_OVS_Control::parse_packet(uint32_t in_port, void *packet)
     int size_tcp = TH_OFF(tcp) * 4;
 
     if (size_tcp < 20) {
-      ACA_LOG_ERROR("size_tcp < 20: %d bypes \n", size_tcp);
+      ACA_LOG_ERROR("size_tcp < 20: %d bytes \n", size_tcp);
       return;
     } else {
       ACA_LOG_INFO("   Src port: %d\n", ntohs(tcp->th_sport));
@@ -222,12 +222,10 @@ void ACA_OVS_Control::parse_packet(uint32_t in_port, void *packet)
       /* compute tcp payload (segment) size */
       size_payload = ntohs(ip->ip_len) - (size_ip + size_tcp);
 
-      /*
-          * Print payload data;
-          */
+      /* Print payload data; */
       if (size_payload > 0) {
         ACA_LOG_INFO("   Payload (%d bytes):\n", size_payload);
-        print_payload(payload, size_payload);
+        // print_payload(payload, size_payload);
       }
     } 
   } else if (ip->ip_p == IPPROTO_UDP) {  
@@ -239,7 +237,7 @@ void ACA_OVS_Control::parse_packet(uint32_t in_port, void *packet)
     int size_udp = ntohs(udp->uh_ulen);
 
     if (size_udp < 20) {
-      ACA_LOG_ERROR("size_udp < 20: %d bypes \n", size_udp);
+      ACA_LOG_ERROR("size_udp < 20: %d bytes \n", size_udp);
       return;
     } else {
       int udp_sport = ntohs(udp->uh_sport);
@@ -266,7 +264,7 @@ void ACA_OVS_Control::parse_packet(uint32_t in_port, void *packet)
                 in_port, const_cast<unsigned char *>(payload));
       }
     }
-  }  
+  }
 }
 
 /*
