@@ -33,7 +33,7 @@ class ACA_OVS_Control {
   /* 
    * main function to call other function through command line
    * It accepts three options:
-   *   -c <commands>, available commands are dump-flows, monitor, packet_out
+   *   -c <commands>, available commands are dump-flows, add-flow, del-flows, mod-flows, monitor, packet_out
    *   -t <target bridge>, eg. br-int, br-tun
    *   -o <additional options>, depends on the command
    */
@@ -43,7 +43,7 @@ class ACA_OVS_Control {
    * create a monitor channel connecting to ovs.
    * Input: 
    *    const char *bridge: bridge name
-   *    cnost char *opt: option for monitor
+   *    cnost char *opt: option for monitor.  
    * Availabe options: 
    *    <miss-len>: a number larger than 1. 
    *    resume: continually intercept packet-in message
@@ -64,12 +64,88 @@ class ACA_OVS_Control {
    *                            "in_port=controller packet=<hex-string> actions=normal"
    */
   void packet_out(const char *bridge, const char *opt);
+
+  /*
+   * check if a flow exists in the ovsdb.
+   * Input:
+   *    const char *bridge: bridge name
+   *    cnost char *flow: flow to be checked
+   * Output:
+   *    int: EXIT_SUCCESS - flow matched, EXIT_FAILURE - no any flow matched
+   * example:
+   *    ACA_OVS_Control::get_instance().flow_exists("br-tun", "table=10,ip,nw_dst=192.168.0.1")
+   * comment: The function retrives flow without show-stats
+   */
   int flow_exists(const char *bridge, const char *flow); 
+
+  /*
+   * dump matched flows.
+   * Input:
+   *    const char *bridge: bridge name
+   *    cnost char *opt: flow to be matched. if no opt specified, the function return all flows
+   * example:
+   *    ACA_OVS_Control::get_instance().dump_flows("br-tun", "table=10,ip,nw_dst=192.168.0.1")
+   * comment: 
+   *    The function retrives flow with show-stats
+   *    if no flow in opt, this function dump all flows
+   */
   void dump_flows(const char *bridge, const char *opt); 
-  void add_flow(const char *bridge, const char *opt); 
+
+  /*
+   * add a flow.
+   * Input:
+   *    const char *bridge: bridge name
+   *    cnost char *opt: flow to be added.
+   * example:
+   *    ACA_OVS_Control::get_instance().add_flow("br-tun", "table=1,tcp,nw_dst=192.168.0.1,priority=1,actions=drop")
+   * comment: 
+   *    actions field is required in the opt.
+   */
+  void add_flow(const char *bridge, const char *opt);
+
+  /*
+   * modify matched flows.
+   * Input:
+   *    const char *bridge: bridge name
+   *    cnost char *opt: flow to be matched and modified field values.
+   * example:
+   *    ACA_OVS_Control::get_instance().mod_flows("br-tun", "table=1,tcp,nw_dst=192.168.0.1,priority=1,actions=resubmit(,2)")
+   * comment: 
+   *    the matching flow uses --strict option. 
+   *    actions field is required in the opt.
+   */ 
   void mod_flows(const char *bridge, const char *opt); 
+
+  /*
+   * delete matched flows.
+   * Input:
+   *    const char *bridge: bridge name
+   *    cnost char *opt: flow to be matched.
+   * example:
+   *    ACA_OVS_Control::get_instance().del_flows("br-tun", "table=1,tcp,nw_dst=192.168.0.1,priority=1")
+   * comment: 
+   *    the matching flow uses --strict option. 
+   */ 
   void del_flows(const char *bridge, const char *opt);
+ 
+  /*
+   * parse a received packet.
+   * Input:
+   *    uint32 in_port: the port received the packet
+   *    void *packet: packet data.
+   * example:
+   *    ACA_OVS_Control::get_instance().parse_packet(1, packet) 
+   */
   void parse_packet(uint32_t in_port, void *packet);
+
+  /*
+   * print out the contents of packet payload data.
+   * Input:
+   *    const u_char *payload: payload data
+   *    int len: payload size.
+   * example:
+   *    ACA_OVS_Control::get_instance().parse_packet(1, packet)
+   */
   void print_payload(const u_char *payload, int len);
   void print_hex_ascii_line(const u_char *payload, int len, int offset);
 
