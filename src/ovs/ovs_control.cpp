@@ -193,7 +193,7 @@ void OVS_Control::monitor(const char *bridge, const char *opt)
             set_switch_config(vconn, &config);
         } else {
             //ovs_fatal(0, "%s: unsupported \"monitor\" argument", option);
-            ACA_LOG_ERROR("%s: unsupported monitor argument", option);
+            ACA_LOG_ERROR("%s: unsupported monitor argument", option.c_str());
         }
     }
 
