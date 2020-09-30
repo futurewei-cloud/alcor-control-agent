@@ -193,7 +193,7 @@ void OVS_Control::monitor(const char *bridge, const char *opt)
             set_switch_config(vconn, &config);
         } else {
             //ovs_fatal(0, "%s: unsupported \"monitor\" argument", option);
-            ACA_LOG_ERROR("%s: unsupported \"monitor\" argument", option);
+            ACA_LOG_ERROR("%s: unsupported monitor argument", option);
         }
     }
 
@@ -232,7 +232,7 @@ OVS_Control::packet_out(const char *bridge, const char *options)
                                          &usable_protocols);
     if (error) {
         //ovs_fatal(0, "%s", error);
-        ACA_LOG_ERROR(0, "%s", error);
+        ACA_LOG_ERROR("%s", error);
     }
     protocol = open_vconn_for_flow_mod(bridge, &vconn,
                                         usable_protocols);
