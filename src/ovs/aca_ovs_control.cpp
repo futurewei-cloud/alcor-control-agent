@@ -80,7 +80,7 @@ int ACA_OVS_Control::control()
     packet_out(target, options);
   } else {
     cout << "Usage: -c <command> -t <target> -o <options>" << endl;
-    cout << "   commands: monitor, dump-flows, packet-out..." << endl;
+    cout << "   commands: monitor, dump-flows, add-flow, mod-flows, del-flows, packet-out..." << endl;
     cout << "   target: swtich name, such as br-int, br-tun, ..." << endl;
     cout << "   options: " << endl;
     cout << "      moinor: \"[miss-len] [invalid-ttl] [resume] [watch:format]\"" << endl;
