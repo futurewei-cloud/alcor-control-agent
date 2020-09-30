@@ -9,7 +9,7 @@ docker create -v $(pwd):/mnt/host/code -it --privileged --cap-add=NET_ADMIN --ca
 docker start a1
 
 # Build mizar first
-docker exec a1 bash -c "cd /mnt/host/code/mizar && make"
+# docker exec a1 bash -c "cd /mnt/host/code/mizar && make"
 
 # Build alcor control agent
 docker exec a1 bash -c "cd /mnt/host/code && cmake . && make"
