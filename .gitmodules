@@ -1,7 +1,3 @@
-[submodule "mizar"]
-	path = mizar
-	url = https://github.com/futurewei-cloud/mizar
-    ignore = untracked
 [submodule "alcor"]
 	path = alcor
 	url = https://github.com/futurewei-cloud/alcor.git
