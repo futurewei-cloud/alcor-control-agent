@@ -248,7 +248,6 @@ OVS_Control::dump_flows(const char *bridge, const char *flow, bool show_stats)
 {
     int rc = EXIT_FAILURE;
     int n_criteria = 0;
-    //int show_stats = 1;
 
     if (!n_criteria && !should_show_names() && show_stats) {
         dump_flows__(bridge, flow, false);

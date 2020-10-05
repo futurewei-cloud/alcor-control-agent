@@ -93,17 +93,13 @@ int ACA_OVS_Control::control()
 
 int ACA_OVS_Control::dump_flows(const char *bridge, const char *opt)
 {
-  bool show_stats = true;
-  return OVS_Control::get_instance().dump_flows(bridge, opt, show_stats);
+  return OVS_Control::get_instance().dump_flows(bridge, opt);
 }
 
 int ACA_OVS_Control::flow_exists(const char *bridge, const char *flow)
 {
-  int rc = -EINVAL;
-  bool show_stats = false;
-  
-  rc = OVS_Control::get_instance().dump_flows(bridge, flow, show_stats);
-
+  int rc = -EINVAL;  
+  rc = OVS_Control::get_instance().dump_flows(bridge, flow, false);
   return rc;
 }
 
