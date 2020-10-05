@@ -60,10 +60,10 @@ class OVS_Control {
   void packet_out(const char *bridge, const char *opt);
   int dump_flows(const char *bridge, const char *flow, bool show_stats);
   void dump_flows__(const char *bridge, const char *flow, bool aggregate);
-  void add_flow(const char *bridge, const char *flow);
-  void mod_flows(const char *bridge, const char *flow, bool strict);
-  void del_flows(const char *bridge, const char *flow, bool strict);
-  void flow_mod(const char *bridge, const char *flow, unsigned short int command);
+  int add_flow(const char *bridge, const char *flow);
+  int mod_flows(const char *bridge, const char *flow, bool strict);
+  int del_flows(const char *bridge, const char *flow, bool strict);
+  int flow_mod(const char *bridge, const char *flow, unsigned short int command);
   void flow_mod__(const char *remote, struct ofputil_flow_mod *fms, 
                   size_t n_fms, enum ofputil_protocol usable_protocols);
   void bundle_flow_mod__(const char *remote, struct ofputil_flow_mod *fms,

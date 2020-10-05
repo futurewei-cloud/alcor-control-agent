@@ -83,50 +83,58 @@ class ACA_OVS_Control {
    * Input:
    *    const char *bridge: bridge name
    *    cnost char *opt: flow to be matched. if no opt specified, the function return all flows
+   * Output:
+   *    int: EXIT_SUCCESS - flow matched, EXIT_FAILURE - no any flow matched
    * example:
    *    ACA_OVS_Control::get_instance().dump_flows("br-tun", "table=10,ip,nw_dst=192.168.0.1")
    * comment: 
    *    The function retrives flow with show-stats
    *    if no flow in opt, this function dump all flows
    */
-  void dump_flows(const char *bridge, const char *opt); 
+  int dump_flows(const char *bridge, const char *opt); 
 
   /*
    * add a flow.
    * Input:
    *    const char *bridge: bridge name
    *    cnost char *opt: flow to be added.
+   * Output:
+   *    int: EXIT_SUCCESS or EXIT_FAILURE
    * example:
    *    ACA_OVS_Control::get_instance().add_flow("br-tun", "table=1,tcp,nw_dst=192.168.0.1,priority=1,actions=drop")
    * comment: 
    *    actions field is required in the opt.
    */
-  void add_flow(const char *bridge, const char *opt);
+  int add_flow(const char *bridge, const char *opt);
 
   /*
    * modify matched flows.
    * Input:
    *    const char *bridge: bridge name
    *    cnost char *opt: flow to be matched and modified field values.
+   * Output:
+   *    int: EXIT_SUCCESS - flow matched, EXIT_FAILURE - no any flow matched
    * example:
    *    ACA_OVS_Control::get_instance().mod_flows("br-tun", "table=1,tcp,nw_dst=192.168.0.1,priority=1,actions=resubmit(,2)")
    * comment: 
    *    the matching flow uses --strict option. 
    *    actions field is required in the opt.
    */ 
-  void mod_flows(const char *bridge, const char *opt); 
+  int mod_flows(const char *bridge, const char *opt); 
 
   /*
    * delete matched flows.
    * Input:
    *    const char *bridge: bridge name
    *    cnost char *opt: flow to be matched.
+   * Output:
+   *    int: EXIT_SUCCESS - flow matched, EXIT_FAILURE - no any flow matched
    * example:
    *    ACA_OVS_Control::get_instance().del_flows("br-tun", "table=1,tcp,nw_dst=192.168.0.1,priority=1")
    * comment: 
    *    the matching flow uses --strict option. 
    */ 
-  void del_flows(const char *bridge, const char *opt);
+  int del_flows(const char *bridge, const char *opt);
  
   /*
    * parse a received packet.

@@ -91,10 +91,10 @@ int ACA_OVS_Control::control()
   return overall_rc;
 }
 
-void ACA_OVS_Control::dump_flows(const char *bridge, const char *opt)
+int ACA_OVS_Control::dump_flows(const char *bridge, const char *opt)
 {
   bool show_stats = true;
-  OVS_Control::get_instance().dump_flows(bridge, opt, show_stats);
+  return OVS_Control::get_instance().dump_flows(bridge, opt, show_stats);
 }
 
 int ACA_OVS_Control::flow_exists(const char *bridge, const char *flow)
@@ -107,21 +107,21 @@ int ACA_OVS_Control::flow_exists(const char *bridge, const char *flow)
   return rc;
 }
 
-void ACA_OVS_Control::add_flow(const char *bridge, const char *opt)
+int ACA_OVS_Control::add_flow(const char *bridge, const char *opt)
 {
-  OVS_Control::get_instance().add_flow(bridge, opt);
+  return OVS_Control::get_instance().add_flow(bridge, opt);
 }
 
-void ACA_OVS_Control::mod_flows(const char *bridge, const char *opt)
+int ACA_OVS_Control::mod_flows(const char *bridge, const char *opt)
 {
   bool strict = true;
-  OVS_Control::get_instance().mod_flows(bridge, opt, strict);
+  return OVS_Control::get_instance().mod_flows(bridge, opt, strict);
 }
 
-void ACA_OVS_Control::del_flows(const char *bridge, const char *opt)
+int ACA_OVS_Control::del_flows(const char *bridge, const char *opt)
 {
   bool strict = true;
-  OVS_Control::get_instance().del_flows(bridge, opt, strict);
+  return OVS_Control::get_instance().del_flows(bridge, opt, strict);
 }
 
 void ACA_OVS_Control::monitor(const char *bridge, const char *opt)
@@ -205,7 +205,7 @@ void ACA_OVS_Control::parse_packet(uint32_t in_port, void *packet)
     /* define/compute tcp header offset */
     const struct sniff_tcp *tcp =
             (struct sniff_tcp *)(base + SIZE_ETHERNET + vlan_len + size_ip);
-    const unsigned char *payload;
+    //const unsigned char *payload;
     int size_payload;
     int size_tcp = TH_OFF(tcp) * 4;
 
@@ -217,7 +217,7 @@ void ACA_OVS_Control::parse_packet(uint32_t in_port, void *packet)
       ACA_LOG_INFO("   Dst port: %d\n", ntohs(tcp->th_dport));
 
       /* define/compute tcp payload (segment) offset */
-      payload = (u_char *)(base + SIZE_ETHERNET + vlan_len + size_ip + size_tcp);
+      //payload = (u_char *)(base + SIZE_ETHERNET + vlan_len + size_ip + size_tcp);
 
       /* compute tcp payload (segment) size */
       size_payload = ntohs(ip->ip_len) - (size_ip + size_tcp);

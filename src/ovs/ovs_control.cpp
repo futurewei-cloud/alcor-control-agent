@@ -412,25 +412,25 @@ OVS_Control::set_protocol_for_flow_dump(vconn *vconn,
     return (ofputil_protocol) 0;
 }
 
-void
+int
 OVS_Control::add_flow(const char *bridge, const char *flow)
 {
-    flow_mod(bridge, flow, OFPFC_ADD);
+    return flow_mod(bridge, flow, OFPFC_ADD);
 }
 
-void
+int
 OVS_Control::mod_flows(const char *bridge, const char *flow, bool strict)
 {
-    flow_mod(bridge, flow, strict ? OFPFC_MODIFY_STRICT : OFPFC_MODIFY);
+    return flow_mod(bridge, flow, strict ? OFPFC_MODIFY_STRICT : OFPFC_MODIFY);
 }
 
-void
+int
 OVS_Control::del_flows(const char *bridge, const char *flow, bool strict)
 {
-    flow_mod(bridge, flow, strict ? OFPFC_DELETE_STRICT : OFPFC_DELETE);
+    return flow_mod(bridge, flow, strict ? OFPFC_DELETE_STRICT : OFPFC_DELETE);
 }
 
-void
+int
 OVS_Control::flow_mod(const char *bridge, const char *flow, unsigned short int command)
 {
     struct ofputil_flow_mod fm;
@@ -444,8 +444,10 @@ OVS_Control::flow_mod(const char *bridge, const char *flow, unsigned short int c
     if (error) {
         // ovs_fatal(0, "%s", error);
         ACA_LOG_ERROR("%s", error);
+        return EXIT_FAILURE;
     }
     flow_mod__(bridge, &fm, 1, usable_protocols);
+    return EXIT_SUCCESS;
 }
 
 void
