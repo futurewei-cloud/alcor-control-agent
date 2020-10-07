@@ -24,9 +24,8 @@ To set up your local development environment, we recommend to use fork-and-branc
 1. Fork Alcor Control Agent Github repository by clicking the Fork button on the upper right-hand side of Alcor Control Agent home page.
 2. Make a local clone:
     ```
-    cd ~/dev
-    $ git clone --recurse-submodules https://github.com/<your_github_username>/alcor-control-agent.git ~/dev/alcor-control-agent
-    $ cd ~/dev/alcor-control-agent
+    $ git clone --recurse-submodules https://github.com/<your_github_username>/alcor-control-agent.git ~/alcor-control-agent
+    $ cd ~/alcor-control-agent
     $ git submodule update --init --recursive
     ```
 3. Add a remote pointing back to the Alcor Official repository
@@ -62,16 +61,16 @@ You will need approval from at least one maintainer, who will merge your codes t
     ```
 
 ## Run the build script to set up the build container and compile the alcor-control-agent
-Assuming alcor-control-agent was cloned into ~/dev/alcor-control-agent directory:
+Assuming alcor-control-agent was cloned into ~/alcor-control-agent directory:
 ```Shell
-cd ~/dev/alcor-control-agent
+cd ~/alcor-control-agent
 ./build/build.sh
 ```
 
 ## You can also setup a physical machine or VM to compile the alcor-control-agent
-Assuming alcor-control-agent was cloned into ~/dev/alcor-control-agent directory:
+Assuming alcor-control-agent was cloned into ~/alcor-control-agent directory:
 ```Shell
-cd ~/dev/alcor-control-agent
+cd ~/alcor-control-agent
 ./build/aca-machine-init.sh
 ```
 
