@@ -120,4 +120,4 @@ ovs-ofctl add-flow br-tun "table=0, priority=1,in_port="patch-int" actions=resub
 ovs-ofctl add-flow br-tun "table=2, priority=0 actions=resubmit(,22)"
 
 echo "9--- running alcor-control-agent"
-./build/bin/AlcorControlAgent -d &
+nohup ~/alcor-control-agent/build/bin/AlcorControlAgent -d > /dev/null 2>&1 &
