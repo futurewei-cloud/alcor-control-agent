@@ -8,7 +8,7 @@ echo "1--- installing mizar dependencies ---" && \
     clang-7 \
     llvm-7 \
     libelf-dev \
-    # openvswitch-switch \
+    openvswitch-switch \
     iproute2  \
     net-tools \
     iputils-ping \
