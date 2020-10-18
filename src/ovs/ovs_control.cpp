@@ -76,7 +76,7 @@ extern "C" {
     char *ds_steal_cstr(struct ds *);
 }
 
-VLOG_DEFINE_THIS_MODULE(ovs_control);
+VLOG_DEFINE_THIS_MODULE(ovs_control)
 
 namespace ovs_control
 {
@@ -711,7 +711,7 @@ OVS_Control::monitor_set_invalid_ttl_to_controller(vconn *vconn)
         if (!config.invalid_ttl_to_controller) {
             // ovs_fatal(0, "setting invalid_ttl_to_controller failed (this "
             //           "switch probably doesn't support this flag)");
-            ACA_LOG_ERROR("setting invalid_ttl_to_controller failed (this "
+            ACA_LOG_ERROR("%s", "setting invalid_ttl_to_controller failed (this "
                           "switch probably doesn't support this flag)");                      
         }
     }
@@ -961,7 +961,7 @@ OVS_Control::monitor_vconn(vconn *vconn, bool reply_to_echo_requests,
     error = unixctl_server_create(unixctl_path, &server);
     if (error) {
         ovs_fatal(error, "failed to create unixctl server");
-        ACA_LOG_ERROR("failed to create unixctl server");        
+        ACA_LOG_ERROR("%s", "failed to create unixctl server");        
     }
     unixctl_command_register("exit", "", 0, 0, X::ofctl_exit, &exiting);
     unixctl_command_register("ofctl/send", "OFMSG...", 1, INT_MAX,
@@ -1029,7 +1029,7 @@ OVS_Control::monitor_vconn(vconn *vconn, bool reply_to_echo_requests,
                     retval = vconn_send_block(vconn, reply);
                     if (retval) {
                         // ovs_fatal(retval, "failed to send echo reply");
-                        ACA_LOG_ERROR("failed to send echo reply");
+                        ACA_LOG_ERROR("%s", "failed to send echo reply");
                     }
                 }
                 break;
@@ -1069,7 +1069,7 @@ OVS_Control::monitor_vconn(vconn *vconn, bool reply_to_echo_requests,
                         retval = vconn_send_block(vconn, reply);
                         if (retval) {
                             // ovs_fatal(retval, "failed to send NXT_RESUME");
-                            ACA_LOG_ERROR("failed to send NXT_RESUME");
+                            ACA_LOG_ERROR("%s", "failed to send NXT_RESUME");
                         }
                     }
                 }

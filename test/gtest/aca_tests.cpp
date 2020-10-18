@@ -110,7 +110,7 @@ static void aca_cleanup()
   ACA_LOG_DEBUG("g_total_update_GS_time = %lu nanoseconds or %lu milliseconds\n",
                 g_total_update_GS_time.load(), g_total_update_GS_time.load() / 1000000);
 
-  ACA_LOG_INFO("Program exiting, cleaning up...\n");
+  ACA_LOG_INFO("%s", "Program exiting, cleaning up...\n");
 
   // Optional:  Delete all global objects allocated by libprotobuf.
   google::protobuf::ShutdownProtobufLibrary();
@@ -2736,7 +2736,7 @@ TEST(dhcp_config_test_cases, update_dhcp_entry_invalid)
 TEST(dhcp_message_test_cases, dhcps_recv_valid)
 {
   int retcode = 0;
-  dhcp_message stDhcpMsg = { 0 };
+  dhcp_message stDhcpMsg;
 
   stDhcpMsg.op = BOOTP_MSG_BOOTREQUEST;
   stDhcpMsg.htype = DHCP_MSG_HWTYPE_ETH;
@@ -2765,7 +2765,7 @@ TEST(dhcp_message_test_cases, dhcps_recv_valid)
 TEST(dhcp_message_test_cases, get_options_valid)
 {
   int retcode = 0;
-  dhcp_message stDhcpMsg = { 0 };
+  dhcp_message stDhcpMsg;
 
   stDhcpMsg.op = BOOTP_MSG_BOOTREQUEST;
   stDhcpMsg.htype = DHCP_MSG_HWTYPE_ETH;

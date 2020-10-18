@@ -46,7 +46,7 @@ int ACA_OVS_L3_Programmer::create_or_update_router(RouterConfiguration &current_
                                                    GoalState &parsed_struct,
                                                    ulong &dataplane_programming_time)
 {
-  ACA_LOG_DEBUG("ACA_OVS_L3_Programmer::create_or_update_router ---> Entering\n");
+  ACA_LOG_DEBUG("%s", "ACA_OVS_L3_Programmer::create_or_update_router ---> Entering\n");
 
   int overall_rc = EXIT_SUCCESS;
   bool is_router_exist;
@@ -69,13 +69,13 @@ int ACA_OVS_L3_Programmer::create_or_update_router(RouterConfiguration &current_
 
   string router_id = current_RouterConfiguration.id();
   if (router_id.empty()) {
-    ACA_LOG_ERROR("router_id is empty");
+    ACA_LOG_ERROR("%s", "router_id is empty");
     return -EINVAL;
   }
 
   if (!aca_validate_mac_address(
               current_RouterConfiguration.host_dvr_mac_address().c_str())) {
-    ACA_LOG_ERROR("host_dvr_mac_address is invalid\n");
+    ACA_LOG_ERROR("%s", "host_dvr_mac_address is invalid\n");
     return -EINVAL;
   }
 
@@ -335,7 +335,7 @@ int ACA_OVS_L3_Programmer::create_or_update_router(RouterConfiguration &current_
                   e.what());
     overall_rc = -EFAULT;
   } catch (...) {
-    ACA_LOG_CRIT("Unknown exception caught while parsing router configuration.\n");
+    ACA_LOG_CRIT("%s", "Unknown exception caught while parsing router configuration.\n");
     overall_rc = -EFAULT;
   }
 
@@ -348,7 +348,7 @@ int ACA_OVS_L3_Programmer::create_or_update_router(RouterConfiguration &current_
 int ACA_OVS_L3_Programmer::delete_router(RouterConfiguration &current_RouterConfiguration,
                                          ulong &dataplane_programming_time)
 {
-  ACA_LOG_DEBUG("ACA_OVS_L3_Programmer::delete_router ---> Entering\n");
+  ACA_LOG_DEBUG("%s", "ACA_OVS_L3_Programmer::delete_router ---> Entering\n");
 
   int overall_rc;
   int source_vlan_id;
@@ -357,7 +357,7 @@ int ACA_OVS_L3_Programmer::delete_router(RouterConfiguration &current_RouterConf
 
   string router_id = current_RouterConfiguration.id();
   if (router_id.empty()) {
-    ACA_LOG_ERROR("router_id is empty");
+    ACA_LOG_ERROR("%s", "router_id is empty");
     return -EINVAL;
   }
 
@@ -425,12 +425,12 @@ int ACA_OVS_L3_Programmer::delete_router(RouterConfiguration &current_RouterConf
 }
 
 int ACA_OVS_L3_Programmer::create_neighbor_l3(const string vpc_id, const string subnet_id,
-                                              alcor::schema::NetworkType network_type,
+                                              alcor::schema::NetworkType /* network_type */ ,
                                               const string virtual_ip, const string virtual_mac,
                                               const string remote_host_ip,
                                               uint tunnel_id, ulong &culminative_time)
 {
-  ACA_LOG_DEBUG("ACA_OVS_L3_Programmer::create_neighbor_l3 ---> Entering\n");
+  ACA_LOG_DEBUG("%s", "ACA_OVS_L3_Programmer::create_neighbor_l3 ---> Entering\n");
 
   int overall_rc = EXIT_SUCCESS;
   bool found_subnet_in_router = false;

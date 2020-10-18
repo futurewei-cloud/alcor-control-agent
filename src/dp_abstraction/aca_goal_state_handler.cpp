@@ -26,18 +26,18 @@ namespace aca_goal_state_handler
 {
 Aca_Goal_State_Handler::Aca_Goal_State_Handler()
 {
-  ACA_LOG_INFO("Goal State Handler: initialize\n");
+  ACA_LOG_INFO("%s", "Goal State Handler: initialize\n");
 
   // default to dataplane_ovs
-  ACA_LOG_INFO("Network State Handler: using ovs dataplane\n");
+  ACA_LOG_INFO("%s", "Network State Handler: using ovs dataplane\n");
   this->core_net_programming_if = new aca_dataplane_ovs::ACA_Dataplane_OVS;
 
   int rc = this->core_net_programming_if->initialize();
 
   if (rc == EXIT_SUCCESS) {
-    ACA_LOG_INFO("Core Network Programming initialization succeed\n");
+    ACA_LOG_INFO("%s", "Core Network Programming initialization succeed\n");
   } else {
-    ACA_LOG_ERROR("Core Network Programming initialization failed\n");
+    ACA_LOG_ERROR("%s", "Core Network Programming initialization failed\n");
     throw std::system_error(ENXIO, std::generic_category(),
                             "Core Network Programming initialization failed\n");
   }

@@ -27,7 +27,7 @@ namespace aca_dhcp_state_handler
 {
 Aca_Dhcp_State_Handler::Aca_Dhcp_State_Handler()
 {
-  ACA_LOG_INFO("DHCP State Handler: using dhcp server\n");
+  ACA_LOG_INFO("%s", "DHCP State Handler: using dhcp server\n");
   this->dhcp_programming_if = &(aca_dhcp_server::ACA_Dhcp_Server::get_instance());
 }
 
@@ -71,7 +71,7 @@ int Aca_Dhcp_State_Handler::update_dhcp_state_workitem(const DHCPState current_D
     overall_rc = this->dhcp_programming_if->delete_dhcp_entry(&stDhcpCfg);
     break;
   default:
-    ACA_LOG_ERROR("=====>wrong dhcp operation\n");
+    ACA_LOG_ERROR("%s", "=====>wrong dhcp operation\n");
     break;
   }
 

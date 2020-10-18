@@ -56,11 +56,13 @@ int ACA_OVS_Control::control()
 {
   int overall_rc = EXIT_SUCCESS;
 
-  char target[g_ofctl_target.size() + 1];
+  // char target[g_ofctl_target.size() + 1];
+  char *target = new char[g_ofctl_target.size() + 1];
   g_ofctl_target.copy(target, g_ofctl_target.size() + 1);
   target[g_ofctl_target.size()] = '\0';
 
-  char options[g_ofctl_options.size() + 1];
+  // char options[g_ofctl_options.size() + 1];
+  char *options = new char[g_ofctl_options.size() + 1];
   g_ofctl_options.copy(options, g_ofctl_options.size() + 1);
   options[g_ofctl_options.size()] = '\0';
 
@@ -148,21 +150,21 @@ void ACA_OVS_Control::parse_packet(uint32_t in_port, void *packet)
   char *base = (char *)packet;
   uint16_t ether_type = ntohs(*(uint16_t *)(base + 12));
   if (ether_type == ETHERTYPE_VLAN) {
-    ACA_LOG_INFO("Ethernet Type: 802.1Q VLAN tagging (0x8100) \n");
+    ACA_LOG_INFO("%s", "Ethernet Type: 802.1Q VLAN tagging (0x8100) \n");
     ether_type = ntohs(*(uint16_t *)(base + 16));
     vlan_len = 4;
   }
 
   if (ether_type == ETHERTYPE_ARP) {
-    ACA_LOG_INFO("Ethernet Type: ARP (0x0806) \n");
+    ACA_LOG_INFO("%s", "Ethernet Type: ARP (0x0806) \n");
     ACA_LOG_INFO("   From: %s\n", inet_ntoa(*(in_addr *)(base + 14 + vlan_len + 14)));
     ACA_LOG_INFO("     to: %s\n", inet_ntoa(*(in_addr *)(base + 14 + vlan_len + 14 + 10)));
   } else if (ether_type == ETHERTYPE_IP) {
-    ACA_LOG_INFO("Ethernet Type: IP (0x0800) \n");
+    ACA_LOG_INFO("%s", "Ethernet Type: IP (0x0800) \n");
   } else if (ether_type == ETHERTYPE_REVARP) {
-    ACA_LOG_INFO("Ethernet Type: REVARP (0x8035) \n");
+    ACA_LOG_INFO("%s", "Ethernet Type: REVARP (0x8035) \n");
   } else {
-    ACA_LOG_INFO("Ethernet Type: Cannot Tell!\n");
+    ACA_LOG_INFO("%s", "Ethernet Type: Cannot Tell!\n");
     return;
   }
 
@@ -181,19 +183,19 @@ void ACA_OVS_Control::parse_packet(uint32_t in_port, void *packet)
     /* determine protocol */
     switch (ip->ip_p) {
     case IPPROTO_TCP:
-      ACA_LOG_INFO("   Protocol: TCP\n");
+      ACA_LOG_INFO("%s", "   Protocol: TCP\n");
       break;
     case IPPROTO_UDP:
-      ACA_LOG_INFO("   Protocol: UDP\n");
+      ACA_LOG_INFO("%s", "   Protocol: UDP\n");
       break;
     case IPPROTO_ICMP:
-      ACA_LOG_INFO("   Protocol: ICMP\n");
+      ACA_LOG_INFO("%s", "   Protocol: ICMP\n");
       break;
     case IPPROTO_IP:
-      ACA_LOG_INFO("   Protocol: IP\n");
+      ACA_LOG_INFO("%s", "   Protocol: IP\n");
       break;
     default:
-      ACA_LOG_INFO("   Protocol: unknown\n");
+      ACA_LOG_INFO("%s", "   Protocol: unknown\n");
     }
   }
 
@@ -255,7 +257,7 @@ void ACA_OVS_Control::parse_packet(uint32_t in_port, void *packet)
 
       /* dhcp message procedure */
       if (udp_sport == 68 && udp_dport == 67) {
-        ACA_LOG_INFO("   Message Type: DHCP\n");
+        ACA_LOG_INFO("%s", "   Message Type: DHCP\n");
         aca_dhcp_server::ACA_Dhcp_Server::get_instance().dhcps_recv(
                 in_port, const_cast<unsigned char *>(payload));
       }
@@ -323,20 +325,20 @@ void ACA_OVS_Control::print_hex_ascii_line(const u_char *payload, int len, int o
     ch++;
     /* print extra space after 8th byte for visual aid */
     if (i == 7)
-      ACA_LOG_INFO(" ");
+      ACA_LOG_INFO("%s", " ");
   }
   /* print space to handle line less than 8 bytes */
   if (len < 8)
-    ACA_LOG_INFO(" ");
+    ACA_LOG_INFO("%s", " ");
 
   /* fill hex gap with spaces if not full line */
   if (len < 16) {
     gap = 16 - len;
     for (i = 0; i < gap; i++) {
-      ACA_LOG_INFO("   ");
+      ACA_LOG_INFO("%s", "   ");
     }
   }
-  ACA_LOG_INFO("   ");
+  ACA_LOG_INFO("%s", "   ");
 
   /* ascii (if printable) */
   ch = payload;
@@ -344,10 +346,10 @@ void ACA_OVS_Control::print_hex_ascii_line(const u_char *payload, int len, int o
     if (isprint(*ch))
       ACA_LOG_INFO("%c", *ch);
     else
-      ACA_LOG_INFO(".");
+      ACA_LOG_INFO("%s", ".");
     ch++;
   }
-  ACA_LOG_INFO("\n");
+  ACA_LOG_INFO("%s", "\n");
   return;
 }
 
