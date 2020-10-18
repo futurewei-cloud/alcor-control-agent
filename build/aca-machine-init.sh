@@ -33,7 +33,7 @@ echo "2--- installing librdkafka ---" && \
 
 echo "3--- installing cppkafka ---" && \
     apt-get update -y && apt-get install -y cmake 
-    git clone https://hub.fastgit.org/mfontanini/cppkafka.git /var/local/git/cppkafka && \
+    git clone https://github.com/mfontanini/cppkafka.git /var/local/git/cppkafka && \
     cd /var/local/git/cppkafka && \
     mkdir build && \
     cd build && \
@@ -53,7 +53,7 @@ echo "4--- installing grpc dependencies ---" && \
 # installing grpc and its dependencies
 GRPC_RELEASE_TAG="v1.24.x"
 echo "5--- cloning grpc repo ---" && \
-    git clone --depth 1 -b $GRPC_RELEASE_TAG https://hub.fastgit.org/grpc/grpc /var/local/git/grpc && \
+    git clone -b $GRPC_RELEASE_TAG https://github.com/grpc/grpc /var/local/git/grpc && \
     cd /var/local/git/grpc && \
     git submodule update --init && \
     echo "--- installing c-ares ---" && \
@@ -90,7 +90,7 @@ echo "5--- cloning grpc repo ---" && \
 
 OVS_RELEASE_TAG="branch-2.12"
 echo "6--- installing openvswitch dependancies ---" && \
-    git clone -b $OVS_RELEASE_TAG https://hub.fastgit.org/openvswitch/ovs.git /var/local/git/openvswitch && \
+    git clone -b $OVS_RELEASE_TAG https://github.com/openvswitch/ovs.git /var/local/git/openvswitch && \
     cd /var/local/git/openvswitch && \
     ./boot.sh && \
     ./configure --prefix=/usr/local --localstatedir=/var --sysconfdir=/etc --enable-shared && \
