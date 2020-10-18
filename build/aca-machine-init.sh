@@ -100,7 +100,8 @@ echo "6--- installing openvswitch dependancies ---" && \
     make && \
     make install && \
     cp /var/local/git/openvswitch/lib/vconn-provider.h /usr/local/include/openvswitch/vconn-provider.h && \
-    rm -rf /var/local/git/openvswitch
+    rm -rf /var/local/git/openvswitch && \
+    test -f /usr/bin/ovs-vsctl && rm -rf /usr/local/sbin/ov* /usr/local/bin/ov* /usr/local/bin/vtep* && \
     cd ~
 
 echo "7--- building alcor-control-agent"
