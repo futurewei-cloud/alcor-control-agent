@@ -17,12 +17,14 @@
 #include "aca_comm_mgr.h"
 #include "aca_goal_state_handler.h"
 #include "aca_dhcp_state_handler.h"
+#include "aca_sg_state_handler.h"
 #include "goalstateprovisioner.grpc.pb.h"
 
 using namespace std;
 using namespace alcor::schema;
 using namespace aca_goal_state_handler;
 using namespace aca_dhcp_state_handler;
+using namespace aca_security_group;
 
 extern string g_rpc_server;
 extern string g_rpc_protocol;
@@ -124,6 +126,17 @@ int Aca_Comm_Manager::update_goal_state(GoalState &goal_state_message,
   if (exec_command_rc != EXIT_SUCCESS) {
     ACA_LOG_ERROR("Failed to update dhcp state. Failed with error code %d\n", exec_command_rc);
     rc = exec_command_rc;
+  }
+
+  if (goal_state_message.security_group_states_size() > 0) {
+    exec_command_rc = Aca_Sg_State_Handler::get_instance().update_security_group_states(
+            goal_state_message, gsOperationReply);
+    if (exec_command_rc == EXIT_SUCCESS) {
+      ACA_LOG_INFO("Successfully security group states, rc: %d\n", exec_command_rc);
+    } else {
+      ACA_LOG_ERROR("Failed to security group states. rc: %d\n", exec_command_rc);
+      rc = exec_command_rc;
+    }
   }
 
   auto end = chrono::steady_clock::now();

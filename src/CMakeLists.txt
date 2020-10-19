@@ -1,5 +1,7 @@
 set(EXECUTABLE_OUTPUT_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../build/bin)
 
+add_definitions("-O0 -g")
+
 set(SOURCES
     ./comm/aca_message_producer.cpp
     ./comm/aca_message_consumer.cpp
@@ -15,8 +17,12 @@ set(SOURCES
     ./ovs/aca_ovs_control.cpp
     ./dhcp/aca_dhcp_state_handler.cpp
     ./dhcp/aca_dhcp_server.cpp    
+	./sg/aca_sg_state_handler.cpp
+	./sg/aca_security_group.cpp
+	./sg/aca_security_group_manager.cpp
+	./sg/aca_security_group_ovs.cpp
 )
-FIND_LIBRARY(RDKAFKA rdkafka /usr/lib/x86_64-linux-gnu NO_DEFAULT_PATH)
+FIND_LIBRARY(RDKAFKA rdkafka /usr/lib/x86_64-linux-gnu /usr/local/lib NO_DEFAULT_PATH) #for centos
 FIND_LIBRARY(CPPKAFKA cppkafka /usr/local/lib NO_DEFAULT_PATH)
 FIND_LIBRARY(OPENVSWITCH openvswitch /usr/local/lib NO_DEFAULT_PATH)
 FIND_LIBRARY(MESSAGEMANAGER messagemanager ${CMAKE_CURRENT_SOURCE_DIR}/../include NO_DEFAULT_PATH)
