@@ -876,6 +876,7 @@ string ACA_Dhcp_Server::_serialize_dhcp_message(dhcp_message *dhcpmsg)
     uint8_t options[308];
   };
 
+  // udphear udphdr = { 0 };
   udphear udphdr;
   udphdr.srcIp = inet_addr("127.0.1.1");
   udphdr.dstIp = inet_addr("255.255.255.255");
@@ -907,6 +908,7 @@ string ACA_Dhcp_Server::_serialize_dhcp_message(dhcp_message *dhcpmsg)
   //udphdr.options = dhcpmsg->options;
   memcpy(udphdr.options, dhcpmsg->options, 308);
 
+  // iphear iphr = { 0 };
   iphear iphr;
   iphr.version = 69;
   iphr.ds = 0;

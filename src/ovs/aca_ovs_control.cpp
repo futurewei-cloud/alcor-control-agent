@@ -90,6 +90,9 @@ int ACA_OVS_Control::control()
          << endl;
   }
 
+  delete target;
+  delete options;
+
   return overall_rc;
 }
 
