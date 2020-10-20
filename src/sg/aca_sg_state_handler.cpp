@@ -60,8 +60,6 @@ int Aca_Sg_State_Handler::handle_port_security_group(Aca_Port &aca_port,
     		ACA_LOG_ERROR("=====>wrong security group operation\n");
     }
 
-	delete &aca_sg;
-
     return EXIT_FAILURE;
 }
 
@@ -103,7 +101,7 @@ OperationType Aca_Sg_State_Handler::get_operation_type(alcor::schema::OperationT
 			ACA_LOG_ERROR("Invalid operation type");
 	}
 
-	throw "Invalid operation type";
+	return UNKNOWN_OPERATION;
 }
 
 Direction Aca_Sg_State_Handler::get_direction(SecurityGroupConfiguration::Direction direction)
@@ -116,9 +114,8 @@ Direction Aca_Sg_State_Handler::get_direction(SecurityGroupConfiguration::Direct
 		default:
 			ACA_LOG_ERROR("Invalid direction");
 	}
-
 	
-	throw "Invalid direction";
+	return UNKNOWN_DIRECTION;
 }
 
 Ethertype Aca_Sg_State_Handler::get_ethertype(alcor::schema::EtherType ethertype)
@@ -132,7 +129,7 @@ Ethertype Aca_Sg_State_Handler::get_ethertype(alcor::schema::EtherType ethertype
 			ACA_LOG_ERROR("Invalid ethertype");
 	}
 
-	throw "Invalid ethertype";
+	return UNKNOWN_ETHERTYPE;
 }
 
 Protocol Aca_Sg_State_Handler::get_protocol(alcor::schema::Protocol protocol)
@@ -148,12 +145,12 @@ Protocol Aca_Sg_State_Handler::get_protocol(alcor::schema::Protocol protocol)
 			ACA_LOG_ERROR("Invalid protocol");
 	}
 
-	throw "Invalid protocol";
+	return UNKNOWN_PROTO;
 }
 
 
 void Aca_Sg_State_Handler::parse_security_group_states(const GoalState &goal_state, 
-                                                map<string, Aca_Security_Group *> &aca_sg_map) 
+                                                map<string, Aca_Security_Group *> &aca_sgs) 
 {
 	//TODO: verify fields of port_state
     for (int i = 0; i < goal_state.security_group_states_size(); i++) {
@@ -199,7 +196,7 @@ void Aca_Sg_State_Handler::parse_security_group_states(const GoalState &goal_sta
 			aca_sg->add_security_group_rule(aca_sg_rule);
 		}		
         
-        aca_sg_map[sg_config.id()] = aca_sg;
+        aca_sgs[sg_config.id()] = aca_sg;
     }
 }
 
@@ -209,22 +206,25 @@ int Aca_Sg_State_Handler::update_security_group_states(const GoalState &goal_sta
     std::vector<std::future<int>> futures;
     int rc;
     int overall_rc = EXIT_SUCCESS;
-    map<string, Aca_Security_Group *> aca_sg_map;
+    map<string, Aca_Security_Group *> aca_sgs;
+	map<string, Aca_Security_Group *>::iterator siter;
+	vector<Aca_Port *> aca_ports;
 
-    parse_security_group_states(goal_state, aca_sg_map);
+    parse_security_group_states(goal_state, aca_sgs);
     
     for (int i = 0; i < goal_state.port_states_size(); i++) {
         PortState port_state = goal_state.port_states(i);
         PortConfiguration port_config = port_state.configuration();
         
         Aca_Port *aca_port = parse_port_state(port_state);
+		aca_ports.push_back(aca_port);
 
         for (int j = 0; j < port_config.security_group_ids_size(); j++) {
             PortConfiguration::SecurityGroupId security_group_id = port_config.security_group_ids(j);
             string sg_id = security_group_id.id();
 
-            map<string, Aca_Security_Group *>::iterator iterator = aca_sg_map.find(sg_id);
-            if (iterator == aca_sg_map.end()) {
+            map<string, Aca_Security_Group *>::iterator iterator = aca_sgs.find(sg_id);
+            if (iterator == aca_sgs.end()) {
                 ACA_LOG_ERROR("Can not find security group by id:%s", sg_id.data());
                 continue;
             }
@@ -241,6 +241,30 @@ int Aca_Sg_State_Handler::update_security_group_states(const GoalState &goal_sta
             overall_rc = rc;
         }
     }
+
+	siter = aca_sgs.begin();
+    while(siter != aca_sgs.end()) {
+        Aca_Security_Group *aca_sg = siter->second;
+		map<string, Aca_Security_Group_Rule *>::iterator riter;
+        map<string, Aca_Security_Group_Rule *> sg_rules = aca_sg->get_security_group_rules();
+
+		riter = sg_rules.begin();
+        while(riter != sg_rules.end()) {
+			Aca_Security_Group_Rule * sg_rule = riter->second;
+			delete sg_rule;
+        }
+        
+        delete aca_sg;
+    }
+
+    aca_sgs.clear();
+
+    for (size_t i = 0; i < aca_ports.size(); i++) {
+		Aca_Port *aca_port = aca_ports[i];
+		delete aca_port;
+	}
+
+	aca_ports.clear();
 
     return overall_rc;
 }

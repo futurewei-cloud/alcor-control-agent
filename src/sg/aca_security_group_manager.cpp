@@ -29,35 +29,66 @@ Aca_Security_Group_Manager &Aca_Security_Group_Manager::get_instance()
 	return instance;
 }
 
-int Aca_Security_Group_Manager::create_security_group_rule(Aca_Port &aca_port,
+map<string, Aca_Port *> &Aca_Security_Group_Manager::get_ports(void) 
+{
+	return this->ports;
+}
+
+map<string, Aca_Security_Group *> &Aca_Security_Group_Manager::get_security_groups(void) 
+{
+	return this->security_groups;
+}
+
+int Aca_Security_Group_Manager::set_remote_group(Aca_Security_Group_Rule &sg_rule)
+{
+	map<string, Aca_Security_Group *>::iterator iter;
+	string remote_grou_id = sg_rule.get_remote_group_id();
+	
+	if (remote_grou_id != "") {
+		iter = this->security_groups.find(remote_grou_id);
+		if (iter == this->security_groups.end()) {
+			return EXIT_FAILURE;
+		}
+		
+		sg_rule.set_remote_group(iter->second);
+	}
+
+	return EXIT_SUCCESS;
+}
+
+int Aca_Security_Group_Manager::create_security_group_rule(Aca_Port &port,
 													  Aca_Security_Group &sg,
                                                       Aca_Security_Group_Rule &sg_rule) 
 {
+	Aca_Security_Group_Ovs &sg_ovs = Aca_Security_Group_Ovs::get_instance();
 	string rule_id;
 	Aca_Security_Group_Rule *aca_sg_rule;
-	Aca_Security_Group_Ovs &sg_ovs = Aca_Security_Group_Ovs::get_instance();
 	rule_id = sg_rule.get_id();
 
 	aca_sg_rule = sg.get_security_group_rule(rule_id);
 	if (aca_sg_rule != NULL) {
 		TRN_LOG_WARN("Security group rule(id:%s) already exist", rule_id.data());
-		return update_security_group_rule(aca_port, sg, sg_rule); 
+		return update_security_group_rule(port, sg, sg_rule); 
+	}
+
+	if (set_remote_group(sg_rule) != EXIT_SUCCESS) {
+		return EXIT_FAILURE;
 	}
 
 	sg_rule.set_cookie(0);
-	sg_ovs.create_port_security_group_rule(aca_port, sg_rule);
+	sg_ovs.create_port_security_group_rule(port, sg_rule);
 	sg.add_security_group_rule(&sg_rule); 
 
 	return EXIT_SUCCESS;
 }
 
-int Aca_Security_Group_Manager::update_security_group_rule(Aca_Port &aca_port,
+int Aca_Security_Group_Manager::update_security_group_rule(Aca_Port &port,
 													  Aca_Security_Group &sg,
                                                       Aca_Security_Group_Rule &sg_rule) 
 {	
+	Aca_Security_Group_Ovs &sg_ovs = Aca_Security_Group_Ovs::get_instance();
 	string rule_id;
 	Aca_Security_Group_Rule *aca_sg_rule;
-	Aca_Security_Group_Ovs &sg_ovs = Aca_Security_Group_Ovs::get_instance();
 	rule_id = sg_rule.get_id();
 	
 	aca_sg_rule = sg.get_security_group_rule(rule_id);
@@ -66,20 +97,24 @@ int Aca_Security_Group_Manager::update_security_group_rule(Aca_Port &aca_port,
 		return EXIT_FAILURE; 
 	}
 
+	if (set_remote_group(sg_rule) != EXIT_SUCCESS) {
+		return EXIT_FAILURE;
+	}
+
 	sg_rule.set_cookie(aca_sg_rule->get_cookie() + 1);
-	sg_ovs.update_port_security_group_rule(aca_port, sg_rule);
+	sg_ovs.update_port_security_group_rule(port, sg_rule);
 	sg.update_security_group_rule(&sg_rule); 
 
 	return EXIT_SUCCESS;
 }
 
-int Aca_Security_Group_Manager::delete_security_group_rule(Aca_Port &aca_port,
+int Aca_Security_Group_Manager::delete_security_group_rule(Aca_Port &port,
 													  Aca_Security_Group &sg,
                                                       Aca_Security_Group_Rule &sg_rule) 
 {
+	Aca_Security_Group_Ovs &sg_ovs = Aca_Security_Group_Ovs::get_instance();
 	string rule_id;
 	Aca_Security_Group_Rule *aca_sg_rule;
-	Aca_Security_Group_Ovs &sg_ovs = Aca_Security_Group_Ovs::get_instance();
 	rule_id = sg_rule.get_id();
 
 	aca_sg_rule = sg.get_security_group_rule(rule_id);
@@ -87,86 +122,95 @@ int Aca_Security_Group_Manager::delete_security_group_rule(Aca_Port &aca_port,
 		ACA_LOG_ERROR("Can not find security group rule by id:%s", rule_id.data());
 		return EXIT_FAILURE; 
 	}
+	
+	if (set_remote_group(sg_rule) != EXIT_SUCCESS) {
+		return EXIT_FAILURE;
+	}
 
-	sg_ovs.delete_port_security_group_rule(aca_port, *aca_sg_rule);
+	sg_ovs.delete_port_security_group_rule(port, *aca_sg_rule);
 	sg.delete_security_group_rule(sg_rule.get_id()); 
 
 	return EXIT_SUCCESS;
 }
 
-int Aca_Security_Group_Manager::create_security_group(Aca_Port &aca_port,
-                                                 Aca_Security_Group &aca_sg) 
+int Aca_Security_Group_Manager::create_security_group(Aca_Port &input_port,
+                                                 Aca_Security_Group &input_sg) 
  {
+ 	Aca_Security_Group_Ovs &sg_ovs = Aca_Security_Group_Ovs::get_instance();
  	map<string, Aca_Port *>::iterator piter;
 	map<string, Aca_Security_Group *>::iterator siter;
-	Aca_Security_Group *sg;
-	Aca_Security_Group_Ovs &sg_ovs = Aca_Security_Group_Ovs::get_instance();
-	string port_id = aca_port.get_id();
-	string sg_id = aca_sg.get_id();
+	Aca_Security_Group *aca_sg;
+	Aca_Port * aca_port;
+	string port_id = input_port.get_id();
+	string sg_id = input_sg.get_id();
 
+	//TODO: maybe multi threads access this map
 	piter = this->ports.find(port_id);
     if (piter == this->ports.end()) {
-        sg_ovs.init_port(aca_port);
+    	aca_port = new Aca_Port(input_port);
+    	this->ports[port_id] = aca_port;
+        sg_ovs.init_port(*aca_port);
+    } else {
+		aca_port = piter->second;
     }
 
     siter = this->security_groups.find(sg_id);
     if (siter == this->security_groups.end()) {
-        sg = new Aca_Security_Group();
+        aca_sg = new Aca_Security_Group(input_sg);
+        this->security_groups[sg_id] = aca_sg;
     } else {
-		sg = siter->second;
+		aca_sg = siter->second;
     }
 
-    for (auto &it : aca_sg.get_security_group_rules()) {
-        create_security_group_rule(aca_port, *sg, *(it.second));
+    aca_sg->add_port_id(port_id);
+	aca_port->add_security_group_id(sg_id);
+
+    for (auto &it : input_sg.get_security_group_rules()) {
+        create_security_group_rule(*aca_port, *aca_sg, *(it.second));
     }
-
-	if (piter == this->ports.end()) {
-		this->ports[port_id] = &aca_port;
-	} else {
-		Aca_Port * aca_port = piter->second;
-		aca_port->add_security_group_id(sg_id);
-	}
-
-	//TODO: maybe multi threads access this map
-	if (siter == this->security_groups.end()) {
-		this->security_groups[sg_id] = sg;
-	}
 			
     return EXIT_SUCCESS;
 }
 
-int Aca_Security_Group_Manager::update_security_group(Aca_Port &aca_port,
-                                                      Aca_Security_Group &aca_sg) 
+int Aca_Security_Group_Manager::update_security_group(Aca_Port &input_port,
+                                                      Aca_Security_Group &input_sg) 
 {
 	map<string, Aca_Port *>::iterator piter;
 	map<string, Aca_Security_Group *>::iterator siter;
+	Aca_Security_Group *aca_sg;
+	Aca_Port * aca_port;
 
-	string port_id = aca_port.get_id();
-	string sg_id = aca_sg.get_id();
+	string port_id = input_port.get_id();
+	string sg_id = input_sg.get_id();
 
+	//TODO: do we need to update the port ?
 	piter = this->ports.find(port_id);
     if (piter == this->ports.end()) {
         ACA_LOG_ERROR("Can not find port by id:%s", port_id.data());
         return EXIT_FAILURE;
     }
+
+    aca_port = piter->second;
     
     siter = this->security_groups.find(sg_id);
     if (siter == this->security_groups.end()) {
         ACA_LOG_ERROR("Can not find security group by id:%s", sg_id.data());
         return EXIT_FAILURE;
     }
+
+    aca_sg = siter->second;
     
-    for (auto &it : aca_sg.get_security_group_rules()) {
+    for (auto &it : input_sg.get_security_group_rules()) {
         Aca_Security_Group_Rule *sg_rule = it.second;
 		switch (sg_rule->get_operation_type()) {
 			case CREATE:
-				create_security_group_rule(aca_port, *(siter->second), *sg_rule);
+				create_security_group_rule(*aca_port, *aca_sg, *sg_rule);
 				break;
 			case UPDATE:
-				update_security_group_rule(aca_port, *(siter->second), *sg_rule);
+				update_security_group_rule(*aca_port, *aca_sg, *sg_rule);
 				break;
 			case DELETE:
-				delete_security_group_rule(aca_port, *(siter->second), *sg_rule);
+				delete_security_group_rule(*aca_port, *aca_sg, *sg_rule);
 				break;
 			default:
 				ACA_LOG_ERROR("Invalid security group rule operation type");
@@ -176,14 +220,16 @@ int Aca_Security_Group_Manager::update_security_group(Aca_Port &aca_port,
     return EXIT_SUCCESS;
 }
 
-int Aca_Security_Group_Manager::delete_security_group(Aca_Port &aca_port,
-                                                      Aca_Security_Group &aca_sg) 
+int Aca_Security_Group_Manager::delete_security_group(Aca_Port &input_port,
+                                                      Aca_Security_Group &input_sg) 
 {
 	map<string, Aca_Port *>::iterator piter;
 	map<string, Aca_Security_Group *>::iterator siter;
+	Aca_Security_Group *aca_sg;
+	Aca_Port *aca_port;
 
-	string port_id = aca_port.get_id();
-	string sg_id = aca_sg.get_id();
+	string port_id = input_port.get_id();
+	string sg_id = input_sg.get_id();
 
 	piter = this->ports.find(port_id);
     if (piter == this->ports.end()) {
@@ -191,28 +237,33 @@ int Aca_Security_Group_Manager::delete_security_group(Aca_Port &aca_port,
         return EXIT_FAILURE;
     }
 
+	aca_port = piter->second;
+
     siter = this->security_groups.find(sg_id);
     if (siter == this->security_groups.end()) {
         ACA_LOG_ERROR("Can not find security group by id:%s", sg_id.data());
         return EXIT_FAILURE;
     }
 
-    
-    for (auto &it : aca_sg.get_security_group_rules()) {
+    aca_sg = siter->second;
+
+    //TODO: Special processing needs when overlapping security group rules are deleted
+    for (auto &it : input_sg.get_security_group_rules()) {
         Aca_Security_Group_Rule *sg_rule = it.second;
-		delete_security_group_rule(aca_port, *(siter->second), *sg_rule);
+		delete_security_group_rule(*aca_port, *aca_sg, *sg_rule);
 	}
 
-	aca_port.delete_security_group_id(sg_id);
-	
-	if (aca_port.get_security_group_id_num() == 0) {
-		Aca_Port *port = piter->second;
+	aca_port->delete_security_group_id(sg_id);
+	if (aca_port->get_security_group_num() == 0) {
 		this->ports.erase(port_id);
-		delete port;
+		delete aca_port;
 	}
 
-	//TODO: only delete sg when never be used by any port
-	//this->security_groups.erase(aca_sg.get_id());
+	aca_sg->delete_port_id(port_id);
+	if (aca_sg->get_port_num() == 0) {
+		this->security_groups.erase(sg_id);
+		delete aca_sg;
+	}
 		
     return EXIT_SUCCESS;
 }

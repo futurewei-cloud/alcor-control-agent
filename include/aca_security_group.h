@@ -31,25 +31,30 @@ enum OperationType {
 	CREATE=1, 
 	UPDATE, 
 	DELETE,
+	UNKNOWN_OPERATION,
 };
 
 enum Direction {
 	INGRESS=1, 
 	EGRESS, 
+	UNKNOWN_DIRECTION,
 };
 
 enum Ethertype {
 	IPV4=0x0800, 
 	ARP=0x0806, 
-	IPV6=0x86dd
+	IPV6=0x86dd,
+	UNKNOWN_ETHERTYPE,
 };
 
 enum Protocol {
 	TCP=6, 
 	UDP=17, 
-	ICMP=1
+	ICMP=1,
+	UNKNOWN_PROTO
 };
 
+class Aca_Security_Group;
 
 class Aca_Security_Group_Rule {
 public:
@@ -76,6 +81,8 @@ public:
 	string get_remote_group_id(void);
 	void set_operation_type(OperationType operation_type);
 	OperationType get_operation_type(void);
+	void set_remote_group(Aca_Security_Group * remote_group);
+	Aca_Security_Group * get_remote_group(void);
 
 private:
 	string id;
@@ -89,6 +96,7 @@ private:
 	string remote_ip_prefix;
 	string remote_group_id;
 	OperationType operation_type;
+	Aca_Security_Group *remote_group;
 };
 
 class Aca_Security_Group {
@@ -105,6 +113,10 @@ public:
 	string get_vpc_id(void);
 	void set_operation_type(OperationType operation_type);
 	OperationType get_operation_type(void);
+	void add_port_id(string port_id);
+	void delete_port_id(string port_id);
+	int get_port_num(void);
+	vector<string> &get_port_ids(void);
 	void add_security_group_rule(Aca_Security_Group_Rule *sg_rule);
 	void update_security_group_rule(Aca_Security_Group_Rule *sg_rule);
 	void delete_security_group_rule(string sg_rule_id);
@@ -117,7 +129,8 @@ private:
 	uint32_t format_version;
 	uint32_t revision_number;
 	string vpc_id;
-	OperationType operation_type; 
+	OperationType operation_type;
+	vector<string> port_ids;
 	map<string, Aca_Security_Group_Rule *> rules;
 };
 
@@ -138,9 +151,10 @@ public:
 	void set_mac_address(string mac_address);
 	string get_mac_address(void);
 	void add_fixed_ip(string fixed_ip);
+	vector<string> &get_fixed_ip(void);
 	void add_security_group_id(string security_group_id);
 	void delete_security_group_id(string security_group_id);
-	int get_security_group_id_num(void);
+	int get_security_group_num(void);
 	void add_allow_address_pair(string ip_address, string mac_address);
 	int allow_address_pairs_size(void);
 	vector<pair<string, string>> get_allow_address_pairs(void);

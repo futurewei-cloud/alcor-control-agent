@@ -25,14 +25,19 @@ namespace aca_security_group {
 class Aca_Security_Group_Manager {
 public:
     static Aca_Security_Group_Manager &get_instance();
-    int create_security_group_rule(Aca_Port &port_state, Aca_Security_Group &sg, Aca_Security_Group_Rule &sg_rule); 
-	int update_security_group_rule(Aca_Port &port_state, Aca_Security_Group &sg, Aca_Security_Group_Rule &sg_rule);
-	int delete_security_group_rule(Aca_Port &port_state, Aca_Security_Group &sg, Aca_Security_Group_Rule &sg_rule);
-	int create_security_group(Aca_Port &port_state, Aca_Security_Group &sg); 
-	int update_security_group(Aca_Port &port_state, Aca_Security_Group &sg);
-	int delete_security_group(Aca_Port &port_state, Aca_Security_Group &sg);
+    int create_security_group_rule(Aca_Port &port, Aca_Security_Group &sg, Aca_Security_Group_Rule &sg_rule); 
+	int update_security_group_rule(Aca_Port &port, Aca_Security_Group &sg, Aca_Security_Group_Rule &sg_rule);
+	int delete_security_group_rule(Aca_Port &port, Aca_Security_Group &sg, Aca_Security_Group_Rule &sg_rule);
+	int create_security_group(Aca_Port &input_port, Aca_Security_Group &input_sg); 
+	int update_security_group(Aca_Port &input_port, Aca_Security_Group &input_sg);
+	int delete_security_group(Aca_Port &input_port, Aca_Security_Group &input_sg);
+
+	map<string, Aca_Port *> &get_ports(void);
+	map<string, Aca_Security_Group *> &get_security_groups(void);
 	
 private:
+	int set_remote_group(Aca_Security_Group_Rule &sg_rule);
+
 	map<string, Aca_Port *> ports;
 	map<string, Aca_Security_Group *> security_groups;
 };

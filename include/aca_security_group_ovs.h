@@ -30,6 +30,7 @@ namespace aca_security_group {
 #define BASE_INGRESS_TABLE 81
 #define RULES_INGRESS_TABLE 82
 #define ACCEPTED_EGRESS_TRAFFIC_TABLE 91
+#define ACCEPTED_INGRESS_TRAFFIC_TABLE 92
 #define DROPPED_TRAFFIC_TABLE 93
 #define ACCEPTED_EGRESS_TRAFFIC_NORMAL_TABLE 94
 
@@ -47,27 +48,36 @@ namespace aca_security_group {
 #define BR_INT "br-int"
 #define BR_TUN "br-tun"
 
+#define FLOW_PRIORITY_BASE 70
+
 class Aca_Security_Group_Ovs {
 public:
     static Aca_Security_Group_Ovs &get_instance();
-	void init_port(Aca_Port &aca_port);
-	int create_port_security_group_rule(Aca_Port &aca_port,
-                                                    Aca_Security_Group_Rule &aca_sg_rule);
-    int update_port_security_group_rule(Aca_Port &aca_port,
-                                                    Aca_Security_Group_Rule &aca_sg_rule);
-	int delete_port_security_group_rule(Aca_Port &aca_port,
-                                                    Aca_Security_Group_Rule &aca_sg_rule);
+	void init_port(Aca_Port &port);
+	int create_port_security_group_rule(Aca_Port &port,
+                                                    Aca_Security_Group_Rule &sg_rule);
+    int update_port_security_group_rule(Aca_Port &port,
+                                                    Aca_Security_Group_Rule &sg_rule);
+	int delete_port_security_group_rule(Aca_Port &port,
+                                                    Aca_Security_Group_Rule &sg_rule);
 private:
 	int get_vlan_by_segment_id(const int segment_id);
-    void init_port_egress_flows(Aca_Port &aca_port); 
-    void init_port_ingress_flows(const Aca_Port &aca_port); 
-    int get_flow_priority(Aca_Security_Group_Rule &aca_sg_rule, int conjunction);
+    void init_port_egress_flows(Aca_Port &port); 
+    void init_port_ingress_flows(const Aca_Port &port); 
+    int flow_priority_offset(Aca_Security_Group_Rule &sg_rule, bool conjunction);
     int get_dl_type_by_ether_type(uint32_t ether_type);
     string get_nw_proto_by_protocol(uint32_t protocol);
-    void build_flows_from_sg_rule(Aca_Port &aca_port,
-                                            Aca_Security_Group_Rule &aca_sg_rule,
-                                            bool has_actions,
-                                            vector<string> &flows);
+	int get_remote_group_conj_id(Aca_Security_Group_Rule &sg_rule);
+    int build_flows_by_sg_rule(Aca_Port &port,Aca_Security_Group_Rule &sg_rule,bool has_actions, vector<string> &flows);
+	int build_conjunction_flows(Aca_Port &port, Aca_Security_Group_Rule &sg_rule,bool need_actions, vector<string> &flows);
+	int get_remote_group_ips(Aca_Security_Group *remote_group, vector<string> remote_ips);
+	int build_flows_by_remote_ip(Aca_Port &port, Aca_Security_Group_Rule &sg_rule, string remote_ip, int conj_id, vector<string> &flows);
+	int build_normal_flows(Aca_Port &port,Aca_Security_Group_Rule &sg_rule,bool need_actions, vector<string> &flows);
+	int add_conjunction_actions(string _flow, int conj_id, int dimension, vector<string> &flows);
+	int build_accept_flows(Aca_Port &port,Aca_Security_Group_Rule &sg_rule, int conj_id, vector<string> &flows);
+
+	uint64_t conj_id_base;
+	map<string, uint64_t> conj_ids;
 };
 
 }

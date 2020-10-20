@@ -111,6 +111,14 @@ OperationType Aca_Security_Group_Rule::get_operation_type(void) {
 	return this->operation_type;
 }
 
+void Aca_Security_Group_Rule::set_remote_group(Aca_Security_Group * remote_group) {
+	this->remote_group = remote_group;
+}
+
+Aca_Security_Group * Aca_Security_Group_Rule::get_remote_group(void) {
+	return this->remote_group;
+}
+
 void Aca_Security_Group::set_id(string id) {
 	this->id = id;
 }
@@ -154,8 +162,31 @@ OperationType Aca_Security_Group::get_operation_type(void) {
 	return this->operation_type;
 }
 
+void Aca_Security_Group::add_port_id(string port_id) {
+	this->port_ids.push_back(port_id);
+}
+
+void Aca_Security_Group::delete_port_id(string port_id) {
+	vector<string>::iterator it;
+	for (it = this->port_ids.begin(); it != this->port_ids.end(); ++it) {
+		if (*it == port_id) {
+			it = this->port_ids.erase(it);
+			break;
+		}
+	}
+}
+
+int Aca_Security_Group::get_port_num(void) {
+	return this->port_ids.size();
+}
+
+vector<string> &Aca_Security_Group::get_port_ids(void) {
+	return this->port_ids;
+}
+
 void Aca_Security_Group::add_security_group_rule(Aca_Security_Group_Rule *sg_rule) {
-	this->rules[sg_rule->get_id()] = sg_rule;
+	Aca_Security_Group_Rule *new_sg_rule = new Aca_Security_Group_Rule(*sg_rule);
+	this->rules[new_sg_rule->get_id()] = new_sg_rule;
 }
 
 void Aca_Security_Group::update_security_group_rule(Aca_Security_Group_Rule *sg_rule) {
@@ -164,7 +195,7 @@ void Aca_Security_Group::update_security_group_rule(Aca_Security_Group_Rule *sg_
 		delete old_sg_rule;
 	}
 
-	this->rules[sg_rule->get_id()] = sg_rule;
+	add_security_group_rule(sg_rule);
 }
 
 void Aca_Security_Group::delete_security_group_rule(string sg_rule_id) {
@@ -245,6 +276,10 @@ void Aca_Port::add_fixed_ip(string fixed_ip) {
 	this->fixed_ips.push_back(fixed_ip);
 }
 
+vector<string> &Aca_Port::get_fixed_ip(void) {
+	return this->fixed_ips;
+}
+
 void Aca_Port::add_security_group_id(string security_group_id) {
 	this->security_group_ids.push_back(security_group_id);
 }
@@ -259,7 +294,7 @@ void Aca_Port::delete_security_group_id(string security_group_id) {
 	}
 }
 
-int Aca_Port::get_security_group_id_num(void) {
+int Aca_Port::get_security_group_num(void) {
 	return this->security_group_ids.size();
 }
 
