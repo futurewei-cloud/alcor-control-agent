@@ -21,11 +21,9 @@
 #include "pulsar/ConsumerConfiguration.h"
 #include "pulsar/Message.h"
 #include "pulsar/Result.h"
+#include "pulsar/MessageBuilder.h"
 
-using pulsar::ClientConfiguration;
-using pulsar::ConsumerConfiguration;
-using pulsar::Client;
-using pulsar::Consumer;
+using namespace pulsar;
 using std::string;
 
 namespace aca_message_pulsar

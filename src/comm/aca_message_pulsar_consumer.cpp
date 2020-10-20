@@ -89,43 +89,45 @@ bool ACA_Message_Pulsar_Consumer::consumeDispatched(string topic)
 
   
   //Receive message
-  result = this->ptr_consumer->receive(message);
+  while(1){
+    result = this->ptr_consumer->receive(message);
 
-  if (result != Result::ResultOk) {
-    ACA_LOG_ERROR("Failed to receive message from topic: %s\n",topic.c_str());
-    return EXIT_FAILURE;
-  }
-
-  else{
-    // Print the ordering key (if any)
-    if (message.hasOrderingKey()) {
-      ACA_LOG_DEBUG("%s  -> ", message.getOrderingKey().c_str());
+    if (result != Result::ResultOk) {
+      ACA_LOG_ERROR("Failed to receive message from topic: %s\n",topic.c_str());
+      return EXIT_FAILURE;
     }
-    // Print the payload
-    ACA_LOG_DEBUG("\n<=====incoming message: %s\n",
-                  message.getDataAsString().c_str());
 
-    rc = Aca_Comm_Manager::get_instance().deserialize(
-            (unsigned char *)message.getData(),message.getLength(), deserialized_GoalState);
-    if (rc == EXIT_SUCCESS) {
-      rc = Aca_Comm_Manager::get_instance().update_goal_state(
-                  deserialized_GoalState, gsOperationalReply);
-
-    // TODO: send gsOperationalReply back to controller 
-
-      if (rc != EXIT_SUCCESS) {
-        ACA_LOG_ERROR("Failed to update host with latest goal state, rc=%d.\n", rc);
-        overall_rc = rc;
-      } else {
-        ACA_LOG_INFO("Successfully updated host with latest goal state %d.\n", rc);
+    else{
+      // Print the ordering key (if any)
+      if (message.hasOrderingKey()) {
+        ACA_LOG_DEBUG("%s  -> ", message.getOrderingKey().c_str());
       }
-    } else {
-      ACA_LOG_ERROR("Deserialization failed with error code %d.\n", rc);
-      overall_rc = rc;
-    }
+      // Print the payload
+      ACA_LOG_DEBUG("\n<=====incoming message: %s\n",
+                    message.getDataAsString().c_str());
 
-    // Now acknowledge message
-    this->ptr_consumer->acknowledge(message);
+      rc = Aca_Comm_Manager::get_instance().deserialize(
+              (unsigned char *)message.getData(),message.getLength(), deserialized_GoalState);
+      if (rc == EXIT_SUCCESS) {
+        rc = Aca_Comm_Manager::get_instance().update_goal_state(
+                    deserialized_GoalState, gsOperationalReply);
+
+      // TODO: send gsOperationalReply back to controller 
+
+        if (rc != EXIT_SUCCESS) {
+          ACA_LOG_ERROR("Failed to update host with latest goal state, rc=%d.\n", rc);
+          overall_rc = rc;
+        } else {
+          ACA_LOG_INFO("Successfully updated host with latest goal state %d.\n", rc);
+        }
+      } else {
+        ACA_LOG_ERROR("Deserialization failed with error code %d.\n", rc);
+        overall_rc = rc;
+      }
+
+      // Now acknowledge message
+      this->ptr_consumer->acknowledge(message);
+    }
   }
   return overall_rc;
 }

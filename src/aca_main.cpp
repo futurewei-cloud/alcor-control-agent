@@ -15,15 +15,16 @@
 #include "aca_log.h"
 #include "aca_util.h"
 #include "aca_ovs_control.h"
-#include "aca_message_pulsar_consumer.h"
+#include "aca_message_pulsar_producer.h"
 #include "aca_grpc.h"
 #include "goalstateprovisioner.grpc.pb.h"
 #include <thread>
 #include <unistd.h> /* for getopt */
 #include <grpcpp/grpcpp.h>
 
+
 using aca_ovs_control::ACA_OVS_Control;
-using aca_message_pulsar::ACA_Message_Pulsar_Consumer;
+using aca_message_pulsar::ACA_Message_Pulsar_Producer;
 using std::string;
 
 // Defines
