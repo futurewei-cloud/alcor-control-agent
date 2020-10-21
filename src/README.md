@@ -75,6 +75,17 @@ cd ~/alcor-control-agent
 ```
 
 ## Running alcor-control-agent and tests
+Install OVS in ubuntu (18.04) if needed:
+```Shell
+root@ca62b6feec63:/mnt/host/code/alcor-control-agent# apt install openvswitch-switch
+```
+
+If you start a new container, you may need below after installing OVS:
+```Shell
+root@ca62b6feec63:/mnt/host/code/alcor-control-agent# /etc/init.d/openvswitch-switch restart
+root@ca62b6feec63:/mnt/host/code/alcor-control-agent# ovs-vswitchd --pidfile --detach
+```
+
 You can run the test (optional):
 ```Shell
 root@ca62b6feec63:/mnt/host/code/alcor-control-agent# ./build/tests/aca_tests

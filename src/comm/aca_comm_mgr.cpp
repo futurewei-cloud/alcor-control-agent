@@ -154,9 +154,6 @@ void Aca_Comm_Manager::print_goal_state(GoalState parsed_struct)
     VpcConfiguration current_VpcConfiguration =
             parsed_struct.vpc_states(i).configuration();
 
-    fprintf(stdout, "current_VpcConfiguration.format_version(): %d\n",
-            current_VpcConfiguration.format_version());
-
     fprintf(stdout, "current_VpcConfiguration.revision_number(): %d\n",
             current_VpcConfiguration.revision_number());
 
@@ -201,9 +198,6 @@ void Aca_Comm_Manager::print_goal_state(GoalState parsed_struct)
 
     SubnetConfiguration current_SubnetConfiguration =
             parsed_struct.subnet_states(i).configuration();
-
-    fprintf(stdout, "current_SubnetConfiguration.format_version(): %d\n",
-            current_SubnetConfiguration.format_version());
 
     fprintf(stdout, "current_SubnetConfiguration.revision_number(): %d\n",
             current_SubnetConfiguration.revision_number());
@@ -262,9 +256,6 @@ void Aca_Comm_Manager::print_goal_state(GoalState parsed_struct)
 
     PortConfiguration current_PortConfiguration =
             parsed_struct.port_states(i).configuration();
-
-    fprintf(stdout, "current_PortConfiguration.format_version(): %d\n",
-            current_PortConfiguration.format_version());
 
     fprintf(stdout, "current_PortConfiguration.revision_number(): %d\n",
             current_PortConfiguration.revision_number());
@@ -332,9 +323,6 @@ void Aca_Comm_Manager::print_goal_state(GoalState parsed_struct)
     NeighborConfiguration current_NeighborConfiguration =
             parsed_struct.neighbor_states(i).configuration();
 
-    fprintf(stdout, "current_NeighborConfiguration.format_version(): %d\n",
-            current_NeighborConfiguration.format_version());
-
     fprintf(stdout, "current_NeighborConfiguration.revision_number(): %d\n",
             current_NeighborConfiguration.revision_number());
 
@@ -388,9 +376,6 @@ void Aca_Comm_Manager::print_goal_state(GoalState parsed_struct)
 
     SecurityGroupConfiguration current_SecurityGroupConfiguration =
             parsed_struct.security_group_states(i).configuration();
-
-    fprintf(stdout, "current_SecurityGroupConfiguration.format_version(): %d\n",
-            current_SecurityGroupConfiguration.format_version());
 
     fprintf(stdout, "current_SecurityGroupConfiguration.revision_number(): %d\n",
             current_SecurityGroupConfiguration.revision_number());
@@ -449,9 +434,6 @@ void Aca_Comm_Manager::print_goal_state(GoalState parsed_struct)
     DHCPConfiguration current_DHCPConfiguration =
             parsed_struct.dhcp_states(i).configuration();
 
-    fprintf(stdout, "current_DHCPConfiguration.format_version(): %d\n",
-            current_DHCPConfiguration.format_version());
-
     fprintf(stdout, "current_DHCPConfiguration.revision_number(): %d\n",
             current_DHCPConfiguration.revision_number());
 
@@ -493,9 +475,6 @@ void Aca_Comm_Manager::print_goal_state(GoalState parsed_struct)
 
     RouterConfiguration current_RouterConfiguration =
             parsed_struct.router_states(i).configuration();
-
-    fprintf(stdout, "current_RouterConfiguration.format_version(): %d\n",
-            current_RouterConfiguration.format_version());
 
     fprintf(stdout, "current_RouterConfiguration.revision_number(): %d\n",
             current_RouterConfiguration.revision_number());

@@ -203,7 +203,6 @@ class GoalStateProvisionerClient {
 
     SubnetConfiguration *SubnetConiguration_builder =
             new_subnet_states->mutable_configuration();
-    SubnetConiguration_builder->set_format_version(1);
     SubnetConiguration_builder->set_revision_number(1);
     SubnetConiguration_builder->set_project_id(project_id);
     SubnetConiguration_builder->set_vpc_id(vpc_id_1);
@@ -220,7 +219,6 @@ class GoalStateProvisionerClient {
     new_neighbor_states->set_operation_type(OperationType::CREATE);
     NeighborConfiguration *NeighborConfiguration_builder =
             new_neighbor_states->mutable_configuration();
-    NeighborConfiguration_builder->set_format_version(1);
     NeighborConfiguration_builder->set_revision_number(1);
 
     NeighborConfiguration_builder->set_project_id(project_id);
@@ -337,7 +335,6 @@ class GoalStateProvisionerClient {
 
       SubnetConfiguration *SubnetConiguration_builder =
               new_subnet_states->mutable_configuration();
-      SubnetConiguration_builder->set_format_version(1);
       SubnetConiguration_builder->set_revision_number(1);
       SubnetConiguration_builder->set_project_id(project_id);
       SubnetConiguration_builder->set_vpc_id(vpc_id_1);
@@ -354,7 +351,6 @@ class GoalStateProvisionerClient {
       new_neighbor_states->set_operation_type(OperationType::CREATE);
       NeighborConfiguration *NeighborConfiguration_builder =
               new_neighbor_states->mutable_configuration();
-      NeighborConfiguration_builder->set_format_version(1);
       NeighborConfiguration_builder->set_revision_number(1);
 
       NeighborConfiguration_builder->set_project_id(project_id);
@@ -441,9 +437,6 @@ void parse_goalstate(GoalState parsed_struct, GoalState GoalState_builder)
     assert(parsed_struct.port_states(i).operation_type() ==
            GoalState_builder.port_states(i).operation_type());
 
-    assert(parsed_struct.port_states(i).configuration().format_version() ==
-           GoalState_builder.port_states(i).configuration().format_version());
-
     assert(parsed_struct.port_states(i).configuration().project_id() ==
            GoalState_builder.port_states(i).configuration().project_id());
 
@@ -510,9 +503,6 @@ void parse_goalstate(GoalState parsed_struct, GoalState GoalState_builder)
     assert(parsed_struct.subnet_states(i).operation_type() ==
            GoalState_builder.subnet_states(i).operation_type());
 
-    assert(parsed_struct.subnet_states(i).configuration().format_version() ==
-           GoalState_builder.subnet_states(i).configuration().format_version());
-
     assert(parsed_struct.subnet_states(i).configuration().project_id() ==
            GoalState_builder.subnet_states(i).configuration().project_id());
 
@@ -534,9 +524,6 @@ void parse_goalstate(GoalState parsed_struct, GoalState GoalState_builder)
   for (int i = 0; i < parsed_struct.vpc_states_size(); i++) {
     assert(parsed_struct.vpc_states(i).operation_type() ==
            GoalState_builder.vpc_states(i).operation_type());
-
-    assert(parsed_struct.vpc_states(i).configuration().format_version() ==
-           GoalState_builder.vpc_states(i).configuration().format_version());
 
     assert(parsed_struct.vpc_states(i).configuration().project_id() ==
            GoalState_builder.vpc_states(i).configuration().project_id());
@@ -633,7 +620,6 @@ int main(int argc, char *argv[])
 
   SubnetConfiguration *SubnetConiguration_builder =
           new_subnet_states->mutable_configuration();
-  SubnetConiguration_builder->set_format_version(1);
   SubnetConiguration_builder->set_revision_number(1);
   SubnetConiguration_builder->set_project_id("99d9d709-8478-4b46-9f3f-000000000000");
   SubnetConiguration_builder->set_vpc_id("99d9d709-8478-4b46-9f3f-000000000000");
@@ -651,7 +637,6 @@ int main(int argc, char *argv[])
 
   NeighborConfiguration *NeighborConfiguration_builder =
           new_neighbor_states->mutable_configuration();
-  NeighborConfiguration_builder->set_format_version(1);
   NeighborConfiguration_builder->set_revision_number(1);
 
   NeighborConfiguration_builder->set_project_id("99d9d709-8478-4b46-9f3f-000000000000");
