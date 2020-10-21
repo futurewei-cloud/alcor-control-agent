@@ -23,9 +23,6 @@
 #include <unistd.h> /* for getopt */
 #include <iostream>
 #include <string>
-#include "aca_dhcp_programming_if.h"
-#define private public
-#include "aca_dhcp_server.h"
 #include "aca_message_pulsar_producer.h"
 #include "aca_ovs_control.h"
 #include "ovs_control.h"
@@ -35,8 +32,6 @@ using namespace alcor::schema;
 using aca_comm_manager::Aca_Comm_Manager;
 using aca_net_config::Aca_Net_Config;
 using aca_ovs_l2_programmer::ACA_OVS_L2_Programmer;
-using namespace aca_dhcp_server;
-using namespace aca_dhcp_programming_if;
 using namespace aca_message_pulsar;
 using namespace aca_ovs_control;
 using namespace ovs_control;
@@ -80,7 +75,6 @@ static string host2_dvr_mac_address = HOST_DVR_MAC_PREFIX + string("d7:f2:02");
 static NetworkType vxlan_type = NetworkType::VXLAN;
 static string mq_broker_ip = "pulsar://localhost:6650"; //for the broker running in localhost
 static string mq_test_topic = "my-topic";
-
 
 // Global variables
 std::atomic_ulong g_total_network_configuration_time(0);
@@ -128,7 +122,6 @@ static void aca_test_create_default_port_state(PortState *new_port_states)
   new_port_states->set_operation_type(OperationType::CREATE);
 
   PortConfiguration *PortConfiguration_builder = new_port_states->mutable_configuration();
-  PortConfiguration_builder->set_format_version(1);
   PortConfiguration_builder->set_revision_number(1);
   PortConfiguration_builder->set_message_type(MessageType::FULL);
   PortConfiguration_builder->set_id(port_id_1);
@@ -154,7 +147,6 @@ static void aca_test_create_default_subnet_state(SubnetState *new_subnet_states)
 
   SubnetConfiguration *SubnetConiguration_builder =
           new_subnet_states->mutable_configuration();
-  SubnetConiguration_builder->set_format_version(1);
   SubnetConiguration_builder->set_revision_number(1);
   SubnetConiguration_builder->set_project_id(project_id);
   SubnetConiguration_builder->set_vpc_id(vpc_id_1);
@@ -372,7 +364,6 @@ TEST(ovs_dataplane_test_cases, 1_port_NEIGHBOR_CREATE_UPDATE)
 
   // fill in port state structs
   PortConfiguration *PortConfiguration_builder = new_port_states->mutable_configuration();
-  PortConfiguration_builder->set_format_version(2);
   PortConfiguration_builder->set_revision_number(2);
   PortConfiguration_builder->set_message_type(MessageType::DELTA);
   PortConfiguration_builder->set_network_type(vxlan_type);
@@ -462,7 +453,6 @@ TEST(ovs_dataplane_test_cases, 1_port_CREATE_plus_NEIGHBOR_CREATE_UPDATE)
   // fill in port state structs for NEIGHBOR_CREATE_UPDATE
   PortConfiguration *PortConfiguration_builder2 =
           new_port_neighbor_states->mutable_configuration();
-  PortConfiguration_builder2->set_format_version(2);
   PortConfiguration_builder2->set_revision_number(2);
   PortConfiguration_builder2->set_message_type(MessageType::DELTA);
   PortConfiguration_builder2->set_network_type(vxlan_type);
@@ -554,7 +544,6 @@ TEST(ovs_dataplane_test_cases, 2_ports_CREATE_test_traffic)
 
   // fill in port state structs
   PortConfiguration *PortConfiguration_builder = new_port_states->mutable_configuration();
-  PortConfiguration_builder->set_format_version(1);
   PortConfiguration_builder->set_revision_number(1);
   PortConfiguration_builder->set_message_type(MessageType::FULL);
   PortConfiguration_builder->set_id(port_id_1);
@@ -674,7 +663,6 @@ TEST(ovs_dataplane_test_cases, 10_ports_CREATE)
 
     PortConfiguration *PortConfiguration_builder =
             new_port_states->mutable_configuration();
-    PortConfiguration_builder->set_format_version(1);
     PortConfiguration_builder->set_revision_number(1);
     PortConfiguration_builder->set_message_type(MessageType::FULL);
     PortConfiguration_builder->set_id(i_string);
@@ -757,7 +745,6 @@ TEST(ovs_dataplane_test_cases, 10_l2_neighbor_CREATE)
 
   SubnetConfiguration *SubnetConiguration_builder =
           new_subnet_states->mutable_configuration();
-  SubnetConiguration_builder->set_format_version(1);
   SubnetConiguration_builder->set_revision_number(1);
   SubnetConiguration_builder->set_project_id(project_id);
   SubnetConiguration_builder->set_vpc_id("1b08a5bc-b718-11ea-b3de-111122223333");
@@ -781,7 +768,6 @@ TEST(ovs_dataplane_test_cases, 10_l2_neighbor_CREATE)
 
     NeighborConfiguration *NeighborConfiguration_builder =
             new_neighbor_states->mutable_configuration();
-    NeighborConfiguration_builder->set_format_version(1);
     NeighborConfiguration_builder->set_revision_number(1);
 
     NeighborConfiguration_builder->set_project_id(project_id);
@@ -856,7 +842,6 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_CREATE_test_traffic_MASTER)
 
   // fill in port state structs for port 1
   PortConfiguration *PortConfiguration_builder = new_port_states->mutable_configuration();
-  PortConfiguration_builder->set_format_version(1);
   PortConfiguration_builder->set_revision_number(1);
   PortConfiguration_builder->set_message_type(MessageType::FULL);
   PortConfiguration_builder->set_id(port_id_1);
@@ -880,7 +865,6 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_CREATE_test_traffic_MASTER)
 
   SubnetConfiguration *SubnetConiguration_builder =
           new_subnet_states->mutable_configuration();
-  SubnetConiguration_builder->set_format_version(1);
   SubnetConiguration_builder->set_revision_number(1);
   SubnetConiguration_builder->set_project_id(project_id);
   SubnetConiguration_builder->set_vpc_id(vpc_id_1);
@@ -896,7 +880,6 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_CREATE_test_traffic_MASTER)
   // fill in port state structs for NEIGHBOR_CREATE_UPDATE for port 3
   PortConfiguration *PortConfiguration_builder2 =
           new_port_neighbor_states->mutable_configuration();
-  PortConfiguration_builder2->set_format_version(2);
   PortConfiguration_builder2->set_revision_number(2);
   PortConfiguration_builder2->set_message_type(MessageType::DELTA);
   PortConfiguration_builder2->set_network_type(vxlan_type);
@@ -1046,7 +1029,6 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_CREATE_test_traffic_SLAVE)
 
   // fill in port state structs for port 3
   PortConfiguration *PortConfiguration_builder = new_port_states->mutable_configuration();
-  PortConfiguration_builder->set_format_version(1);
   PortConfiguration_builder->set_revision_number(1);
   PortConfiguration_builder->set_message_type(MessageType::FULL);
   PortConfiguration_builder->set_id(port_id_3);
@@ -1070,7 +1052,6 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_CREATE_test_traffic_SLAVE)
 
   SubnetConfiguration *SubnetConiguration_builder =
           new_subnet_states->mutable_configuration();
-  SubnetConiguration_builder->set_format_version(1);
   SubnetConiguration_builder->set_revision_number(1);
   SubnetConiguration_builder->set_project_id(project_id);
   SubnetConiguration_builder->set_vpc_id(vpc_id_1);
@@ -1086,7 +1067,6 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_CREATE_test_traffic_SLAVE)
   // fill in port state structs for NEIGHBOR_CREATE_UPDATE for port 1
   PortConfiguration *PortConfiguration_builder2 =
           new_port_neighbor_states->mutable_configuration();
-  PortConfiguration_builder2->set_format_version(2);
   PortConfiguration_builder2->set_revision_number(2);
   PortConfiguration_builder2->set_message_type(MessageType::DELTA);
   PortConfiguration_builder2->set_network_type(vxlan_type);
@@ -1213,7 +1193,6 @@ TEST(ovs_dataplane_test_cases, ADD_DELETE_ROUTER_test_no_traffic)
   // fill in router state structs
   RouterConfiguration *RouterConfiguration_builder =
           new_router_states->mutable_configuration();
-  RouterConfiguration_builder->set_format_version(1);
   RouterConfiguration_builder->set_revision_number(1);
 
   RouterConfiguration_builder->set_id("router_id1");
@@ -1260,7 +1239,6 @@ TEST(ovs_dataplane_test_cases, ADD_DELETE_ROUTER_test_no_traffic)
 
   SubnetConfiguration *SubnetConiguration_builder2 =
           new_subnet_states2->mutable_configuration();
-  SubnetConiguration_builder2->set_format_version(1);
   SubnetConiguration_builder2->set_revision_number(1);
   SubnetConiguration_builder2->set_project_id(project_id);
   SubnetConiguration_builder2->set_vpc_id(vpc_id_2);
@@ -1330,7 +1308,6 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_ROUTING_test_traffic_one_machine
 
   // fill in port state structs for port 3
   PortConfiguration *PortConfiguration_builder = new_port_states->mutable_configuration();
-  PortConfiguration_builder->set_format_version(1);
   PortConfiguration_builder->set_revision_number(1);
   PortConfiguration_builder->set_message_type(MessageType::FULL);
   PortConfiguration_builder->set_id(port_id_3);
@@ -1354,7 +1331,6 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_ROUTING_test_traffic_one_machine
 
   SubnetConfiguration *SubnetConiguration_builder =
           new_subnet_states->mutable_configuration();
-  SubnetConiguration_builder->set_format_version(1);
   SubnetConiguration_builder->set_revision_number(1);
   SubnetConiguration_builder->set_project_id(project_id);
   SubnetConiguration_builder->set_vpc_id(vpc_id_1);
@@ -1464,7 +1440,6 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_ROUTING_test_traffic_one_machine
   // fill in router state structs
   RouterConfiguration *RouterConfiguration_builder =
           new_router_states->mutable_configuration();
-  RouterConfiguration_builder->set_format_version(1);
   RouterConfiguration_builder->set_revision_number(1);
 
   RouterConfiguration_builder->set_id("router_id1");
@@ -1511,7 +1486,6 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_ROUTING_test_traffic_one_machine
 
   SubnetConfiguration *SubnetConiguration_builder2 =
           new_subnet_states2->mutable_configuration();
-  SubnetConiguration_builder2->set_format_version(1);
   SubnetConiguration_builder2->set_revision_number(1);
   SubnetConiguration_builder2->set_project_id(project_id);
   SubnetConiguration_builder2->set_vpc_id(vpc_id_2);
@@ -1556,7 +1530,6 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_ROUTING_test_traffic_one_machine
 
   NeighborConfiguration *NeighborConfiguration_builder3 =
           new_neighbor_states3->mutable_configuration();
-  NeighborConfiguration_builder3->set_format_version(1);
   NeighborConfiguration_builder3->set_revision_number(1);
 
   NeighborConfiguration_builder3->set_project_id(project_id);
@@ -1576,7 +1549,6 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_ROUTING_test_traffic_one_machine
 
   NeighborConfiguration *NeighborConfiguration_builder4 =
           new_neighbor_states4->mutable_configuration();
-  NeighborConfiguration_builder4->set_format_version(1);
   NeighborConfiguration_builder4->set_revision_number(1);
 
   NeighborConfiguration_builder4->set_project_id(project_id);
@@ -1679,7 +1651,6 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_ROUTING_test_traffic_MASTER)
 
   // fill in port state structs for port 1
   PortConfiguration *PortConfiguration_builder = new_port_states->mutable_configuration();
-  PortConfiguration_builder->set_format_version(1);
   PortConfiguration_builder->set_revision_number(1);
   PortConfiguration_builder->set_message_type(MessageType::FULL);
   PortConfiguration_builder->set_id(port_id_1);
@@ -1703,7 +1674,6 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_ROUTING_test_traffic_MASTER)
 
   SubnetConfiguration *SubnetConiguration_builder =
           new_subnet_states->mutable_configuration();
-  SubnetConiguration_builder->set_format_version(1);
   SubnetConiguration_builder->set_revision_number(1);
   SubnetConiguration_builder->set_project_id(project_id);
   SubnetConiguration_builder->set_vpc_id(vpc_id_1);
@@ -1824,7 +1794,6 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_ROUTING_test_traffic_MASTER)
   // fill in router state structs
   RouterConfiguration *RouterConfiguration_builder =
           new_router_states->mutable_configuration();
-  RouterConfiguration_builder->set_format_version(1);
   RouterConfiguration_builder->set_revision_number(1);
 
   RouterConfiguration_builder->set_id("router_id1");
@@ -1845,7 +1814,6 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_ROUTING_test_traffic_MASTER)
 
   SubnetConfiguration *SubnetConiguration_builder2 =
           new_subnet_states2->mutable_configuration();
-  SubnetConiguration_builder2->set_format_version(1);
   SubnetConiguration_builder2->set_revision_number(1);
   SubnetConiguration_builder2->set_project_id(project_id);
   SubnetConiguration_builder2->set_vpc_id(vpc_id_2);
@@ -1890,7 +1858,6 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_ROUTING_test_traffic_MASTER)
 
   NeighborConfiguration *NeighborConfiguration_builder3 =
           new_neighbor_states3->mutable_configuration();
-  NeighborConfiguration_builder3->set_format_version(1);
   NeighborConfiguration_builder3->set_revision_number(1);
 
   NeighborConfiguration_builder3->set_project_id(project_id);
@@ -1910,7 +1877,6 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_ROUTING_test_traffic_MASTER)
 
   NeighborConfiguration *NeighborConfiguration_builder4 =
           new_neighbor_states4->mutable_configuration();
-  NeighborConfiguration_builder4->set_format_version(1);
   NeighborConfiguration_builder4->set_revision_number(1);
 
   NeighborConfiguration_builder4->set_project_id(project_id);
@@ -2024,7 +1990,6 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_ROUTING_test_traffic_SLAVE)
 
   // fill in port state structs for port 3
   PortConfiguration *PortConfiguration_builder = new_port_states->mutable_configuration();
-  PortConfiguration_builder->set_format_version(1);
   PortConfiguration_builder->set_revision_number(1);
   PortConfiguration_builder->set_message_type(MessageType::FULL);
   PortConfiguration_builder->set_id(port_id_3);
@@ -2048,7 +2013,6 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_ROUTING_test_traffic_SLAVE)
 
   SubnetConfiguration *SubnetConiguration_builder =
           new_subnet_states->mutable_configuration();
-  SubnetConiguration_builder->set_format_version(1);
   SubnetConiguration_builder->set_revision_number(1);
   SubnetConiguration_builder->set_project_id(project_id);
   SubnetConiguration_builder->set_vpc_id(vpc_id_1);
@@ -2146,7 +2110,6 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_ROUTING_test_traffic_SLAVE)
   // fill in router state structs
   RouterConfiguration *RouterConfiguration_builder =
           new_router_states->mutable_configuration();
-  RouterConfiguration_builder->set_format_version(1);
   RouterConfiguration_builder->set_revision_number(1);
 
   RouterConfiguration_builder->set_id("router_id2");
@@ -2167,7 +2130,6 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_ROUTING_test_traffic_SLAVE)
 
   SubnetConfiguration *SubnetConiguration_builder2 =
           new_subnet_states2->mutable_configuration();
-  SubnetConiguration_builder2->set_format_version(1);
   SubnetConiguration_builder2->set_revision_number(1);
   SubnetConiguration_builder2->set_project_id(project_id);
   SubnetConiguration_builder2->set_vpc_id(vpc_id_2);
@@ -2212,7 +2174,6 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_ROUTING_test_traffic_SLAVE)
 
   NeighborConfiguration *NeighborConfiguration_builder3 =
           new_neighbor_states3->mutable_configuration();
-  NeighborConfiguration_builder3->set_format_version(1);
   NeighborConfiguration_builder3->set_revision_number(1);
 
   NeighborConfiguration_builder3->set_project_id(project_id);
@@ -2232,7 +2193,6 @@ TEST(ovs_dataplane_test_cases, DISABLED_2_ports_ROUTING_test_traffic_SLAVE)
 
   NeighborConfiguration *NeighborConfiguration_builder4 =
           new_neighbor_states4->mutable_configuration();
-  NeighborConfiguration_builder4->set_format_version(1);
   NeighborConfiguration_builder4->set_revision_number(1);
 
   NeighborConfiguration_builder4->set_project_id(project_id);
@@ -2660,174 +2620,6 @@ TEST(net_config_test_cases, rename_veth_device_valid)
   EXPECT_EQ(rc, EXIT_SUCCESS);
 }
 
-TEST(dhcp_config_test_cases, add_dhcp_entry_valid)
-{
-  int retcode = 0;
-  dhcp_config stDhcpCfgIn;
-
-  stDhcpCfgIn.ipv4_address = "10.0.0.1";
-  stDhcpCfgIn.mac_address = "AA:BB:CC:DD:EE:FF";
-  stDhcpCfgIn.port_host_name = "Port1";
-
-  retcode = ACA_Dhcp_Server::get_instance().add_dhcp_entry(&stDhcpCfgIn);
-  EXPECT_EQ(retcode, EXIT_SUCCESS);
-}
-
-TEST(dhcp_config_test_cases, add_dhcp_entry_invalid)
-{
-  int retcode = 0;
-  dhcp_config stDhcpCfgIn1;
-  dhcp_config stDhcpCfgIn2;
-
-  stDhcpCfgIn1.ipv4_address = "10.0.0.1";
-  stDhcpCfgIn1.mac_address = "AA:BB:CC:DD:EE:FF";
-  stDhcpCfgIn1.port_host_name = "Port1";
-
-  stDhcpCfgIn2.ipv4_address = "10.0.0.2";
-  stDhcpCfgIn2.mac_address = "AA:BB:CC:DD:EE:FF";
-  stDhcpCfgIn2.port_host_name = "Port2";
-
-  (void)ACA_Dhcp_Server::get_instance().add_dhcp_entry(&stDhcpCfgIn1);
-
-  retcode = ACA_Dhcp_Server::get_instance().add_dhcp_entry(&stDhcpCfgIn2);
-  EXPECT_EQ(retcode, EXIT_FAILURE);
-}
-
-TEST(dhcp_config_test_cases, delete_dhcp_entry_valid)
-{
-  int retcode = 0;
-  dhcp_config stDhcpCfgIn;
-
-  stDhcpCfgIn.ipv4_address = "10.0.0.1";
-  stDhcpCfgIn.mac_address = "AA:BB:CC:DD:EE:FF";
-  stDhcpCfgIn.port_host_name = "Port1";
-
-  (void)ACA_Dhcp_Server::get_instance().add_dhcp_entry(&stDhcpCfgIn);
-
-  retcode = ACA_Dhcp_Server::get_instance().delete_dhcp_entry(&stDhcpCfgIn);
-  EXPECT_EQ(retcode, EXIT_SUCCESS);
-}
-
-TEST(dhcp_config_test_cases, update_dhcp_entry_valid)
-{
-  int retcode = 0;
-  dhcp_config stDhcpCfgIn;
-
-  stDhcpCfgIn.ipv4_address = "10.0.0.1";
-  stDhcpCfgIn.mac_address = "AA:BB:CC:DD:EE:FF";
-  stDhcpCfgIn.port_host_name = "Port1";
-
-  (void)ACA_Dhcp_Server::get_instance().add_dhcp_entry(&stDhcpCfgIn);
-
-  stDhcpCfgIn.ipv4_address = "10.0.0.2";
-  retcode = ACA_Dhcp_Server::get_instance().update_dhcp_entry(&stDhcpCfgIn);
-  EXPECT_EQ(retcode, EXIT_SUCCESS);
-}
-
-TEST(dhcp_config_test_cases, update_dhcp_entry_invalid)
-{
-  int retcode = 0;
-  dhcp_config stDhcpCfgIn;
-
-  stDhcpCfgIn.ipv4_address = "10.0.0.1";
-  stDhcpCfgIn.mac_address = "AA:BB:CC:DD:EE:FF";
-  stDhcpCfgIn.port_host_name = "Port1";
-
-  (void)ACA_Dhcp_Server::get_instance().delete_dhcp_entry(&stDhcpCfgIn);
-  retcode = ACA_Dhcp_Server::get_instance().update_dhcp_entry(&stDhcpCfgIn);
-  EXPECT_EQ(retcode, EXIT_FAILURE);
-}
-
-TEST(dhcp_message_test_cases, dhcps_recv_valid)
-{
-  int retcode = 0;
-  dhcp_message stDhcpMsg = { 0 };
-
-  stDhcpMsg.op = BOOTP_MSG_BOOTREQUEST;
-  stDhcpMsg.htype = DHCP_MSG_HWTYPE_ETH;
-  stDhcpMsg.hlen = DHCP_MSG_HWTYPE_ETH_LEN;
-  stDhcpMsg.xid = 12345;
-  stDhcpMsg.flags = 0x8000;
-  stDhcpMsg.chaddr[0] = 0x3c;
-  stDhcpMsg.chaddr[1] = 0xf0;
-  stDhcpMsg.chaddr[2] = 0x11;
-  stDhcpMsg.chaddr[3] = 0x12;
-  stDhcpMsg.chaddr[4] = 0x56;
-  stDhcpMsg.chaddr[5] = 0x65;
-  stDhcpMsg.cookie = DHCP_MSG_MAGIC_COOKIE;
-  stDhcpMsg.options[0] = DHCP_OPT_CODE_MSGTYPE;
-  stDhcpMsg.options[1] = DHCP_OPT_LEN_1BYTE;
-  stDhcpMsg.options[2] = DHCP_MSG_DHCPDISCOVER;
-  stDhcpMsg.options[3] = DHCP_OPT_END;
-
-  retcode = ACA_Dhcp_Server::get_instance()._validate_dhcp_message(&stDhcpMsg);
-  EXPECT_EQ(retcode, EXIT_SUCCESS);
-
-  retcode = ACA_Dhcp_Server::get_instance()._get_message_type(&stDhcpMsg);
-  EXPECT_EQ(retcode, DHCP_MSG_DHCPDISCOVER);
-}
-
-TEST(dhcp_message_test_cases, get_options_valid)
-{
-  int retcode = 0;
-  dhcp_message stDhcpMsg = { 0 };
-
-  stDhcpMsg.op = BOOTP_MSG_BOOTREQUEST;
-  stDhcpMsg.htype = DHCP_MSG_HWTYPE_ETH;
-  stDhcpMsg.hlen = DHCP_MSG_HWTYPE_ETH_LEN;
-  stDhcpMsg.xid = 12345;
-  stDhcpMsg.flags = 0x8000;
-  stDhcpMsg.chaddr[0] = 0x3c;
-  stDhcpMsg.chaddr[1] = 0xf0;
-  stDhcpMsg.chaddr[2] = 0x11;
-  stDhcpMsg.chaddr[3] = 0x12;
-  stDhcpMsg.chaddr[4] = 0x56;
-  stDhcpMsg.chaddr[5] = 0x65;
-  stDhcpMsg.cookie = DHCP_MSG_MAGIC_COOKIE;
-
-  stDhcpMsg.options[0] = DHCP_OPT_CODE_MSGTYPE;
-  stDhcpMsg.options[1] = DHCP_OPT_LEN_1BYTE;
-  stDhcpMsg.options[2] = DHCP_MSG_DHCPDISCOVER;
-
-  stDhcpMsg.options[3] = DHCP_OPT_CODE_SERVER_ID;
-  stDhcpMsg.options[4] = DHCP_OPT_LEN_4BYTE;
-  stDhcpMsg.options[5] = 0x7f;
-  stDhcpMsg.options[6] = 0x00;
-  stDhcpMsg.options[7] = 0x00;
-  stDhcpMsg.options[8] = 0x01;
-
-  stDhcpMsg.options[9] = DHCP_OPT_CODE_REQ_IP;
-  stDhcpMsg.options[10] = DHCP_OPT_LEN_4BYTE;
-  stDhcpMsg.options[11] = 0x0a;
-  stDhcpMsg.options[12] = 0x00;
-  stDhcpMsg.options[13] = 0x00;
-  stDhcpMsg.options[14] = 0x01;
-
-  stDhcpMsg.options[15] = DHCP_OPT_END;
-
-  retcode = ACA_Dhcp_Server::get_instance()._get_message_type(&stDhcpMsg);
-  EXPECT_EQ(retcode, DHCP_MSG_DHCPDISCOVER);
-
-  retcode = ACA_Dhcp_Server::get_instance()._get_server_id(&stDhcpMsg);
-  EXPECT_EQ(retcode, 0x7f000001);
-
-  retcode = ACA_Dhcp_Server::get_instance()._get_requested_ip(&stDhcpMsg);
-  EXPECT_EQ(retcode, 0x0a000001);
-}
-
-TEST(pulsar_test_cases, DISABLED_pulsar_consumer_test){
-  int retcode = 0;
-  const int MESSAGES_TO_SEND = 10;
-  string message = "Test Message";
-
-  ACA_Message_Pulsar_Producer producer(mq_broker_ip,mq_test_topic);
-
-  for(int i = 0; i < MESSAGES_TO_SEND; i++){
-    retcode = producer.publish(message);
-    EXPECT_EQ(retcode, EXIT_SUCCESS);
-  }
-}
-
 TEST(ovs_flow_mod_cases, add_flows)
 {
   // ulong culminative_network_configuration_time = 0;
@@ -2840,12 +2632,12 @@ TEST(ovs_flow_mod_cases, add_flows)
   overall_rc = EXIT_SUCCESS;
 
   // add flow
-  ACA_OVS_Control::get_instance().add_flow("br-tun", "ip,nw_dst=192.168.0.1,priority=1,actions=drop");
- 
+  ACA_OVS_Control::get_instance().add_flow(
+          "br-tun", "ip,nw_dst=192.168.0.1,priority=1,actions=drop");
+
   overall_rc = ACA_OVS_Control::get_instance().flow_exists("br-tun", "ip,nw_dst=192.168.0.1");
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
-
 }
 
 TEST(ovs_flow_mod_cases, mod_flows)
@@ -2857,13 +2649,15 @@ TEST(ovs_flow_mod_cases, mod_flows)
   // create and setup br-int and br-tun bridges, and their patch ports
   overall_rc = ACA_OVS_L2_Programmer::get_instance().setup_ovs_bridges_if_need();
   ASSERT_EQ(overall_rc, EXIT_SUCCESS);
-  
+
   // add flow
-  ACA_OVS_Control::get_instance().add_flow("br-tun", "tcp,nw_dst=192.168.0.1,priority=1,actions=drop");
+  ACA_OVS_Control::get_instance().add_flow(
+          "br-tun", "tcp,nw_dst=192.168.0.1,priority=1,actions=drop");
 
   // modify flow
-  ACA_OVS_Control::get_instance().mod_flows("br-tun", "tcp,nw_dst=192.168.0.1,priority=1,actions=resubmit(,2)");
- 
+  ACA_OVS_Control::get_instance().mod_flows(
+          "br-tun", "tcp,nw_dst=192.168.0.1,priority=1,actions=resubmit(,2)");
+
   overall_rc = ACA_OVS_Control::get_instance().flow_exists("br-tun", "tcp,nw_dst=192.168.0.1");
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
@@ -2878,13 +2672,14 @@ TEST(ovs_flow_mod_cases, del_flows)
   // create and setup br-int and br-tun bridges, and their patch ports
   overall_rc = ACA_OVS_L2_Programmer::get_instance().setup_ovs_bridges_if_need();
   ASSERT_EQ(overall_rc, EXIT_SUCCESS);
-  
+
   // add flow
-  ACA_OVS_Control::get_instance().add_flow("br-tun", "tcp,nw_dst=192.168.0.9,priority=1,actions=drop");
+  ACA_OVS_Control::get_instance().add_flow(
+          "br-tun", "tcp,nw_dst=192.168.0.9,priority=1,actions=drop");
 
   // delete flow
   ACA_OVS_Control::get_instance().del_flows("br-tun", "tcp,nw_dst=192.168.0.9,priority=1");
- 
+
   overall_rc = ACA_OVS_Control::get_instance().flow_exists("br-tun", "tcp,nw_dst=192.168.0.9");
   EXPECT_NE(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
