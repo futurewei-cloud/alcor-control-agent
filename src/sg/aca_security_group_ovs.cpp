@@ -221,14 +221,13 @@ string Aca_Security_Group_Ovs::get_nw_proto_by_protocol(uint32_t protocol)
     return "";
 }
 
-int Aca_Security_Group_Ovs::build_normal_flows(Aca_Port &port,
+int Aca_Security_Group_Ovs::build_flow_match_fileds(Aca_Port &port,
                                                     Aca_Security_Group_Rule &sg_rule,
-                                                    bool need_actions,
+                                                    bool del_flow,
                                                     vector<string> &flows)
 {
     stringstream match_fileds;
     int priority;
-    string actions;
     string nw_src_dst;
     string tcp_udp_dst;
     
@@ -247,17 +246,15 @@ int Aca_Security_Group_Ovs::build_normal_flows(Aca_Port &port,
     tcp_udp_dst = get_nw_proto_by_protocol(nw_proto);
 
     if (direction == INGRESS) {
-        actions = "actions=output:" + ofport;
         match_fileds << "table=" << RULES_INGRESS_TABLE << ",";
     } else {
-        actions = "actions=resubmit(," + to_string(ACCEPT_OR_INGRESS_TABLE) + ")";  
         match_fileds << "table=" << RULES_EGRESS_TABLE << ",";
     }
 
-	if (need_actions) {
-		match_fileds << "cookie=" << cookie << ",";
-	} else {
+	if (del_flow) {
 		match_fileds << "cookie=" << cookie << "/-1,";
+	} else {
+		match_fileds << "cookie=" << cookie << ",";
 	}
 	
     match_fileds << "priority=" << priority << ",";
@@ -295,10 +292,6 @@ int Aca_Security_Group_Ovs::build_normal_flows(Aca_Port &port,
         
         flow = match_fileds.str() + ss.str();
         
-        if (need_actions) {
-			flow = flow + "," + actions;
-        }
-        
 		flows.push_back(flow);
 	} else {
 	    for (uint32_t i = port_range_min; i <= port_range_max; i++) {
@@ -308,10 +301,6 @@ int Aca_Security_Group_Ovs::build_normal_flows(Aca_Port &port,
 	        ss << tcp_udp_dst << "_dst=" << i;
 	        flow = match_fileds.str() + ss.str();
 	        
-	        if (need_actions) {
-				flow = flow + "," + actions;
-	        }
-	        
 	        flows.push_back(flow);
 	    }
     }
@@ -320,7 +309,7 @@ int Aca_Security_Group_Ovs::build_normal_flows(Aca_Port &port,
 }
 
 int Aca_Security_Group_Ovs::get_remote_group_ips(Aca_Security_Group *remote_group, 
-															vector<string> remote_ips)
+															vector<string> &remote_ips)
 {
 	Aca_Security_Group_Manager manager = Aca_Security_Group_Manager::get_instance();
 	set<string> &port_ids = remote_group->get_port_ids();
@@ -401,9 +390,9 @@ int Aca_Security_Group_Ovs::build_flows_by_remote_ip(Aca_Port &port,
 	match_fileds << "reg" << REG_NET << "=" << local_vlan << ",";
 
     if (direction == INGRESS) {
-        match_fileds << "nw_src=" << remote_ip << ",";
+        match_fileds << "nw_src=" << remote_ip;
     } else {
-        match_fileds << "nw_dst=" << remote_ip << ",";
+        match_fileds << "nw_dst=" << remote_ip;
     }
     
 	return add_conjunction_actions(match_fileds.str(), conj_id, 1, flows);
@@ -416,10 +405,9 @@ int Aca_Security_Group_Ovs::add_conjunction_actions(string flow,
 {
 	for (int i = 0; i < 2; i++) {
     	stringstream s_flow;
-    	string flow;
     	
-    	s_flow << "ct_state=" << ct_state[i] << ",actions=conjunction(" \
-    		<< conj_id << "," << dimension << "/2)";
+    	s_flow << ",ct_state=" << ct_state[i] << ",actions=conjunction(" \
+    		<< conj_id + i << "," << dimension << "/2)";
 		
 		flows.push_back(flow + s_flow.str());
     } 
@@ -446,10 +434,10 @@ int Aca_Security_Group_Ovs::build_accept_flows(Aca_Port &port,
 
     if (direction == INGRESS) {
         match_fileds << "table=" << RULES_INGRESS_TABLE << ",";
-        actions = "actions=output:" + ofport;
+        actions = "output:" + to_string(ofport);
     } else {
         match_fileds << "table=" << RULES_EGRESS_TABLE << ",";
-        actions = "actions=resubmit(," + to_string(ACCEPT_OR_INGRESS_TABLE) + ")";  
+        actions = "resubmit(," + to_string(ACCEPT_OR_INGRESS_TABLE) + ")";  
     }
 
     priority = (conj_id % 8) / 2;
@@ -465,10 +453,10 @@ int Aca_Security_Group_Ovs::build_accept_flows(Aca_Port &port,
 		match_fileds << "ct_state=" << ct_state[i] << ",";
 		if (i == 1 && direction == INGRESS) {
 			s_flow << match_fileds.str() << "conj_id=" << conj_id + 1 << ",";
-			s_flow << "ct(comit,zone=NXM_NX_REG" << REG_NET << "[0..15])," << actions \
+			s_flow << "actions=ct(commit,zone=NXM_NX_REG" << REG_NET << "[0..15])," << actions \
 					<< ",resubmit(," << ACCEPTED_INGRESS_TRAFFIC_TABLE << ")";
 		} else {
-			s_flow << match_fileds.str() << "conj_id=" << conj_id << "," << actions;
+			s_flow << match_fileds.str() << "conj_id=" << conj_id << ",actions=" << actions;
 		}
 
 		flows.push_back(s_flow.str());
@@ -479,12 +467,11 @@ int Aca_Security_Group_Ovs::build_accept_flows(Aca_Port &port,
 
 int Aca_Security_Group_Ovs::build_conjunction_flows(Aca_Port &port,
                                                     Aca_Security_Group_Rule &sg_rule,
-                                                    bool need_actions,
                                                     vector<string> &flows)
 {
 	int conj_id;
 	vector<string> remote_ips;
-	vector<string> normal_flows;
+	vector<string> match_fileds;
 	Aca_Security_Group *remote_group;
 	
 	remote_group = sg_rule.get_remote_group();
@@ -492,17 +479,21 @@ int Aca_Security_Group_Ovs::build_conjunction_flows(Aca_Port &port,
 		return EXIT_FAILURE;
 	}
 
-	get_remote_group_ips(remote_group, remote_ips);
+	if (get_remote_group_ips(remote_group, remote_ips) != EXIT_SUCCESS) {
+		ACA_LOG_ERROR("Get ips of remote group failed\n");
+		return EXIT_FAILURE;
+	}
+	
 	conj_id = get_remote_group_conj_id(sg_rule);
 
 	for (uint32_t i = 0; i < remote_ips.size(); i++) {
 		build_flows_by_remote_ip(port, sg_rule, remote_ips[i], conj_id, flows);
 	}
 
-	build_normal_flows(port, sg_rule, true, normal_flows);
+	build_flow_match_fileds(port, sg_rule, false, match_fileds);
 
-	for (uint32_t i = 0; i < normal_flows.size(); i++) {
-		add_conjunction_actions(normal_flows[i], conj_id, 2, flows);
+	for (uint32_t i = 0; i < match_fileds.size(); i++) {
+		add_conjunction_actions(match_fileds[i], conj_id, 2, flows);
 	}
 
 	return build_accept_flows(port, sg_rule, conj_id, flows);
@@ -511,14 +502,51 @@ int Aca_Security_Group_Ovs::build_conjunction_flows(Aca_Port &port,
 
 int Aca_Security_Group_Ovs::build_flows_by_sg_rule(Aca_Port &port,
                                                     Aca_Security_Group_Rule &sg_rule,
-                                                    bool need_actions,
+                                                    bool del_flow,
                                                     vector<string> &flows)
 {
+	Direction direction;
+	uint32_t ofport;
+	string actions;
+	vector<string> tmp_flows;
+	
 	if (sg_rule.get_remote_group() != NULL) {
-		return build_conjunction_flows(port, sg_rule, need_actions, flows);
+		return build_conjunction_flows(port, sg_rule, flows);
 	} 
 
-	return build_normal_flows(port, sg_rule, need_actions, flows);
+	build_flow_match_fileds(port, sg_rule, del_flow, tmp_flows);
+
+    direction = sg_rule.get_direction();
+    ofport = port.get_ofport();
+
+    if (direction == INGRESS) {
+        actions = "actions=output:" + ofport;
+    } else {
+        actions = "actions=resubmit(," + to_string(ACCEPT_OR_INGRESS_TABLE) + ")";  
+    }
+
+	for (uint32_t i = 0; i < tmp_flows.size(); i++) {
+		string flow = tmp_flows[i];
+		
+		for (int j = 0; j < 2; j++) {
+			stringstream s_flow;
+			
+			s_flow << flow << ",ct_state=" << ct_state[j];
+
+			if (!del_flow) {
+				if (j == 1 && direction == INGRESS) {
+					s_flow << "ct(comit,zone=NXM_NX_REG" << REG_NET << "[0..15])," << actions \
+							<< ",resubmit(," << ACCEPTED_INGRESS_TRAFFIC_TABLE << ")";
+				} else {
+					s_flow << "," << actions;
+				}
+			}
+
+			flows.push_back(s_flow.str());
+		}
+	}
+
+	return EXIT_SUCCESS;
 }
 
 int Aca_Security_Group_Ovs::create_port_security_group_rule(Aca_Port &port,
@@ -527,7 +555,10 @@ int Aca_Security_Group_Ovs::create_port_security_group_rule(Aca_Port &port,
 	vector<string> flows;
 	ACA_OVS_Control &controller = ACA_OVS_Control::get_instance();
 
-	build_flows_by_sg_rule(port, sg_rule, true, flows);
+	if (build_flows_by_sg_rule(port, sg_rule, false, flows) != EXIT_SUCCESS) {
+		ACA_LOG_ERROR("Build flows by sg rule failed\n");
+		return EXIT_FAILURE;
+	}
 
 	for (uint32_t i = 0; i < flows.size(); i++) {
         controller.add_flow(BR_INT, flows[i].data());
@@ -543,7 +574,10 @@ int Aca_Security_Group_Ovs::update_port_security_group_rule(Aca_Port &port,
 	vector<string> flows;
 	ACA_OVS_Control &controller = ACA_OVS_Control::get_instance();
 
-    build_flows_by_sg_rule(port, new_sg_rule, true, flows);
+	if (build_flows_by_sg_rule(port, new_sg_rule, false, flows) != EXIT_SUCCESS) {
+		ACA_LOG_ERROR("Build flows by sg rule failed\n");
+		return EXIT_FAILURE;
+	}
 
 	for (uint32_t i = 0; i < flows.size(); i++) {
         controller.add_flow(BR_INT, flows[i].data());
@@ -561,7 +595,10 @@ int Aca_Security_Group_Ovs::delete_port_security_group_rule(Aca_Port &port,
 	vector<string> flows;
 	ACA_OVS_Control &controller = ACA_OVS_Control::get_instance();
 
-	build_flows_by_sg_rule(port, sg_rule, false, flows);
+	if (build_flows_by_sg_rule(port, sg_rule, true, flows) != EXIT_SUCCESS) {
+		ACA_LOG_ERROR("Build flows by sg rule failed\n");
+		return EXIT_FAILURE;
+	}
 
 	for (uint32_t i = 0; i < flows.size(); i++) {
         controller.del_flows(BR_INT, flows[i].data());

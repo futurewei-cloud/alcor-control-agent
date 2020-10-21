@@ -44,6 +44,11 @@ public class SecurityGroupTest {
                 .usePlaintext().build();
     }
 
+    @Override
+    protected void finalize() {
+        managedChannel.shutdown();
+    }
+
     private VpcState buildVpcState() {
         VpcConfiguration.Builder vpcConfigBuilder = VpcConfiguration.newBuilder();
         vpcConfigBuilder.setName("vpc1");
@@ -93,6 +98,29 @@ public class SecurityGroupTest {
         return portStateBuilder.build();
     }
 
+    private PortState buildPortState2() {
+        PortConfiguration.Builder portConfigBuilder = PortConfiguration.newBuilder();
+        portConfigBuilder.setName("port2");
+        portConfigBuilder.setVpcId("vpc_id1");
+        portConfigBuilder.setId("port_id2");
+        portConfigBuilder.setFormatVersion(2);
+        portConfigBuilder.setRevisionNumber(2);
+        portConfigBuilder.setAdminStateUp(true);
+        portConfigBuilder.setMessageType(Common.MessageType.FULL);
+        portConfigBuilder.setMacAddress("7E:04:D0:A9:42:53");
+        portConfigBuilder.addFixedIps(PortConfiguration.FixedIp.newBuilder()
+                .setIpAddress("10.10.10.3").setSubnetId("subnet_id1").build());
+        PortConfiguration.SecurityGroupId.Builder securityGroupIdBuilder = PortConfiguration.SecurityGroupId.newBuilder();
+        securityGroupIdBuilder.setId("security_group_id2");
+        portConfigBuilder.addSecurityGroupIds(securityGroupIdBuilder.build());
+
+        PortState.Builder portStateBuilder = PortState.newBuilder();
+        portStateBuilder.setOperationType(OperationType.CREATE);
+        portStateBuilder.setConfiguration(portConfigBuilder.build());
+
+        return portStateBuilder.build();
+    }
+
     private SecurityGroupState buildSecurityGroupState() {
         SecurityGroupConfiguration.Builder securityGroupConfigBuilder = SecurityGroupConfiguration.newBuilder();
         securityGroupConfigBuilder.setName("security_group1");
@@ -109,7 +137,7 @@ public class SecurityGroupTest {
         securityGroupRuleBuilder.setProtocol(Protocol.TCP);
         securityGroupRuleBuilder.setPortRangeMin(100);
         securityGroupRuleBuilder.setPortRangeMax(101);
-        securityGroupRuleBuilder.setRemoteIpPrefix("12.12.12.0/24");
+        securityGroupRuleBuilder.setRemoteIpPrefix("11.11.11.0/24");
         securityGroupConfigBuilder.addSecurityGroupRules(securityGroupRuleBuilder.build());
 
         SecurityGroupState.Builder securityGroupStateBuilder = SecurityGroupState.newBuilder();
@@ -119,27 +147,73 @@ public class SecurityGroupTest {
         return securityGroupStateBuilder.build();
     }
 
-    public void pushNetworkResourceStatesTest() {
-        GoalStateProvisionerBlockingStub blockingStub =
-                GoalStateProvisionerGrpc.newBlockingStub(managedChannel);
+    private SecurityGroupState buildSecurityGroupState2() {
+        SecurityGroupConfiguration.Builder securityGroupConfigBuilder = SecurityGroupConfiguration.newBuilder();
+        securityGroupConfigBuilder.setName("security_group2");
+        securityGroupConfigBuilder.setVpcId("vpc_id1");
+        securityGroupConfigBuilder.setId("security_group_id2");
+        securityGroupConfigBuilder.setFormatVersion(2);
+        securityGroupConfigBuilder.setRevisionNumber(2);
+        SecurityGroupRule.Builder securityGroupRuleBuilder = SecurityGroupRule.newBuilder();
+        securityGroupRuleBuilder.setOperationType(OperationType.CREATE);
+        securityGroupRuleBuilder.setId("security_group_rule_id2");
+        securityGroupRuleBuilder.setSecurityGroupId("security_group_id2");
+        securityGroupRuleBuilder.setDirection(Direction.INGRESS);
+        securityGroupRuleBuilder.setEthertype(EtherType.IPV4);
+        securityGroupRuleBuilder.setProtocol(Protocol.UDP);
+        securityGroupRuleBuilder.setPortRangeMin(200);
+        securityGroupRuleBuilder.setPortRangeMax(201);
+        securityGroupRuleBuilder.setRemoteGroupId("security_group_id1");
+        securityGroupConfigBuilder.addSecurityGroupRules(securityGroupRuleBuilder.build());
 
+        SecurityGroupState.Builder securityGroupStateBuilder = SecurityGroupState.newBuilder();
+        securityGroupStateBuilder.setOperationType(OperationType.CREATE);
+        securityGroupStateBuilder.setConfiguration(securityGroupConfigBuilder.build());
+
+        return securityGroupStateBuilder.build();
+    }
+
+    private GoalState buildGoalState(PortState portState, SecurityGroupState securityGroupState) {
         GoalState.Builder builder = GoalState.newBuilder();
         builder.setFormatVersion(1);
         builder.addVpcStates(buildVpcState());
         builder.addSubnetStates(buildSubnetState());
-        builder.addPortStates(buildPortState());
-        builder.addSecurityGroupStates(buildSecurityGroupState());
+        builder.addPortStates(portState);
+        builder.addSecurityGroupStates(securityGroupState);
+
+        return builder.build();
+    }
+
+    private void pushNetworkResourceStates(GoalState goalState) {
+        GoalStateProvisionerBlockingStub blockingStub =
+                GoalStateProvisionerGrpc.newBlockingStub(managedChannel);
 
         GoalStateOperationReply goalStateOperationReply
-                = blockingStub.pushNetworkResourceStates(builder.build());
+                = blockingStub.pushNetworkResourceStates(goalState);
 
         System.out.println(goalStateOperationReply.toString());
+    }
 
-        managedChannel.shutdown();
+    private void createGeneralSecurityGroupTest() {
+        PortState portState = buildPortState();
+        SecurityGroupState securityGroupState = buildSecurityGroupState();
+        GoalState goalState = buildGoalState(portState, securityGroupState);
+        pushNetworkResourceStates(goalState);
+    }
+
+    private void createRemoteGroupSecurityGroupTest() {
+        createGeneralSecurityGroupTest();
+
+        PortState portState = buildPortState2();
+        SecurityGroupState securityGroupState = buildSecurityGroupState2();
+        GoalState goalState = buildGoalState(portState, securityGroupState);
+        pushNetworkResourceStates(goalState);
     }
 
     public static void main(String[] args) {
         SecurityGroupTest securityGroupTest = new SecurityGroupTest();
-        securityGroupTest.pushNetworkResourceStatesTest();
+        //securityGroupTest.createGeneralSecurityGroupTest();
+
+        securityGroupTest.createRemoteGroupSecurityGroupTest();
     }
 }

@@ -67,11 +67,11 @@ private:
     int get_dl_type_by_ether_type(uint32_t ether_type);
     string get_nw_proto_by_protocol(uint32_t protocol);
 	int get_remote_group_conj_id(Aca_Security_Group_Rule &sg_rule);
-    int build_flows_by_sg_rule(Aca_Port &port,Aca_Security_Group_Rule &sg_rule,bool has_actions, vector<string> &flows);
-	int build_conjunction_flows(Aca_Port &port, Aca_Security_Group_Rule &sg_rule,bool need_actions, vector<string> &flows);
-	int get_remote_group_ips(Aca_Security_Group *remote_group, vector<string> remote_ips);
+    int build_flows_by_sg_rule(Aca_Port &port,Aca_Security_Group_Rule &sg_rule, bool del_flow, vector<string> &flows);
+	int build_conjunction_flows(Aca_Port &port, Aca_Security_Group_Rule &sg_rule, vector<string> &flows);
+	int get_remote_group_ips(Aca_Security_Group *remote_group, vector<string> &remote_ips);
 	int build_flows_by_remote_ip(Aca_Port &port, Aca_Security_Group_Rule &sg_rule, string remote_ip, int conj_id, vector<string> &flows);
-	int build_normal_flows(Aca_Port &port,Aca_Security_Group_Rule &sg_rule,bool need_actions, vector<string> &flows);
+	int build_flow_match_fileds(Aca_Port &port, Aca_Security_Group_Rule &sg_rule, bool del_flow, vector<string> &flows);
 	int add_conjunction_actions(string _flow, int conj_id, int dimension, vector<string> &flows);
 	int build_accept_flows(Aca_Port &port,Aca_Security_Group_Rule &sg_rule, int conj_id, vector<string> &flows);
 
