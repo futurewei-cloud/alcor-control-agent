@@ -83,6 +83,7 @@ static void aca_cleanup()
   }
 
   if (g_grpc_server != NULL) {
+    g_grpc_server->ShutDownServer();
     delete g_grpc_server;
     g_grpc_server = NULL;
     ACA_LOG_INFO("Cleaned up grpc server.\n");
@@ -90,6 +91,13 @@ static void aca_cleanup()
     ACA_LOG_ERROR("Unable to call delete, grpc server pointer is null.\n");
   }
 
+  if (g_grpc_server_thread != NULL){
+    delete g_grpc_server_thread;
+    g_grpc_server_thread = NULL;
+    ACA_LOG_INFO("Cleaned up grpc server thread.\n");
+  } else {
+    ACA_LOG_ERROR("Unable to call delete,grpc server thread pointer is null.\n");
+  }    
   ACA_LOG_CLOSE();
 }
 
@@ -179,12 +187,13 @@ int main(int argc, char *argv[])
   if (g_ofctl_target == EMPTY_STRING) {
     g_ofctl_target = OFCTL_TARGET;
   }
-
+	
   g_grpc_server = new GoalStateProvisionerImpl();
   g_grpc_server_thread =
           new std::thread(std::bind(&GoalStateProvisionerImpl::RunServer, g_grpc_server));
-
+  g_grpc_server_thread->detach();
   //ACA_OVS_Control::get_instance().monitor("br-tun", "resume");
+  
   ACA_OVS_Control::get_instance().monitor("br-int", "resume");
   
   MessageConsumer network_config_consumer(g_broker_list, g_kafka_group_id);
