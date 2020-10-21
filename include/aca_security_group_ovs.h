@@ -53,13 +53,12 @@ namespace aca_security_group {
 class Aca_Security_Group_Ovs {
 public:
     static Aca_Security_Group_Ovs &get_instance();
-	void init_port(Aca_Port &port);
+	void init_port_flows(Aca_Port &port);
+	void clear_port_flows(Aca_Port &port);
 	int create_port_security_group_rule(Aca_Port &port,
                                                     Aca_Security_Group_Rule &sg_rule);
-    int update_port_security_group_rule(Aca_Port &port,
-                                                    Aca_Security_Group_Rule &sg_rule);
-	int delete_port_security_group_rule(Aca_Port &port,
-                                                    Aca_Security_Group_Rule &sg_rule);
+    int update_port_security_group_rule(Aca_Port &port, Aca_Security_Group_Rule &new_sg_rule, Aca_Security_Group_Rule &old_sg_rule);
+	int delete_port_security_group_rule(Aca_Port &port, Aca_Security_Group_Rule &sg_rule);
 private:
 	int get_vlan_by_segment_id(const int segment_id);
     void init_port_egress_flows(Aca_Port &port); 

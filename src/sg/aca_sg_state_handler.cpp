@@ -252,9 +252,11 @@ int Aca_Sg_State_Handler::update_security_group_states(const GoalState &goal_sta
         while(riter != sg_rules.end()) {
 			Aca_Security_Group_Rule * sg_rule = riter->second;
 			delete sg_rule;
+			riter++;
         }
         
         delete aca_sg;
+        siter++;
     }
 
     aca_sgs.clear();

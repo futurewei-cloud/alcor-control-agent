@@ -117,7 +117,7 @@ void Aca_Security_Group_Ovs::init_port_ingress_flows(const Aca_Port &port)
     controller.add_flow(BR_INT, flow);
 }
 
-void Aca_Security_Group_Ovs::init_port(Aca_Port &port)
+void Aca_Security_Group_Ovs::init_port_flows(Aca_Port &port)
 {
     ACA_OVS_Control &controller = ACA_OVS_Control::get_instance();
     char flow[128] = {0};
@@ -166,6 +166,10 @@ void Aca_Security_Group_Ovs::init_port(Aca_Port &port)
     init_port_ingress_flows(port);
 }
 
+void Aca_Security_Group_Ovs::clear_port_flows(Aca_Port &port)
+{
+	//TODO: delete all flows of this port
+}
 int Aca_Security_Group_Ovs::flow_priority_offset(Aca_Security_Group_Rule &sg_rule, 
 														bool conjunction)
 {
@@ -319,10 +323,10 @@ int Aca_Security_Group_Ovs::get_remote_group_ips(Aca_Security_Group *remote_grou
 															vector<string> remote_ips)
 {
 	Aca_Security_Group_Manager manager = Aca_Security_Group_Manager::get_instance();
-	vector<string> &port_ids = remote_group->get_port_ids();
-	
-	for (uint32_t i = 0; i < port_ids.size(); i++) {
-		string port_id = port_ids[i];
+	set<string> &port_ids = remote_group->get_port_ids();
+
+	for(set<string>::iterator it = port_ids.begin(); it != port_ids.end(); it++) {
+        string port_id = *it;
 		map<string, Aca_Port *> &ports = manager.get_ports();
 		map<string, Aca_Port *>::iterator iter;
 		Aca_Port *port;
@@ -533,20 +537,20 @@ int Aca_Security_Group_Ovs::create_port_security_group_rule(Aca_Port &port,
 }
 
 int Aca_Security_Group_Ovs::update_port_security_group_rule(Aca_Port &port,
-                                                    	Aca_Security_Group_Rule &sg_rule)
+                                                    	Aca_Security_Group_Rule &new_sg_rule, 
+                                                    	Aca_Security_Group_Rule &old_sg_rule)
 {
 	vector<string> flows;
 	ACA_OVS_Control &controller = ACA_OVS_Control::get_instance();
 
-    build_flows_by_sg_rule(port, sg_rule, true, flows);
+    build_flows_by_sg_rule(port, new_sg_rule, true, flows);
 
 	for (uint32_t i = 0; i < flows.size(); i++) {
         controller.add_flow(BR_INT, flows[i].data());
     }
-    
-	sg_rule.set_cookie(sg_rule.get_cookie() - 1);
-    delete_port_security_group_rule(port, sg_rule);
-    sg_rule.set_cookie(sg_rule.get_cookie() + 1);
+
+    //TODO: Consider port update
+    delete_port_security_group_rule(port, old_sg_rule);
 
     return EXIT_SUCCESS;
 }

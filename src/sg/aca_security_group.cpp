@@ -119,6 +119,18 @@ Aca_Security_Group * Aca_Security_Group_Rule::get_remote_group(void) {
 	return this->remote_group;
 }
 
+Aca_Security_Group::Aca_Security_Group() {
+}
+
+Aca_Security_Group::Aca_Security_Group(Aca_Security_Group &sg) {
+	this->id = sg.get_id();
+	this->name = sg.get_name();
+	this->format_version = sg.get_format_version();
+	this->revision_number = sg.get_revision_number();
+	this->vpc_id = sg.get_vpc_id();
+	this->operation_type = sg.get_operation_type();
+}
+
 void Aca_Security_Group::set_id(string id) {
 	this->id = id;
 }
@@ -163,24 +175,18 @@ OperationType Aca_Security_Group::get_operation_type(void) {
 }
 
 void Aca_Security_Group::add_port_id(string port_id) {
-	this->port_ids.push_back(port_id);
+	this->port_ids.insert(port_id);
 }
 
 void Aca_Security_Group::delete_port_id(string port_id) {
-	vector<string>::iterator it;
-	for (it = this->port_ids.begin(); it != this->port_ids.end(); ++it) {
-		if (*it == port_id) {
-			it = this->port_ids.erase(it);
-			break;
-		}
-	}
+	this->port_ids.erase(port_id);
 }
 
 int Aca_Security_Group::get_port_num(void) {
 	return this->port_ids.size();
 }
 
-vector<string> &Aca_Security_Group::get_port_ids(void) {
+set<string> &Aca_Security_Group::get_port_ids(void) {
 	return this->port_ids;
 }
 
@@ -219,6 +225,21 @@ map<string, Aca_Security_Group_Rule *> Aca_Security_Group::get_security_group_ru
 	return this->rules;
 }
 
+Aca_Port::Aca_Port() {
+}
+
+Aca_Port::Aca_Port(Aca_Port &port) {
+	this->id = port.get_id();
+	this->name = port.get_name();
+	this->ofport = port.get_ofport();
+	this->vni = port.get_vni();
+	this->format_version = port.get_format_version();
+	this->revision_number = port.get_revision_number();
+	this->vpc_id = port.get_vpc_id();
+	this->mac_address = port.get_mac_address();
+	this->fixed_ips = port.get_fixed_ip();
+}
+
 void Aca_Port::set_id(string id) {
 	this->id = id;
 }
@@ -241,6 +262,14 @@ void Aca_Port::set_ofport(uint32_t ofport) {
 
 uint32_t Aca_Port::get_ofport(void) {
 	return this->ofport;
+}
+
+void Aca_Port::set_vni(uint32_t vni) {
+	this->vni = vni;
+}
+
+uint32_t Aca_Port::get_vni(void) {
+	return this->vni;
 }
 
 void Aca_Port::set_format_version(uint32_t format_version) {
@@ -281,17 +310,11 @@ vector<string> &Aca_Port::get_fixed_ip(void) {
 }
 
 void Aca_Port::add_security_group_id(string security_group_id) {
-	this->security_group_ids.push_back(security_group_id);
+	this->security_group_ids.insert(security_group_id);
 }
 
 void Aca_Port::delete_security_group_id(string security_group_id) {
-	vector<string>::iterator it;
-	for (it = this->security_group_ids.begin(); it != this->security_group_ids.end(); ++it) {
-		if (*it == security_group_id) {
-			it = this->security_group_ids.erase(it);
-			break;
-		}
-	}
+	this->security_group_ids.erase(security_group_id);
 }
 
 int Aca_Port::get_security_group_num(void) {

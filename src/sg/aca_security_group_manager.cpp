@@ -102,7 +102,7 @@ int Aca_Security_Group_Manager::update_security_group_rule(Aca_Port &port,
 	}
 
 	sg_rule.set_cookie(aca_sg_rule->get_cookie() + 1);
-	sg_ovs.update_port_security_group_rule(port, sg_rule);
+	sg_ovs.update_port_security_group_rule(port, sg_rule, *aca_sg_rule);
 	sg.update_security_group_rule(&sg_rule); 
 
 	return EXIT_SUCCESS;
@@ -149,7 +149,7 @@ int Aca_Security_Group_Manager::create_security_group(Aca_Port &input_port,
     if (piter == this->ports.end()) {
     	aca_port = new Aca_Port(input_port);
     	this->ports[port_id] = aca_port;
-        sg_ovs.init_port(*aca_port);
+        sg_ovs.init_port_flows(*aca_port);
     } else {
 		aca_port = piter->second;
     }
@@ -223,6 +223,7 @@ int Aca_Security_Group_Manager::update_security_group(Aca_Port &input_port,
 int Aca_Security_Group_Manager::delete_security_group(Aca_Port &input_port,
                                                       Aca_Security_Group &input_sg) 
 {
+ 	Aca_Security_Group_Ovs &sg_ovs = Aca_Security_Group_Ovs::get_instance();
 	map<string, Aca_Port *>::iterator piter;
 	map<string, Aca_Security_Group *>::iterator siter;
 	Aca_Security_Group *aca_sg;
@@ -256,6 +257,7 @@ int Aca_Security_Group_Manager::delete_security_group(Aca_Port &input_port,
 	aca_port->delete_security_group_id(sg_id);
 	if (aca_port->get_security_group_num() == 0) {
 		this->ports.erase(port_id);
+        sg_ovs.clear_port_flows(*aca_port);
 		delete aca_port;
 	}
 

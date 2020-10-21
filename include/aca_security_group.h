@@ -21,6 +21,7 @@
 #include <string>
 #include <map>  
 #include <vector>  
+#include <set>  
 
 using namespace std;
 
@@ -101,6 +102,8 @@ private:
 
 class Aca_Security_Group {
 public:
+	Aca_Security_Group();
+	Aca_Security_Group(Aca_Security_Group &sg);
     void set_id(string id);
 	string get_id(void);
 	void set_name(string name);
@@ -116,7 +119,7 @@ public:
 	void add_port_id(string port_id);
 	void delete_port_id(string port_id);
 	int get_port_num(void);
-	vector<string> &get_port_ids(void);
+	set<string> &get_port_ids(void);
 	void add_security_group_rule(Aca_Security_Group_Rule *sg_rule);
 	void update_security_group_rule(Aca_Security_Group_Rule *sg_rule);
 	void delete_security_group_rule(string sg_rule_id);
@@ -130,18 +133,22 @@ private:
 	uint32_t revision_number;
 	string vpc_id;
 	OperationType operation_type;
-	vector<string> port_ids;
+	set<string> port_ids;
 	map<string, Aca_Security_Group_Rule *> rules;
 };
 
 class Aca_Port {
 public:
+	Aca_Port();
+	Aca_Port(Aca_Port &port);
     void set_id(string id);
 	string get_id(void);
 	void set_name(string name);
 	string get_name(void);
 	void set_ofport(uint32_t ofport);
 	uint32_t get_ofport(void);
+	void set_vni(uint32_t vni);
+	uint32_t get_vni(void);
 	void set_format_version(uint32_t format_version);
 	uint32_t get_format_version(void);
 	void set_revision_number(uint32_t revision_number);
@@ -171,7 +178,7 @@ private:
 	string vpc_id;
 	string mac_address;
 	vector<string> fixed_ips;
-	vector<string> security_group_ids;
+	set<string> security_group_ids;
 	vector<pair<string, string>> allow_address_pairs;
 	map<string, Aca_Security_Group *> security_groups;
 };
