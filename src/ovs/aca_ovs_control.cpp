@@ -56,12 +56,10 @@ int ACA_OVS_Control::control()
 {
   int overall_rc = EXIT_SUCCESS;
 
-  // char target[g_ofctl_target.size() + 1];
   char *target = new char[g_ofctl_target.size() + 1];
   g_ofctl_target.copy(target, g_ofctl_target.size() + 1);
   target[g_ofctl_target.size()] = '\0';
 
-  // char options[g_ofctl_options.size() + 1];
   char *options = new char[g_ofctl_options.size() + 1];
   g_ofctl_options.copy(options, g_ofctl_options.size() + 1);
   options[g_ofctl_options.size()] = '\0';
