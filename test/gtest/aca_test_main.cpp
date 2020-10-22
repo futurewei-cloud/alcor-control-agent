@@ -38,6 +38,16 @@ string remote_ip_2 = "172.17.0.3"; // for docker network
 static string mq_broker_ip = "pulsar://localhost:6650"; //for the broker running in localhost
 static string mq_test_topic = "my-topic";
 
+//
+// Test suite: pulsar_test_cases
+//
+// Testing the pulsar implementation where AlcorControlAgent is the consumer
+// and aca_test is acting as producer
+// Note: it will require a pulsar setup on localhost therefore this test is DISABLED by default
+//   it can be executed by:
+//
+//     aca_tests --gtest_also_run_disabled_tests --gtest_filter=*DISABLED_pulsar_consumer_test
+//
 TEST(pulsar_test_cases, DISABLED_pulsar_consumer_test)
 {
   int retcode = 0;

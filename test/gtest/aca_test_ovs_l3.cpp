@@ -66,6 +66,23 @@ extern void aca_test_create_default_subnet_state(SubnetState *new_subnet_states)
 static string host1_dvr_mac_address = HOST_DVR_MAC_PREFIX + string("d7:f2:01");
 static string host2_dvr_mac_address = HOST_DVR_MAC_PREFIX + string("d7:f2:02");
 
+//
+// Test suite: ovs_l3_test_cases
+//
+// Testing the ovs dataplane l3 implementation, including add/delete router and and
+// test traffics routing.
+// Note: traffic tests requires physical machine or VM setup (not container) because
+// it needs to create docker containers, therefore traffic tests are DISABLED by default
+//   it can be executed by:
+//
+//     one machine routing test (-c 10.213.43.188 -> IP of local machine):
+//     aca_tests --gtest_also_run_disabled_tests --gtest_filter=*DISABLED_2_ports_ROUTING_test_traffic_one_machine -c 10.213.43.188
+//
+//     two machines routing test: child machine (-p 10.213.43.187 -> IP of parent machine):
+//     aca_tests --gtest_also_run_disabled_tests --gtest_filter=*DISABLED_2_ports_ROUTING_test_traffic_CHILD -p 10.213.43.187
+//     two machines routing test: parent machine (-c 10.213.43.188 -> IP of child machine):
+//     aca_tests --gtest_also_run_disabled_tests --gtest_filter=*DISABLED_2_ports_ROUTING_test_traffic_PARENT -c 10.213.43.188
+//
 TEST(ovs_l3_test_cases, ADD_DELETE_ROUTER_test_no_traffic)
 {
   ulong not_care_culminative_time = 0;

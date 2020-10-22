@@ -117,6 +117,19 @@ void aca_test_create_default_subnet_state(SubnetState *new_subnet_states)
   SubnetConiguration_builder->set_allocated_gateway(subnetConfig_GatewayBuilder);
 }
 
+//
+// Test suite: ovs_l2_test_cases
+//
+// Testing the ovs dataplane l2 implementation, including port and neighbor configurations
+// and test traffics on one machine.
+// Note: the two machine tests requires a two machines setup therefore it is DISABLED by default
+//   it can be executed by:
+//
+//     child machine (-p 10.213.43.187 -> IP of parent machine):
+//     aca_tests --gtest_also_run_disabled_tests --gtest_filter=*DISABLED_2_ports_CREATE_test_traffic_CHILD -p 10.213.43.187
+//     parent machine (-c 10.213.43.188 -> IP of child machine):
+//     aca_tests --gtest_also_run_disabled_tests --gtest_filter=*DISABLED_2_ports_CREATE_test_traffic_PARENT -c 10.213.43.188
+//
 TEST(ovs_l2_test_cases, 2_ports_config_test_traffic)
 {
   // ulong culminative_network_configuration_time = 0;

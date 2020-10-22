@@ -20,6 +20,12 @@
 using namespace aca_dhcp_server;
 using namespace aca_dhcp_programming_if;
 
+//
+// Test suite: dhcp_config_test_cases
+//
+// Testing the DHCP implementation on add/delete dhcp entry
+// and other internal functions
+//
 TEST(dhcp_config_test_cases, add_dhcp_entry_valid)
 {
   int retcode = 0;

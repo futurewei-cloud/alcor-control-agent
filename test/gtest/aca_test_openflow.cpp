@@ -21,6 +21,11 @@ using namespace aca_ovs_control;
 using namespace ovs_control;
 using aca_ovs_l2_programmer::ACA_OVS_L2_Programmer;
 
+//
+// Test suite: ovs_flow_mod_cases
+//
+// Testing the openflow helper functions for add/mod/delete flows and flow_exists
+//
 TEST(ovs_flow_mod_cases, add_flows)
 {
   int overall_rc;

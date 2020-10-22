@@ -23,6 +23,11 @@ static char DEFAULT_MTU[] = "9000";
 
 extern bool g_demo_mode;
 
+//
+// Test suite: net_config_test_cases
+//
+// Testing network configuration helper functions
+//
 TEST(net_config_test_cases, create_namespace_invalid)
 {
   ulong culminative_network_configuration_time = 0;
