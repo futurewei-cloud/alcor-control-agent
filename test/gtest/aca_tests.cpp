@@ -2826,8 +2826,8 @@ TEST(pulsar_test_cases, DISABLED_pulsar_consumer_test){
     retcode = producer.publish(message);
     EXPECT_EQ(retcode, EXIT_SUCCESS);
   }
+}
 
-  
 TEST(ovs_flow_mod_cases, add_flows)
 {
   // ulong culminative_network_configuration_time = 0;
