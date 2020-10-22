@@ -85,7 +85,7 @@ bool ACA_Message_Pulsar_Consumer::consumeDispatched(string topic)
 
   //Receive message
   while(true){
-    result = consumer->receive(message);
+    result = consumer.receive(message);
 
     if (result != Result::ResultOk) {
       ACA_LOG_ERROR("Failed to receive message from topic: %s\n",topic.c_str());
@@ -121,7 +121,7 @@ bool ACA_Message_Pulsar_Consumer::consumeDispatched(string topic)
       }
 
       // Now acknowledge message
-      consumer->acknowledge(message);
+      consumer.acknowledge(message);
     }
   }
   return overall_rc;
