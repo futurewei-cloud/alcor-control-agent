@@ -22,6 +22,7 @@ using namespace std;
 using namespace pulsar;
 
 namespace aca_message_pulsar
+{
 ACA_Message_Pulsar_Producer::ACA_Message_Pulsar_Producer(string brokers, string topic)
 {
   setBrokers(brokers);
@@ -58,7 +59,7 @@ bool ACA_Message_Pulsar_Producer::publish(string message)
 
   // Create a producer
   Producer producer;
-  result = this->ptr_client.createProducer(this->topic,producer);
+  result = this->ptr_client->createProducer(this->topic_name,producer);
   if(result != ResultOk){
     ACA_LOG_ERROR("Failed to create producer, result=%d.\n", result);
     return EXIT_FAILURE;
