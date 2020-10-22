@@ -96,7 +96,7 @@ static void aca_cleanup()
     g_grpc_server_thread = NULL;
     ACA_LOG_INFO("Cleaned up grpc server thread.\n");
   } else {
-    ACA_LOG_ERROR("Unable to call delete,grpc server thread pointer is null.\n");
+    ACA_LOG_ERROR("Unable to call delete, grpc server thread pointer is null.\n");
   }    
   ACA_LOG_CLOSE();
 }
@@ -192,7 +192,6 @@ int main(int argc, char *argv[])
   g_grpc_server_thread =
           new std::thread(std::bind(&GoalStateProvisionerImpl::RunServer, g_grpc_server));
   g_grpc_server_thread->detach();
-  //ACA_OVS_Control::get_instance().monitor("br-tun", "resume");
   
   ACA_OVS_Control::get_instance().monitor("br-int", "resume");
   
