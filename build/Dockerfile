@@ -33,7 +33,7 @@ RUN echo "1--- installing common dependencies ---" && \
     pkg-config \
     libtool \
     wget
-    
+
 RUN pip3 install httpserver netaddr
 
 # this layer is consuming about 406MB, can try to optimize 
@@ -100,9 +100,14 @@ RUN echo "5--- installing openvswitch dependancies ---" && \
     ./configure --prefix=/usr/local --localstatedir=/var --sysconfdir=/etc --enable-shared && \
     make && \
     make install && \
-<<<<<<< HEAD
-    ldconfig && \
-    rm -rf /var/local/git/cppkafka
+    mkdir -p /usr/local/include/openvswitch && \
+    cp /var/local/git/openvswitch/lib/vconn-provider.h /usr/local/include/openvswitch/vconn-provider.h && \
+    rm -rf /var/local/git/openvswitch && \
+    cd ~
+
+ENV PATH=$PATH:/usr/local/share/openvswitch/scripts \
+    LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib
+
 
 ENV PULSAR_RELEASE_TAG='pulsar-2.6.1'
 RUN echo "7--- installing pulsar dependacies ---" && \
@@ -112,13 +117,5 @@ RUN echo "7--- installing pulsar dependacies ---" && \
     cd /var/local/git/pulsar && \
     apt install -y ./apache-pulsar-client*.deb && \
     rm -rf /var/local/git/pulsar 
-=======
-    mkdir -p /usr/local/include/openvswitch && \
-    cp /var/local/git/openvswitch/lib/vconn-provider.h /usr/local/include/openvswitch/vconn-provider.h && \
-    rm -rf /var/local/git/openvswitch && \
-    cd ~
 
-ENV PATH=$PATH:/usr/local/share/openvswitch/scripts \
-    LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib
 
->>>>>>> fd4d204eb4ac74d299fc46752e6d79c6ff23089d

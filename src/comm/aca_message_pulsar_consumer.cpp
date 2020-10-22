@@ -37,7 +37,7 @@ ACA_Message_Pulsar_Consumer::ACA_Message_Pulsar_Consumer(string brokers, string 
   ACA_LOG_DEBUG("Consumer subscription name: %s\n", this->subscription_name.c_str());
 
   // Create the client
-  this->ptr_client= new Client(brokers,this->client_config);
+  this->ptr_client= new Client(brokers);
 }
 
 ACA_Message_Pulsar_Consumer::~ACA_Message_Pulsar_Consumer()
@@ -85,7 +85,7 @@ bool ACA_Message_Pulsar_Consumer::consumeDispatched(string topic)
 
   //Receive message
   while(true){
-    result = this->ptr_consumer->receive(message);
+    result = consumer->receive(message);
 
     if (result != Result::ResultOk) {
       ACA_LOG_ERROR("Failed to receive message from topic: %s\n",topic.c_str());
@@ -121,7 +121,7 @@ bool ACA_Message_Pulsar_Consumer::consumeDispatched(string topic)
       }
 
       // Now acknowledge message
-      this->ptr_consumer->acknowledge(message);
+      consumer->acknowledge(message);
     }
   }
   return overall_rc;
