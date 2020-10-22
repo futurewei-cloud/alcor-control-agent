@@ -104,8 +104,6 @@ int ACA_Dataplane_OVS::update_port_state_workitem(const PortState current_PortSt
 
   PortConfiguration current_PortConfiguration = current_PortState.configuration();
 
-  assert(current_PortConfiguration.format_version() > 0);
-
   // TODO: need to design the usage of current_PortConfiguration.revision_number()
   assert(current_PortConfiguration.revision_number() > 0);
 
@@ -351,8 +349,6 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
   NeighborConfiguration current_NeighborConfiguration =
           current_NeighborState.configuration();
 
-  assert(current_NeighborConfiguration.format_version() > 0);
-
   // TODO: need to design the usage of current_NeighborConfiguration.revision_number()
   assert(current_NeighborConfiguration.revision_number() > 0);
 
@@ -512,8 +508,6 @@ int ACA_Dataplane_OVS::update_router_state_workitem(RouterState current_RouterSt
   auto operation_start = chrono::steady_clock::now();
 
   RouterConfiguration current_RouterConfiguration = current_RouterState.configuration();
-
-  assert(current_RouterConfiguration.format_version() > 0);
 
   // TODO: need to design the usage of current_RouterConfiguration.revision_number()
   assert(current_RouterConfiguration.revision_number() > 0);
