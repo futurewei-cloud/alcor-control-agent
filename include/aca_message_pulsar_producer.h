@@ -17,10 +17,9 @@
 
 #include "pulsar/Client.h"
 #include "pulsar/Producer.h"
-#include "pulsar/ClientConfiguration.h"
 #include "pulsar/ProducerConfiguration.h"
 #include "pulsar/Message.h"
-#include "pulsr/MessageBuilder.h"
+#include "pulsar/MessageBuilder.h"
 #include "pulsar/Result.h"
 
 using namespace std;
