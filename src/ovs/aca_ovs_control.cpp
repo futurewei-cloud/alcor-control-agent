@@ -68,11 +68,19 @@ int ACA_OVS_Control::control()
     monitor(target, options);
   } else if (g_ofctl_command.compare("dump-flows") == 0) {
     dump_flows(target, options);
+  } else if (g_ofctl_command.compare("flow-exists") == 0) {
+    flow_exists(target, options);
+  } else if (g_ofctl_command.compare("add-flow") == 0) {
+    add_flow(target, options);
+  } else if (g_ofctl_command.compare("mod-flows") == 0) {
+    mod_flows(target, options);
+  } else if (g_ofctl_command.compare("del-flows") == 0) {
+    del_flows(target, options);
   } else if (g_ofctl_command.compare("packet-out") == 0) {
     packet_out(target, options);
   } else {
     cout << "Usage: -c <command> -t <target> -o <options>" << endl;
-    cout << "   commands: monitor, dump-flows, packet-out..." << endl;
+    cout << "   commands: monitor, dump-flows, add-flow, mod-flows, del-flows, packet-out..." << endl;
     cout << "   target: swtich name, such as br-int, br-tun, ..." << endl;
     cout << "   options: " << endl;
     cout << "      moinor: \"[miss-len] [invalid-ttl] [resume] [watch:format]\"" << endl;
@@ -83,9 +91,33 @@ int ACA_OVS_Control::control()
   return overall_rc;
 }
 
-void ACA_OVS_Control::dump_flows(const char *bridge, const char *opt)
+int ACA_OVS_Control::dump_flows(const char *bridge, const char *opt)
 {
-  OVS_Control::get_instance().dump_flows(bridge, opt);
+  return OVS_Control::get_instance().dump_flows(bridge, opt);
+}
+
+int ACA_OVS_Control::flow_exists(const char *bridge, const char *flow)
+{
+  int rc = -EINVAL;  
+  rc = OVS_Control::get_instance().dump_flows(bridge, flow, false);
+  return rc;
+}
+
+int ACA_OVS_Control::add_flow(const char *bridge, const char *opt)
+{
+  return OVS_Control::get_instance().add_flow(bridge, opt);
+}
+
+int ACA_OVS_Control::mod_flows(const char *bridge, const char *opt)
+{
+  bool strict = true;
+  return OVS_Control::get_instance().mod_flows(bridge, opt, strict);
+}
+
+int ACA_OVS_Control::del_flows(const char *bridge, const char *opt)
+{
+  bool strict = true;
+  return OVS_Control::get_instance().del_flows(bridge, opt, strict);
 }
 
 void ACA_OVS_Control::monitor(const char *bridge, const char *opt)
@@ -139,7 +171,7 @@ void ACA_OVS_Control::parse_packet(uint32_t in_port, void *packet)
   int size_ip = IP_HL(ip) * 4;
 
   if (size_ip < 20) {
-    // printf("   *** Invalid IP header length: %u bytes\n", size_ip);
+    ACA_LOG_ERROR("size_udp < 20: %d bytes\n", size_ip);
     return;
   } else {
     /* print source and destination IP addresses */
@@ -164,67 +196,69 @@ void ACA_OVS_Control::parse_packet(uint32_t in_port, void *packet)
       ACA_LOG_INFO("   Protocol: unknown\n");
     }
   }
-  /* define/compute tcp header offset */
-  const struct sniff_tcp *tcp =
-          (struct sniff_tcp *)(base + SIZE_ETHERNET + vlan_len + size_ip);
-  const unsigned char *payload;
-  int size_payload;
-  int size_tcp = TH_OFF(tcp) * 4;
 
-  if (size_tcp < 20) {
-    // printf("   *** Invalid TCP header length: %u bytes\n", size_tcp);
-    return;
-  } else {
-    ACA_LOG_INFO("   Src port: %d\n", ntohs(tcp->th_sport));
-    ACA_LOG_INFO("   Dst port: %d\n", ntohs(tcp->th_dport));
+  if (ip->ip_p == IPPROTO_TCP) {
+    /* define/compute tcp header offset */
+    const struct sniff_tcp *tcp =
+            (struct sniff_tcp *)(base + SIZE_ETHERNET + vlan_len + size_ip);
+    //const unsigned char *payload;
+    int size_payload;
+    int size_tcp = TH_OFF(tcp) * 4;
 
-    /* define/compute tcp payload (segment) offset */
-    payload = (u_char *)(base + SIZE_ETHERNET + vlan_len + size_ip + size_tcp);
+    if (size_tcp < 20) {
+      ACA_LOG_ERROR("size_tcp < 20: %d bytes \n", size_tcp);
+      return;
+    } else {
+      ACA_LOG_INFO("   Src port: %d\n", ntohs(tcp->th_sport));
+      ACA_LOG_INFO("   Dst port: %d\n", ntohs(tcp->th_dport));
 
-    /* compute tcp payload (segment) size */
-    size_payload = ntohs(ip->ip_len) - (size_ip + size_tcp);
+      /* define/compute tcp payload (segment) offset */
+      //payload = (u_char *)(base + SIZE_ETHERNET + vlan_len + size_ip + size_tcp);
 
-    /*
-        * Print payload data;
-        */
-    if (size_payload > 0) {
-      ACA_LOG_INFO("   Payload (%d bytes):\n", size_payload);
-      print_payload(payload, size_payload);
-    }
-  }
+      /* compute tcp payload (segment) size */
+      size_payload = ntohs(ip->ip_len) - (size_ip + size_tcp);
 
-  /* define/compute udp header offset */
-  const struct sniff_udp *udp =
-          (struct sniff_udp *)(base + SIZE_ETHERNET + vlan_len + size_ip);
-  int size_udp = ntohs(udp->uh_ulen);
+      /* Print payload data; */
+      if (size_payload > 0) {
+        ACA_LOG_INFO("   Payload (%d bytes):\n", size_payload);
+        // print_payload(payload, size_payload);
+      }
+    } 
+  } else if (ip->ip_p == IPPROTO_UDP) {  
+    /* define/compute udp header offset */
+    const struct sniff_udp *udp =
+            (struct sniff_udp *)(base + SIZE_ETHERNET + vlan_len + size_ip);
+    const unsigned char *payload;
+    int size_payload;
+    int size_udp = ntohs(udp->uh_ulen);
 
-  if (size_udp < 20) {
-    return;
-  } else {
-    int udp_sport = ntohs(udp->uh_sport);
-    int udp_dport = ntohs(udp->uh_dport);
-    ACA_LOG_INFO("   Src port: %d\n", udp_sport);
-    ACA_LOG_INFO("   Dst port: %d\n", udp_dport);
+    if (size_udp < 20) {
+      ACA_LOG_ERROR("size_udp < 20: %d bytes \n", size_udp);
+      return;
+    } else {
+      int udp_sport = ntohs(udp->uh_sport);
+      int udp_dport = ntohs(udp->uh_dport);
+      ACA_LOG_INFO("   Src port: %d\n", udp_sport);
+      ACA_LOG_INFO("   Dst port: %d\n", udp_dport);
 
-    /* define/compute udp payload (daragram) offset */
-    payload = (u_char *)(base + SIZE_ETHERNET + vlan_len + size_ip + 8);
+      /* define/compute udp payload (daragram) offset */
+      payload = (u_char *)(base + SIZE_ETHERNET + vlan_len + size_ip + 8);
 
-    /* compute udp payload (datagram) size */
-    size_payload = ntohs(ip->ip_len) - (size_ip + 8);
+      /* compute udp payload (datagram) size */
+      size_payload = ntohs(ip->ip_len) - (size_ip + 8);
 
-    /*
-        * Print payload data.
-        */
-    if (size_payload > 0) {
-      ACA_LOG_INFO("   Payload (%d bytes):\n", size_payload);
-      print_payload(payload, size_payload);
-    }
+      /* Print payload data. */
+      if (size_payload > 0) {
+        ACA_LOG_INFO("   Payload (%d bytes):\n", size_payload);
+        //print_payload(payload, size_payload);
+      }
 
-    /* dhcp message procedure */
-    if (udp_sport == 68 && udp_dport == 67) {
-      ACA_LOG_INFO("   Message Type: DHCP\n");
-      aca_dhcp_server::ACA_Dhcp_Server::get_instance().dhcps_recv(in_port, 
-              const_cast<unsigned char *>(payload));
+      /* dhcp message procedure */
+      if (udp_sport == 68 && udp_dport == 67) {
+        ACA_LOG_INFO("   Message Type: DHCP\n");
+        aca_dhcp_server::ACA_Dhcp_Server::get_instance().dhcps_recv(
+                in_port, const_cast<unsigned char *>(payload));
+      }
     }
   }
 }

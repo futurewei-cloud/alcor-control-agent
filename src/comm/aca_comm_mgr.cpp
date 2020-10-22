@@ -208,8 +208,17 @@ void Aca_Comm_Manager::print_goal_state(GoalState parsed_struct)
     fprintf(stdout, "current_SubnetConfiguration.revision_number(): %d\n",
             current_SubnetConfiguration.revision_number());
 
+    fprintf(stdout, "current_SubnetConfiguration.request_id(): %s\n",
+            current_SubnetConfiguration.request_id().c_str());
+
     fprintf(stdout, "current_SubnetConfiguration.id(): %s\n",
             current_SubnetConfiguration.id().c_str());
+
+    fprintf(stdout, "current_SubnetConfiguration.message_type(): %d\n",
+            current_SubnetConfiguration.message_type());
+
+    fprintf(stdout, "current_SubnetConfiguration.network_type(): %d\n",
+            current_SubnetConfiguration.network_type());
 
     fprintf(stdout, "current_SubnetConfiguration.project_id(): %s\n",
             current_SubnetConfiguration.project_id().c_str());
@@ -259,6 +268,9 @@ void Aca_Comm_Manager::print_goal_state(GoalState parsed_struct)
 
     fprintf(stdout, "current_PortConfiguration.revision_number(): %d\n",
             current_PortConfiguration.revision_number());
+
+    fprintf(stdout, "current_PortConfiguration.request_id(): %s\n",
+            current_PortConfiguration.request_id().c_str());
 
     fprintf(stdout, "current_PortConfiguration.message_type(): %d\n",
             current_PortConfiguration.message_type());
@@ -329,6 +341,12 @@ void Aca_Comm_Manager::print_goal_state(GoalState parsed_struct)
     fprintf(stdout, "current_NeighborConfiguration.id(): %s\n",
             current_NeighborConfiguration.id().c_str());
 
+    fprintf(stdout, "current_NeighborConfiguration.request_id(): %s\n",
+            current_NeighborConfiguration.request_id().c_str());
+
+    fprintf(stdout, "current_NeighborConfiguration.message_type(): %d\n",
+            current_NeighborConfiguration.message_type());
+
     fprintf(stdout, "current_NeighborConfiguration.project_id(): %s\n",
             current_NeighborConfiguration.project_id().c_str());
 
@@ -365,7 +383,7 @@ void Aca_Comm_Manager::print_goal_state(GoalState parsed_struct)
   }
 
   for (int i = 0; i < parsed_struct.security_group_states_size(); i++) {
-    fprintf(stdout, "parsed_struct.neighbor_states(%d).operation_type(): %s\n", i,
+    fprintf(stdout, "parsed_struct.security_group_states(%d).operation_type(): %s\n", i,
             aca_get_operation_string(parsed_struct.security_group_states(i).operation_type()));
 
     SecurityGroupConfiguration current_SecurityGroupConfiguration =
@@ -377,8 +395,14 @@ void Aca_Comm_Manager::print_goal_state(GoalState parsed_struct)
     fprintf(stdout, "current_SecurityGroupConfiguration.revision_number(): %d\n",
             current_SecurityGroupConfiguration.revision_number());
 
+    fprintf(stdout, "current_SecurityGroupConfiguration.request_id(): %s\n",
+            current_SecurityGroupConfiguration.request_id().c_str());
+
     fprintf(stdout, "current_SecurityGroupConfiguration.id(): %s\n",
             current_SecurityGroupConfiguration.id().c_str());
+
+    fprintf(stdout, "current_SecurityGroupConfiguration.message_type(): %d\n",
+            current_SecurityGroupConfiguration.message_type());
 
     fprintf(stdout, "current_SecurityGroupConfiguration.project_id(): %s\n",
             current_SecurityGroupConfiguration.project_id().c_str());
@@ -418,7 +442,50 @@ void Aca_Comm_Manager::print_goal_state(GoalState parsed_struct)
     printf("\n");
   }
 
-  // TODO: add the print out of DHCP message
+  for (int i = 0; i < parsed_struct.dhcp_states_size(); i++) {
+    fprintf(stdout, "parsed_struct.dhcp_states(%d).operation_type(): %s\n", i,
+            aca_get_operation_string(parsed_struct.dhcp_states(i).operation_type()));
+
+    DHCPConfiguration current_DHCPConfiguration =
+            parsed_struct.dhcp_states(i).configuration();
+
+    fprintf(stdout, "current_DHCPConfiguration.format_version(): %d\n",
+            current_DHCPConfiguration.format_version());
+
+    fprintf(stdout, "current_DHCPConfiguration.revision_number(): %d\n",
+            current_DHCPConfiguration.revision_number());
+
+    fprintf(stdout, "current_DHCPConfiguration.request_id(): %s\n",
+            current_DHCPConfiguration.request_id().c_str());
+
+    fprintf(stdout, "current_DHCPConfiguration.subnet_id(): %s\n",
+            current_DHCPConfiguration.subnet_id().c_str());
+
+    fprintf(stdout, "current_DHCPConfiguration.mac_address(): %s\n",
+            current_DHCPConfiguration.mac_address().c_str());
+
+    fprintf(stdout, "current_DHCPConfiguration.ipv4_address(): %s\n",
+            current_DHCPConfiguration.ipv4_address().c_str());
+
+    fprintf(stdout, "current_DHCPConfiguration.ipv6_address(): %s\n",
+            current_DHCPConfiguration.ipv6_address().c_str());
+
+    fprintf(stdout, "current_DHCPConfiguration.port_host_name(): %s \n",
+            current_DHCPConfiguration.port_host_name().c_str());
+
+    for (int j = 0; j < current_DHCPConfiguration.extra_dhcp_options_size(); j++) {
+      fprintf(stdout, "current_DHCPConfiguration.extra_dhcp_options(%d): name: %s, value %s \n",
+              j, current_DHCPConfiguration.extra_dhcp_options(j).name().c_str(),
+              current_DHCPConfiguration.extra_dhcp_options(j).value().c_str());
+    }
+
+    for (int j = 0; j < current_DHCPConfiguration.dns_entry_list_size(); j++) {
+      fprintf(stdout, "current_DHCPConfiguration.dns_entry_list(%d): entry %s \n",
+              j, current_DHCPConfiguration.dns_entry_list(j).entry().c_str());
+    }
+
+    printf("\n");
+  }
 
   for (int i = 0; i < parsed_struct.router_states_size(); i++) {
     fprintf(stdout, "parsed_struct.router_states(%d).operation_type(): %s\n", i,
@@ -432,6 +499,9 @@ void Aca_Comm_Manager::print_goal_state(GoalState parsed_struct)
 
     fprintf(stdout, "current_RouterConfiguration.revision_number(): %d\n",
             current_RouterConfiguration.revision_number());
+
+    fprintf(stdout, "current_RouterConfiguration.request_id(): %s\n",
+            current_RouterConfiguration.request_id().c_str());
 
     fprintf(stdout, "current_RouterConfiguration.id(): %s\n",
             current_RouterConfiguration.id().c_str());

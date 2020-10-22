@@ -164,6 +164,7 @@ class ACA_Dhcp_Server : public aca_dhcp_programming_if::ACA_Dhcp_Programming_Int
   void _validate_ipv4_address(const char *ip_address);
   void _validate_ipv6_address(const char *ip_address);
   int _validate_dhcp_entry(dhcp_config *dhcp_cfg_in);
+  void _standardize_mac_address(string &mac_string);
 
   /**************** Data plane operations *********************/
   int _validate_dhcp_message(dhcp_message *dhcpmsg);
@@ -198,7 +199,8 @@ class ACA_Dhcp_Server : public aca_dhcp_programming_if::ACA_Dhcp_Programming_Int
   std::unordered_map<std::string, dhcp_entry_data> *_dhcp_db;
   std::mutex _dhcp_db_mutex;
 
-  void (aca_dhcp_server::ACA_Dhcp_Server ::*_parse_dhcp_msg_ops[DHCP_MSG_MAX])(uint32_t in_port, dhcp_message *dhcpmsg);
+  void (aca_dhcp_server::ACA_Dhcp_Server ::*_parse_dhcp_msg_ops[DHCP_MSG_MAX])(
+          uint32_t in_port, dhcp_message *dhcpmsg);
 };
 
 } // namespace aca_dhcp_server

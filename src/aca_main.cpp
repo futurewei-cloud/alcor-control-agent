@@ -143,7 +143,6 @@ int main(int argc, char *argv[])
               "\t\t[-g pulsar subscription name]\n"
               "\t\t[-p gRPC server port\n"
               "\t\t[-c ofctl command]\n"
-              "\t\t[-t ofctl target]\n"
               "\t\t[-m enable demo mode]\n"
               "\t\t[-d enable debug mode]\n",
               argv[0]);
