@@ -682,9 +682,7 @@ int main(int argc, char *argv[])
 
   GoalState parsed_struct;
 
-  cppkafka::Buffer kafka_buffer(buffer, size);
-
-  rc = Aca_Comm_Manager::get_instance().deserialize(&kafka_buffer, parsed_struct);
+  rc = Aca_Comm_Manager::get_instance().deserialize((const unsigned char*)buffer, size, parsed_struct);
 
   if (buffer != NULL) {
     free(buffer);

@@ -26,6 +26,7 @@
 #include "aca_dhcp_programming_if.h"
 #define private public
 #include "aca_dhcp_server.h"
+#include "aca_message_pulsar_producer.h"
 #include "aca_ovs_control.h"
 #include "ovs_control.h"
 
@@ -36,6 +37,7 @@ using aca_net_config::Aca_Net_Config;
 using aca_ovs_l2_programmer::ACA_OVS_L2_Programmer;
 using namespace aca_dhcp_server;
 using namespace aca_dhcp_programming_if;
+using namespace aca_message_pulsar;
 using namespace aca_ovs_control;
 using namespace ovs_control;
 
@@ -76,6 +78,9 @@ static string subnet2_gw_mac = "fa:16:3e:d7:f2:21";
 static string host1_dvr_mac_address = HOST_DVR_MAC_PREFIX + string("d7:f2:01");
 static string host2_dvr_mac_address = HOST_DVR_MAC_PREFIX + string("d7:f2:02");
 static NetworkType vxlan_type = NetworkType::VXLAN;
+static string mq_broker_ip = "pulsar://localhost:6650"; //for the broker running in localhost
+static string mq_test_topic = "my-topic";
+
 
 // Global variables
 std::atomic_ulong g_total_network_configuration_time(0);
@@ -2808,6 +2813,19 @@ TEST(dhcp_message_test_cases, get_options_valid)
 
   retcode = ACA_Dhcp_Server::get_instance()._get_requested_ip(&stDhcpMsg);
   EXPECT_EQ(retcode, 0x0a000001);
+}
+
+TEST(pulsar_test_cases, DISABLED_pulsar_consumer_test){
+  int retcode = 0;
+  const int MESSAGES_TO_SEND = 10;
+  string message = "Test Message";
+
+  ACA_Message_Pulsar_Producer producer(mq_broker_ip,mq_test_topic);
+
+  for(int i = 0; i < MESSAGES_TO_SEND; i++){
+    retcode = producer.publish(message);
+    EXPECT_EQ(retcode, EXIT_SUCCESS);
+  }
 }
 
 TEST(ovs_flow_mod_cases, add_flows)

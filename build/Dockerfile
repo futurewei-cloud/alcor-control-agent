@@ -31,7 +31,9 @@ RUN echo "1--- installing common dependencies ---" && \
     automake \
     dh-autoreconf \
     pkg-config \
-    libtool
+    libtool \
+    wget
+
 RUN pip3 install httpserver netaddr
 
 # this layer is consuming about 406MB, can try to optimize 
@@ -105,4 +107,15 @@ RUN echo "5--- installing openvswitch dependancies ---" && \
 
 ENV PATH=$PATH:/usr/local/share/openvswitch/scripts \
     LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib
+
+
+ENV PULSAR_RELEASE_TAG='pulsar-2.6.1'
+RUN echo "7--- installing pulsar dependacies ---" && \
+    mkdir -p /var/local/git/pulsar && \
+    wget https://archive.apache.org/dist/pulsar/${PULSAR_RELEASE_TAG}/DEB/apache-pulsar-client.deb -O /var/local/git/pulsar/apache-pulsar-client.deb && \
+    wget https://archive.apache.org/dist/pulsar/${PULSAR_RELEASE_TAG}/DEB/apache-pulsar-client-dev.deb -O /var/local/git/pulsar/apache-pulsar-client-dev.deb && \
+    cd /var/local/git/pulsar && \
+    apt install -y ./apache-pulsar-client*.deb && \
+    rm -rf /var/local/git/pulsar 
+
 

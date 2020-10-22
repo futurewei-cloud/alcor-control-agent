@@ -2,15 +2,17 @@ cmake_minimum_required(VERSION 3.1)
 
 set(EXECUTABLE_OUTPUT_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../build/tests)
 
+
 FIND_LIBRARY(RDKAFKA rdkafka /usr/lib/x86_64-linux-gnu NO_DEFAULT_PATH)
 FIND_LIBRARY(CPPKAFKA cppkafka /usr/local/lib NO_DEFAULT_PATH)
+FIND_LIBRARY(PULSAR pulsar /usr/lib NO_DEFAULT_PATH)
 #FIND_LIBRARY(OPENVSWITCH openvswitch /usr/local/lib NO_DEFAULT_PATH)
 FIND_LIBRARY(MESSAGEMANAGER messagemanager ${CMAKE_CURRENT_SOURCE_DIR}/../include NO_DEFAULT_PATH)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../include)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../src/proto3)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../mizar/src/include)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../src/grpc)
-#link_libraries(${RDKAFKA} ${CPPKAFKA} ${OPENVSWITCH})
+link_libraries(${PULSAR})
 
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
@@ -39,6 +41,7 @@ add_executable(aca_tests gtest/aca_tests.cpp)
 
 # Link test executable against gtest & gtest_main
 target_link_libraries(aca_tests gtest gtest_main)
+target_link_libraries(aca_tests pulsar)
 #target_link_libraries(aca_tests openvswitch)
 target_link_libraries(aca_tests AlcorControlAgentLib)
 target_link_libraries(aca_tests proto)

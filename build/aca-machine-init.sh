@@ -104,10 +104,20 @@ echo "6--- installing openvswitch dependancies ---" && \
     test -f /usr/bin/ovs-vsctl && rm -rf /usr/local/sbin/ov* /usr/local/bin/ov* /usr/local/bin/vtep* && \
     cd ~
 
-echo "7--- building alcor-control-agent"
+PULSAR_RELEASE_TAG='pulsar-2.6.1'
+echo "7--- installing pulsar dependacies ---" && \
+    mkdir -p /var/local/git/pulsar && \
+    wget https://archive.apache.org/dist/pulsar/${PULSAR_RELEASE_TAG}/DEB/apache-pulsar-client.deb -O /var/local/git/pulsar/apache-pulsar-client.deb && \
+    wget https://archive.apache.org/dist/pulsar/${PULSAR_RELEASE_TAG}/DEB/apache-pulsar-client-dev.deb -O /var/local/git/pulsar/apache-pulsar-client-dev.deb && \
+    cd /var/local/git/pulsar && \
+    apt install -y ./apache-pulsar-client*.deb && \
+    rm -rf /var/local/git/pulsar 
+    cd ~
+
+echo "8--- building alcor-control-agent"
 cd $BUILD/.. && cmake . && make
 
-echo "8--- rebuilding br-tun and br-int"
+echo "9--- rebuilding br-tun and br-int"
 ovs-ctl --system-id=random --delete-bridges restart
 ovs-vsctl add-br br-int -- add-br br-tun
 ovs-vsctl \
@@ -119,6 +129,6 @@ ovs-vsctl \
 ovs-ofctl add-flow br-tun "table=0, priority=1,in_port="patch-int" actions=resubmit(,2)"
 ovs-ofctl add-flow br-tun "table=2, priority=0 actions=resubmit(,22)"
 
-echo "9--- running alcor-control-agent"
+echo "10--- running alcor-control-agent"
 # sends output to null device, but stderr to console 
 nohup $BUILD/bin/AlcorControlAgent -d > /dev/null 2>&1 &
