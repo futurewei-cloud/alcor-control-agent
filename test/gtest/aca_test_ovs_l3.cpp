@@ -29,6 +29,7 @@ using aca_comm_manager::Aca_Comm_Manager;
 using aca_net_config::Aca_Net_Config;
 using aca_ovs_l2_programmer::ACA_OVS_L2_Programmer;
 
+// extern the string and helper functions from aca_test_ovs_l2.cpp
 extern string project_id;
 extern string vpc_id_1;
 extern string vpc_id_2;
