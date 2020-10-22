@@ -187,7 +187,7 @@ int main(int argc, char *argv[])
   if (g_ofctl_target == EMPTY_STRING) {
     g_ofctl_target = OFCTL_TARGET;
   }
-  
+
   g_grpc_server = new GoalStateProvisionerImpl();
   g_grpc_server_thread =
           new std::thread(std::bind(&GoalStateProvisionerImpl::RunServer, g_grpc_server));
