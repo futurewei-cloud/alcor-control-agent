@@ -17,7 +17,7 @@
 
 #include "pulsar/Client.h"
 #include "pulsar/Producer.h"
-#include "pulsar/Configuration.h"
+#include "pulsar/ClientConfiguration.h"
 #include "pulsar/ProducerConfiguration.h"
 #include "pulsar/Message.h"
 #include "pulsr/MessageBuilder.h"

@@ -17,9 +17,9 @@
 #include "aca_comm_mgr.h"
 #include "aca_log.h"
 
+
 using aca_comm_manager::Aca_Comm_Manager;
 using pulsar::Client;
-using pulsar::ClientConfiguration;
 using pulsar::ConsumerConfiguration;
 using pulsar::Consumer;
 using pulsar::Message;
@@ -33,20 +33,16 @@ ACA_Message_Pulsar_Consumer::ACA_Message_Pulsar_Consumer(string brokers, string 
   setBrokers(brokers);
   setSubscriptionName(subscription_name);
 
-  // TO DO: Construct the configuration
-
   ACA_LOG_DEBUG("Broker list: %s\n", this->brokers_list.c_str());
   ACA_LOG_DEBUG("Consumer subscription name: %s\n", this->subscription_name.c_str());
 
-  // Create the consumer and client
-  this->ptr_consumer = new Consumer();
+  // Create the client
   this->ptr_client= new Client(brokers,this->client_config);
 }
 
 ACA_Message_Pulsar_Consumer::~ACA_Message_Pulsar_Consumer()
 {
-  //delete ptr_consumer;
-  delete ptr_client;
+  delete this->ptr_client;
 }
 
 string ACA_Message_Pulsar_Consumer::getBrokers() const
@@ -77,8 +73,8 @@ bool ACA_Message_Pulsar_Consumer::consumeDispatched(string topic)
   int overall_rc = EXIT_SUCCESS;
   Result result;
   Message message;
-
-  result = this->ptr_client->subscribe(topic,this->subscription_name,this->consumer_config,*(this->ptr_consumer));
+  Consumer consumer;
+  result = this->ptr_client->subscribe(topic,this->subscription_name,this->consumer_config,consumer);
 
   if (result != Result::ResultOk){
     ACA_LOG_ERROR("Failed to subscribe topic: %s\n", topic.c_str());
@@ -87,9 +83,8 @@ bool ACA_Message_Pulsar_Consumer::consumeDispatched(string topic)
 
   ACA_LOG_DEBUG("Consumer consuming messages from topic: %s\n", topic.c_str());
 
-  
   //Receive message
-  while(1){
+  while(true){
     result = this->ptr_consumer->receive(message);
 
     if (result != Result::ResultOk) {
@@ -107,7 +102,7 @@ bool ACA_Message_Pulsar_Consumer::consumeDispatched(string topic)
                     message.getDataAsString().c_str());
 
       rc = Aca_Comm_Manager::get_instance().deserialize(
-              (unsigned char *)message.getData(),message.getLength(), deserialized_GoalState);
+              (unsigned char *)message.getData(), message.getLength(), deserialized_GoalState);
       if (rc == EXIT_SUCCESS) {
         rc = Aca_Comm_Manager::get_instance().update_goal_state(
                     deserialized_GoalState, gsOperationalReply);
@@ -134,7 +129,6 @@ bool ACA_Message_Pulsar_Consumer::consumeDispatched(string topic)
 
 void ACA_Message_Pulsar_Consumer::setBrokers(string brokers)
 {
-  //TODO: validate string as IP address
   this->brokers_list = brokers;
 }
 

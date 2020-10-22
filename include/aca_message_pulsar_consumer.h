@@ -17,11 +17,10 @@
 
 #include "pulsar/Client.h"
 #include "pulsar/Consumer.h"
-#include "pulsar/ClientConfiguration.h"
 #include "pulsar/ConsumerConfiguration.h"
 #include "pulsar/Message.h"
 #include "pulsar/Result.h"
-#include "pulsar/MessageBuilder.h"
+
 
 using namespace pulsar;
 using std::string;
@@ -36,11 +35,7 @@ class ACA_Message_Pulsar_Consumer {
 
     string topic_name; //A string representation of the topic to be consumed, for example: /hostid/00000000-0000-0000-0000-000000000000/netwconf/
 
-    ClientConfiguration client_config; //Configuration of the pulsar client
-
     ConsumerConfiguration consumer_config; //Configuration of the pulsar consumer
-
-    Consumer *ptr_consumer; //A pointer to the pulsar consumer
 
     Client *ptr_client; //A pointer to the pulsar client
 
