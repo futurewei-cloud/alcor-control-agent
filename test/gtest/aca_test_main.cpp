@@ -81,12 +81,12 @@ int main(int argc, char **argv)
 
   testing::InitGoogleTest(&argc, argv);
 
-  while ((option = getopt(argc, argv, "p:c:")) != -1) {
+  while ((option = getopt(argc, argv, "p:d:")) != -1) {
     switch (option) {
     case 'p':
       remote_ip_1 = optarg;
       break;
-    case 'c':
+    case 'd':
       remote_ip_2 = optarg;
       break;
     default: /* the '?' case when the option is not recognized */
