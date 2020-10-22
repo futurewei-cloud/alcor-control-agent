@@ -35,7 +35,15 @@ find_package(GTest REQUIRED)
 include_directories(${GTEST_INCLUDE_DIR})
 
 # Add test cpp file
-add_executable(aca_tests gtest/aca_tests.cpp gtest/aca_test_dhcp.cpp)
+add_executable(
+    aca_tests
+    gtest/aca_test_main.cpp
+    gtest/aca_test_dhcp.cpp
+    gtest/aca_test_net_config.cpp
+    gtest/aca_test_openflow.cpp
+    gtest/aca_test_ovs_l2.cpp
+    gtest/aca_test_ovs_l3.cpp
+)
 
 # Link test executable against gtest & gtest_main
 target_link_libraries(aca_tests gtest gtest_main)
