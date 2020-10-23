@@ -56,9 +56,7 @@ echo "4--- installing grpc dependencies ---" && \
 # installing grpc and its dependencies
 GRPC_RELEASE_TAG="v1.24.x"
 echo "5--- cloning grpc repo ---" && \
-    git clone -b $GRPC_RELEASE_TAG https://hub.fastgit.org/grpc/grpc /var/local/git/grpc && \
-    rm -f /var/local/git/grpc/.gitmodules && \
-    cp /home/sdn/Downloads/alcor-control-agent/build/.gitmodules /var/local/git/grpc && \
+    git clone -b $GRPC_RELEASE_TAG https://github.com/grpc/grpc /var/local/git/grpc && \
     cd /var/local/git/grpc && \
     git submodule update --init && \
     echo "--- installing c-ares ---" && \
