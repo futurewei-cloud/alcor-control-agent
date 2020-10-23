@@ -15,24 +15,24 @@
 #include "aca_log.h"
 #include "aca_util.h"
 #include "aca_ovs_control.h"
-#include "aca_message_consumer.h"
+#include "aca_message_pulsar_consumer.h"
 #include "aca_grpc.h"
 #include "goalstateprovisioner.grpc.pb.h"
-#include "cppkafka/utils/consumer_dispatcher.h"
 #include <thread>
 #include <unistd.h> /* for getopt */
 #include <grpcpp/grpcpp.h>
 
+
 using aca_ovs_control::ACA_OVS_Control;
-using messagemanager::MessageConsumer;
+using aca_message_pulsar::ACA_Message_Pulsar_Consumer;
 using std::string;
 
 // Defines
 #define ACALOGNAME "AlcorControlAgent"
 static char EMPTY_STRING[] = "";
-static char BROKER_LIST[] = "172.17.0.1:9092";
-static char KAFKA_TOPIC[] = "Host-ts-1";
-static char KAFKA_GROUP_ID[] = "test-group-id";
+static char BROKER_LIST[] = "pulsar://localhost:6502";
+static char PULSAR_TOPIC[] = "Host-ts-1";
+static char PULSAR_SUBSCRIPTION_NAME[] = "Test-Subscription";
 static char GRPC_SERVER_PORT[] = "50001";
 static char OFCTL_COMMAND[] = "monitor";
 static char OFCTL_TARGET[] = "br-int";
@@ -40,12 +40,11 @@ static char OFCTL_TARGET[] = "br-int";
 using namespace std;
 
 // Global variables
-cppkafka::ConsumerDispatcher *dispatcher = NULL;
 std::thread *g_grpc_server_thread = NULL;
 GoalStateProvisionerImpl *g_grpc_server = NULL;
 string g_broker_list = EMPTY_STRING;
-string g_kafka_topic = EMPTY_STRING;
-string g_kafka_group_id = EMPTY_STRING;
+string g_pulsar_topic = EMPTY_STRING;
+string g_pulsar_subsription_name = EMPTY_STRING;
 string g_grpc_server_port = EMPTY_STRING;
 string g_ofctl_command = EMPTY_STRING;
 string g_ofctl_target = EMPTY_STRING;
@@ -72,17 +71,9 @@ static void aca_cleanup()
   // Stop sets a private variable running_ to False
   // The Dispatch checks the variable in a loop and stops when running is
   // no longer set to True.
-  if (dispatcher != NULL) //Currently is always NULL
-  {
-    dispatcher->stop();
-    delete dispatcher;
-    dispatcher = NULL;
-    ACA_LOG_INFO("%s", "Cleaned up Kafka dispatched consumer.\n");
-  } else {
-    ACA_LOG_ERROR("%s", "Unable to call delete, dispatcher pointer is null.\n");
-  }
 
   if (g_grpc_server != NULL) {
+    g_grpc_server->ShutDownServer();
     delete g_grpc_server;
     g_grpc_server = NULL;
     ACA_LOG_INFO("%s", "Cleaned up grpc server.\n");
@@ -90,6 +81,13 @@ static void aca_cleanup()
     ACA_LOG_ERROR("%s", "Unable to call delete, grpc server pointer is null.\n");
   }
 
+  if (g_grpc_server_thread != NULL){
+    delete g_grpc_server_thread;
+    g_grpc_server_thread = NULL;
+    ACA_LOG_INFO("%s", "Cleaned up grpc server thread.\n");
+  } else {
+    ACA_LOG_ERROR("%s", "Unable to call delete, grpc server thread pointer is null.\n");
+  }    
   ACA_LOG_CLOSE();
 }
 
@@ -122,10 +120,10 @@ int main(int argc, char *argv[])
       g_broker_list = optarg;
       break;
     case 'h':
-      g_kafka_topic = optarg;
+      g_pulsar_topic = optarg;
       break;
     case 'g':
-      g_kafka_group_id = optarg;
+      g_pulsar_subsription_name = optarg;
       break;
     case 'p':
       g_grpc_server_port = optarg;
@@ -148,9 +146,9 @@ int main(int argc, char *argv[])
     default: /* the '?' case when the option is not recognized */
       fprintf(stderr,
               "Usage: %s\n"
-              "\t\t[-b kafka broker list]\n"
-              "\t\t[-h kafka host topic to listen]\n"
-              "\t\t[-g kafka group id]\n"
+              "\t\t[-b pulsar broker list]\n"
+              "\t\t[-h pulsar host topic to listen]\n"
+              "\t\t[-g pulsar subscription name]\n"
               "\t\t[-p gRPC server port\n"
               "\t\t[-c ofctl command]\n"
               "\t\t[-m enable demo mode]\n"
@@ -164,11 +162,11 @@ int main(int argc, char *argv[])
   if (g_broker_list == EMPTY_STRING) {
     g_broker_list = BROKER_LIST;
   }
-  if (g_kafka_topic == EMPTY_STRING) {
-    g_kafka_topic = KAFKA_TOPIC;
+  if (g_pulsar_topic == EMPTY_STRING) {
+    g_pulsar_topic = PULSAR_TOPIC;
   }
-  if (g_kafka_group_id == EMPTY_STRING) {
-    g_kafka_group_id = KAFKA_GROUP_ID;
+  if (g_pulsar_subsription_name == EMPTY_STRING) {
+    g_pulsar_subsription_name = PULSAR_SUBSCRIPTION_NAME;
   }
   if (g_grpc_server_port == EMPTY_STRING) {
     g_grpc_server_port = GRPC_SERVER_PORT;
@@ -183,12 +181,12 @@ int main(int argc, char *argv[])
   g_grpc_server = new GoalStateProvisionerImpl();
   g_grpc_server_thread =
           new std::thread(std::bind(&GoalStateProvisionerImpl::RunServer, g_grpc_server));
-
-  //ACA_OVS_Control::get_instance().monitor("br-tun", "resume");
-  ACA_OVS_Control::get_instance().monitor("br-int", "resume");
+  g_grpc_server_thread->detach();
   
-  MessageConsumer network_config_consumer(g_broker_list, g_kafka_group_id);
-  rc = network_config_consumer.consumeDispatched(g_kafka_topic);
+  ACA_OVS_Control::get_instance().monitor("br-int", "resume");
+
+  ACA_Message_Pulsar_Consumer network_config_consumer(g_broker_list, g_pulsar_subsription_name);
+  rc = network_config_consumer.consumeDispatched(g_pulsar_topic);
 
   aca_cleanup();
   return rc;

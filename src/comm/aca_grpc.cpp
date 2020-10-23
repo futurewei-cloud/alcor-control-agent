@@ -35,7 +35,7 @@ extern string g_grpc_server_port;
 using namespace alcor::schema;
 using aca_comm_manager::Aca_Comm_Manager;
 
-Status GoalStateProvisionerImpl::PushNetworkResourceStates(ServerContext* /* context */ ,
+Status GoalStateProvisionerImpl::PushNetworkResourceStates(ServerContext *context,
                                                            const GoalState *goalState,
                                                            GoalStateOperationReply *goalStateOperationReply)
 {
@@ -58,7 +58,7 @@ Status GoalStateProvisionerImpl::PushNetworkResourceStates(ServerContext* /* con
 }
 
 Status GoalStateProvisionerImpl::PushNetworkResourceStatesStream(
-        ServerContext* /* context */ , ServerReaderWriter<GoalStateOperationReply, GoalState> *stream)
+        ServerContext *context, ServerReaderWriter<GoalStateOperationReply, GoalState> *stream)
 {
   GoalState goalState;
   GoalStateOperationReply gsOperationReply;
@@ -83,13 +83,20 @@ Status GoalStateProvisionerImpl::PushNetworkResourceStatesStream(
   return Status::OK;
 }
 
+Status GoalStateProvisionerImpl::ShutDownServer()
+{
+  ACA_LOG_INFO("%s", "Shutdown server");
+  server->Shutdown();
+  return Status::OK;
+}
+
 void GoalStateProvisionerImpl::RunServer()
 {
   ServerBuilder builder;
   string GRPC_SERVER_ADDRESS = "0.0.0.0:" + g_grpc_server_port;
   builder.AddListeningPort(GRPC_SERVER_ADDRESS, grpc::InsecureServerCredentials());
   builder.RegisterService(this);
-  std::unique_ptr<Server> server(builder.BuildAndStart());
+  server = builder.BuildAndStart();
   ACA_LOG_INFO("Streaming capable GRPC server listening on %s\n",
                GRPC_SERVER_ADDRESS.c_str());
   server->Wait();

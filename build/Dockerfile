@@ -1,13 +1,21 @@
 FROM ubuntu:18.04
-RUN echo "--- installing mizar dependencies ---" && \
+RUN echo "1--- installing common dependencies ---" && \
     apt-get update -y && apt-get install -y \
     rpcbind \
     rsyslog \
     build-essential \
+    make \
+    g++ \
+    unzip \
+    cmake \
     clang-7 \
     llvm-7 \
     libelf-dev \
-    #openvswitch-switch \
+    doxygen \
+    zlib1g-dev \
+    libssl-dev \
+    libboost-program-options-dev \
+    libboost-all-dev \
     iproute2  \
     net-tools \
     iputils-ping \
@@ -22,29 +30,33 @@ RUN echo "--- installing mizar dependencies ---" && \
     autoconf \
     automake \
     dh-autoreconf \
-    libtool
+    pkg-config \
+    libtool \
+    wget
+
 RUN pip3 install httpserver netaddr
 
-ENV OVS_RELEASE_TAG branch-2.12
-RUN echo "--- installing openvswitch dependancies ---" && \
-    git clone -b ${OVS_RELEASE_TAG} https://github.com/openvswitch/ovs.git /var/local/git/openvswitch && \
-    cd /var/local/git/openvswitch && \    
-    ./boot.sh && \
-    ./configure --prefix=/usr/local --localstatedir=/var --sysconfdir=/etc --enable-shared && \
+# this layer is consuming about 406MB, can try to optimize 
+RUN echo "2--- installing librdkafka ---" && \
+    apt-get install -y --no-install-recommends\
+    librdkafka-dev \
+    && apt-get clean
+
+RUN echo "3--- installing cppkafka ---" && \
+    git clone https://github.com/mfontanini/cppkafka.git /var/local/git/cppkafka && \
+    cd /var/local/git/cppkafka && \
+    mkdir build && \
+    cd build && \
+    cmake .. && \
     make && \
     make install && \
-    cp /var/local/git/openvswitch/lib/vconn-provider.h /usr/local/include/openvswitch/vconn-provider.h && \
-    rm -rf \var\local\git\openvswitch
-
-RUN echo "--- installing grpc dependencies ---" && \
-    apt-get install -y \
-    cmake libssl-dev \
-    autoconf git pkg-config \
-    automake libtool make g++ unzip 
+    ldconfig && \
+    rm -rf /var/local/git/cppkafka && \
+    cd ~
 
 # installing grpc and its dependencies
 ENV GRPC_RELEASE_TAG v1.24.x
-RUN echo "--- cloning grpc repo ---" && \
+RUN echo "4--- cloning grpc repo ---" && \
     git clone -b ${GRPC_RELEASE_TAG} https://github.com/grpc/grpc /var/local/git/grpc && \
     cd /var/local/git/grpc && \
     git submodule update --init && \
@@ -77,26 +89,33 @@ RUN echo "--- cloning grpc repo ---" && \
     cmake -Dgtest_build_samples=ON -DBUILD_SHARED_LIBS=ON . && \
     make && \
     make install && \
-    rm -rf /var/local/git/grpc
+    rm -rf /var/local/git/grpc && \
+    cd ~
 
-# this layer is consuming about 406MB, can try to optimize 
-RUN echo "--- installing librdkafka ---" && \
-    apt-get install -y --no-install-recommends\
-    librdkafka-dev \
-    doxygen \
-    libssl-dev \
-    zlib1g-dev \
-    libboost-program-options-dev \
-    libboost-all-dev \
-    && apt-get clean
-
-RUN echo "--- installing cppkafka ---" && \
-    git clone https://github.com/mfontanini/cppkafka.git /var/local/git/cppkafka && \
-    cd /var/local/git/cppkafka && \
-    mkdir build && \
-    cd build && \
-    cmake .. && \
+ENV OVS_RELEASE_TAG branch-2.12
+RUN echo "5--- installing openvswitch dependancies ---" && \
+    git clone -b ${OVS_RELEASE_TAG} https://github.com/openvswitch/ovs.git /var/local/git/openvswitch && \
+    cd /var/local/git/openvswitch && \
+    ./boot.sh && \
+    ./configure --prefix=/usr/local --localstatedir=/var --sysconfdir=/etc --enable-shared && \
     make && \
     make install && \
-    ldconfig && \
-    rm -rf /var/local/git/cppkafka
+    mkdir -p /usr/local/include/openvswitch && \
+    cp /var/local/git/openvswitch/lib/vconn-provider.h /usr/local/include/openvswitch/vconn-provider.h && \
+    rm -rf /var/local/git/openvswitch && \
+    cd ~
+
+ENV PATH=$PATH:/usr/local/share/openvswitch/scripts \
+    LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib
+
+
+ENV PULSAR_RELEASE_TAG='pulsar-2.6.1'
+RUN echo "7--- installing pulsar dependacies ---" && \
+    mkdir -p /var/local/git/pulsar && \
+    wget https://archive.apache.org/dist/pulsar/${PULSAR_RELEASE_TAG}/DEB/apache-pulsar-client.deb -O /var/local/git/pulsar/apache-pulsar-client.deb && \
+    wget https://archive.apache.org/dist/pulsar/${PULSAR_RELEASE_TAG}/DEB/apache-pulsar-client-dev.deb -O /var/local/git/pulsar/apache-pulsar-client-dev.deb && \
+    cd /var/local/git/pulsar && \
+    apt install -y ./apache-pulsar-client*.deb && \
+    rm -rf /var/local/git/pulsar 
+
+
