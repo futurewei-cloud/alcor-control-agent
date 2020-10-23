@@ -58,13 +58,8 @@ int Aca_Comm_Manager::deserialize(const unsigned char *mq_buffer, size_t buffer_
   // compatible with the version of the headers we compiled against.
   GOOGLE_PROTOBUF_VERIFY_VERSION;
 
-<<<<<<< HEAD
-  if (parsed_struct.ParseFromArray(kafka_buffer->get_data(), kafka_buffer->get_size())) {
-    ACA_LOG_INFO("%s", "Successfully converted kafka buffer to protobuf struct\n");
-=======
   if (parsed_struct.ParseFromArray(mq_buffer, buffer_length)) {
     ACA_LOG_INFO("Successfully converted message to protobuf struct\n");
->>>>>>> 48903755eb787b5954147f701838a4dcf4e18563
 
     return EXIT_SUCCESS;
   } else {
