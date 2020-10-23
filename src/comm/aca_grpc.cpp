@@ -85,7 +85,11 @@ Status GoalStateProvisionerImpl::PushNetworkResourceStatesStream(
 
 Status GoalStateProvisionerImpl::ShutDownServer()
 {
+<<<<<<< HEAD
   ACA_LOG_INFO("%s", "Shutdown server");
+=======
+  ACA_LOG_INFO("Shutdown server");
+>>>>>>> 48903755eb787b5954147f701838a4dcf4e18563
   server->Shutdown();
   return Status::OK;
 }

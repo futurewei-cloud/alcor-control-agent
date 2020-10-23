@@ -84,9 +84,15 @@ static void aca_cleanup()
   if (g_grpc_server_thread != NULL){
     delete g_grpc_server_thread;
     g_grpc_server_thread = NULL;
+<<<<<<< HEAD
     ACA_LOG_INFO("%s", "Cleaned up grpc server thread.\n");
   } else {
     ACA_LOG_ERROR("%s", "Unable to call delete, grpc server thread pointer is null.\n");
+=======
+    ACA_LOG_INFO("Cleaned up grpc server thread.\n");
+  } else {
+    ACA_LOG_ERROR("Unable to call delete, grpc server thread pointer is null.\n");
+>>>>>>> 48903755eb787b5954147f701838a4dcf4e18563
   }    
   ACA_LOG_CLOSE();
 }
