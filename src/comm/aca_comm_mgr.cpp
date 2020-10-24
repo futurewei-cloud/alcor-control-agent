@@ -59,7 +59,7 @@ int Aca_Comm_Manager::deserialize(const unsigned char *mq_buffer, size_t buffer_
   GOOGLE_PROTOBUF_VERIFY_VERSION;
 
   if (parsed_struct.ParseFromArray(mq_buffer, buffer_length)) {
-    ACA_LOG_INFO("Successfully converted message to protobuf struct\n");
+    ACA_LOG_INFO("%s", "Successfully converted message to protobuf struct\n");
 
     return EXIT_SUCCESS;
   } else {
@@ -76,7 +76,7 @@ int Aca_Comm_Manager::update_goal_state(GoalState &goal_state_message,
   int rc = EXIT_SUCCESS;
   auto start = chrono::steady_clock::now();
 
-  ACA_LOG_DEBUG("Starting to update goal state\n");
+  ACA_LOG_DEBUG("%s", "Starting to update goal state\n");
 
   ACA_LOG_INFO("[METRICS] Goal state message size is: %lu bytes\n",
                goal_state_message.ByteSizeLong());

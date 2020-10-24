@@ -63,7 +63,7 @@ static void aca_cleanup()
   ACA_LOG_DEBUG("g_total_update_GS_time = %lu nanoseconds or %lu milliseconds\n",
                 g_total_update_GS_time.load(), g_total_update_GS_time.load() / 1000000);
 
-  ACA_LOG_INFO("Program exiting, cleaning up...\n");
+  ACA_LOG_INFO("%s", "Program exiting, cleaning up...\n");
 
   // Optional: Delete all global objects allocated by libprotobuf.
   google::protobuf::ShutdownProtobufLibrary();
@@ -76,17 +76,17 @@ static void aca_cleanup()
     g_grpc_server->ShutDownServer();
     delete g_grpc_server;
     g_grpc_server = NULL;
-    ACA_LOG_INFO("Cleaned up grpc server.\n");
+    ACA_LOG_INFO("%s", "Cleaned up grpc server.\n");
   } else {
-    ACA_LOG_ERROR("Unable to call delete, grpc server pointer is null.\n");
+    ACA_LOG_ERROR("%s", "Unable to call delete, grpc server pointer is null.\n");
   }
 
   if (g_grpc_server_thread != NULL){
     delete g_grpc_server_thread;
     g_grpc_server_thread = NULL;
-    ACA_LOG_INFO("Cleaned up grpc server thread.\n");
+    ACA_LOG_INFO("%s", "Cleaned up grpc server thread.\n");
   } else {
-    ACA_LOG_ERROR("Unable to call delete, grpc server thread pointer is null.\n");
+    ACA_LOG_ERROR("%s", "Unable to call delete, grpc server thread pointer is null.\n");
   }    
   ACA_LOG_CLOSE();
 }
@@ -108,7 +108,7 @@ int main(int argc, char *argv[])
 
   ACA_LOG_INIT(ACALOGNAME);
 
-  ACA_LOG_INFO("Alcor Control Agent started...\n");
+  ACA_LOG_INFO("%s", "Alcor Control Agent started...\n");
 
   // Register the signal handlers
   signal(SIGINT, aca_signal_handler);

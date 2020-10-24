@@ -262,7 +262,7 @@ int ACA_Dhcp_Server::_get_db_size() const
   if (_dhcp_db) {
     return _dhcp_db->size();
   } else {
-    ACA_LOG_ERROR("DHCP-DB does not exist!\n");
+    ACA_LOG_ERROR("%s", "DHCP-DB does not exist!\n");
     return EXIT_FAILURE;
   }
 }
@@ -275,14 +275,14 @@ void ACA_Dhcp_Server::dhcps_recv(uint32_t in_port, void *message)
   uint8_t msg_type = 0;
 
   if (!message) {
-    ACA_LOG_ERROR("DHCP message is null!\n");
+    ACA_LOG_ERROR("%s", "DHCP message is null!\n");
     return;
   }
 
   dhcpmsg = (dhcp_message *)message;
 
   if (_validate_dhcp_message(dhcpmsg)) {
-    ACA_LOG_ERROR("Invalid DHCP message!\n");
+    ACA_LOG_ERROR("%s", "Invalid DHCP message!\n");
     return;
   }
 
@@ -327,20 +327,20 @@ int ACA_Dhcp_Server::_validate_dhcp_message(dhcp_message *dhcpmsg)
   int retcode = 0;
 
   if (!dhcpmsg) {
-    ACA_LOG_ERROR("DHCP message is null!\n");
+    ACA_LOG_ERROR("%s", "DHCP message is null!\n");
     return EXIT_FAILURE;
   }
 
   do {
     if (BOOTP_MSG_BOOTREQUEST != dhcpmsg->op) {
       retcode = -1;
-      ACA_LOG_ERROR("Invalid 'op' field for DHCP message!\n");
+      ACA_LOG_ERROR("%s", "Invalid 'op' field for DHCP message!\n");
       break;
     }
 
     if (DHCP_MSG_HWTYPE_ETH == dhcpmsg->htype && 6 != dhcpmsg->hlen) {
       retcode = -1;
-      ACA_LOG_ERROR("Invalid 'hlen' field for ethernet!\n");
+      ACA_LOG_ERROR("%s", "Invalid 'hlen' field for ethernet!\n");
       break;
     }
 
@@ -379,7 +379,7 @@ uint8_t ACA_Dhcp_Server::_get_message_type(dhcp_message *dhcpmsg)
   dhcp_message_options unopt;
 
   if (!dhcpmsg) {
-    ACA_LOG_ERROR("DHCP message is null!\n");
+    ACA_LOG_ERROR("%s", "DHCP message is null!\n");
     return DHCP_MSG_NONE;
   }
 
@@ -396,7 +396,7 @@ uint32_t ACA_Dhcp_Server::_get_server_id(dhcp_message *dhcpmsg)
   dhcp_message_options unopt;
 
   if (!dhcpmsg) {
-    ACA_LOG_ERROR("DHCP message is null!\n");
+    ACA_LOG_ERROR("%s", "DHCP message is null!\n");
     return 0;
   }
 
@@ -415,7 +415,7 @@ uint32_t ACA_Dhcp_Server::_get_requested_ip(dhcp_message *dhcpmsg)
   dhcp_message_options unopt;
 
   if (!dhcpmsg) {
-    ACA_LOG_ERROR("DHCP message is null!\n");
+    ACA_LOG_ERROR("%s", "DHCP message is null!\n");
     return 0;
   }
 
@@ -436,7 +436,7 @@ string ACA_Dhcp_Server::_get_client_id(dhcp_message *dhcpmsg)
   stringstream ss;
 
   if (!dhcpmsg) {
-    ACA_LOG_ERROR("DHCP message is null!\n");
+    ACA_LOG_ERROR("%s", "DHCP message is null!\n");
     return nullptr;
   }
 
@@ -556,7 +556,7 @@ void ACA_Dhcp_Server::_init_dhcp_msg_ops()
   _parse_dhcp_msg_ops[DHCP_MSG_DHCPINFORM] = &aca_dhcp_server::ACA_Dhcp_Server::_parse_dhcp_none;
 }
 
-void ACA_Dhcp_Server::_parse_dhcp_none(uint32_t in_port, dhcp_message *dhcpmsg)
+void ACA_Dhcp_Server::_parse_dhcp_none(uint32_t /* in_port */ , dhcp_message *dhcpmsg)
 {
   ACA_LOG_ERROR("Wrong DHCP message type! (Message type = %d)\n",
                 _get_message_type(dhcpmsg));
@@ -876,7 +876,7 @@ string ACA_Dhcp_Server::_serialize_dhcp_message(dhcp_message *dhcpmsg)
     uint8_t options[308];
   };
 
-  udphear udphdr = { 0 };
+  udphear udphdr;
   udphdr.srcIp = inet_addr("127.0.1.1");
   udphdr.dstIp = inet_addr("255.255.255.255");
   udphdr.udp_len = htons(8 + len);
@@ -907,7 +907,7 @@ string ACA_Dhcp_Server::_serialize_dhcp_message(dhcp_message *dhcpmsg)
   //udphdr.options = dhcpmsg->options;
   memcpy(udphdr.options, dhcpmsg->options, 308);
 
-  iphear iphr = { 0 };
+  iphear iphr;
   iphr.version = 69;
   iphr.ds = 0;
   iphr.total_len = htons(28 + len);

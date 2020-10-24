@@ -35,7 +35,7 @@ extern string g_grpc_server_port;
 using namespace alcor::schema;
 using aca_comm_manager::Aca_Comm_Manager;
 
-Status GoalStateProvisionerImpl::PushNetworkResourceStates(ServerContext *context,
+Status GoalStateProvisionerImpl::PushNetworkResourceStates(ServerContext* /* context */ ,
                                                            const GoalState *goalState,
                                                            GoalStateOperationReply *goalStateOperationReply)
 {
@@ -58,7 +58,7 @@ Status GoalStateProvisionerImpl::PushNetworkResourceStates(ServerContext *contex
 }
 
 Status GoalStateProvisionerImpl::PushNetworkResourceStatesStream(
-        ServerContext *context, ServerReaderWriter<GoalStateOperationReply, GoalState> *stream)
+        ServerContext* /* context */ , ServerReaderWriter<GoalStateOperationReply, GoalState> *stream)
 {
   GoalState goalState;
   GoalStateOperationReply gsOperationReply;
@@ -85,7 +85,7 @@ Status GoalStateProvisionerImpl::PushNetworkResourceStatesStream(
 
 Status GoalStateProvisionerImpl::ShutDownServer()
 {
-  ACA_LOG_INFO("Shutdown server");
+  ACA_LOG_INFO("%s", "Shutdown server");
   server->Shutdown();
   return Status::OK;
 }

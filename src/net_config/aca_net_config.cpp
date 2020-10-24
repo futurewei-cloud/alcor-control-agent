@@ -332,7 +332,7 @@ int Aca_Net_Config::execute_system_command(string cmd_string, ulong &culminative
   g_total_network_configuration_time += network_configuration_elapse_time;
 
   if (rc == EXIT_SUCCESS) {
-    ACA_LOG_INFO("Command succeeded!\n");
+    ACA_LOG_INFO("%s", "Command succeeded!\n");
   } else {
     ACA_LOG_DEBUG("Command failed!!! rc: %d\n", rc);
   }

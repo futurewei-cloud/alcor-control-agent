@@ -74,7 +74,7 @@ static void aca_cleanup()
   ACA_LOG_DEBUG("g_total_update_GS_time = %lu nanoseconds or %lu milliseconds\n",
                 g_total_update_GS_time.load(), g_total_update_GS_time.load() / 1000000);
 
-  ACA_LOG_INFO("Program exiting, cleaning up...\n");
+  ACA_LOG_INFO("%s", "Program exiting, cleaning up...\n");
 
   // Optional:  Delete all global objects allocated by libprotobuf.
   google::protobuf::ShutdownProtobufLibrary();
@@ -183,7 +183,7 @@ class GoalStateProvisionerClient {
                  sync_call_ns, sync_call_ns / 1000000);
 
     if (!status.ok()) {
-      ACA_LOG_ERROR("RPC call failed\n");
+      ACA_LOG_ERROR("%s", "RPC call failed\n");
     }
   }
 
@@ -292,7 +292,7 @@ class GoalStateProvisionerClient {
                  write_done_ns, write_done_ns / 1000000);
 
     while (stream->Read(&gsOperationReply)) {
-      ACA_LOG_INFO("Received one streaming GoalStateOperationReply\n");
+      ACA_LOG_INFO("%s", "Received one streaming GoalStateOperationReply\n");
     }
 
     writer.join();
@@ -411,7 +411,7 @@ class GoalStateProvisionerClient {
                  (send_goalstate_ns - g_total_ACA_Message_time.load()) / 1000000);
 
     if (!status.ok()) {
-      ACA_LOG_ERROR("RPC call failed\n");
+      ACA_LOG_ERROR("%s", "RPC call failed\n");
     }
   }
 
@@ -681,7 +681,7 @@ int main(int argc, char *argv[])
     fprintf(stdout, "Deserialize failed with error code: %u\n", rc);
   }
 
-  ACA_LOG_INFO("-------------- setup local grpc client --------------\n");
+  ACA_LOG_INFO("%s", "-------------- setup local grpc client --------------\n");
 
   auto before_grpc_client = std::chrono::steady_clock::now();
 
@@ -696,7 +696,7 @@ int main(int argc, char *argv[])
   ACA_LOG_INFO("[METRICS] grpc_client took: %ld nanoseconds or %ld milliseconds\n",
                async_client_ns, async_client_ns / 1000000);
 
-  ACA_LOG_INFO("-------------- sending one goal state async --------------\n");
+  ACA_LOG_INFO("%s", "-------------- sending one goal state async --------------\n");
 
   GoalStateOperationReply async_reply;
 
@@ -715,9 +715,9 @@ int main(int argc, char *argv[])
   print_goalstateReply(async_reply);
 
   if (rc == EXIT_SUCCESS) {
-    ACA_LOG_INFO("1 goal state async grpc call succeed\n");
+    ACA_LOG_INFO("%s", "1 goal state async grpc call succeed\n");
   } else {
-    ACA_LOG_INFO("1 goal state async grpc call failed!!!\n");
+    ACA_LOG_INFO("%s", "1 goal state async grpc call failed!!!\n");
   }
 
   const uint TEST_ITERATIONS = 10;
@@ -725,15 +725,15 @@ int main(int argc, char *argv[])
   for (uint i = 0; i < TEST_ITERATIONS; i++) {
     ACA_LOG_INFO("************** Iteration #%u **************\n", i);
 
-    ACA_LOG_INFO("-------------- sending one goal state sync --------------\n");
+    ACA_LOG_INFO("%s", "-------------- sending one goal state sync --------------\n");
 
     grpc_client.send_goalstate_sync(1, "21");
 
-    ACA_LOG_INFO("-------------- sending 10 goal state sync --------------\n");
+    ACA_LOG_INFO("%s", "-------------- sending 10 goal state sync --------------\n");
 
     grpc_client.send_goalstate_sync(10, "22");
 
-    ACA_LOG_INFO("-------------- sending 1 goal state stream --------------\n");
+    ACA_LOG_INFO("%s", "-------------- sending 1 goal state stream --------------\n");
 
     NeighborConfiguration_builder->set_name("portname3");
     NeighborConfiguration_builder->set_host_ip_address("223.0.0.33");
@@ -756,12 +756,12 @@ int main(int argc, char *argv[])
     print_goalstateReply(stream_reply);
 
     if (rc == EXIT_SUCCESS) {
-      ACA_LOG_INFO("1 goal state stream grpc call succeed\n");
+      ACA_LOG_INFO("%s", "1 goal state stream grpc call succeed\n");
     } else {
-      ACA_LOG_INFO("1 goal state stream grpc call failed!!!\n");
+      ACA_LOG_INFO("%s", "1 goal state stream grpc call failed!!!\n");
     }
 
-    ACA_LOG_INFO("-------------- sending 10 goal state stream --------------\n");
+    ACA_LOG_INFO("%s", "-------------- sending 10 goal state stream --------------\n");
 
     grpc_client.send_goalstate_stream(10, "32");
   }
