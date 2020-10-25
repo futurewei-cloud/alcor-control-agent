@@ -8,27 +8,29 @@ image::images/zeta_integration_high_level.jpg["highlevel Architecture", width=80
 Each group entry corresponds to a Zeta Gateway Cluster (ZGC). Each bucket in the group entry corresponds to a gateway in ZGC.
 
 2. Tenant Network. The gateway node in ZGC is responsible for delivering the rules to ACA on computing nodes when two VMs communicate for the first time. 
-ACA as the openflow controller will install rules on ovs. The path between the gateway node and the computing node is called the default path in the following.
+ACA as the openflow controller will install rules on ovs.
+
+3. Gateway/Direct path. The path between the gateway node and the computing node is called the gateway path whereas VM to VM direct communication is called direct path.
 
 == Bucketing System Design on Compute Node
 
-The information of the ZGC cluster will be stored on the computing node. When a VM brings up, 
-if the compute node does not have a VM with the same VNI, there is no need to configure flow table and group table.
-The packet will match the VNI in the flow table to determine which group rule is used by this packet.
+The information of the ZGC cluster will be when to computing node when needed from Alcor controller. When a VM boots up, 
+if the compute node already have a VM with the same VPC, there is no need to configure flow table and group table.
+The packet will match the internal VLAN in the flow table to determine which group rule is used.
 Each group rule can be configured with a few buckets, and each bucket specifies a gateway node.
-After determining which group rule can handle the packet, the group rules support hash function to map a packet to a bucket. 
-Ths hash field cna be specified as source MAC, source IP, destination MAC and destination IP.
+After determining which group rule will handle the packet, the group rules support hash function to map packets to a bucket. 
+Ths hash field will use source IP, source port, destination IP, destination port and protocol.
 
 image::images/zeta_integration_example.jpg["example", width=800, link="zeta_integration_example.jpg"]
 
-We use an example to illustrate the default path. VMX belongs to VPC1, VMA belongs to VPC2. The flows of VPC1 and VPC2 are mapped to the same cluster, which includes two gateway nodes gateway1 and gateway2. The gw_port1 and gw_port2 ports of computing node1 are respectively connected to the gateway nodes gateway1 and gateway2. Then we deploy a group entry on computing node1, the group identifier is 4, and the action buckets are: bucket1:output=gw_port1; bucket2:output=gw_port2. In addition, by deploying a low-priority flow entry, the flow of the VPC1 that does not match the high-priority flow entry (vm-vm direct path forwarding entry) is directed to the group entry 4, so that all nodes on node1 are calculated. The flow of VPC1 will be directed to group entry 4, and will be forwarded to the gateway node gateway1 or gateway2 through the group entry 4. Through the flow table + group table, you can achieve the mapping of vpc to the gateway node cluster.
+We use an example to illustrate the gateway path. VMX belongs to VPC1, VMA belongs to VPC2. The flows of VPC1 and VPC2 are mapped to the same cluster, which includes two gateway nodes gateway1 and gateway2. The gw_port1 and gw_port2 ports of computing node1 are respectively connected to the gateway nodes gateway1 and gateway2. Then we deploy a group entry on computing node1, the group identifier is 4, and the action buckets are: bucket1:output=gw_port1; bucket2:output=gw_port2. In addition, by deploying a low-priority flow entry, the flow of the VPC1 that does not match the high-priority flow entry (vm-vm direct path forwarding entry) is directed to the group entry 4, so that all nodes on node1 are calculated. The flow of VPC1 will be directed to group entry 4, and will be forwarded to the gateway node gateway1 or gateway2 through the group entry 4. Through the flow table + group table, you can achieve the mapping of vpc to the gateway node cluster.
 
 
-== Workflow Diagram for Default Path Configuration
+== Workflow Diagram for Gateway Path Configuration
 
-Default path configuration happens when a VM brings up and there does not exist a VM which has the same VNI.
+Gateway path configuration happens when a VM boot up and there is no existing VM port belongs to the same VPC on the host.
 
-1. Alcor controller send a message to ACA on the host;
+1. Alcor controller send goal state message to ACA on the host for new port configuration;
 
 2. ACA receieves the message and extract information of ZGC from the database;
 
@@ -38,17 +40,22 @@ TBD
 
 == Workflow Diagram for VM to VM Direct Path Configuration
 
-This happens when a gateway node publishes rules to the computing node.
+This happens when a gateway node publishes send OAM packet to the computing node.
 
-1. A gateway node receieve the first packet from a compute node;
+1. A gateway node receive the first packet from a compute node;
 
-2. The gateway node extract the header information of this packet;
+2. The gateway node extract the header information of this packet route the packet to destination host;
 
 3. The gateway node send the OAM packet to the computing node;
 
-4. ACA on the compute node receieve the OAM packet;
+4. ACA on the compute node receive the OAM packet;
 
-5. ACA configure the flow table of ovs to determine which port go to the destination VM.
+5. ACA configure the flow table of ovs after learning about the destination host IP and mac, also the destination port IP and mac;
+
+6. ACA add new outport for the destination host;
+
+7. ACA add higher priority rule the flow table to enable VM to VM direct communication;
+
 
 == OAM Packet Usage and Handling
 
