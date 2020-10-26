@@ -39,9 +39,18 @@ Gateway path configuration happens when a VM boot up and there is no existing VM
 
 3. ACA configure ovs to install flow rule and group rule;
 
-Set idle time for flow rules and group rules, e.g., 60s. When there is no packet matches these rules, it will be automatically deleted.
 
-TBD
+
+== Group Rule Delete
+
+The ACA has the information about VLAN tag owned by each VM. The group table delete may occur when a VM brings down or be migrated on a host;
+
+1. When a VM brings down or be migrated, ACA finds the VLAN of this VM;
+
+2. ACA finds if there are other VM with the same VLAN ;
+
+3. If not, delete the group rule which match the VLAN of offline VM;
+
 
 == Workflow Diagram for VM to VM Direct Path Configuration
 
@@ -60,11 +69,18 @@ This happens when a gateway node receieve packets from compute node, then send O
 6. ACA add higher priority rule the flow table to enable VM to VM direct communication;
 
 
+image::images/direct_path_configuration.jpg["direct path configuration", width=800, link="direct_path_configuration.jpg"]
 
 
 == OAM Packet Usage and Handling on ACA
 
-TBD
+1. ACA receieve the OAM packet;
+
+2. The AVA_OVS_Control module parse the OAM packet and determine whether to add or delete flow rules based on the OAM packet;
+
+3. ACA build a port on the source host to the destination host;
+
+4. ACA install flow rules with higher priority than gateway path;
 
 == Workflow Diagram for Bucketing and OAM Handling.
 
