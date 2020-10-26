@@ -4,7 +4,7 @@
 
 ![](images/Experimental_topology.JPG)
 
-<center>Figure 1. Experimental topology</center>
+<p align="center">Figure 1. Experimental topology</p>
 
 #### 1.1 Gateway node
 
