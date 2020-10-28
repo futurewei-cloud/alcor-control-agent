@@ -2,102 +2,126 @@
 
 == Architecture Overview
 
-image::images/zeta_integration_high_level.jpg["highlevel Architecture", width=800, link="zeta_integration_high_level.jpg"]
+Figure 1 Highlevel Architecture
 
-image::images/gateway_direct_path.jpg["gateway_direct_path", width=600, link="gateway_direct_path.jpg"]
+image::images/zeta_integration_high_level.jpg["Highlevel Architecture", width=800, link="zeta_integration_high_level.jpg"]
 
-1. Control/API Network. Alcor server configures the group entries and the buckets in the group entries for each computing node. 
+Figure 2 Illustion of Gateway Path and Direct Path
+
+image::images/gateway_direct_path.jpg["gateway_direct_path", width=400, link="gateway_direct_path.jpg"]
+
+. Control/API Network. Alcor server configures the group entries and the buckets in the group entries for each computing node. 
 Each group entry corresponds to a Zeta Gateway Cluster (ZGC). Each bucket in the group entry corresponds to a gateway in ZGC.
 
-2. Tenant Network. The gateway node in ZGC is responsible for delivering the rules to ACA on computing nodes when two VMs communicate for the first time. 
+. Tenant Network. The gateway node in ZGC is responsible for delivering the rules to ACA on computing nodes when two VMs communicate for the first time. 
 ACA as the openflow controller will install rules on ovs.
 
-3. Gateway/Direct path. The path between the gateway node and the computing node is called the gateway path whereas VM to VM direct communication is called direct path.
+. Gateway/Direct path. The path between the gateway node and the computing node is called the gateway path whereas VM to VM direct communication is called direct path. How to build gateway/direct path will be introduced later.
+
+    .. When two VMs talk for the first time, the first packet will go through the gateway path;
+    .. The gateway node receieve the first packet and than send an OAM packet to the source host;
+    .. The gateway node send the first packet (may be more than one due to delay) to the destination host;
+    .. The source host receieve the OAM packet then build VM to VM direct path. After this, all packets go throuth the direct path;
+
 
 == Bucketing System Design on Compute Node
 
-The information of the ZGC cluster will be when to computing node when needed from Alcor controller. When a VM boots up, 
+The information of the ZGC cluster will be sent to computing node by Alcor controller when a host is up. When a VM boots up, 
 if the compute node already have a VM with the same VPC, there is no need to configure flow table and group table.
 The packet will match the internal VLAN in the flow table to determine which group rule is used.
 Each group rule can be configured with a few buckets, and each bucket specifies a gateway node.
 After determining which group rule will handle the packet, the group rules support Round Robin algorithm to map packets to a bucket. 
 
-image::images/zeta_integration_example1.jpg["example", width=800, link="zeta_integration_example1.jpg"]
-
-image::images/zeta_integration_example2.jpg["example", width=800, link="zeta_integration_example2.jpg"]
-
-We use an example to illustrate the gateway path. VMX and VMY belongs to VPC1. The flows of VPC1 is mapped to a zeta gateway cluster, which includes two gateway nodes gateway1 and gateway2. The gw_port1 and gw_port2 ports of computing node1 are respectively corresponding to the gateway nodes gateway1 and gateway2. Then we deploy a group entry on computing node1, the group identifier is 4, and the action buckets are: bucket1:output=gw_port1; bucket2:output=gw_port2. In addition, by deploying a low-priority flow entry, the flow of the VPC1 that does not match the high-priority flow entry (vm-vm direct path forwarding entry) is directed to the group entry 4. The flow of VPC1 will be directed to group entry 4, and will be forwarded to the gateway node gateway1 or gateway2 through the group entry 4. Through the flow table + group table, you can achieve the mapping of vpc to the gateway node cluster.
-
-
-== Workflow Diagram for Gateway Path Configuration
-
-Gateway path configuration happens when a VM boot up and there is no existing VM port belongs to the same VPC on the host.
-
-1. Alcor controller send goal state message to ACA on the host for new port configuration;
-
-2. ACA receieves the message and extract information of ZGC from the database;
-
-3. ACA configure ovs to install flow rule and group rule;
-
-
-
-== Group Rule Delete
-
-The ACA has the information about VLAN tag owned by each VM. The group table delete may occur when a VM brings down or be migrated on a host;
-
-1. When a VM brings down or be migrated, ACA finds the VLAN of this VM;
-
-2. ACA finds if there are other VM with the same VLAN ;
-
-3. If not, delete the group rule which match the VLAN of offline VM;
-
-
-== Workflow Diagram for VM to VM Direct Path Configuration
-
-This happens when a gateway node receieve packets from compute node, then send OAM packet to the computing node.
-
-1. A gateway node receive the first packet from a compute node;
-
-2. The gateway node extract the header information of this packet and route the packet to destination host;
-
-3. The gateway node send the OAM packet to the computing node;
-
-4. ACA on the compute node receive the OAM packet;
-
-5. ACA configure the flow table on ovs after learning about the destination host IP and mac, also the destination port IP and mac;
-
-6. ACA add higher priority rule the flow table to enable VM to VM direct communication;
-
+Figure 2 Packet Processing for Gateway Path and Direct Path
 
 image::images/direct_path_configuration.jpg["direct path configuration", width=800, link="direct_path_configuration.jpg"]
 
+Figure 3 Example Topology
 
-== OAM Packet Usage and Handling on ACA
+image::images/zeta_integration_example.jpg["example", width=600, link="zeta_integration_example.jpg"]
 
-1. ACA receieve the OAM packet;
+The following workflow is based on the figure above.
 
-2. The AVA_OVS_Control module parse the OAM packet and determine whether to add or delete flow rules based on the OAM packet;
+=== Workflow for Gateway Path Configuration
 
-3. ACA build a port on the source host to the destination host;
+Gateway path configuration happens when a VM boots up and there is no existing VM port belongs to the same VPC on the host.
 
-4. ACA install flow rules with higher priority than gateway path;
+. Alcor controller send goal state message which includes ZGC information (MAC and IP of FWDs) to ACA on the host;
 
-== Workflow Diagram for Bucketing and OAM Handling.
+. ACA receieves the message and extract information of ZGC;
 
-TBD
+. ACA determines whether the gateway path entry which has the same VLAN id has been installed in the flow table.
+
+. If not, ACA builds tunnel between gateway nodes and the host, and configure ovs to install flow rules and group rules to build gateway path;
+
+    .. When container 192.168.1.71 on host 172.16.62.237 talks to container 192.168.1.81 on host 172.16.62.238. The flow rules may look like this:
+
+    cookie=0x0, duration=85506.933s, table=0, n_packets=3792, n_bytes=5275816, priority=1,in_port="patch-int" actions=resubmit(,2)
+    cookie=0x0, duration=170337.699s, table=2, n_packets=111, n_bytes=4662, priority=0,dl_dst=01:00:00:00:00:00/01:00:00:00:00:00 actions=resubmit(,22)
+    cookie=0x0, duration=85323.301s, table=22, n_packets=111, n_bytes=4774, priority=1,dl_vlan=100 actions=strip_vlan,load:0x1->NXM_NX_TUN_ID[],group:100
+
+    .. The group rule may look like this:
+
+    group_id=100,type=select,bucket=output:vxlan231,bucket=output:vxlan232
+
+. ACA installs a rules on br-tun to match the OAM packets from gateway nodes. This rule can match UDP port with 8300 and pass the matched packet to ACA;
+
+=== Workflow for Group Rule Delete
+
+The ACA has the information about VLAN tag owned by each VM. The deletion of flow rules and group rules may occur when a VM brings down or be migrated on a host;
+
+. When a VM brings down or be migrated, ACA finds the VLAN of this VM;
+
+. ACA finds if there are other VM with the same VLAN ;
+
+. If not, delete the flow rule which match the VLAN of offline VM, and record the group id in the action of the deleted flow rule;
+
+. Find in the flow table if there are other rules for the action of this group id;
+
+. If not, delete this group rule;
 
 
+=== Workflow for VM to VM Direct Path Configuration
 
+This happens when a gateway node receieve the first packet from compute node, then send OAM packet to the computing node.
+
+. A gateway node receives the first packet from a compute node;
+
+. The gateway node extracts the header information of this packet and route the packet to destination host;
+
+. The gateway node sends the OAM packet to the computing node;
+
+. The ovs on host receieves the OAM packet and pass it to ACA;
+
+. ACA parses OAM packet and extract information about the IP and mac of destination host and VM;
+
+. ACA add higher priority rule in flow table to support VM to VM direct path;
+    .. The flow rules may look like this:
+
+    cookie=0x0, duration=13184.269s, table=0, n_packets=6, n_bytes=476, priority=2,in_port="patch-int",dl_dst=f6:0e:05:38:0b:72 actions=resubmit(,24)
+    cookie=0x0, duration=13152.691s, table=24, n_packets=6, n_bytes=476, priority=1,dl_vlan=100 actions=strip_vlan,load:0x1->NXM_NX_TUN_ID[],output:vxlan238
+
+=== OAM Packet Usage and Handling on ACA
+
+When ACA receieve OAM packet, it needs to parse it and decide what the action is.
+
+. ACA receieves the OAM packet;
+
+. ACA extracts OP_Code to determin whether to add (0x0000 0000) or delete (0x0000 0001) rules;
+
+. ACA extracts OP_Data in OAM packet;
+
+. ACA uses OP_Data according to OP_Code to issue commands to ovs;
 
 == Code changes
 
 === Goal State Message Change from Alcor Server to ACA
 
-TBD
+Add code in aca_dataplane_ovs.h to support parsing ZGC information sended from Alcor server;
 
 === OAM Packet Handling
 
-TBD
+Add a file about adding, deleting, modifying and checking the flow and group table. This file is related to the Zeta project.
 
 === Test Code Updates
 
