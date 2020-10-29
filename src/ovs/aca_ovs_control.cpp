@@ -33,6 +33,7 @@
 #include <netinet/ip.h>
 #include <arpa/inet.h>
 #include "aca_dhcp_server.h"
+#include "aca_oam_server.h"
 
 using namespace std;
 using namespace ovs_control;
@@ -263,6 +264,13 @@ void ACA_OVS_Control::parse_packet(uint32_t in_port, void *packet)
         ACA_LOG_INFO("%s", "   Message Type: DHCP\n");
         aca_dhcp_server::ACA_Dhcp_Server::get_instance().dhcps_recv(
                 in_port, const_cast<unsigned char *>(payload));
+      }
+
+      /* oam message procedure */
+      if (udp_dport == OAM_SOCKET_PORT){
+        ACA_LOG_INFO("%s", "   Message Type: OAM\n");
+        //aca_dhcp_server::ACA_Oam_Server::get_instance().oams_recv(
+        //  in_port, onst_cast<unsigned char *>(payload));
       }
     }
   }
