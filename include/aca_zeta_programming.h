@@ -42,4 +42,4 @@ class ACA_Zeta_Programming {
   int delete_group_entry(const char *bridge, zeta_config *zeta_config_in);
 };
 } // namespace aca_zeta_programming
-#endif // #ifndef ACA_ZETA_PROGRAMMING
+#endif // #ifndef ACA_ZETA_PROGRAMMING_H
