@@ -17,14 +17,14 @@
 #include "aca_ovs_control.h"
 #include "aca_message_pulsar_consumer.h"
 #include "aca_grpc.h"
+#include "aca_ovs_l2_programmer.h"
 #include "goalstateprovisioner.grpc.pb.h"
 #include <thread>
 #include <unistd.h> /* for getopt */
 #include <grpcpp/grpcpp.h>
 
-
-using aca_ovs_control::ACA_OVS_Control;
 using aca_message_pulsar::ACA_Message_Pulsar_Consumer;
+using aca_ovs_control::ACA_OVS_Control;
 using std::string;
 
 // Defines
@@ -81,13 +81,13 @@ static void aca_cleanup()
     ACA_LOG_ERROR("%s", "Unable to call delete, grpc server pointer is null.\n");
   }
 
-  if (g_grpc_server_thread != NULL){
+  if (g_grpc_server_thread != NULL) {
     delete g_grpc_server_thread;
     g_grpc_server_thread = NULL;
     ACA_LOG_INFO("%s", "Cleaned up grpc server thread.\n");
   } else {
     ACA_LOG_ERROR("%s", "Unable to call delete, grpc server thread pointer is null.\n");
-  }    
+  }
   ACA_LOG_CLOSE();
 }
 
@@ -182,7 +182,9 @@ int main(int argc, char *argv[])
   g_grpc_server_thread =
           new std::thread(std::bind(&GoalStateProvisionerImpl::RunServer, g_grpc_server));
   g_grpc_server_thread->detach();
-  
+
+  aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().setup_ovs_bridges_if_need();
+
   ACA_OVS_Control::get_instance().monitor("br-int", "resume");
 
   ACA_Message_Pulsar_Consumer network_config_consumer(g_broker_list, g_pulsar_subsription_name);
