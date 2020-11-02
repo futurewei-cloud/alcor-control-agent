@@ -114,20 +114,10 @@ int ACA_OVS_L2_Programmer::setup_ovs_bridges_if_need()
     execute_ovsdb_command("add-br br-tun", not_care_culminative_time, overall_rc);
 
     // create and connect the patch ports between br-int and br-tun
-    execute_ovsdb_command("add-port br-int patch-tun", not_care_culminative_time, overall_rc);
-
-    execute_ovsdb_command("set interface patch-tun type=patch",
-                          not_care_culminative_time, overall_rc);
-
-    execute_ovsdb_command("set interface patch-tun options:peer=patch-int",
-                          not_care_culminative_time, overall_rc);
-
-    execute_ovsdb_command("add-port br-tun patch-int", not_care_culminative_time, overall_rc);
-
-    execute_ovsdb_command("set interface patch-int type=patch",
-                          not_care_culminative_time, overall_rc);
-
-    execute_ovsdb_command("set interface patch-int options:peer=patch-tun",
+    execute_ovsdb_command("-- add-port br-int patch-tun "
+                          "-- set interface patch-tun type=patch options:peer=patch-int "
+                          "-- add-port br-tun patch-int "
+                          "-- set interface patch-int type=patch options:peer=patch-tun",
                           not_care_culminative_time, overall_rc);
 
     // adding default flows
