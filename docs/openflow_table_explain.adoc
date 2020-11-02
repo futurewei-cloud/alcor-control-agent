@@ -1,0 +1,214 @@
+= Alcor Openflow Table Explain
+Eric Li <sze.li@futurewei.com>
+v0.1, 2020-10-29
+:toc: right
+:sectnums:
+
+This document explains the openflow table structure and rules used by Alcor Control Agent.
+
+== Openflow Rule Priorities
+
+. Priority high: 50 - know exactly where packet should go, or on demand rule
+. Priority med: 25 - know where packet should go, or essential rule
+. Priority low: 1 - defaults on where packet should go
+
+== br-tun tables
+
+=== Table Triage: (openflow table 0)
+
+. if on demand routing rule match, route it
+. if ARP, resubmit to Table 51 ARP Responder
+. if ICMP, resubmit to Table 52 ICMP Responder
+. else send to Table Forwarding [TBD] (table=0, priority=low actions=resubmit(,55))
+
+==== On demand L3 Routing rule
+
+For packets send to known gateway mac, to known destination IP, route it
+
+Status: implemented as essential rule, to be implemented trigger on demand by issue#134, need to add essential rule to gateway mac send to controller, consider sending those packets to Table 55 forwarding for better organization and control
+
+Template: Priority = high, ip,dl_vlan=1,nw_dst=10.0.1.106 (destination port IP),dl_dst=02:42:ac:11:00:01(gateway mac) actions=mod_vlan_vid:2,mod_dl_src:02:42:ac:11:00:00(host DVR mac),mod_dl_dst=c6:41:e9:81:56:91(destination port mac),resubmit to table 2 (outgoing to wire)
+
+[source,shell]
+------------------------------------------------------------
+cookie=0x0, duration=22.987s, table=0, n_packets=0, n_bytes=0, priority=50,ip,dl_vlan=2,dl_dst=fa:16:3e:d7:f2:21,nw_dst=10.10.0.101 actions=mod_vlan_vid:1,mod_dl_src:fe:16:11:d7:f2:02,mod_dl_dst:fa:16:3e:d7:f2:6c,resubmit(,2)
+------------------------------------------------------------
+
+==== Send ARP requests to ARP table
+
+Status: added as port of bridge setup, needed for gateway port for routing, to be change to on demand by issue#117
+
+[source,shell]
+------------------------------------------------------------
+cookie=0x0, duration=23.372s, table=0, n_packets=0, n_bytes=0, priority=25,arp,in_port="patch-int",arp_op=1 actions=resubmit(,51)
+------------------------------------------------------------
+
+==== Send ICMP requests to ICMP table
+
+Status: added as port of bridge setup, needed for gateway port for routing
+
+[source,shell]
+------------------------------------------------------------
+cookie=0x0, duration=23.355s, table=0, n_packets=0, n_bytes=0, priority=25,icmp,in_port="patch-int",icmp_type=8 actions=resubmit(,52)
+------------------------------------------------------------
+
+==== outgoing to wire
+
+Status: added as port of bridge setup
+
+[source,shell]
+------------------------------------------------------------
+ cookie=0x0, duration=239.320s, table=0, n_packets=4, n_bytes=280, priority=1,in_port="patch-int" actions=resubmit(,2)
+------------------------------------------------------------
+
+==== incoming from neighbor through vxlan port (based on remote IP)
+
+Status: added when L2 neighbor is added, [TBD] consider raising the priority to med based on template
+
+Template: Priority = med, in_port="vxlan-0", resubmit to table 4 (incoming from wire)
+
+[source,shell]
+------------------------------------------------------------
+cookie=0x0, duration=236.017s, table=0, n_packets=6, n_bytes=476, priority=1,in_port="vxlan-42629872" actions=resubmit(,4)
+------------------------------------------------------------
+
+==== default rule
+
+Status: default rule when bridge is created, [TBD] remove it or change it to explicit drop
+
+[source,shell]
+------------------------------------------------------------
+cookie=0x0, duration=239.360s, table=0, n_packets=0, n_bytes=0, priority=0 actions=NORMAL
+------------------------------------------------------------
+
+=== Table unicast or multicast: (openflow table 2)
+
+. if unicast, resubmit to Table 51 ARP Responder, not yet implemented
+. if multicast, resubmit to Table 22 flood the tunnels, not yet implemented
+. current implementation simply resubmit to Table 22 flood the tunnels, similar to macrostack
+
+[source,shell]
+------------------------------------------------------------
+cookie=0x0, duration=239.316s, table=2, n_packets=6, n_bytes=476, priority=1 actions=resubmit(,22)
+------------------------------------------------------------
+
+[TBD] want to change it to:
+------------------------------------------------------------
+cookie=0x8df39e8e3df5dd6c, duration=251739.131s, table=2, n_packets=198, n_bytes=23002, priority=0,dl_dst=00:00:00:00:00:00/01:00:00:00:00:00 actions=resubmit(,20) unicast traffic goes to 20
+cookie=0x8df39e8e3df5dd6c, duration=251739.130s, table=2, n_packets=9, n_bytes=1100, priority=0,dl_dst=01:00:00:00:00:00/01:00:00:00:00:00 actions=resubmit(,22) multicast traffic goes to 22
+------------------------------------------------------------
+
+=== Table incoming vxlan: (openflow table 4)
+
+Status: added when port is added
+
+Template: Priority = med, match tun_id, tag internal vlan, output to "patch-int"
+
+[source,shell]
+------------------------------------------------------------
+cookie=0x0, duration=236.710s, table=4, n_packets=3, n_bytes=238, priority=1,tun_id=0x14 actions=mod_vlan_vid:1,output:"patch-int"
+------------------------------------------------------------
+
+[TBD] want to change it to when we enable mac learning for smarter outgoing unicast traffic:
+------------------------------------------------------------
+cookie=0x8df39e8e3df5dd6c, duration=173716.058s, table=6, n_packets=213, n_bytes=25440, priority=1,tun_id=0x1b actions=mod_vlan_vid:1,resubmit(,10)
+cookie=0x8df39e8e3df5dd6c, duration=251739.127s, table=10, n_packets=213, n_bytes=25440, priority=1 actions=learn(table=20,hard_timeout=300,priority=1,cookie=0x8df39e8e3df5dd6c,NXM_OF_VLAN_TCI[0..11],NXM_OF_ETH_DST[]=NXM_OF_ETH_SRC[],load:0->NXM_OF_VLAN_TCI[],load:NXM_NX_TUN_ID[]->NXM_NX_TUN_ID[],output:OXM_OF_IN_PORT[]),output:"patch-int"  - VM mac learning on which tunnel ID and port to use
+------------------------------------------------------------
+
+=== Table multicast: (openflow table 22)
+
+Status: added when L2 neighbor is added
+
+Template: Priority = med, match vlan, actions = strip vlan, load tun_id, output to vlan tunnel ports for its vpc
+
+[source,shell]
+------------------------------------------------------------
+cookie=0x0, duration=236.022s, table=22, n_packets=6, n_bytes=364, priority=1,dl_vlan=2 actions=strip_vlan,load:0x1e->NXM_NX_TUN_ID[],output:"vxlan-42629872"
+------------------------------------------------------------
+
+=== Table ARP Responder: (openflow table 51)
+
+. if local VLAN and ARP target IP matches an openflow rule, send ARP response
+. else send to Normal path - to be removed
+
+Status: implemented, to be change to on demand by issue#117
+
+Template: 
+
+table=51, priority=high,proto=‘arp’,dl_vlan=[VLAN tag],nw_dst=[Target IP] actions=
+
+    . ‘move:NXM_OF_ETH_SRC[]->NXM_OF_ETH_DST[],’ – Put the source MAC address of the request (The requesting VM) as the new reply’s destination MAC address
+    . ‘mod_dl_src:%(mac)s,’ – Put the requested MAC address of the remote VM as this message’s source MAC address
+    . ‘load:0x2->NXM_OF_ARP_OP[],’ – Put an 0x2 code as the type of the ARP message. 0x2 is an ARP response.
+    . ‘move:NXM_NX_ARP_SHA[]->NXM_NX_ARP_THA[],’ – Place the ARP request’s source hardware address (MAC) as this new message’s ARP target / destination hardware address
+    . ‘move:NXM_OF_ARP_SPA[]->NXM_OF_ARP_TPA[],’ – Place the ARP request’s source protocol / IP address as the new message’s ARP destination IP address
+    . ‘load:%(mac)->NXM_NX_ARP_SHA[],’ – Place the requested VM’s MAC address as the source MAC address of the ARP reply
+    . ‘load:%(ip)->NXM_OF_ARP_SPA[],’ – Place the requested VM’s IP address as the source IP address of the ARP reply
+    . ‘load:0->NXM_OF_IN_PORT[]‘ – Send the message back to the port it came from
+
+[source,shell]
+------------------------------------------------------------
+cookie=0x0, duration=236.347s, table=51, n_packets=2, n_bytes=84, priority=50,arp,dl_vlan=1,arp_tpa=10.10.0.1 actions=move:NXM_OF_ETH_SRC[]->NXM_OF_ETH_DST[],mod_dl_src:fa:16:3e:d7:f2:11,load:0x2->NXM_OF_ARP_OP[],move:NXM_NX_ARP_SHA[]->NXM_NX_ARP_THA[],move:NXM_OF_ARP_SPA[]->NXM_OF_ARP_TPA[],load:0xfa163ed7f211->NXM_NX_ARP_SHA[],load:0xa0a0001->NXM_OF_ARP_SPA[],IN_PORT
+cookie=0x0, duration=239.309s, table=51, n_packets=6, n_bytes=252, priority=1 actions=resubmit(,22)
+------------------------------------------------------------
+
+=== Table ICMP Responder: (openflow table 52)
+
+. if local VLAN and ICMP target matches an openflow rule, send ICMP response
+. else send to Normal path
+
+Status: implemented, needed for gateway port for routing
+
+[source,shell]
+------------------------------------------------------------
+cookie=0x0, duration=236.343s, table=52, n_packets=1, n_bytes=98, priority=50,icmp,dl_vlan=1,nw_dst=10.10.0.1 actions=move:NXM_OF_ETH_SRC[]->NXM_OF_ETH_DST[],mod_dl_src:fa:16:3e:d7:f2:11,move:NXM_OF_IP_SRC[]->NXM_OF_IP_DST[],mod_nw_src:10.10.0.1,load:0xff->NXM_NX_IP_TTL[],load:0->NXM_OF_ICMP_TYPE[],IN_PORT
+cookie=0x0, duration=239.302s, table=52, n_packets=0, n_bytes=0, priority=1 actions=resubmit(,22)
+------------------------------------------------------------
+
+=== Table Forwarding: (openflow table 55)
+
+. (on demand rule) if inter-subnet communication matches an openflow rule, perform L3 forwarding, programmed in last 60s
+. (L3 essential rule) if segment ID and destination L3 subnet matches an openflow rule, send to ACA
+. (L2 essential rule) if local vlan and local subnet matches an openflow rule, send to Normal path
+. else send to Table External, this is traffic to external
+
+Status: Not yet implemented, should come in after EIP/SNAT
+
+[source,shell]
+------------------------------------------------------------
+(on demand rule)table=55, priority=50,dl_vlan=[VLAN tag of network 1],dl_dst=[mac of GW for network 1] actions=
+
+    ‘strip_vlan,load:[VLAN tag of network 2->NXM_NX_TUN_ID[],‘ - Replace to network 2 VLAN tag
+
+    ‘mod_dl_dst=[destination VM MAC]‘ – replace the GW mac to destination VM’s MAC 
+
+    ‘actions=NORMAL‘
+
+(L3 essential rule)table=55, priority=10,dl_vlan=[VLAN tag of network 1],dl_dst=[mac of GW for network 1] actions=CONTROLLER
+
+(L2 essential rule)table=55, priority=10,dl_vlan=[VLAN tag of network 1], [match local subnet] actions = NORMAL
+
+table=55, priority=0 actions=resubmit(,60) (to table External)
+------------------------------------------------------------
+
+=== Table External: (openflow table 60)
+
+Status: Not yet implemented, should come in with EIP/SNAT design and implementation
+
+== br-int tables
+
+=== Table Triage: (openflow table 0)
+
+Status: restore the neighbor host DVR mac to the corresponding gateway mac
+
+Template: priorty = medium, match internal vlan per VPC, match DVR mac, restore mac to the corresponding gateway mac, output:NORMAL
+
+[source,shell]
+------------------------------------------------------------
+cookie=0x0, duration=15065.566s, table=0, n_packets=1, n_bytes=98, priority=25,dl_vlan=1,dl_src=fe:16:11:00:00:00/ff:ff:ff:00:00:00 actions=mod_dl_src:fa:16:3e:d7:f2:11,NORMAL
+cookie=0x0, duration=15069.114s, table=0, n_packets=28, n_bytes=1736, priority=0 actions=NORMAL 
+------------------------------------------------------------
+
+=== Table security groups:
+
+Status: implementation in progress
