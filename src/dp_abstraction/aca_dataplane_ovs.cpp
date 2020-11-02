@@ -121,11 +121,10 @@ int ACA_Dataplane_OVS::update_port_state_workitem(const PortState current_PortSt
     generated_port_name = aca_get_port_name(current_PortConfiguration.id());
 
     try {
-      if (current_PortConfiguration.fixed_ips_size() <= 0) {
-        ACA_LOG_ERROR("PortConfiguration.fixed_ips_size: %d.\n",
-                      current_PortConfiguration.fixed_ips_size());
+      if (!aca_validate_fixed_ips_size(current_PortConfiguration.fixed_ips_size())) {
         throw std::invalid_argument("PortConfiguration.fixed_ips_size is less than zero");
       }
+
       virtual_ip_address = current_PortConfiguration.fixed_ips(0).ip_address();
 
       // inet_pton returns 1 for success 0 for failure
@@ -366,20 +365,18 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
     [[fallthrough]];
   case OperationType::INFO:
 
-    if (current_NeighborConfiguration.fixed_ips_size() <= 0) {
-      ACA_LOG_ERROR("NeighborConfiguration.fixed_ips_size: %d.\n",
-                    current_NeighborConfiguration.fixed_ips_size());
-      throw std::invalid_argument("NeighborConfiguration.fixed_ips_size is less than zero");
-    }
+    try {
+      if (!aca_validate_fixed_ips_size(current_NeighborConfiguration.fixed_ips_size())) {
+        throw std::invalid_argument("NeighborConfiguration.fixed_ips_size is less than zero");
+      }
 
-    for (int ip_index = 0;
-         ip_index < current_NeighborConfiguration.fixed_ips_size(); ip_index++) {
-      if (current_NeighborConfiguration.fixed_ips(ip_index).neighbor_type() == NeighborType::L2 ||
-          current_NeighborConfiguration.fixed_ips(ip_index).neighbor_type() ==
-                  NeighborType::L3) {
-        try {
-          virtual_ip_address =
-                  current_NeighborConfiguration.fixed_ips(ip_index).ip_address();
+      for (int ip_index = 0;
+           ip_index < current_NeighborConfiguration.fixed_ips_size(); ip_index++) {
+        auto current_fixed_ip = current_NeighborConfiguration.fixed_ips(ip_index);
+
+        if (current_fixed_ip.neighbor_type() == NeighborType::L2 ||
+            current_fixed_ip.neighbor_type() == NeighborType::L3) {
+          virtual_ip_address = current_fixed_ip.ip_address();
 
           // inet_pton returns 1 for success 0 for failure
           if (inet_pton(AF_INET, virtual_ip_address.c_str(), &(sa.sin_addr)) != 1) {
@@ -407,8 +404,7 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
                           current_SubnetConfiguration.id().c_str());
 
             if (parsed_struct.subnet_states(j).operation_type() == OperationType::INFO) {
-              if (current_SubnetConfiguration.id() ==
-                  current_NeighborConfiguration.fixed_ips(ip_index).subnet_id()) {
+              if (current_SubnetConfiguration.id() == current_fixed_ip.subnet_id()) {
                 found_network_type = current_SubnetConfiguration.network_type();
 
                 found_tunnel_id = current_SubnetConfiguration.tunnel_id();
@@ -424,18 +420,14 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
 
           if (!subnet_info_found) {
             ACA_LOG_ERROR("Not able to find the info for neighbor ip_index: %d with subnet ID: %s.\n",
-                          ip_index,
-                          current_NeighborConfiguration.fixed_ips(ip_index)
-                                  .subnet_id()
-                                  .c_str());
+                          ip_index, current_fixed_ip.subnet_id().c_str());
             overall_rc = -EXIT_FAILURE;
           } else {
             ACA_LOG_DEBUG(
                     "Neighbor Operation:%s: neighbor_type:%s, project_id:%s, vpc_id:%s, network_type:%d, ip_index: %d,"
                     "virtual_ip_address:%s, virtual_mac_address:%s, neighbor_host_ip_address:%s, tunnel_id:%d\n",
                     aca_get_operation_string(current_NeighborState.operation_type()),
-                    aca_get_neighbor_type_string(
-                            current_NeighborConfiguration.fixed_ips(ip_index).neighbor_type()),
+                    aca_get_neighbor_type_string(current_fixed_ip.neighbor_type()),
                     current_NeighborConfiguration.project_id().c_str(),
                     current_NeighborConfiguration.vpc_id().c_str(),
                     found_network_type, ip_index, virtual_ip_address.c_str(),
@@ -462,37 +454,36 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
             }
 
             if (overall_rc == EXIT_SUCCESS) {
-              if (current_NeighborConfiguration.fixed_ips(ip_index).neighbor_type() ==
-                  NeighborType::L3) {
+              if (current_fixed_ip.neighbor_type() == NeighborType::L3) {
                 overall_rc = ACA_OVS_L3_Programmer::get_instance().create_or_update_neighbor_l3(
                         current_NeighborConfiguration.vpc_id(),
-                        current_NeighborConfiguration.fixed_ips(ip_index).subnet_id(),
-                        found_network_type, virtual_ip_address,
-                        virtual_mac_address, host_ip_address, found_tunnel_id,
-                        culminative_dataplane_programming_time);
+                        current_fixed_ip.subnet_id(), found_network_type,
+                        virtual_ip_address, virtual_mac_address, host_ip_address,
+                        found_tunnel_id, culminative_dataplane_programming_time);
               }
             }
           }
-        } catch (const std::invalid_argument &e) {
-          ACA_LOG_ERROR("Invalid argument exception caught while parsing neighbor configuration, message: %s.\n",
-                        e.what());
+        } else {
+          ACA_LOG_ERROR("Unknown neighbor_type: %d.\n",
+                        current_NeighborState.operation_type());
           overall_rc = -EINVAL;
-        } catch (const std::exception &e) {
-          ACA_LOG_ERROR("Exception caught while parsing neighbor configuration, message: %s.\n",
-                        e.what());
-          overall_rc = -EFAULT;
-        } catch (...) {
-          ACA_LOG_CRIT("%s", "Unknown exception caught while parsing neighbor configuration.\n");
-          overall_rc = -EFAULT;
         }
-        break;
-      } else {
-        ACA_LOG_ERROR("Unknown neighbor_type: %d.\n",
-                      current_NeighborState.operation_type());
-        overall_rc = -EINVAL;
-      }
 
-    } // for (int ip_index = 0; ip_index < current_NeighborConfiguration.fixed_ips_size(); ip_index++)
+      } // for (int ip_index = 0; ip_index < current_NeighborConfiguration.fixed_ips_size(); ip_index++)
+
+    } catch (const std::invalid_argument &e) {
+      ACA_LOG_ERROR("Invalid argument exception caught while parsing neighbor configuration, message: %s.\n",
+                    e.what());
+      overall_rc = -EINVAL;
+    } catch (const std::exception &e) {
+      ACA_LOG_ERROR("Exception caught while parsing neighbor configuration, message: %s.\n",
+                    e.what());
+      overall_rc = -EFAULT;
+    } catch (...) {
+      ACA_LOG_CRIT("%s", "Unknown exception caught while parsing neighbor configuration.\n");
+      overall_rc = -EFAULT;
+    }
+
     break;
 
   default:
