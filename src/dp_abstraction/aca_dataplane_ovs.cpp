@@ -378,7 +378,6 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
           current_NeighborConfiguration.fixed_ips(ip_index).neighbor_type() ==
                   NeighborType::L3) {
         try {
-          assert(current_NeighborConfiguration.fixed_ips_size() == 1);
           virtual_ip_address =
                   current_NeighborConfiguration.fixed_ips(ip_index).ip_address();
 
