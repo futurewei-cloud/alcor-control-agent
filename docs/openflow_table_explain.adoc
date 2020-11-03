@@ -83,9 +83,9 @@ cookie=0x0, duration=239.360s, table=0, n_packets=0, n_bytes=0, priority=0 actio
 
 === Table unicast or multicast: (openflow table 2)
 
-. if unicast, resubmit to Table 51 ARP Responder, not yet implemented
-. if multicast, resubmit to Table 22 flood the tunnels, not yet implemented
-. current implementation simply resubmit to Table 22 flood the tunnels, similar to macrostack
+. if unicast, resubmit to Table 20 unicast, not yet implemented
+. if multicast, resubmit to Table 22 multicast, not yet implemented
+. current implementation simply resubmit to Table 22 flood the tunnels, similar approach as macrostack
 
 [source,shell]
 ------------------------------------------------------------
