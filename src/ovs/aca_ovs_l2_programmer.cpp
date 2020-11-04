@@ -35,7 +35,7 @@ namespace aca_ovs_l2_programmer
 {
 static int aca_set_port_vlan_workitem(const string port_name, uint vlan_id)
 {
-  ACA_LOG_DEBUG("aca_set_port_vlan_workitem ---> Entering\n");
+  ACA_LOG_DEBUG("%s", "aca_set_port_vlan_workitem ---> Entering\n");
 
   ulong not_care_culminative_time = 0;
   int overall_rc;
@@ -84,7 +84,7 @@ ACA_OVS_L2_Programmer &ACA_OVS_L2_Programmer::get_instance()
 
 int ACA_OVS_L2_Programmer::setup_ovs_bridges_if_need()
 {
-  ACA_LOG_DEBUG("ACA_OVS_L2_Programmer::setup_ovs_bridges_if_need ---> Entering\n");
+  ACA_LOG_DEBUG("%s", "ACA_OVS_L2_Programmer::setup_ovs_bridges_if_need ---> Entering\n");
 
   ulong not_care_culminative_time;
   int overall_rc = EXIT_SUCCESS;
@@ -104,10 +104,10 @@ int ACA_OVS_L2_Programmer::setup_ovs_bridges_if_need()
 
   if (br_int_existed && br_tun_existed) {
     // case 1: both br-int and br-tun exist
-    ACA_LOG_DEBUG("Both br-int and br-tun existed: do nothing\n");
+    ACA_LOG_DEBUG("%s", "Both br-int and br-tun existed: do nothing\n");
   } else if (!br_int_existed && !br_int_existed) {
     // case 2: both br-int and br-tun not there
-    ACA_LOG_DEBUG("Both br-int and br-tun not existed: create them\n");
+    ACA_LOG_DEBUG("%s", "Both br-int and br-tun not existed: create them\n");
 
     execute_ovsdb_command("add-br br-int", not_care_culminative_time, overall_rc);
 
@@ -169,7 +169,7 @@ int ACA_OVS_L2_Programmer::configure_port(const string vpc_id, const string port
                                           const string virtual_ip,
                                           uint tunnel_id, ulong &culminative_time)
 {
-  ACA_LOG_DEBUG("ACA_OVS_L2_Programmer::port_configure ---> Entering\n");
+  ACA_LOG_DEBUG("%s", "ACA_OVS_L2_Programmer::port_configure ---> Entering\n");
 
   int overall_rc = EXIT_SUCCESS;
 
@@ -259,7 +259,7 @@ int ACA_OVS_L2_Programmer::create_update_neighbor_port(const string vpc_id,
                                                        const string remote_host_ip,
                                                        uint tunnel_id, ulong &culminative_time)
 {
-  ACA_LOG_DEBUG("ACA_OVS_L2_Programmer::port_neighbor_create_update ---> Entering\n");
+  ACA_LOG_DEBUG("%s", "ACA_OVS_L2_Programmer::port_neighbor_create_update ---> Entering\n");
 
   int overall_rc = EXIT_SUCCESS;
 
@@ -318,11 +318,11 @@ int ACA_OVS_L2_Programmer::create_update_neighbor_port(const string vpc_id,
 void ACA_OVS_L2_Programmer::execute_ovsdb_command(const std::string cmd_string,
                                                   ulong &culminative_time, int &overall_rc)
 {
-  ACA_LOG_DEBUG("ACA_OVS_L2_Programmer::execute_ovsdb_command ---> Entering\n");
+  ACA_LOG_DEBUG("%s", "ACA_OVS_L2_Programmer::execute_ovsdb_command ---> Entering\n");
 
   auto ovsdb_client_start = chrono::steady_clock::now();
 
-  string ovsdb_cmd_string = "/usr/bin/ovs-vsctl " + cmd_string;
+  string ovsdb_cmd_string = "ovs-vsctl " + cmd_string;
   int rc = aca_net_config::Aca_Net_Config::get_instance().execute_system_command(ovsdb_cmd_string);
 
   if (rc != EXIT_SUCCESS) {
@@ -345,11 +345,11 @@ void ACA_OVS_L2_Programmer::execute_ovsdb_command(const std::string cmd_string,
 void ACA_OVS_L2_Programmer::execute_openflow_command(const std::string cmd_string,
                                                      ulong &culminative_time, int &overall_rc)
 {
-  ACA_LOG_DEBUG("ACA_OVS_L2_Programmer::execute_openflow_command ---> Entering\n");
+  ACA_LOG_DEBUG("%s", "ACA_OVS_L2_Programmer::execute_openflow_command ---> Entering\n");
 
   auto openflow_client_start = chrono::steady_clock::now();
 
-  string openflow_cmd_string = "/usr/bin/ovs-ofctl " + cmd_string;
+  string openflow_cmd_string = "ovs-ofctl " + cmd_string;
   int rc = aca_net_config::Aca_Net_Config::get_instance().execute_system_command(openflow_cmd_string);
 
   if (rc != EXIT_SUCCESS) {

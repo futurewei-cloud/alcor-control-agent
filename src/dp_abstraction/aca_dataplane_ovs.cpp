@@ -36,8 +36,8 @@ int ACA_Dataplane_OVS::initialize()
   return ACA_OVS_L2_Programmer::get_instance().setup_ovs_bridges_if_need();
 }
 
-int ACA_Dataplane_OVS::update_vpc_state_workitem(const VpcState current_VpcState,
-                                                 GoalStateOperationReply &gsOperationReply)
+int ACA_Dataplane_OVS::update_vpc_state_workitem(const VpcState /* current_VpcState */ ,
+                                                 GoalStateOperationReply & /* gsOperationReply */)
 {
   // TO BE IMPLEMENTED
   return ENOSYS;
@@ -103,8 +103,6 @@ int ACA_Dataplane_OVS::update_port_state_workitem(const PortState current_PortSt
   auto operation_start = chrono::steady_clock::now();
 
   PortConfiguration current_PortConfiguration = current_PortState.configuration();
-
-  assert(current_PortConfiguration.format_version() > 0);
 
   // TODO: need to design the usage of current_PortConfiguration.revision_number()
   assert(current_PortConfiguration.revision_number() > 0);
@@ -206,7 +204,7 @@ int ACA_Dataplane_OVS::update_port_state_workitem(const PortState current_PortSt
                     e.what());
       overall_rc = -EFAULT;
     } catch (...) {
-      ACA_LOG_CRIT("Unknown exception caught while parsing port configuration.\n");
+      ACA_LOG_CRIT("%s", "Unknown exception caught while parsing port configuration.\n");
       overall_rc = -EFAULT;
     }
 
@@ -296,7 +294,7 @@ int ACA_Dataplane_OVS::update_port_state_workitem(const PortState current_PortSt
                     e.what());
       overall_rc = -EFAULT;
     } catch (...) {
-      ACA_LOG_CRIT("Unknown exception caught while parsing port configuration.\n");
+      ACA_LOG_CRIT("%s", "Unknown exception caught while parsing port configuration.\n");
       overall_rc = -EFAULT;
     }
 
@@ -320,7 +318,7 @@ int ACA_Dataplane_OVS::update_port_state_workitem(const PortState current_PortSt
           culminative_network_configuration_time, operation_total_time);
 
   if (overall_rc == EXIT_SUCCESS) {
-    ACA_LOG_INFO("Successfully configured the port state.\n");
+    ACA_LOG_INFO("%s", "Successfully configured the port state.\n");
   } else if (overall_rc == EINPROGRESS) {
     ACA_LOG_INFO("Port state returned pending: rc=%d\n", overall_rc);
   } else {
@@ -350,8 +348,6 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
 
   NeighborConfiguration current_NeighborConfiguration =
           current_NeighborState.configuration();
-
-  assert(current_NeighborConfiguration.format_version() > 0);
 
   // TODO: need to design the usage of current_NeighborConfiguration.revision_number()
   assert(current_NeighborConfiguration.revision_number() > 0);
@@ -465,7 +461,7 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
                       e.what());
         overall_rc = -EFAULT;
       } catch (...) {
-        ACA_LOG_CRIT("Unknown exception caught while parsing neighbor configuration.\n");
+        ACA_LOG_CRIT("%s", "Unknown exception caught while parsing neighbor configuration.\n");
         overall_rc = -EFAULT;
       }
       break;
@@ -473,6 +469,7 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
       ACA_LOG_ERROR("Unknown neighbor_type: %d.\n", current_NeighborState.operation_type());
       overall_rc = -EINVAL;
     }
+    break;
 
   default:
     ACA_LOG_ERROR("Invalid neighbor state operation type %d\n",
@@ -493,7 +490,7 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
           culminative_network_configuration_time, operation_total_time);
 
   if (overall_rc == EXIT_SUCCESS) {
-    ACA_LOG_INFO("Successfully configured the neighbor state.\n");
+    ACA_LOG_INFO("%s", "Successfully configured the neighbor state.\n");
   } else {
     ACA_LOG_ERROR("Unable to configure the neighbor state: rc=%d\n", overall_rc);
   }
@@ -512,8 +509,6 @@ int ACA_Dataplane_OVS::update_router_state_workitem(RouterState current_RouterSt
   auto operation_start = chrono::steady_clock::now();
 
   RouterConfiguration current_RouterConfiguration = current_RouterState.configuration();
-
-  assert(current_RouterConfiguration.format_version() > 0);
 
   // TODO: need to design the usage of current_RouterConfiguration.revision_number()
   assert(current_RouterConfiguration.revision_number() > 0);
@@ -552,7 +547,7 @@ int ACA_Dataplane_OVS::update_router_state_workitem(RouterState current_RouterSt
           culminative_network_configuration_time, operation_total_time);
 
   if (overall_rc == EXIT_SUCCESS) {
-    ACA_LOG_INFO("Successfully configured the router state.\n");
+    ACA_LOG_INFO("%s", "Successfully configured the router state.\n");
   } else {
     ACA_LOG_ERROR("Unable to configure the router state: rc=%d\n", overall_rc);
   }

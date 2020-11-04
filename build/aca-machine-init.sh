@@ -1,4 +1,8 @@
 #!/bin/bash
+
+BUILD="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+echo "build path is $BUILD"
+
 # TODO: remove the unneeded dependencies
 echo "1--- installing mizar dependencies ---" && \
     apt-get update -y && apt-get install -y \
@@ -8,7 +12,6 @@ echo "1--- installing mizar dependencies ---" && \
     clang-7 \
     llvm-7 \
     libelf-dev \
-    openvswitch-switch \
     iproute2  \
     net-tools \
     iputils-ping \
@@ -97,28 +100,35 @@ echo "6--- installing openvswitch dependancies ---" && \
     make && \
     make install && \
     cp /var/local/git/openvswitch/lib/vconn-provider.h /usr/local/include/openvswitch/vconn-provider.h && \
-    cd /usr/local/bin && \
-    rm ov* && \
-    rm -rf \var\local\git\openvswitch
+    rm -rf /var/local/git/openvswitch && \
+    test -f /usr/bin/ovs-vsctl && rm -rf /usr/local/sbin/ov* /usr/local/bin/ov* /usr/local/bin/vtep* && \
     cd ~
 
-echo "7--- building alcor-control-agent"
-cd ~/alcor-control-agent && cmake . && make
+PULSAR_RELEASE_TAG='pulsar-2.6.1'
+echo "7--- installing pulsar dependacies ---" && \
+    mkdir -p /var/local/git/pulsar && \
+    wget https://archive.apache.org/dist/pulsar/${PULSAR_RELEASE_TAG}/DEB/apache-pulsar-client.deb -O /var/local/git/pulsar/apache-pulsar-client.deb && \
+    wget https://archive.apache.org/dist/pulsar/${PULSAR_RELEASE_TAG}/DEB/apache-pulsar-client-dev.deb -O /var/local/git/pulsar/apache-pulsar-client-dev.deb && \
+    cd /var/local/git/pulsar && \
+    apt install -y ./apache-pulsar-client*.deb && \
+    rm -rf /var/local/git/pulsar 
+    cd ~
 
-echo "8--- rebuilding br-tun and br-int"
-ovs-vsctl add-br br-int
-ovs-vsctl add-br br-tun
-ovs-vsctl add-port br-int patch-tun
+echo "8--- building alcor-control-agent"
+cd $BUILD/.. && cmake . && make
 
-ovs-vsctl set interface patch-tun type=patch
-ovs-vsctl set interface patch-tun options:peer=patch-int
-ovs-vsctl add-port br-tun patch-int 
-ovs-vsctl set interface patch-int type=patch
-ovs-vsctl set interface patch-int options:peer=patch-tun
+echo "9--- rebuilding br-tun and br-int"
+ovs-ctl --system-id=random --delete-bridges restart
+ovs-vsctl add-br br-int -- add-br br-tun
+ovs-vsctl \
+    -- add-port br-int patch-tun \
+    -- set interface patch-tun type=patch options:peer=patch-int \
+    -- add-port br-tun patch-int \
+    -- set interface patch-int type=patch options:peer=patch-tun
 
 ovs-ofctl add-flow br-tun "table=0, priority=1,in_port="patch-int" actions=resubmit(,2)"
 ovs-ofctl add-flow br-tun "table=2, priority=0 actions=resubmit(,22)"
 
-echo "9--- running alcor-control-agent"
+echo "10--- running alcor-control-agent"
 # sends output to null device, but stderr to console 
-nohup ~/alcor-control-agent/build/bin/AlcorControlAgent -d > /dev/null 2>&1 &
+nohup $BUILD/bin/AlcorControlAgent -d > /dev/null 2>&1 &

@@ -31,7 +31,7 @@ ACA_Vlan_Manager &ACA_Vlan_Manager::get_instance()
 // this function assumes there is no existing entry for vpc_id
 void ACA_Vlan_Manager::create_entry_unsafe(string vpc_id)
 {
-  ACA_LOG_DEBUG("ACA_Vlan_Manager::create_entry_unsafe ---> Entering\n");
+  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::create_entry_unsafe ---> Entering\n");
 
   vpc_table_entry new_table_entry;
   new_table_entry.vlan_id = current_available_vlan_id.load();
@@ -39,12 +39,12 @@ void ACA_Vlan_Manager::create_entry_unsafe(string vpc_id)
 
   _vpcs_table.emplace(vpc_id, new_table_entry);
 
-  ACA_LOG_DEBUG("ACA_OVS_Programmer::create_entry_unsafe <--- Exiting\n");
+  ACA_LOG_DEBUG("%s", "ACA_OVS_Programmer::create_entry_unsafe <--- Exiting\n");
 }
 
 uint ACA_Vlan_Manager::get_or_create_vlan_id(string vpc_id)
 {
-  ACA_LOG_DEBUG("ACA_Vlan_Manager::acquire_vlan_id ---> Entering\n");
+  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::acquire_vlan_id ---> Entering\n");
 
   // -----critical section starts-----
   _vpcs_table_mutex.lock();
@@ -55,14 +55,14 @@ uint ACA_Vlan_Manager::get_or_create_vlan_id(string vpc_id)
   _vpcs_table_mutex.unlock();
   // -----critical section ends-----
 
-  ACA_LOG_DEBUG("ACA_OVS_Programmer::acquire_vlan_id <--- Exiting\n");
+  ACA_LOG_DEBUG("%s", "ACA_OVS_Programmer::acquire_vlan_id <--- Exiting\n");
 
   return acquired_vlan_id;
 }
 
 void ACA_Vlan_Manager::add_ovs_port(string vpc_id, string ovs_port)
 {
-  ACA_LOG_DEBUG("ACA_Vlan_Manager::add_ovs_port ---> Entering\n");
+  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::add_ovs_port ---> Entering\n");
 
   // -----critical section starts-----
   _vpcs_table_mutex.lock();
@@ -73,13 +73,13 @@ void ACA_Vlan_Manager::add_ovs_port(string vpc_id, string ovs_port)
   _vpcs_table_mutex.unlock();
   // -----critical section ends-----
 
-  ACA_LOG_DEBUG("ACA_OVS_Programmer::add_ovs_port <--- Exiting\n");
+  ACA_LOG_DEBUG("%s", "ACA_OVS_Programmer::add_ovs_port <--- Exiting\n");
 }
 
 // called when a port associated with a vpc on this host is deleted
 int ACA_Vlan_Manager::remove_ovs_port(string vpc_id, string ovs_port)
 {
-  ACA_LOG_DEBUG("ACA_Vlan_Manager::remove_ovs_port ---> Entering\n");
+  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::remove_ovs_port ---> Entering\n");
 
   int overall_rc;
 
@@ -111,7 +111,7 @@ int ACA_Vlan_Manager::remove_ovs_port(string vpc_id, string ovs_port)
 
 void ACA_Vlan_Manager::add_outport(string vpc_id, string outport)
 {
-  ACA_LOG_DEBUG("ACA_Vlan_Manager::add_outport ---> Entering\n");
+  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::add_outport ---> Entering\n");
 
   // -----critical section starts-----
   _vpcs_table_mutex.lock();
@@ -128,13 +128,13 @@ void ACA_Vlan_Manager::add_outport(string vpc_id, string outport)
   _vpcs_table_mutex.unlock();
   // -----critical section ends-----
 
-  ACA_LOG_DEBUG("ACA_Vlan_Manager::add_outport <--- Exiting\n");
+  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::add_outport <--- Exiting\n");
 }
 
 // called when a neighbor info is deleted
 int ACA_Vlan_Manager::remove_outport(string vpc_id, string outport)
 {
-  ACA_LOG_DEBUG("ACA_Vlan_Manager::remove_outport ---> Entering\n");
+  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::remove_outport ---> Entering\n");
 
   int overall_rc;
 
@@ -157,7 +157,7 @@ int ACA_Vlan_Manager::remove_outport(string vpc_id, string outport)
 
 int ACA_Vlan_Manager::get_outports(string vpc_id, string &outports)
 {
-  ACA_LOG_DEBUG("ACA_Vlan_Manager::get_outports ---> Entering\n");
+  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::get_outports ---> Entering\n");
 
   int overall_rc;
   static string OUTPUT = "output:\"";

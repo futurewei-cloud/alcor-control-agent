@@ -116,7 +116,7 @@ static inline bool aca_validate_mac_address(const char *mac_string)
   unsigned char mac[6];
 
   if (mac_string == nullptr) {
-    ACA_LOG_ERROR("Input mac_string is null\n");
+    ACA_LOG_ERROR("%s", "Input mac_string is null\n");
     return false;
   }
 
@@ -139,7 +139,7 @@ static inline bool
 aca_validate_tunnel_id(const uint tunnel_id, alcor::schema::NetworkType network_type)
 {
   if (tunnel_id == 0) {
-    ACA_LOG_ERROR("Input tunnel_id is 0\n");
+    ACA_LOG_ERROR("%s", "Input tunnel_id is 0\n");
     return false;
   }
 
@@ -169,7 +169,7 @@ aca_validate_tunnel_id(const uint tunnel_id, alcor::schema::NetworkType network_
     }
 
   default:
-    ACA_LOG_ERROR("ERROR: unknown network type!\n");
+    ACA_LOG_ERROR("%s", "ERROR: unknown network type!\n");
     return false;
   }
 }

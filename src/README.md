@@ -45,13 +45,19 @@ To set up your local development environment, we recommend to use fork-and-branc
     $ git add .
     & git commit -m "commit message"
     ```
-6. Push changes to your remote fork
+6. Rebase your feature branch when there are changes in offical master, this is needed before submitting a PR
+    ```
+    $ git fetch upstream
+    $ git rebase upstream/master
+    $ git push
+    ```
+7. Push changes to your remote fork
     ```
     $ git push origin <new_branch_name>
     ```
-7. Open a Pull Request on Alcor home page, notify community on [Alcor Slack](https://alcor-networking.slack.com/) channels.
-You will need approval from at least one maintainer, who will merge your codes to Alcor master.
-8. Clean up after a merged Pull Request
+8. Open a Pull Request on alcor-control-agent home page (https://github.com/futurewei-cloud/alcor-control-agent), notify community on [Alcor Slack](https://alcor-networking.slack.com/) channels.
+You will need approval from at least one maintainer, who will merge your codes to master.
+9. Clean up after a merged Pull Request
     ```
     $ git checkout master
     $ git pull upstream master
@@ -75,6 +81,17 @@ cd ~/alcor-control-agent
 ```
 
 ## Running alcor-control-agent and tests
+Install OVS in ubuntu (18.04) if needed:
+```Shell
+root@ca62b6feec63:/mnt/host/code/alcor-control-agent# apt install openvswitch-switch
+```
+
+If you start a new container, you may need below after installing OVS:
+```Shell
+root@ca62b6feec63:/mnt/host/code/alcor-control-agent# /etc/init.d/openvswitch-switch restart
+root@ca62b6feec63:/mnt/host/code/alcor-control-agent# ovs-vswitchd --pidfile --detach
+```
+
 You can run the test (optional):
 ```Shell
 root@ca62b6feec63:/mnt/host/code/alcor-control-agent# ./build/tests/aca_tests
