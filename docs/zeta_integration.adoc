@@ -113,6 +113,26 @@ When ACA receieve OAM packet, it needs to parse it and decide what the action is
 
 . ACA uses OP_Data according to OP_Code to issue commands to ovs;
 
+
+== Cross-subnet Communication 
+
+VM1 on Host1 starts to talk to VM2 on Host2. VM1 and VM2 belong to the same VPC, but different subnets. Thus, the communication needs the help of DVR in ACA.
+
+. VM1 sends a packet to VM2;
+
+. br-int on Host receieves the packet. The source MAC of this packet is MAC_VM1, and the destination MAC is MAC_Gateway_Host1;
+
+. br-int adds VLAN and sends the packet to ACA;
+
+. ACA matches MAC_Gateway_Host1 and adds on-demand openflow rule to flow table, and sends the first packet back to br-int;
+
+. br-int replaces the VLAN tag. Now the source MAC is MAC_Host1_DVR and the destination MAC is MAC_VM2;
+
+. br_int sends the packet to br_tun;
+
+. If there is no direct path, configure direct path vis gateway path. Otherwise, this packet will go through direct path;
+
+
 == Code changes
 
 === Goal State Message Change from Alcor Server to ACA
@@ -120,8 +140,20 @@ When ACA receieve OAM packet, it needs to parse it and decide what the action is
 Add code in aca_dataplane_ovs.h to support parsing ZGC information sended from Alcor server;
 
 === OAM Packet Handling
+. include/aca_oam_server.h
+    .. Define the data struct of op_data in OAM packet;
+    .. Define the interface for receiving and parsing OAM packets;
+    .. Define the interface for establishing direct path between VMs;
 
-Add a file about adding, deleting, modifying and checking the flow and group table. This file is related to the Zeta project.
+. include/aca_zeta_state_handler.h
+    .. Define the interface to receieve goal state message from Alcor server;
+
+. include/aca_zeta_programming.h
+    .. Define the data struct about gateway path configuration;
+    .. Define the interface for adding, deleting, checking and modifying group entries;
+
+. src/zeta/aca_oam_server.cpp
+    .. Implement the interface in the include/aca_oam_server.h 
 
 === Test Code Updates
 
