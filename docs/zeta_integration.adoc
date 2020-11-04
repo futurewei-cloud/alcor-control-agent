@@ -120,7 +120,7 @@ VM1 on Host1 starts to talk to VM2 on Host2. VM1 and VM2 belong to the same VPC,
 
 . VM1 sends a packet to VM2;
 
-. br-int on Host receieves the packet. The source MAC of this packet is MAC_VM1, and the destination MAC is MAC_Gateway_Host1;
+. br-int on Host receieves the packet. The source MAC of this packet is MAC_VM1, and the destination MAC is MAC_Gateway_VM1;
 
 . br-int adds VLAN and sends the packet to ACA;
 
