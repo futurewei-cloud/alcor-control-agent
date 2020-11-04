@@ -103,10 +103,10 @@ int ACA_OVS_L2_Programmer::setup_ovs_bridges_if_need()
   overall_rc = EXIT_SUCCESS;
 
   if (br_int_existed && br_tun_existed) {
-    // case 1: both br-int and br-tun exist
+    // case 1: both br-int and br-tun existed
     ACA_LOG_DEBUG("%s", "Both br-int and br-tun existed: do nothing\n");
   } else if (!br_int_existed && !br_int_existed) {
-    // case 2: both br-int and br-tun not there
+    // case 2: both br-int and br-tun not existed
     ACA_LOG_DEBUG("%s", "Both br-int and br-tun not existed: create them\n");
 
     execute_ovsdb_command("add-br br-int", not_care_culminative_time, overall_rc);
