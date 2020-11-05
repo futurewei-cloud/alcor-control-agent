@@ -12,16 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef ACA_ZETA_PROGRAMMING_H
-#define ACA_ZETA_PROGRAMMING_H
+#ifndef ACA_ZETA_PROGRAMMER_H
+#define ACA_ZETA_PROGRAMMER_H
 
 #include <string>
 #include <vector>
 
 using namespace std;
 
-namespace aca_zeta_programming
-
+namespace aca_zeta_programmer
 {
 struct zeta_config {
   string group_id;
@@ -30,16 +29,18 @@ struct zeta_config {
   vector<string> buckets;
 };
 
-// DHCP programming interface class
-class ACA_Zeta_Programming {
+// Zeta programming interface class
+class ACA_Zeta_Programmer {
   public:
-  int add_group_entry(const char *bridge, zeta_config *zeta_config_in);
+  static ACA_Zeta_Programmer &get_instance();
 
-  int dump_groups_entry(const char *bridge, const char *opt);
+  int add_group_entry(zeta_config *zeta_config_in);
 
-  int update_group_entry(const char *bridge, zeta_config *zeta_config_in);
+  int dump_groups_entry(const char *opt);
 
-  int delete_group_entry(const char *bridge, zeta_config *zeta_config_in);
+  int update_group_entry(zeta_config *zeta_config_in);
+
+  int delete_group_entry(zeta_config *zeta_config_in);
 };
-} // namespace aca_zeta_programming
-#endif // #ifndef ACA_ZETA_PROGRAMMING_H
+} // namespace aca_zeta_programmer
+#endif // #ifndef ACA_ZETA_PROGRAMMER_H
