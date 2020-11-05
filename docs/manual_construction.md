@@ -144,22 +144,22 @@ root@computer7:/# ovs-ofctl del-flows br-tun
 
 
 # Packet-out flow tables：
-root@computer7:/# ovs-ofctl add-flow br-tun table=0,in_port="patch-int",priority=1,actions="resubmit(,2)"
+root@computer7:/# ovs-ofctl add-flow br-tun table=0,in_port="patch-int",priority=1,actions="resubmit(,30)"
 
 
 # Group table：
 root@computer7:/# ovs-ofctl -O OpenFlow13 add-group br-tun group_id=100,type=select,bucket=output:vxlan231,bucket=output:vxlan232
 root@computer7:/# ovs-ofctl -O OpenFlow13 add-group br-tun group_id=200,type=select,bucket=output:vxlan233,bucket=output:vxlan234
 
-root@computer7:/# ovs-ofctl add-flow br-tun table=2,priority=1,dl_vlan=100,actions="strip_vlan,load:0x1->NXM_NX_TUN_ID[],group:100"
-root@computer7:/# ovs-ofctl add-flow br-tun table=2,priority=1,dl_vlan=200,actions="strip_vlan,load:0x2->NXM_NX_TUN_ID[],group:200"
+root@computer7:/# ovs-ofctl add-flow br-tun table=30,priority=50,dl_vlan=100,actions="strip_vlan,load:0x1->NXM_NX_TUN_ID[],group:100"
+root@computer7:/# ovs-ofctl add-flow br-tun table=30,priority=50,dl_vlan=200,actions="strip_vlan,load:0x2->NXM_NX_TUN_ID[],group:200"
 
 
 # Packet-in flow tables：
-root@computer7:/# ovs-ofctl add-flow br-tun table=0,priority=1,in_port="vxlan231",actions="resubmit(,4)"
-root@computer7:/# ovs-ofctl add-flow br-tun table=0,priority=1,in_port="vxlan232",actions="resubmit(,4)"
-root@computer7:/# ovs-ofctl add-flow br-tun table=0,priority=1,in_port="vxlan233",actions="resubmit(,4)"
-root@computer7:/# ovs-ofctl add-flow br-tun table=0,priority=1,in_port="vxlan234",actions="resubmit(,4)"
+root@computer7:/# ovs-ofctl add-flow br-tun table=0,priority=25,in_port="vxlan231",actions="resubmit(,4)"
+root@computer7:/# ovs-ofctl add-flow br-tun table=0,priority=25,in_port="vxlan232",actions="resubmit(,4)"
+root@computer7:/# ovs-ofctl add-flow br-tun table=0,priority=25,in_port="vxlan233",actions="resubmit(,4)"
+root@computer7:/# ovs-ofctl add-flow br-tun table=0,priority=25,in_port="vxlan234",actions="resubmit(,4)"
 
 root@computer7:/# ovs-ofctl add-flow br-tun table=4,priority=1,tun_id=0x1,actions="mod_vlan_vid:100,output:"patch-int""
 root@computer7:/# ovs-ofctl add-flow br-tun table=4,priority=1,tun_id=0x2,actions="mod_vlan_vid:200,output:"patch-int""
@@ -169,15 +169,15 @@ root@computer7:/# ovs-ofctl add-flow br-tun table=4,priority=1,tun_id=0x2,action
 -   **5. Show default flow tables in br-tun**
 ```
 root@computer7:/# ovs-ofctl dump-flows br-tun
- cookie=0x0, duration=143.676s, table=0, n_packets=0, n_bytes=0, priority=1,in_port="patch-int" actions=resubmit(,2)
- cookie=0x0, duration=120.965s, table=0, n_packets=0, n_bytes=0, priority=1,in_port=vxlan231 actions=resubmit(,4)
- cookie=0x0, duration=116.247s, table=0, n_packets=0, n_bytes=0, priority=1,in_port=vxlan232 actions=resubmit(,4)
- cookie=0x0, duration=111.779s, table=0, n_packets=0, n_bytes=0, priority=1,in_port=vxlan233 actions=resubmit(,4)
- cookie=0x0, duration=105.270s, table=0, n_packets=0, n_bytes=0, priority=1,in_port=vxlan234 actions=resubmit(,4)
- cookie=0x0, duration=130.806s, table=2, n_packets=0, n_bytes=0, priority=1,dl_vlan=100 actions=strip_vlan,load:0x1->NXM_NX_TUN_ID[],group:100
- cookie=0x0, duration=126.095s, table=2, n_packets=0, n_bytes=0, priority=1,dl_vlan=200 actions=strip_vlan,load:0x2->NXM_NX_TUN_ID[],group:200
- cookie=0x0, duration=98.494s, table=4, n_packets=0, n_bytes=0, priority=1,tun_id=0x1 actions=mod_vlan_vid:100,output:"patch-int"
- cookie=0x0, duration=93.063s, table=4, n_packets=0, n_bytes=0, priority=1,tun_id=0x2 actions=mod_vlan_vid:200,output:"patch-int"
+ cookie=0x0, duration=286.369s, table=0, n_packets=0, n_bytes=0, priority=1,in_port="patch-int" actions=resubmit(,30)
+ cookie=0x0, duration=251.400s, table=0, n_packets=0, n_bytes=0, priority=25,in_port=vxlan231 actions=resubmit(,4)
+ cookie=0x0, duration=245.223s, table=0, n_packets=0, n_bytes=0, priority=25,in_port=vxlan232 actions=resubmit(,4)
+ cookie=0x0, duration=33.086s, table=0, n_packets=0, n_bytes=0, priority=25,in_port=vxlan233 actions=resubmit(,4)
+ cookie=0x0, duration=19.574s, table=0, n_packets=0, n_bytes=0, priority=25,in_port=vxlan234 actions=resubmit(,4)
+ cookie=0x0, duration=12.766s, table=4, n_packets=0, n_bytes=0, priority=1,tun_id=0x1 actions=mod_vlan_vid:100,output:"patch-int"
+ cookie=0x0, duration=6.428s, table=4, n_packets=0, n_bytes=0, priority=1,tun_id=0x2 actions=mod_vlan_vid:200,output:"patch-int"
+ cookie=0x0, duration=264.126s, table=30, n_packets=0, n_bytes=0, priority=50,dl_vlan=100 actions=strip_vlan,load:0x1->NXM_NX_TUN_ID[],group:100
+ cookie=0x0, duration=258.319s, table=30, n_packets=0, n_bytes=0, priority=50,dl_vlan=200 actions=strip_vlan,load:0x2->NXM_NX_TUN_ID[],group:200
 ```
 
 
@@ -263,22 +263,22 @@ root@computer8:/# ovs-ofctl del-flows br-tun
 
 
 # Packet-out flow tables：
-root@computer8:/# ovs-ofctl add-flow br-tun table=0,in_port="patch-int",priority=1,actions="resubmit(,2)"
+root@computer8:/# ovs-ofctl add-flow br-tun table=0,in_port="patch-int",priority=1,actions="resubmit(,30)"
 
 
 # Group table：
 root@computer8:/# ovs-ofctl -O OpenFlow13 add-group br-tun group_id=100,type=select,bucket=output:vxlan231,bucket=output:vxlan232
 root@computer8:/# ovs-ofctl -O OpenFlow13 add-group br-tun group_id=200,type=select,bucket=output:vxlan233,bucket=output:vxlan234
 
-root@computer8:/# ovs-ofctl add-flow br-tun table=2,priority=1,dl_vlan=100,actions="strip_vlan,load:0x1->NXM_NX_TUN_ID[],group:100"
-root@computer8:/# ovs-ofctl add-flow br-tun table=2,priority=1,dl_vlan=200,actions="strip_vlan,load:0x2->NXM_NX_TUN_ID[],group:200"
+root@computer8:/# ovs-ofctl add-flow br-tun table=30,priority=50,dl_vlan=100,actions="strip_vlan,load:0x1->NXM_NX_TUN_ID[],group:100"
+root@computer8:/# ovs-ofctl add-flow br-tun table=30,priority=50,dl_vlan=200,actions="strip_vlan,load:0x2->NXM_NX_TUN_ID[],group:200"
 
 
 # Packet-in flow tables：
-root@computer8:/# ovs-ofctl add-flow br-tun table=0,priority=1,in_port="vxlan231",actions="resubmit(,4)"
-root@computer8:/# ovs-ofctl add-flow br-tun table=0,priority=1,in_port="vxlan232",actions="resubmit(,4)"
-root@computer8:/# ovs-ofctl add-flow br-tun table=0,priority=1,in_port="vxlan233",actions="resubmit(,4)"
-root@computer8:/# ovs-ofctl add-flow br-tun table=0,priority=1,in_port="vxlan234",actions="resubmit(,4)"
+root@computer8:/# ovs-ofctl add-flow br-tun table=0,priority=25,in_port="vxlan231",actions="resubmit(,4)"
+root@computer8:/# ovs-ofctl add-flow br-tun table=0,priority=25,in_port="vxlan232",actions="resubmit(,4)"
+root@computer8:/# ovs-ofctl add-flow br-tun table=0,priority=25,in_port="vxlan233",actions="resubmit(,4)"
+root@computer8:/# ovs-ofctl add-flow br-tun table=0,priority=25,in_port="vxlan234",actions="resubmit(,4)"
 
 root@computer8:/# ovs-ofctl add-flow br-tun table=4,priority=1,tun_id=0x1,actions="mod_vlan_vid:100,output:"patch-int""
 root@computer8:/# ovs-ofctl add-flow br-tun table=4,priority=1,tun_id=0x2,actions="mod_vlan_vid:200,output:"patch-int""
@@ -287,15 +287,15 @@ root@computer8:/# ovs-ofctl add-flow br-tun table=4,priority=1,tun_id=0x2,action
 -   **5. Show default flow tables in br-tun**
 ```
 root@computer8:/# ovs-ofctl dump-flows br-tun
- cookie=0x0, duration=93.617s, table=0, n_packets=0, n_bytes=0, priority=1,in_port="patch-int" actions=resubmit(,2)
- cookie=0x0, duration=38.897s, table=0, n_packets=0, n_bytes=0, priority=1,in_port=vxlan231 actions=resubmit(,4)
- cookie=0x0, duration=33.897s, table=0, n_packets=0, n_bytes=0, priority=1,in_port=vxlan232 actions=resubmit(,4)
- cookie=0x0, duration=29.184s, table=0, n_packets=0, n_bytes=0, priority=1,in_port=vxlan233 actions=resubmit(,4)
- cookie=0x0, duration=20.681s, table=0, n_packets=0, n_bytes=0, priority=1,in_port=vxlan234 actions=resubmit(,4)
- cookie=0x0, duration=83.079s, table=2, n_packets=0, n_bytes=0, priority=1,dl_vlan=100 actions=strip_vlan,load:0x1->NXM_NX_TUN_ID[],group:100
- cookie=0x0, duration=77.929s, table=2, n_packets=0, n_bytes=0, priority=1,dl_vlan=200 actions=strip_vlan,load:0x2->NXM_NX_TUN_ID[],group:200
- cookie=0x0, duration=15.800s, table=4, n_packets=0, n_bytes=0, priority=1,tun_id=0x1 actions=mod_vlan_vid:100,output:"patch-int"
- cookie=0x0, duration=11.167s, table=4, n_packets=0, n_bytes=0, priority=1,tun_id=0x2 actions=mod_vlan_vid:200,output:"patch-int"
+ cookie=0x0, duration=422.733s, table=0, n_packets=0, n_bytes=0, priority=1,in_port="patch-int" actions=resubmit(,30)
+ cookie=0x0, duration=386.359s, table=0, n_packets=0, n_bytes=0, priority=25,in_port=vxlan231 actions=resubmit(,4)
+ cookie=0x0, duration=379.887s, table=0, n_packets=0, n_bytes=0, priority=25,in_port=vxlan232 actions=resubmit(,4)
+ cookie=0x0, duration=373.639s, table=0, n_packets=0, n_bytes=0, priority=25,in_port=vxlan233 actions=resubmit(,4)
+ cookie=0x0, duration=365.607s, table=0, n_packets=0, n_bytes=0, priority=25,in_port=vxlan234 actions=resubmit(,4)
+ cookie=0x0, duration=357.078s, table=4, n_packets=0, n_bytes=0, priority=1,tun_id=0x1 actions=mod_vlan_vid:100,output:"patch-int"
+ cookie=0x0, duration=349.646s, table=4, n_packets=0, n_bytes=0, priority=1,tun_id=0x2 actions=mod_vlan_vid:200,output:"patch-int"
+ cookie=0x0, duration=400.533s, table=30, n_packets=0, n_bytes=0, priority=50,dl_vlan=100 actions=strip_vlan,load:0x1->NXM_NX_TUN_ID[],group:100
+ cookie=0x0, duration=393.687s, table=30, n_packets=0, n_bytes=0, priority=50,dl_vlan=200 actions=strip_vlan,load:0x2->NXM_NX_TUN_ID[],group:200
 ```
 
 
@@ -335,8 +335,8 @@ rtt min/avg/max/mdev = 0.929/2.215/5.817/2.081 ms
 ```
 root@computer7:/# ovs-ofctl dump-flows br-tun
  ......
- cookie=0x0, duration=1686.595s, table=2, n_packets=18, n_bytes=1428, priority=1,dl_vlan=100 actions=strip_vlan,load:0x1->NXM_NX_TUN_ID[],group:100
- cookie=0x0, duration=1681.884s, table=2, n_packets=12, n_bytes=728, priority=1,dl_vlan=200 actions=strip_vlan,load:0x2->NXM_NX_TUN_ID[],group:200
+ cookie=0x0, duration=1299.225s, table=30, n_packets=6, n_bytes=476, priority=50,dl_vlan=100 actions=strip_vlan,load:0x1->NXM_NX_TUN_ID[],group:100
+ cookie=0x0, duration=1293.418s, table=30, n_packets=6, n_bytes=476, priority=50,dl_vlan=200 actions=strip_vlan,load:0x2->NXM_NX_TUN_ID[],group:200
  ......
 ```
 
@@ -370,11 +370,10 @@ root@computer7:/# ovs-vsctl add-port br-tun vxlan238 -- set interface vxlan238 t
 -   **2. Add flow tables for direct path**
 ```
 # Packet-out flow tables：
-root@computer7:/# ovs-ofctl add-flow br-tun table=0,in_port="patch-int",dl_dst=96:fc:fd:b2:cc:e9,priority=2,actions="resubmit(,2)"
-root@computer7:/# ovs-ofctl add-flow br-tun table=24,priority=1,dl_vlan=100,actions="strip_vlan,load:0x1->NXM_NX_TUN_ID[],output:"vxlan238""
+root@computer7:/# ovs-ofctl add-flow br-tun table=0,priority=50,in_port="patch-int",dl_vlan=100,dl_dst=96:fc:fd:b2:cc:e9,actions="strip_vlan,load:0x1->NXM_NX_TUN_ID[],output:"vxlan238""
 
 # Packet-in flow tables：
-root@computer7:/# ovs-ofctl add-flow br-tun table=0,priority=2,in_port="vxlan238",actions="resubmit(,4)"
+root@computer7:/# ovs-ofctl add-flow br-tun table=0,priority=25,in_port="vxlan238",actions="resubmit(,4)"
 ```
 
 
@@ -388,12 +387,10 @@ root@computer8:/# ovs-vsctl add-port br-tun vxlan237 -- set interface vxlan237 t
 -   **2. Add flow tables for direct path**
 ```
 # Packet-out flow tables：
-root@computer8:/# ovs-ofctl add-flow br-tun table=0,in_port="patch-int",dl_dst=9a:c2:f9:79:eb:37,priority=2,actions="resubmit(,2)"
-root@computer8:/# ovs-ofctl add-flow br-tun table=24,priority=1,dl_vlan=100,actions="strip_vlan,load:0x1->NXM_NX_TUN_ID[],output:"vxlan237""
+root@computer8:/# ovs-ofctl add-flow br-tun table=0,priority=50,in_port="patch-int",dl_vlan=100,dl_dst=9a:c2:f9:79:eb:37,actions="strip_vlan,load:0x1->NXM_NX_TUN_ID[],output:"vxlan237""
 
 # Packet-in flow tables：
-
-root@computer8:/# ovs-ofctl add-flow br-tun table=0,priority=2,in_port="vxlan237",actions="resubmit(,4)"
+root@computer8:/# ovs-ofctl add-flow br-tun table=0,priority=25,in_port="vxlan237",actions="resubmit(,4)"
 ```
 
 
@@ -414,10 +411,10 @@ PING 192.168.1.81 (192.168.1.81) 56(84) bytes of data.
 rtt min/avg/max/mdev = 0.986/2.221/5.457/1.873 ms
 ```
 
--   **2. Observe the n_packets increase of the "priority=2,in_port="patch-int",dl_dst=96:fc:fd:b2:cc:e9 actions=resubmit(,2)" rule, 
+-   **2. Observe the n_packets increase of the on demand direct path rule, 
 that means the direct path works.**
 ```
 root@computer7:/# ovs-ofctl dump-flows br-tun
- cookie=0x0, duration=1459.468s, table=0, n_packets=6, n_bytes=476, priority=2,in_port="patch-int",dl_dst=96:fc:fd:b2:cc:e9 actions=resubmit(,2)
+ cookie=0x0, duration=609.300s, table=0, n_packets=6, n_bytes=476, priority=50,in_port="patch-int",dl_vlan=100,dl_dst=96:fc:fd:b2:cc:e9 actions=strip_vlan,load:0x1->NXM_NX_TUN_ID[],output:vxlan238
  ......
 ```
