@@ -35,28 +35,47 @@ namespace aca_oam_server
 #define OAM_MSG_NONE (0x3)
 #define OAM_MSG_MAX (0x3)
 
+struct oam_match{
+    string sip;
+    string dip;
+    string sport;
+    string dport;
+    string proto;
+    string vni;
+};
+
+struct oam_action{
+    string inst_nw_dst;
+    string node_nw_dst;
+    string inst_dl_dst;
+    string node_dl_dst;
+    string idle_timeout;
+};
+
+
 struct flow_inject_msg{
-    struct in_addr *inner_src_ip; // Inner Packet SIP
-    struct in_addr *inner_dst_ip; // Inner Packet DIP
+    struct in_addr inner_src_ip; // Inner Packet SIP
+    struct in_addr inner_dst_ip; // Inner Packet DIP
     uint16_t src_port; // Inner Packet SPort
     uint16_t dst_port; // Inner Packet DPort
     uint8_t proto; // Inner Packet Protocol
     uint8_t vni[4]; // Inner Packet Protocol
     struct in_addr inst_dst_ip; // Destination Inst IP
     struct in_addr node_dst_ip; // Destination Node IP
-    struct ether_addr *inst_dst_mac; // Destination Inst MAC
-    struct ether_addr *node_dst_mac; // Destination Node MAC
+    // struct ether_addr *inst_dst_mac; // Destination Inst MAC
+    // struct ether_addr *node_dst_mac; // Destination Node MAC
+    uint8_t inst_dst_mac[6];
+    uint8_t node_dst_mac[6];
     uint16_t idle_timeout; // 0 - 65536s
 };
 
 struct flow_del_msg{
-    struct in_addr *inner_src_ip;
-    struct in_addr *inner_dst_ip; 
+    struct in_addr inner_src_ip;
+    struct in_addr inner_dst_ip; 
     uint16_t src_port; 
     uint16_t dst_port; 
     uint8_t proto; 
     uint8_t vni[4];
-    struct ether_addr *inst_dst_mac; // Destination Inst MAC
 };
 
 struct oam_message{
@@ -79,31 +98,32 @@ class ACA_Oam_Server {
 
   void _deinit_oam_ofp();
   
-  void oams_recv(uint32_t in_port, void *message);
+  void oams_recv(void *message);
 
   uint8_t _get_message_type(oam_message *oammsg);
 
-  int arp_instance_response(const string inst_dst_mac);
+  oam_match get_oam_match_field(oam_message *oammsg);
 
-  int add_direct_path(alcor::schema::NetworkType network_type, const string inst_dst_mac,
-            const string vlan_id, const string vni, const string outport_name);
+  oam_action get_oam_action_field(oam_message *oammsg);
 
-  int del_direct_path(const string inst_dst_mac, const string vlan_id);
+  int add_direct_path(oam_match match, oam_action action);
+
+  int del_direct_path(oam_match match);
 
   void _init_oam_msg_ops();
 
+  int _validate_oam_message(oam_message *oammsg);
+
   void _standardize_mac_address(string &mac_string);
 
-  void _parse_oam_flow_injection(uint32_t in_port, oam_message *oammsg);
+  void _parse_oam_flow_injection(oam_message *oammsg);
 
-  void _parse_oam_flow_deletion(uint32_t in_port, oam_message *oammsg);
+  void _parse_oam_flow_deletion(oam_message *oammsg);
 
   void (aca_oam_server::ACA_Oam_Server ::*_parse_oam_msg_ops[OAM_MSG_MAX])(
-        uint32_t in_port, oam_message *oammsg);
+        oam_message *oammsg);
 
-  //void get_mac_address(uint8_t *mac_addr);
-
-  string get_tunnel_id(uint8_t *vni);
+  string _get_mac_addr(uint8_t *mac);
 
   string get_vpc_id(uint8_t *vni);
 
