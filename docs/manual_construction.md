@@ -193,7 +193,7 @@ root@computer7:/# ovs-ofctl dump-flows br-tun
 ```
 
 
-#### 3.1 computer node2 (172.16.62.238)
+#### 3.2 computer node2 (172.16.62.238)
 
 -   **1. Add br-int and br-tun, and create VXLAN tunnels connected to each gateway node.**
 ```
