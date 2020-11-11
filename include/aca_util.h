@@ -111,6 +111,15 @@ static inline const char *aca_get_neighbor_type_string(alcor::schema::NeighborTy
   }
 }
 
+static inline bool aca_validate_fixed_ips_size(const int fixed_ips_size)
+{
+  if (fixed_ips_size <= 0) {
+    ACA_LOG_ERROR("fixed_ips_size: %d is less than zero\n", fixed_ips_size);
+    return false;
+  }
+  return true;
+}
+
 static inline bool aca_validate_mac_address(const char *mac_string)
 {
   unsigned char mac[6];

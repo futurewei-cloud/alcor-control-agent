@@ -117,17 +117,12 @@ echo "7--- installing pulsar dependacies ---" && \
 echo "8--- building alcor-control-agent"
 cd $BUILD/.. && cmake . && make
 
-echo "9--- rebuilding br-tun and br-int"
-ovs-ctl --system-id=random --delete-bridges restart
-ovs-vsctl add-br br-int -- add-br br-tun
-ovs-vsctl \
-    -- add-port br-int patch-tun \
-    -- set interface patch-tun type=patch options:peer=patch-int \
-    -- add-port br-tun patch-int \
-    -- set interface patch-int type=patch options:peer=patch-tun
-
-ovs-ofctl add-flow br-tun "table=0, priority=1,in_port="patch-int" actions=resubmit(,2)"
-ovs-ofctl add-flow br-tun "table=2, priority=0 actions=resubmit(,22)"
+if [ "$1" == "delete-bridges" ]; then
+  echo "9--- deleting br-tun and br-int if requested"
+  PATH=$PATH:/usr/local/share/openvswitch/scripts \
+      LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib
+  ovs-ctl --system-id=random --delete-bridges restart
+fi
 
 echo "10--- running alcor-control-agent"
 # sends output to null device, but stderr to console 
