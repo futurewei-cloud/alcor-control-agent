@@ -120,17 +120,15 @@ VM1 on Host1 starts to talk to VM2 on Host2. VM1 and VM2 belong to the same VPC,
 
 . VM1 sends a packet to VM2;
 
-. br-int on Host receieves the packet. The source MAC of this packet is MAC_VM1, and the destination MAC is MAC_Gateway_VM1;
+. br-int on Host receives the packet. The source MAC of this packet is MAC_VM1, and the destination MAC is MAC_Gateway_VM1;
 
-. br-int adds VLAN and sends the packet to ACA;
+. br-int adds VLAN and sends the packet to ACA based on the on-demand routing implementation (issue#134);
 
 . ACA matches MAC_Gateway_Host1 and adds on-demand openflow rule to flow table, and sends the first packet back to br-int;
 
-. br-int replaces the VLAN tag. Now the source MAC is MAC_Host1_DVR and the destination MAC is MAC_VM2;
+. br_int sends the packet to br_tun; Convert the source MAC to MAC_Host1_DVR and the destination MAC to MAC_VM2 with on-demand routing rule;
 
-. br_int sends the packet to br_tun;
-
-. If there is no direct path, configure direct path vis gateway path. Otherwise, this packet will go through direct path;
+. If there is no direct path, send the packet to Zeta gateway path. Otherwise, this packet will go through direct VM path;
 
 
 == Code changes
