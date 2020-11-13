@@ -191,6 +191,8 @@ int ACA_OVS_L2_Programmer::configure_port(const string vpc_id, const string port
 
   ACA_Vlan_Manager::get_instance().add_ovs_port(vpc_id, port_name);
 
+  // table 4 = incoming vxlan, allow incoming vxlan traffic matching tunnel_id to
+  // stamp with internal vlan and deliver to br-int
   execute_openflow_command(
           "add-flow br-tun \"table=4, priority=1,tun_id=" + to_string(tunnel_id) +
                   " actions=mod_vlan_vid:" + to_string(internal_vlan_id) + ",output:\"patch-int\"\"",
@@ -249,7 +251,7 @@ int ACA_OVS_L2_Programmer::create_update_neighbor_port(const string vpc_id,
                                                        const string remote_host_ip,
                                                        uint tunnel_id, ulong &culminative_time)
 {
-  ACA_LOG_DEBUG("%s", "ACA_OVS_L2_Programmer::port_neighbor_create_update ---> Entering\n");
+  ACA_LOG_DEBUG("%s", "ACA_OVS_L2_Programmer::create_update_neighbor_port ---> Entering\n");
 
   int overall_rc = EXIT_SUCCESS;
 
@@ -267,6 +269,7 @@ int ACA_OVS_L2_Programmer::create_update_neighbor_port(const string vpc_id,
 
   string outport_name = aca_get_outport_name(network_type, remote_host_ip);
 
+  // create ovs outport for a particular remote_ip
   string cmd_string =
           "--may-exist add-port br-tun " + outport_name + " -- set interface " +
           outport_name + " type=" + aca_get_network_type_string(network_type) +
@@ -288,18 +291,22 @@ int ACA_OVS_L2_Programmer::create_update_neighbor_port(const string vpc_id,
     throw std::runtime_error("vpc_id entry not found in vpc_table");
   }
 
+  // match internal vlan based on VPC, output for all outports based on the same
+  // tunnel ID (multicast traffic)
   cmd_string = "add-flow br-tun \"table=22,priority=1,dl_vlan=" + to_string(internal_vlan_id) +
                " actions=strip_vlan,load:" + to_string(tunnel_id) +
                "->NXM_NX_TUN_ID[]," + full_outport_list + "\"";
 
   execute_openflow_command(cmd_string, culminative_time, overall_rc);
 
+  // incoming from neighbor through vxlan port (based on remote IP)
+  // [TBD] consider raising the priority to med based on design
   cmd_string = "add-flow br-tun \"table=0,priority=1,in_port=\"" +
                outport_name + "\" actions=resubmit(,4)\"";
 
   execute_openflow_command(cmd_string, culminative_time, overall_rc);
 
-  ACA_LOG_DEBUG("ACA_OVS_L2_Programmer::port_neighbor_create_update <--- Exiting, overall_rc = %d\n",
+  ACA_LOG_DEBUG("ACA_OVS_L2_Programmer::create_update_neighbor_port <--- Exiting, overall_rc = %d\n",
                 overall_rc);
 
   return overall_rc;

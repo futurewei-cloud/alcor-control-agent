@@ -39,7 +39,7 @@ void ACA_Vlan_Manager::create_entry_unsafe(string vpc_id)
 
   _vpcs_table.emplace(vpc_id, new_table_entry);
 
-  ACA_LOG_DEBUG("%s", "ACA_OVS_Programmer::create_entry_unsafe <--- Exiting\n");
+  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::create_entry_unsafe <--- Exiting\n");
 }
 
 uint ACA_Vlan_Manager::get_or_create_vlan_id(string vpc_id)
@@ -55,7 +55,7 @@ uint ACA_Vlan_Manager::get_or_create_vlan_id(string vpc_id)
   _vpcs_table_mutex.unlock();
   // -----critical section ends-----
 
-  ACA_LOG_DEBUG("%s", "ACA_OVS_Programmer::acquire_vlan_id <--- Exiting\n");
+  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::acquire_vlan_id <--- Exiting\n");
 
   return acquired_vlan_id;
 }
@@ -73,7 +73,7 @@ void ACA_Vlan_Manager::add_ovs_port(string vpc_id, string ovs_port)
   _vpcs_table_mutex.unlock();
   // -----critical section ends-----
 
-  ACA_LOG_DEBUG("%s", "ACA_OVS_Programmer::add_ovs_port <--- Exiting\n");
+  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::add_ovs_port <--- Exiting\n");
 }
 
 // called when a port associated with a vpc on this host is deleted
