@@ -21,11 +21,15 @@ using namespace std;
 
 namespace aca_dhcp_programming_if
 {
+#define DHCP_MSG_OPTS_DNS_LENGTH (5) //max 5 dns address
 struct dhcp_config {
   string mac_address;
   string ipv4_address;
   string ipv6_address;
+  string subnet_mask;
+  string gateway_address;
   string port_host_name;
+  string dns_addresses[DHCP_MSG_OPTS_DNS_LENGTH];
 };
 
 // DHCP programming interface class

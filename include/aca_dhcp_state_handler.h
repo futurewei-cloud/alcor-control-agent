@@ -26,6 +26,7 @@ class Aca_Dhcp_State_Handler {
 
   // process ONE DHCP state
   int update_dhcp_state_workitem(const alcor::schema::DHCPState current_DHCPState,
+                                 alcor::schema::GoalState &parsed_struct,
                                  alcor::schema::GoalStateOperationReply &gsOperationReply);
 
   // process 0 to N DHCP states

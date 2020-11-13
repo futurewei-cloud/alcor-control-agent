@@ -31,12 +31,18 @@ struct dhcp_entry_data {
   string ipv4_address;
   string ipv6_address;
   string port_host_name;
+  string subnet_mask;
+  string gateway_address;
+  string dns_addresses[DHCP_MSG_OPTS_DNS_LENGTH];
 };
 
 #define DHCP_ENTRY_DATA_SET(pData, pCfg)                                       \
   do {                                                                         \
     (pData)->ipv4_address = (pCfg)->ipv4_address;                              \
     (pData)->port_host_name = (pCfg)->port_host_name;                          \
+    (pData)->subnet_mask = (pCfg)->subnet_mask;                                \
+    (pData)->gateway_address = (pCfg)->gateway_address;                        \
+    (pData)->dns_addresses = (pCfg)->dns_addresses;                            \
   } while (0)
 
 //BOOTP Message Type
@@ -60,8 +66,74 @@ struct dhcp_entry_data {
 #define DHCP_MSG_HWTYPE_ETH (0x1)
 #define DHCP_MSG_HWTYPE_ETH_LEN (0x6)
 #define DHCP_MSG_MAGIC_COOKIE (0x63825363) //magic cookie per RFC2131
+#define DHCP_MSG_SERVER_ID (0x7f000001) //Hard coded for 127.0.0.1
 
 #pragma pack(push, 1)
+
+// define ip header
+struct iphear {
+  uint8_t version;
+  uint8_t ds;
+  uint16_t total_len;
+  uint16_t identi;
+  uint16_t fregment;
+  uint8_t tol;
+  uint8_t protocol;
+  uint16_t checksum;
+  uint32_t src_ip;
+  uint32_t dst_ip;
+  uint16_t src_port;
+  uint16_t dst_port;
+  uint16_t len;
+  uint16_t udp_checksum;
+};
+
+// define upd header
+struct udphear {
+  uint32_t srcIp;
+  uint32_t dstIp;
+  uint16_t udp_len;
+  uint8_t rsv;
+  uint8_t protocol;
+  uint16_t src_port;
+  uint16_t dst_port;
+  uint16_t len;
+  uint16_t checksum;
+  uint8_t op;
+  uint8_t htype;
+  uint8_t hlen;
+  uint8_t hops;
+  uint32_t xid;
+  uint16_t secs;
+  uint16_t flags;
+  uint32_t ciaddr;
+  uint32_t yiaddr;
+  uint32_t siaddr;
+  uint32_t giaddr;
+  uint8_t chaddr[16];
+  uint8_t sname[64];
+  uint8_t file[128];
+  uint32_t cookie;
+  uint8_t options[308];
+};
+
+//DHCP message ip header field
+#define DHCP_MSG_IP_HEADER_SRC_IP (0x7f000101)
+#define DHCP_MSG_IP_HEADER_DEST_IP (0xffffffff)
+#define DHCP_MSG_IP_HEADER_SRC_PORT (67)
+#define DHCP_MSG_IP_HEADER_DEST_PORT (68)
+#define DHCP_MSG_IP_HEADER_VERSION (69) //ip version + ip header length
+#define DHCP_MSG_IP_HEADER_PROTOCOL (17) //udp protocol
+#define DHCP_MSG_IP_HEADER_FREGMENT (0x4000) //don't fregment
+#define DHCP_MSG_IP_HEADER_TOL (16) //time to live
+#define DHCP_MSG_IP_HEADER_IDENTI (0) //identification 
+#define DHCP_MSG_IP_HEADER_DS (0) //different service field
+
+//DHCP message l2 layer
+#define DHCP_MSG_L2_HEADER_DEST_MAC ("ffffffffffff")
+#define DHCP_MSG_L2_HEADER_SRC_MAC ("60d755f7c209")
+#define DHCP_MSG_L2_HEADER_TYPE ("0800")
+
 struct dhcp_message {
   uint8_t op;
   uint8_t htype;
@@ -91,6 +163,10 @@ struct dhcp_message {
 #define DHCP_OPT_CODE_SERVER_ID (0x36)
 #define DHCP_OPT_CODE_REQ_IP (0x32)
 #define DHCP_OPT_CODE_CLIENT_ID (0x3d)
+#define DHCP_OPT_CODE_SUBNET_MASK (0x1)
+#define DHCP_OPT_CODE_ROUTER (0x3)
+#define DHCP_OPT_CODE_DNS_NAME_SERVER (0x6)
+#define DHCP_OPT_CODE_DNS_DOMAIN_NAME (0xf)
 
 #define DHCP_OPT_CLV_HEADER (0x2) //CLV = Code + Length + Value
 #define DHCP_OPT_DEFAULT_IP_LEASE_TIME (86400) //One day
@@ -111,6 +187,24 @@ struct dhcp_server_id {
   uint8_t code;
   uint8_t len;
   uint32_t sid;
+};
+
+struct dhcp_subnet_mask {
+  uint8_t code;
+  uint8_t len;
+  uint32_t subnet_mask;
+};
+
+struct dhcp_router {
+  uint8_t code;
+  uint8_t len;
+  uint32_t router_address;
+};
+
+struct dhcp_dns {
+  uint8_t code;
+  uint8_t len;
+  uint8_t dns[DHCP_MSG_OPTS_DNS_LENGTH*4];
 };
 
 struct dhcp_req_ip {
@@ -183,16 +277,20 @@ class ACA_Dhcp_Server : public aca_dhcp_programming_if::ACA_Dhcp_Programming_Int
   void _parse_dhcp_request(uint32_t in_port, dhcp_message *dhcpmsg);
 
   dhcp_message *_pack_dhcp_offer(dhcp_message *dhcpdiscover, dhcp_entry_data *pData);
-  dhcp_message *_pack_dhcp_ack(dhcp_message *dhcpreq);
+  dhcp_message *_pack_dhcp_ack(dhcp_message *dhcpreq, dhcp_entry_data *pData);
   dhcp_message *_pack_dhcp_nak(dhcp_message *dhcpreq);
   void _pack_dhcp_message(dhcp_message *rpl, dhcp_message *req);
   void _pack_dhcp_header(dhcp_message *dhcpmsg);
   void _pack_dhcp_opt_msgtype(uint8_t *option, uint8_t msg_type);
   void _pack_dhcp_opt_ip_lease_time(uint8_t *option, uint32_t lease);
   void _pack_dhcp_opt_server_id(uint8_t *option, uint32_t server_id);
+  void _pack_dhcp_opt_subnet_mask(uint8_t *option, string subnet_mask);
+  void _pack_dhcp_opt_router(uint8_t *option, string router_address);
+  int _pack_dhcp_opt_dns(uint8_t *option, string dns_addresses[]);
 
   unsigned short check_sum(unsigned char *a, int len);
   string _serialize_dhcp_message(dhcp_message *dhcpmsg);
+  string ACA_Dhcp_Server::_serialize_dhcp_ip_header_message(dhcp_message *dhcpmsg, int dhcp_message_len)
 
   /****************** Private variables ******************/
   int _dhcp_entry_thresh;
