@@ -186,6 +186,25 @@ void Aca_Comm_Manager::print_goal_state(GoalState parsed_struct)
 
     auto current_auxiliary_gateway = current_VpcConfiguration.auxiliary_gateway();
 
+    fprintf(stdout, "current_auxiliary_gateway.auxgateway_type(): %d\n",
+            current_auxiliary_gateway.auxgateway_type());
+
+    fprintf(stdout, "current_auxiliary_gateway.id(): %s\n",
+            current_auxiliary_gateway.id().c_str());
+
+    for (int k = 0; k < current_auxiliary_gateway.destinations_size(); k++) {
+      fprintf(stdout, "current_auxiliary_gateway.destinations(%d).ip_address(): %s \n",
+              k, current_auxiliary_gateway.destinations(k).ip_address().c_str());
+
+      fprintf(stdout, "current_auxiliary_gateway.destinations(%d).mac_address(): %s \n",
+              k, current_auxiliary_gateway.destinations(k).mac_address().c_str());
+    }
+
+    if (current_auxiliary_gateway.has_zeta_info()) {
+      fprintf(stdout, "current_auxiliary_gateway.zeta_info().port_inband_operation: %d\n",
+              current_auxiliary_gateway.zeta_info().port_inband_operation());
+    }
+
     printf("\n");
   }
 
@@ -277,6 +296,12 @@ void Aca_Comm_Manager::print_goal_state(GoalState parsed_struct)
 
     fprintf(stdout, "current_PortConfiguration.name(): %s \n",
             current_PortConfiguration.name().c_str());
+
+    fprintf(stdout, "current_PortConfiguration.device_id(): %s\n",
+            current_PortConfiguration.device_id().c_str());
+
+    fprintf(stdout, "current_PortConfiguration.device_owner(): %s \n",
+            current_PortConfiguration.device_owner().c_str());
 
     fprintf(stdout, "current_PortConfiguration.mac_address(): %s \n",
             current_PortConfiguration.mac_address().c_str());
