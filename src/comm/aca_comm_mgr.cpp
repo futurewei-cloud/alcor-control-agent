@@ -38,7 +38,8 @@ Aca_Comm_Manager &Aca_Comm_Manager::get_instance()
   return instance;
 }
 
-int Aca_Comm_Manager::deserialize(const unsigned char *mq_buffer, size_t buffer_length, GoalState &parsed_struct)
+int Aca_Comm_Manager::deserialize(const unsigned char *mq_buffer,
+                                  size_t buffer_length, GoalState &parsed_struct)
 {
   int rc;
 
@@ -157,11 +158,17 @@ void Aca_Comm_Manager::print_goal_state(GoalState parsed_struct)
     fprintf(stdout, "current_VpcConfiguration.revision_number(): %d\n",
             current_VpcConfiguration.revision_number());
 
-    fprintf(stdout, "current_VpcConfiguration.project_id(): %s\n",
-            current_VpcConfiguration.project_id().c_str());
+    fprintf(stdout, "current_VpcConfiguration.request_id(): %s\n",
+            current_VpcConfiguration.request_id().c_str());
 
     fprintf(stdout, "current_VpcConfiguration.id(): %s\n",
             current_VpcConfiguration.id().c_str());
+
+    fprintf(stdout, "current_VpcConfiguration.update_type(): %d\n",
+            current_VpcConfiguration.update_type());
+
+    fprintf(stdout, "current_VpcConfiguration.project_id(): %s\n",
+            current_VpcConfiguration.project_id().c_str());
 
     fprintf(stdout, "current_VpcConfiguration.name(): %s \n",
             current_VpcConfiguration.name().c_str());
@@ -169,7 +176,7 @@ void Aca_Comm_Manager::print_goal_state(GoalState parsed_struct)
     fprintf(stdout, "current_VpcConfiguration.cidr(): %s \n",
             current_VpcConfiguration.cidr().c_str());
 
-    fprintf(stdout, "current_VpcConfiguration.tunnel_id(): %ld \n",
+    fprintf(stdout, "current_VpcConfiguration.tunnel_id(): %u \n",
             current_VpcConfiguration.tunnel_id());
 
     for (int j = 0; j < current_VpcConfiguration.subnet_ids_size(); j++) {
@@ -177,17 +184,7 @@ void Aca_Comm_Manager::print_goal_state(GoalState parsed_struct)
               current_VpcConfiguration.subnet_ids(j).id().c_str());
     }
 
-    for (int k = 0; k < current_VpcConfiguration.routes_size(); k++) {
-      fprintf(stdout,
-              "current_VpcConfiguration.routes(%d).destination(): "
-              "%s \n",
-              k, current_VpcConfiguration.routes(k).destination().c_str());
-
-      fprintf(stdout,
-              "current_VpcConfiguration.routes(%d).next_hop(): "
-              "%s \n",
-              k, current_VpcConfiguration.routes(k).next_hop().c_str());
-    }
+    auto current_auxiliary_gateway = current_VpcConfiguration.auxiliary_gateway();
 
     printf("\n");
   }
@@ -386,8 +383,8 @@ void Aca_Comm_Manager::print_goal_state(GoalState parsed_struct)
     fprintf(stdout, "current_SecurityGroupConfiguration.id(): %s\n",
             current_SecurityGroupConfiguration.id().c_str());
 
-    fprintf(stdout, "current_SecurityGroupConfiguration.message_type(): %d\n",
-            current_SecurityGroupConfiguration.message_type());
+    fprintf(stdout, "current_SecurityGroupConfiguration.update_type(): %d\n",
+            current_SecurityGroupConfiguration.update_type());
 
     fprintf(stdout, "current_SecurityGroupConfiguration.project_id(): %s\n",
             current_SecurityGroupConfiguration.project_id().c_str());
