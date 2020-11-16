@@ -40,6 +40,7 @@ int ACA_Dataplane_OVS::update_vpc_state_workitem(const VpcState /* current_VpcSt
                                                  GoalStateOperationReply & /* gsOperationReply */)
 {
   // TO BE IMPLEMENTED
+  
   return ENOSYS;
 }
 

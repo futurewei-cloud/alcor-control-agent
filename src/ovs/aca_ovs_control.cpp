@@ -267,7 +267,7 @@ void ACA_OVS_Control::parse_packet(uint32_t in_port, void *packet)
       }
 
       /* oam message procedure */
-      if (udp_dport == OAM_SOCKET_PORT){
+      if (udp_dport == (int)this->oam_server_port){
         ACA_LOG_INFO("%s", "   Message Type: OAM\n");
         aca_oam_server::ACA_Oam_Server::get_instance().oams_recv(const_cast<unsigned char *>(payload));
       }
@@ -363,4 +363,12 @@ void ACA_OVS_Control::print_hex_ascii_line(const u_char *payload, int len, int o
   return;
 }
 
+void ACA_OVS_Control::set_oam_server_port(uint32_t port)
+{
+  this->oam_server_port = port;
+}
+uint32_t ACA_OVS_Control::get_oam_server_port()
+{
+  return this->oam_server_port;
+}
 } // namespace aca_ovs_control

@@ -24,6 +24,7 @@
 #include "aca_vlan_manager.h"
 
 using namespace std;
+using namespace aca_ovs_control;
 
 namespace aca_oam_server
 {
@@ -40,58 +41,66 @@ ACA_Oam_Server::~ACA_Oam_Server()
 
 void ACA_Oam_Server::_init_oam_ofp()
 {
-  unsigned long not_care_culminative_time;
   int overall_rc = EXIT_SUCCESS;
 
   // adding oam default flows
-  string cmd = "add-flow br-int \"table=0,priority=25,udp,udp_dst=" + to_string(OAM_SOCKET_PORT) + 
-          ",actions=CONTROLLER\"";
+  uint32_t oam_server_port = ACA_OVS_Control::get_instance().get_oam_server_port();
+  string opt = "table=0,priority=25,udp,udp_dst=" + to_string(oam_server_port) + ",actions=CONTROLLER";
 
-  aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
-          cmd,not_care_culminative_time, overall_rc);
+  overall_rc = ACA_OVS_Control::get_instance().add_flow("br-int", opt.c_str());
+
+  if (overall_rc == EXIT_SUCCESS) {
+    ACA_LOG_INFO("%s", "Command succeeded!\n");
+  } else {
+    ACA_LOG_ERROR("Command failed!!! overrall_rc: %d\n", overall_rc);
+  }
+
   return;
 }
 
 void ACA_Oam_Server::_deinit_oam_ofp()
 {
-  unsigned long not_care_culminative_time;
   int overall_rc = EXIT_SUCCESS;
 
-  string cmd = "del-flows br-int \"udp,udp_dst=" + to_string(OAM_SOCKET_PORT) + "\"";
+  uint32_t oam_server_port = ACA_OVS_Control::get_instance().get_oam_server_port();
+  string opt = "udp,udp_dst=" + to_string(oam_server_port);
 
   // deleting oam default flows
-  aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
-          cmd, not_care_culminative_time, overall_rc);
+  overall_rc = ACA_OVS_Control::get_instance().del_flows("br-int", opt.c_str());
+
+  if (overall_rc == EXIT_SUCCESS) {
+    ACA_LOG_INFO("%s", "Command succeeded!\n");
+  } else {
+    ACA_LOG_ERROR("Command failed!!! overrall_rc: %d\n", overall_rc);
+  }
   return;
 }
 
-ACA_Oam_Server &ACA_Oam_Server::get_instance(){
+ACA_Oam_Server &ACA_Oam_Server::get_instance()
+{
   static ACA_Oam_Server instance;
   return instance;
 }
 
-int ACA_Oam_Server::_validate_oam_message(oam_message *oammsg)
+bool ACA_Oam_Server::_validate_oam_message(oam_message *oammsg)
 {
   int retcode = 0;
 
   if (!oammsg) {
     ACA_LOG_ERROR("%s", "OAM message is null!\n");
-    return EXIT_FAILURE;
+    return false;
   }
 
-  do {
-    if (OAM_MSG_FLOW_INJECTION != oammsg->op_code || OAM_MSG_FLOW_DELETION != oammsg->op_code) {
-      retcode = -1;
-      ACA_LOG_ERROR("%s", "Invalid 'op_code' field for OAM message!\n");
-      break;
-    }
-  } while (0);
+  if (OAM_MSG_FLOW_INJECTION != oammsg->op_code || OAM_MSG_FLOW_DELETION != oammsg->op_code) {
+    retcode = -1;
+    ACA_LOG_ERROR("%s", "Invalid 'op_code' field for OAM message!\n");
+  }
 
   if (0 != retcode) {
-    return EXIT_FAILURE;
+    return false;
   }
 
-  return EXIT_SUCCESS;
+  return true;
 }
 
 void ACA_Oam_Server::oams_recv(void *message)
@@ -99,7 +108,7 @@ void ACA_Oam_Server::oams_recv(void *message)
   oam_message *oammsg = nullptr;
 
   if (!message) {
-   ACA_LOG_ERROR("%s", "DHCP message is null!\n");
+    ACA_LOG_ERROR("%s", "DHCP message is null!\n");
     return;
   }
 
@@ -109,7 +118,7 @@ void ACA_Oam_Server::oams_recv(void *message)
     ACA_LOG_ERROR("%s", "Invalid OAM message!\n");
     return;
   }
-  
+
   uint8_t msg_type = (uint8_t)_get_message_type(oammsg);
 
   (this->*_parse_oam_msg_ops[msg_type])(oammsg);
@@ -117,13 +126,12 @@ void ACA_Oam_Server::oams_recv(void *message)
   return;
 }
 
-
 void ACA_Oam_Server::_init_oam_msg_ops()
 {
-  _parse_oam_msg_ops[OAM_MSG_FLOW_INJECTION] = 
-            &aca_oam_server::ACA_Oam_Server::_parse_oam_flow_injection;
+  _parse_oam_msg_ops[OAM_MSG_FLOW_INJECTION] =
+          &aca_oam_server::ACA_Oam_Server::_parse_oam_flow_injection;
   _parse_oam_msg_ops[OAM_MSG_FLOW_DELETION] =
-            &aca_oam_server::ACA_Oam_Server::_parse_oam_flow_deletion;
+          &aca_oam_server::ACA_Oam_Server::_parse_oam_flow_deletion;
 }
 
 uint8_t ACA_Oam_Server::_get_message_type(oam_message *oammsg)
@@ -137,16 +145,17 @@ uint8_t ACA_Oam_Server::_get_message_type(oam_message *oammsg)
     return OAM_MSG_NONE;
   }
 
-  return (uint8_t)oammsg->op_code;
+  return (uint8_t)(ntohl(oammsg->op_code));
 }
 
-string ACA_Oam_Server::_get_mac_addr(uint8_t *mac){
+string ACA_Oam_Server::_get_mac_addr(uint8_t *mac)
+{
   string mac_string;
   stringstream ss;
 
   for (int i = 0; i < 6; i++) {
     ss << std::hex << std::setw(2) << std::setfill('0')
-        << static_cast<unsigned int>(mac[i]);
+       << static_cast<unsigned int>(mac[i]);
     ss << ":";
   }
   ss >> mac_string;
@@ -163,13 +172,14 @@ void ACA_Oam_Server::_standardize_mac_address(string &mac_string)
   std::replace(mac_string.begin(), mac_string.end(), '-', ':');
 }
 
-string ACA_Oam_Server::get_vpc_id(uint8_t *vni){
+string ACA_Oam_Server::get_vpc_id(uint8_t *vni)
+{
   string vpc_id;
   stringstream ss;
 
-  for(int i = 0; i < 3; i++){
+  for (int i = 0; i < 3; i++) {
     ss << std::hex << std::setw(2) << std::setfill('0')
-         << static_cast<unsigned int>(vni[i]);
+       << static_cast<unsigned int>(vni[i]);
   }
 
   ss >> vpc_id;
@@ -178,7 +188,8 @@ string ACA_Oam_Server::get_vpc_id(uint8_t *vni){
   return vpc_id;
 }
 
-oam_match ACA_Oam_Server::get_oam_match_field(oam_message *oammsg){
+oam_match ACA_Oam_Server::get_oam_match_field(oam_message *oammsg)
+{
   oam_match match;
 
   flow_inject_msg msg_data = oammsg->data.msg_inject_flow;
@@ -193,7 +204,8 @@ oam_match ACA_Oam_Server::get_oam_match_field(oam_message *oammsg){
   return match;
 }
 
-oam_action ACA_Oam_Server::get_oam_action_field(oam_message *oammsg){
+oam_action ACA_Oam_Server::get_oam_action_field(oam_message *oammsg)
+{
   oam_action action;
 
   flow_inject_msg msg_data = oammsg->data.msg_inject_flow;
@@ -222,20 +234,17 @@ void ACA_Oam_Server::_parse_oam_flow_injection(oam_message *oammsg)
 
   alcor::schema::NetworkType network_type = alcor::schema::NetworkType::VXLAN;
 
-  if(!aca_is_port_on_same_host(remote_host_ip)){
-      ACA_LOG_INFO("%s", "port_neighbor not exist!\n");
-      aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().create_update_neighbor_port(vpc_id,
-                                                       network_type,
-                                                       remote_host_ip,
-                                                       (uint)stoi(vpc_id), 
-                                                       not_care_culminative_time);
+  if (!aca_is_port_on_same_host(remote_host_ip)) {
+    ACA_LOG_INFO("%s", "port_neighbor not exist!\n");
+    aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().create_update_neighbor_port(
+            vpc_id, network_type, remote_host_ip, (uint)stoi(vpc_id), not_care_culminative_time);
   }
   overall_rc = aca_oam_server::ACA_Oam_Server::add_direct_path(match, action);
 
   if (overall_rc == EXIT_SUCCESS) {
     ACA_LOG_INFO("%s", "Command succeeded!\n");
   } else {
-    ACA_LOG_DEBUG("Command failed!!! overrall_rc: %d\n", overall_rc);
+    ACA_LOG_ERROR("Command failed!!! overrall_rc: %d\n", overall_rc);
   }
 
   return;
@@ -251,7 +260,7 @@ void ACA_Oam_Server::_parse_oam_flow_deletion(oam_message *oammsg)
   if (overall_rc == EXIT_SUCCESS) {
     ACA_LOG_INFO("%s", "Command succeeded!\n");
   } else {
-    ACA_LOG_DEBUG("Command failed!!! overrall_rc: %d\n", overall_rc);
+    ACA_LOG_ERROR("Command failed!!! overrall_rc: %d\n", overall_rc);
   }
 
   return;
@@ -259,27 +268,29 @@ void ACA_Oam_Server::_parse_oam_flow_deletion(oam_message *oammsg)
 
 int ACA_Oam_Server::add_direct_path(oam_match match, oam_action action)
 {
-  unsigned long not_care_culminative_time;
   int overall_rc = EXIT_SUCCESS;
 
-  string vlan_id = to_string(aca_vlan_manager::ACA_Vlan_Manager::get_instance().get_or_create_vlan_id(match.vni));
-  string outport_name = aca_get_outport_name(alcor::schema::NetworkType::VXLAN, action.node_nw_dst);
+  string vlan_id = to_string(aca_vlan_manager::ACA_Vlan_Manager::get_instance().get_or_create_vlan_id(
+          match.vni));
+  string outport_name =
+          aca_get_outport_name(alcor::schema::NetworkType::VXLAN, action.node_nw_dst);
 
-  string cmd_match = "ip,nw_proto=" + match.proto + ",nw_src=" + match.sip + ",nw_dst="
-             + match.dip + ",tp_src=" + match.sport + ",tp_dst=" + match.dport + ",dl_vlan=" + vlan_id;
-  string cmd_action = "action=\"strip_vlan,load:" + match.vni + "->NXM_NX_TUN_ID[],mod_dl_dst=" 
-            + action.inst_dl_dst + ",mod_nw_dst=" + action.inst_nw_dst + ",idle_timeout=" + 
-            action.idle_timeout + ",output:" + outport_name + "\"";
+  string cmd_match = "ip,nw_proto=" + match.proto + ",nw_src=" + match.sip +
+                     ",nw_dst=" + match.dip + ",tp_src=" + match.sport +
+                     ",tp_dst=" + match.dport + ",dl_vlan=" + vlan_id;
+  string cmd_action = "action=\"strip_vlan,load:" + match.vni +
+                      "->NXM_NX_TUN_ID[],mod_dl_dst=" + action.inst_dl_dst +
+                      ",mod_nw_dst=" + action.inst_nw_dst +
+                      ",idle_timeout=" + action.idle_timeout + ",output:" + outport_name;
 
-  string cmd_string = "add-flow br-tun table=55,priority=50," + cmd_match + "," + cmd_action;
-  
-  aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
-            cmd_string, not_care_culminative_time, overall_rc);
+  string opt = "table=55,priority=50," + cmd_match + "," + cmd_action;
+
+  overall_rc = ACA_OVS_Control::get_instance().add_flow("br-tun", opt.c_str());
 
   if (overall_rc == EXIT_SUCCESS) {
     ACA_LOG_INFO("%s", "Add direct path succeeded!\n");
   } else {
-    ACA_LOG_DEBUG("Add direct path failed!!! overrall_rc: %d\n", overall_rc);
+    ACA_LOG_ERROR("Add direct path failed!!! overrall_rc: %d\n", overall_rc);
   }
 
   return overall_rc;
@@ -287,24 +298,24 @@ int ACA_Oam_Server::add_direct_path(oam_match match, oam_action action)
 
 int ACA_Oam_Server::del_direct_path(oam_match match)
 {
-  unsigned long not_care_culminative_time;
   int overall_rc = EXIT_SUCCESS;
-  string vlan_id = to_string(aca_vlan_manager::ACA_Vlan_Manager::get_instance().get_or_create_vlan_id(match.vni));
+  string vlan_id = to_string(aca_vlan_manager::ACA_Vlan_Manager::get_instance().get_or_create_vlan_id(
+          match.vni));
 
-  string cmd = "del-flows br-tun table=55,priority=50,ip,nw_proto=" + match.proto + ",nw_src=" + match.sip + 
-            ",nw_dst=" + match.dip + ",tp_src=" + match.sport + ",tp_dst=" + match.dport + ",dl_vlan=" + vlan_id;
+  string opt = "table=55,priority=50,ip,nw_proto=" + match.proto +
+               ",nw_src=" + match.sip + ",nw_dst=" + match.dip +
+               ",tp_src=" + match.sport + ",tp_dst=" + match.dport + ",dl_vlan=" + vlan_id;
 
-  aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
-        cmd, not_care_culminative_time, overall_rc);
-  
+  // delete flow
+  overall_rc = ACA_OVS_Control::get_instance().del_flows("br-tun", opt.c_str());
+
   if (overall_rc == EXIT_SUCCESS) {
     ACA_LOG_INFO("%s", "Delete direct path succeeded!\n");
   } else {
-    ACA_LOG_DEBUG("Delete direct path failed!!! overrall_rc: %d\n", overall_rc);
+    ACA_LOG_ERROR("Delete direct path failed!!! overrall_rc: %d\n", overall_rc);
   }
 
   return overall_rc;
 }
 
-}// namespace aca_oam_server
-
+} // namespace aca_oam_server
