@@ -20,9 +20,14 @@
 #include "aca_ovs_l2_programmer.h"
 #include "aca_comm_mgr.h"
 #include "aca_util.h"
+#include "goalstate.pb.h"
 
+using namespace std;
+using namespace alcor::schema;
 using namespace aca_dhcp_server;
 using namespace aca_dhcp_programming_if;
+using aca_comm_manager::Aca_Comm_Manager;
+using aca_net_config::Aca_Net_Config;
 
 static string project_id = "99d9d709-8478-4b46-9f3f-000000000000";
 static string vpc_id_1 = "1b08a5bc-b718-11ea-b3de-111111111111";
