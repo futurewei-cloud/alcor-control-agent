@@ -451,6 +451,7 @@ TEST(ovs_l3_test_cases, DISABLED_2_ports_ROUTING_test_traffic_one_machine)
 
   NeighborConfiguration_builder3->set_project_id(project_id);
   NeighborConfiguration_builder3->set_vpc_id(vpc_id_1);
+  NeighborConfiguration_builder3->set_id(port_id_3);
   NeighborConfiguration_builder3->set_name(port_name_3);
   NeighborConfiguration_builder3->set_mac_address(vmac_address_3);
   NeighborConfiguration_builder3->set_host_ip_address(remote_ip_2);
@@ -470,6 +471,7 @@ TEST(ovs_l3_test_cases, DISABLED_2_ports_ROUTING_test_traffic_one_machine)
 
   NeighborConfiguration_builder4->set_project_id(project_id);
   NeighborConfiguration_builder4->set_vpc_id(vpc_id_2);
+  NeighborConfiguration_builder4->set_id(port_id_4);
   NeighborConfiguration_builder4->set_name(port_name_4);
   NeighborConfiguration_builder4->set_mac_address(vmac_address_4);
   NeighborConfiguration_builder4->set_host_ip_address(remote_ip_2);
@@ -779,6 +781,7 @@ TEST(ovs_l3_test_cases, DISABLED_2_ports_ROUTING_test_traffic_PARENT)
 
   NeighborConfiguration_builder3->set_project_id(project_id);
   NeighborConfiguration_builder3->set_vpc_id(vpc_id_1);
+  NeighborConfiguration_builder3->set_id(port_id_3);
   NeighborConfiguration_builder3->set_name(port_name_3);
   NeighborConfiguration_builder3->set_mac_address(vmac_address_3);
   NeighborConfiguration_builder3->set_host_ip_address(remote_ip_2);
@@ -798,6 +801,7 @@ TEST(ovs_l3_test_cases, DISABLED_2_ports_ROUTING_test_traffic_PARENT)
 
   NeighborConfiguration_builder4->set_project_id(project_id);
   NeighborConfiguration_builder4->set_vpc_id(vpc_id_2);
+  NeighborConfiguration_builder4->set_id(port_id_4);
   NeighborConfiguration_builder4->set_name(port_name_4);
   NeighborConfiguration_builder4->set_mac_address(vmac_address_4);
   NeighborConfiguration_builder4->set_host_ip_address(remote_ip_2);
@@ -1095,6 +1099,7 @@ TEST(ovs_l3_test_cases, DISABLED_2_ports_ROUTING_test_traffic_CHILD)
 
   NeighborConfiguration_builder3->set_project_id(project_id);
   NeighborConfiguration_builder3->set_vpc_id(vpc_id_1);
+  NeighborConfiguration_builder3->set_id(port_id_1);
   NeighborConfiguration_builder3->set_name(port_name_1);
   NeighborConfiguration_builder3->set_mac_address(vmac_address_1);
   NeighborConfiguration_builder3->set_host_ip_address(remote_ip_1);
@@ -1114,6 +1119,7 @@ TEST(ovs_l3_test_cases, DISABLED_2_ports_ROUTING_test_traffic_CHILD)
 
   NeighborConfiguration_builder4->set_project_id(project_id);
   NeighborConfiguration_builder4->set_vpc_id(vpc_id_2);
+  NeighborConfiguration_builder4->set_id(port_id_2);
   NeighborConfiguration_builder4->set_name(port_name_2);
   NeighborConfiguration_builder4->set_mac_address(vmac_address_2);
   NeighborConfiguration_builder4->set_host_ip_address(remote_ip_1);
