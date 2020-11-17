@@ -231,6 +231,15 @@ int ACA_OVS_L3_Programmer::create_or_update_router(RouterConfiguration &current_
 
           // Should be able to ping the gateway now
 
+          // add essential rule to restore from neighbor host DVR mac to destination GW mac:
+          // Note: all port from the same subnet on current host will share this rule
+          cmd_string = "add-flow br-int \"table=0,priority=25,dl_vlan=" +
+                       to_string(source_vlan_id) + ",dl_src=" + HOST_DVR_MAC_MATCH +
+                       " actions=mod_dl_src:" + found_gateway_mac + " output:NORMAL\"";
+
+          ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
+                  cmd_string, dataplane_programming_time, overall_rc);
+
           for (int k = 0; k < current_subnet_routing_table.routing_rules_size(); k++) {
             auto current_routing_rule = current_subnet_routing_table.routing_rules(k);
 
@@ -381,29 +390,56 @@ int ACA_OVS_L3_Programmer::delete_router(RouterConfiguration &current_RouterConf
   // for each subnet's gateway:
   for (auto subnet_it = router_subnet_routing_tables.begin();
        subnet_it != router_subnet_routing_tables.end(); subnet_it++) {
-    ACA_LOG_DEBUG("Subnet_id:%s\n ", subnet_it->first.c_str());
+    string subnet_entry_to_delete = subnet_it->first.c_str();
+    ACA_LOG_DEBUG("Subnet_id entry to delete:%s\n", subnet_entry_to_delete.c_str());
 
-    source_vlan_id = ACA_Vlan_Manager::get_instance().get_or_create_vlan_id(
-            subnet_it->second.vpc_id);
+    // see if there is still *any* other router still have this subnet connected
+    bool subnet_entry_to_delete_found = false;
+    for (auto all_routers_it : _routers_table) {
+      auto current_subnet_routing_tables = all_routers_it.second;
+      if (current_subnet_routing_tables.find(subnet_entry_to_delete) !=
+          current_subnet_routing_tables.end()) {
+        ACA_LOG_ERROR("Subnet_id entry to delete found! %s\n",
+                      subnet_entry_to_delete.c_str());
+        subnet_entry_to_delete_found = true;
+        break;
+      } else {
+        continue;
+      }
+    }
 
-    current_gateway_mac = subnet_it->second.gateway_mac;
-    current_gateway_mac.erase(
-            remove(current_gateway_mac.begin(), current_gateway_mac.end(), ':'),
-            current_gateway_mac.end());
+    if (!subnet_entry_to_delete_found) {
+      source_vlan_id = ACA_Vlan_Manager::get_instance().get_or_create_vlan_id(
+              subnet_it->second.vpc_id);
 
-    // Delete Arp responder:
-    cmd_string = "del-flows br-tun \"table=51,arp,dl_vlan=" + to_string(source_vlan_id) +
-                 ",nw_dst=" + subnet_it->second.gateway_ip + "\"";
+      current_gateway_mac = subnet_it->second.gateway_mac;
+      current_gateway_mac.erase(
+              remove(current_gateway_mac.begin(), current_gateway_mac.end(), ':'),
+              current_gateway_mac.end());
 
-    ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
-            cmd_string, dataplane_programming_time, overall_rc);
+      // Delete Arp responder:
+      cmd_string = "del-flows br-tun \"table=51,arp,dl_vlan=" + to_string(source_vlan_id) +
+                   ",nw_dst=" + subnet_it->second.gateway_ip + "\"";
 
-    // Delete ICMP responder:
-    cmd_string = "del-flows br-tun \"table=52,icmp,dl_vlan=" + to_string(source_vlan_id) +
-                 ",nw_dst=" + subnet_it->second.gateway_ip + "\"";
+      ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
+              cmd_string, dataplane_programming_time, overall_rc);
 
-    ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
-            cmd_string, dataplane_programming_time, overall_rc);
+      // Delete ICMP responder:
+      cmd_string = "del-flows br-tun \"table=52,icmp,dl_vlan=" + to_string(source_vlan_id) +
+                   ",nw_dst=" + subnet_it->second.gateway_ip + "\"";
+
+      ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
+              cmd_string, dataplane_programming_time, overall_rc);
+
+      // remove essential rule to restore from neighbor host DVR mac to destination GW mac
+
+      // Note: all port from the same subnet on current host will share this rule
+      cmd_string = "del-flows br-int \"table=0,priority=25,dl_vlan=" + to_string(source_vlan_id) +
+                   ",dl_src=" + HOST_DVR_MAC_MATCH + "\" --strict";
+
+      ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
+              cmd_string, dataplane_programming_time, overall_rc);
+    }
   }
 
   // -----critical section starts-----
@@ -487,19 +523,6 @@ int ACA_OVS_L3_Programmer::create_or_update_neighbor_l3(
 
         source_vlan_id = ACA_Vlan_Manager::get_instance().get_or_create_vlan_id(
                 subnet_it->second.vpc_id);
-
-        // essential rule to restore from neighbor host DVR mac to destination GW mac:
-        // not needed if the neighbor port is at the same compute host
-        if (!is_port_on_same_host) {
-          // Note: all port from the same subnet on current host will share this rule
-          cmd_string = "add-flow br-int \"table=0,priority=25,dl_vlan=" +
-                       to_string(source_vlan_id) + ",dl_src=" + HOST_DVR_MAC_MATCH +
-                       " actions=mod_dl_src:" + subnet_it->second.gateway_mac +
-                       " output:NORMAL\"";
-
-          ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
-                  cmd_string, culminative_time, overall_rc);
-        }
 
         destination_vlan_id =
                 ACA_Vlan_Manager::get_instance().get_or_create_vlan_id(vpc_id);
