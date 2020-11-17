@@ -15,6 +15,7 @@
 #include "aca_log.h"
 #include "aca_util.h"
 #include "aca_config.h"
+#include "aca_vlan_manager.h"
 #include "aca_ovs_l2_programmer.h"
 #include "aca_comm_mgr.h"
 #include "gtest/gtest.h"
@@ -25,6 +26,7 @@
 
 using namespace std;
 using namespace alcor::schema;
+using namespace aca_vlan_manager;
 using aca_comm_manager::Aca_Comm_Manager;
 using aca_net_config::Aca_Net_Config;
 using aca_ovs_l2_programmer::ACA_OVS_L2_Programmer;
@@ -130,7 +132,7 @@ void aca_test_create_default_subnet_state(SubnetState *new_subnet_states)
 //     parent machine (-c 10.213.43.188 -> IP of child machine):
 //     aca_tests --gtest_also_run_disabled_tests --gtest_filter=*DISABLED_2_ports_CREATE_test_traffic_PARENT -c 10.213.43.188
 //
-TEST(ovs_l2_test_cases, 2_ports_config_test_traffic)
+TEST(ovs_l2_test_cases, 2_ports_CREATE_test_traffic_plus_neighbor_internal)
 {
   // ulong culminative_network_configuration_time = 0;
   ulong not_care_culminative_time;
@@ -177,12 +179,12 @@ TEST(ovs_l2_test_cases, 2_ports_config_test_traffic)
   string prefix_len = "/24";
 
   // create two ports (using demo mode) and configure them
-  overall_rc = ACA_OVS_L2_Programmer::get_instance().configure_port(
+  overall_rc = ACA_OVS_L2_Programmer::get_instance().create_port(
           vpc_id_1, port_name_1, vip_address_1 + prefix_len, 20, not_care_culminative_time);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
 
-  overall_rc = ACA_OVS_L2_Programmer::get_instance().configure_port(
+  overall_rc = ACA_OVS_L2_Programmer::get_instance().create_port(
           vpc_id_1, port_name_2, vip_address_2 + prefix_len, 20, not_care_culminative_time);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
@@ -213,8 +215,8 @@ TEST(ovs_l2_test_cases, 2_ports_config_test_traffic)
   string outport_name = aca_get_outport_name(vxlan_type, remote_ip_1);
 
   // insert neighbor info
-  overall_rc = ACA_OVS_L2_Programmer::get_instance().create_update_neighbor_port(
-          vpc_id_1, vxlan_type, remote_ip_1, 20, not_care_culminative_time);
+  overall_rc = ACA_OVS_L2_Programmer::get_instance().create_or_update_neighbor_port(
+          port_id_4, vpc_id_1, vxlan_type, remote_ip_1, 20, not_care_culminative_time);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
 
@@ -222,6 +224,18 @@ TEST(ovs_l2_test_cases, 2_ports_config_test_traffic)
   ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
           " list-ports br-tun | grep " + outport_name, not_care_culminative_time, overall_rc);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
+
+  // delete neighbor info
+  overall_rc = ACA_OVS_L2_Programmer::get_instance().delete_neighbor_port(
+          port_id_4, vpc_id_1, outport_name, not_care_culminative_time);
+  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
+
+  // check if the outport has been deleted on br-tun
+  ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
+          " list-ports br-tun | grep " + outport_name, not_care_culminative_time, overall_rc);
+  EXPECT_NE(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
 
   // delete br-int and br-tun bridges
@@ -247,7 +261,7 @@ TEST(ovs_l2_test_cases, 2_ports_config_test_traffic)
   overall_rc = EXIT_SUCCESS;
 }
 
-TEST(ovs_l2_test_cases, 1_port_CREATE)
+TEST(ovs_l2_test_cases, 1_port_CREATE_DELETE_demo_mode)
 {
   ulong not_care_culminative_time = 0;
   string cmd_string;
@@ -281,13 +295,24 @@ TEST(ovs_l2_test_cases, 1_port_CREATE)
           GoalState_builder, gsOperationalReply);
   ASSERT_EQ(overall_rc, EXIT_SUCCESS);
 
-  // restore demo mode
-  g_demo_mode = previous_demo_mode;
-
-  // check to ensure the port is created and setup correctly
+  // check to ensure the demo port is created and setup correctly
   ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
           "get Interface " + port_name_1 + " ofport", not_care_culminative_time, overall_rc);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
+
+  new_port_states->set_operation_type(OperationType::DELETE);
+  overall_rc = Aca_Comm_Manager::get_instance().update_goal_state(
+          GoalState_builder, gsOperationalReply);
+  ASSERT_EQ(overall_rc, EXIT_SUCCESS);
+
+  // restore demo mode
+  g_demo_mode = previous_demo_mode;
+
+  // check to ensure the demo port is deleted
+  ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
+          "get Interface " + port_name_1 + " ofport", not_care_culminative_time, overall_rc);
+  EXPECT_NE(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
 
   // clean up
@@ -308,7 +333,7 @@ TEST(ovs_l2_test_cases, 1_port_CREATE)
   overall_rc = EXIT_SUCCESS;
 }
 
-TEST(ovs_l2_test_cases, 1_port_NEIGHBOR_CREATE_UPDATE)
+TEST(ovs_l2_test_cases, 1_l2_neighbor_CREATE_DELETE)
 {
   ulong not_care_culminative_time = 0;
   string cmd_string;
@@ -327,41 +352,38 @@ TEST(ovs_l2_test_cases, 1_port_NEIGHBOR_CREATE_UPDATE)
   overall_rc = EXIT_SUCCESS;
 
   GoalState GoalState_builder;
-  PortState *new_port_states = GoalState_builder.add_port_states();
+  NeighborState *new_neighbor_states = GoalState_builder.add_neighbor_states();
   SubnetState *new_subnet_states = GoalState_builder.add_subnet_states();
 
-  new_port_states->set_operation_type(OperationType::NEIGHBOR_CREATE_UPDATE);
+  new_neighbor_states->set_operation_type(OperationType::CREATE);
 
-  // fill in port state structs
-  PortConfiguration *PortConfiguration_builder = new_port_states->mutable_configuration();
-  PortConfiguration_builder->set_revision_number(2);
-  PortConfiguration_builder->set_message_type(MessageType::DELTA);
-  PortConfiguration_builder->set_network_type(vxlan_type);
+  // fill in neighbor state structs
+  NeighborConfiguration *NeighborConfiguration_builder =
+          new_neighbor_states->mutable_configuration();
+  NeighborConfiguration_builder->set_revision_number(1);
 
-  PortConfiguration_builder->set_project_id(project_id);
-  PortConfiguration_builder->set_vpc_id(vpc_id_1);
-  PortConfiguration_builder->set_mac_address(vmac_address_3);
-  PortConfiguration_builder->set_admin_state_up(true);
+  NeighborConfiguration_builder->set_project_id(project_id);
+  NeighborConfiguration_builder->set_vpc_id(vpc_id_1);
+  NeighborConfiguration_builder->set_id(port_id_3);
+  NeighborConfiguration_builder->set_mac_address(vmac_address_3);
+  NeighborConfiguration_builder->set_host_ip_address("172.17.111.222");
 
-  PortConfiguration_HostInfo *portConfig_HostInfoBuilder(new PortConfiguration_HostInfo);
-  portConfig_HostInfoBuilder->set_ip_address(remote_ip_1);
-  PortConfiguration_builder->set_allocated_host_info(portConfig_HostInfoBuilder);
-
-  PortConfiguration_FixedIp *FixedIp_builder = PortConfiguration_builder->add_fixed_ips();
-  FixedIp_builder->set_ip_address(vip_address_3);
+  NeighborConfiguration_FixedIp *FixedIp_builder =
+          NeighborConfiguration_builder->add_fixed_ips();
+  FixedIp_builder->set_neighbor_type(NeighborType::L2);
   FixedIp_builder->set_subnet_id(subnet_id_1);
+  FixedIp_builder->set_ip_address(vip_address_3);
 
   // fill in subnet state structs
   aca_test_create_default_subnet_state(new_subnet_states);
 
-  // NEIGHBOR_CREATE_UPDATE
   GoalStateOperationReply gsOperationalReply;
 
   overall_rc = Aca_Comm_Manager::get_instance().update_goal_state(
           GoalState_builder, gsOperationalReply);
   ASSERT_EQ(overall_rc, EXIT_SUCCESS);
 
-  string outport_name = aca_get_outport_name(vxlan_type, remote_ip_1);
+  string outport_name = aca_get_outport_name(vxlan_type, "172.17.111.222");
 
   // check if the outport has been created on br-tun
   ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
@@ -369,10 +391,22 @@ TEST(ovs_l2_test_cases, 1_port_NEIGHBOR_CREATE_UPDATE)
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
 
+  // delete neighbor info
+  new_neighbor_states->set_operation_type(OperationType::DELETE);
+  overall_rc = Aca_Comm_Manager::get_instance().update_goal_state(
+          GoalState_builder, gsOperationalReply);
+  ASSERT_EQ(overall_rc, EXIT_SUCCESS);
+
+  // check if the outport has been deleted on br-tun
+  ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
+          " list-ports br-tun | grep " + outport_name, not_care_culminative_time, overall_rc);
+  EXPECT_NE(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
+
   // clean up
 
   // free the allocated configurations since we are done with it now
-  new_port_states->clear_configuration();
+  new_neighbor_states->clear_configuration();
   new_subnet_states->clear_configuration();
 
   // delete br-int and br-tun bridges
@@ -387,7 +421,7 @@ TEST(ovs_l2_test_cases, 1_port_NEIGHBOR_CREATE_UPDATE)
   overall_rc = EXIT_SUCCESS;
 }
 
-TEST(ovs_l2_test_cases, 1_port_CREATE_plus_NEIGHBOR_CREATE_UPDATE)
+TEST(ovs_l2_test_cases, 1_port_CREATE_plus_neighbor_CREATE)
 {
   ulong not_care_culminative_time = 0;
   string cmd_string;
@@ -415,31 +449,26 @@ TEST(ovs_l2_test_cases, 1_port_CREATE_plus_NEIGHBOR_CREATE_UPDATE)
   // fill in subnet state structs
   aca_test_create_default_subnet_state(new_subnet_states);
 
-  // add a new port state with NEIGHBOR_CREATE_UPDATE
-  PortState *new_port_neighbor_states = GoalState_builder.add_port_states();
+  // add a new neighbor state with CREATE
+  NeighborState *new_neighbor_states = GoalState_builder.add_neighbor_states();
+  new_neighbor_states->set_operation_type(OperationType::CREATE);
 
-  new_port_neighbor_states->set_operation_type(OperationType::NEIGHBOR_CREATE_UPDATE);
+  // fill in neighbor state structs
+  NeighborConfiguration *NeighborConfiguration_builder =
+          new_neighbor_states->mutable_configuration();
+  NeighborConfiguration_builder->set_revision_number(1);
 
-  // fill in port state structs for NEIGHBOR_CREATE_UPDATE
-  PortConfiguration *PortConfiguration_builder2 =
-          new_port_neighbor_states->mutable_configuration();
-  PortConfiguration_builder2->set_revision_number(2);
-  PortConfiguration_builder2->set_message_type(MessageType::DELTA);
-  PortConfiguration_builder2->set_network_type(vxlan_type);
+  NeighborConfiguration_builder->set_project_id(project_id);
+  NeighborConfiguration_builder->set_vpc_id(vpc_id_1);
+  NeighborConfiguration_builder->set_id(port_id_3);
+  NeighborConfiguration_builder->set_mac_address(vmac_address_3);
+  NeighborConfiguration_builder->set_host_ip_address("172.17.111.222");
 
-  PortConfiguration_builder2->set_project_id(project_id);
-  PortConfiguration_builder2->set_vpc_id(vpc_id_1);
-  PortConfiguration_builder2->set_mac_address(vmac_address_3);
-  PortConfiguration_builder2->set_admin_state_up(true);
-
-  PortConfiguration_HostInfo *portConfig_HostInfoBuilder2(new PortConfiguration_HostInfo);
-  portConfig_HostInfoBuilder2->set_ip_address(remote_ip_1);
-  PortConfiguration_builder2->set_allocated_host_info(portConfig_HostInfoBuilder2);
-
-  PortConfiguration_FixedIp *FixedIp_builder2 =
-          PortConfiguration_builder2->add_fixed_ips();
-  FixedIp_builder2->set_subnet_id(subnet_id_1);
-  FixedIp_builder2->set_ip_address(vip_address_3);
+  NeighborConfiguration_FixedIp *FixedIp_builder =
+          NeighborConfiguration_builder->add_fixed_ips();
+  FixedIp_builder->set_neighbor_type(NeighborType::L2);
+  FixedIp_builder->set_subnet_id(subnet_id_1);
+  FixedIp_builder->set_ip_address(vip_address_3);
 
   // set demo mode
   bool previous_demo_mode = g_demo_mode;
@@ -461,7 +490,7 @@ TEST(ovs_l2_test_cases, 1_port_CREATE_plus_NEIGHBOR_CREATE_UPDATE)
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
 
-  string outport_name = aca_get_outport_name(vxlan_type, remote_ip_1);
+  string outport_name = aca_get_outport_name(vxlan_type, "172.17.111.222");
 
   // check if the outport has been created on br-tun
   ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
@@ -473,7 +502,7 @@ TEST(ovs_l2_test_cases, 1_port_CREATE_plus_NEIGHBOR_CREATE_UPDATE)
 
   // free the allocated configurations since we are done with it now
   new_port_states->clear_configuration();
-  new_port_neighbor_states->clear_configuration();
+  new_neighbor_states->clear_configuration();
   new_subnet_states->clear_configuration();
 
   // delete br-int and br-tun bridges
@@ -690,7 +719,8 @@ TEST(ovs_l2_test_cases, 10_ports_CREATE)
 
 TEST(ovs_l2_test_cases, 10_l2_neighbor_CREATE)
 {
-  string port_name_postfix = "11111111-2222-3333-4444-555555555555";
+  string port_name_postfix = "-2222-3333-4444-555555555555";
+  string neighbor_id_postfix = "-baad-f00d-4444-555555555555";
   string ip_address_prefix = "10.0.0.";
   string remote_ip_address_prefix = "123.0.0.";
   ulong not_care_culminative_time = 0;
@@ -731,6 +761,7 @@ TEST(ovs_l2_test_cases, 10_l2_neighbor_CREATE)
 
   for (int i = 0; i < L2_NEIGHBOR_TO_CREATE; i++) {
     string i_string = std::to_string(i);
+    string neighbor_id = i_string + neighbor_id_postfix;
     string port_name = i_string + port_name_postfix;
 
     new_neighbor_states = GoalState_builder.add_neighbor_states();
@@ -742,6 +773,7 @@ TEST(ovs_l2_test_cases, 10_l2_neighbor_CREATE)
 
     NeighborConfiguration_builder->set_project_id(project_id);
     NeighborConfiguration_builder->set_vpc_id("1b08a5bc-b718-11ea-b3de-111122223333");
+    NeighborConfiguration_builder->set_id(neighbor_id);
     NeighborConfiguration_builder->set_name(port_name);
     NeighborConfiguration_builder->set_mac_address(vmac_address_1);
     NeighborConfiguration_builder->set_host_ip_address(remote_ip_address_prefix + i_string);
@@ -791,6 +823,8 @@ TEST(ovs_l2_test_cases, DISABLED_2_ports_CREATE_test_traffic_PARENT)
   ulong not_care_culminative_time = 0;
   string cmd_string;
   int overall_rc;
+
+  ACA_Vlan_Manager::get_instance().clear_all_data();
 
   // delete br-int and br-tun bridges
   ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
@@ -842,29 +876,24 @@ TEST(ovs_l2_test_cases, DISABLED_2_ports_CREATE_test_traffic_PARENT)
   SubnetConiguration_builder->set_cidr("10.0.0.0/24");
   SubnetConiguration_builder->set_tunnel_id(20);
 
-  // add a new port state with NEIGHBOR_CREATE_UPDATE
-  PortState *new_port_neighbor_states = GoalState_builder.add_port_states();
-
-  new_port_neighbor_states->set_operation_type(OperationType::NEIGHBOR_CREATE_UPDATE);
+  // add a new neighbor state with CREATE
+  NeighborState *new_neighbor_states = GoalState_builder.add_neighbor_states();
+  new_neighbor_states->set_operation_type(OperationType::CREATE);
 
   // fill in port state structs for NEIGHBOR_CREATE_UPDATE for port 3
-  PortConfiguration *PortConfiguration_builder2 =
-          new_port_neighbor_states->mutable_configuration();
-  PortConfiguration_builder2->set_revision_number(2);
-  PortConfiguration_builder2->set_message_type(MessageType::DELTA);
-  PortConfiguration_builder2->set_network_type(vxlan_type);
+  NeighborConfiguration *NeighborConfiguration_builder =
+          new_neighbor_states->mutable_configuration();
+  NeighborConfiguration_builder->set_revision_number(1);
 
-  PortConfiguration_builder2->set_project_id(project_id);
-  PortConfiguration_builder2->set_vpc_id(vpc_id_1);
-  PortConfiguration_builder2->set_mac_address(vmac_address_3);
-  PortConfiguration_builder2->set_admin_state_up(true);
+  NeighborConfiguration_builder->set_project_id(project_id);
+  NeighborConfiguration_builder->set_vpc_id(vpc_id_1);
+  NeighborConfiguration_builder->set_id(port_id_3);
+  NeighborConfiguration_builder->set_mac_address(vmac_address_3);
+  NeighborConfiguration_builder->set_host_ip_address(remote_ip_2);
 
-  PortConfiguration_HostInfo *portConfig_HostInfoBuilder2(new PortConfiguration_HostInfo);
-  portConfig_HostInfoBuilder2->set_ip_address(remote_ip_2);
-  PortConfiguration_builder2->set_allocated_host_info(portConfig_HostInfoBuilder2);
-
-  PortConfiguration_FixedIp *FixedIp_builder2 =
-          PortConfiguration_builder2->add_fixed_ips();
+  NeighborConfiguration_FixedIp *FixedIp_builder2 =
+          NeighborConfiguration_builder->add_fixed_ips();
+  FixedIp_builder2->set_neighbor_type(NeighborType::L2);
   FixedIp_builder2->set_subnet_id(subnet_id_1);
   FixedIp_builder2->set_ip_address(vip_address_3);
 
@@ -901,8 +930,9 @@ TEST(ovs_l2_test_cases, DISABLED_2_ports_CREATE_test_traffic_PARENT)
   SubnetConiguration_builder->set_tunnel_id(30);
 
   // fill in port state structs for NEIGHBOR_CREATE_UPDATE for port 4
-  PortConfiguration_builder2->set_vpc_id(vpc_id_2);
-  PortConfiguration_builder2->set_mac_address(vmac_address_4);
+  NeighborConfiguration_builder->set_vpc_id(vpc_id_2);
+  NeighborConfiguration_builder->set_id(port_id_4);
+  NeighborConfiguration_builder->set_mac_address(vmac_address_4);
   FixedIp_builder2->set_subnet_id(subnet_id_2);
   FixedIp_builder2->set_ip_address(vip_address_4);
 
@@ -958,7 +988,7 @@ TEST(ovs_l2_test_cases, DISABLED_2_ports_CREATE_test_traffic_PARENT)
 
   // free the allocated configurations since we are done with it now
   new_port_states->clear_configuration();
-  new_port_neighbor_states->clear_configuration();
+  new_neighbor_states->clear_configuration();
   new_subnet_states->clear_configuration();
 
   // delete br-int and br-tun bridges
@@ -978,6 +1008,8 @@ TEST(ovs_l2_test_cases, DISABLED_2_ports_CREATE_test_traffic_CHILD)
   ulong not_care_culminative_time = 0;
   string cmd_string;
   int overall_rc;
+
+  ACA_Vlan_Manager::get_instance().clear_all_data();
 
   // delete br-int and br-tun bridges
   ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
@@ -1029,38 +1061,26 @@ TEST(ovs_l2_test_cases, DISABLED_2_ports_CREATE_test_traffic_CHILD)
   SubnetConiguration_builder->set_cidr("10.0.0.0/24");
   SubnetConiguration_builder->set_tunnel_id(20);
 
-  // add a new port state with NEIGHBOR_CREATE_UPDATE
-  PortState *new_port_neighbor_states = GoalState_builder.add_port_states();
+  // add a new neighbor state with CREATE
+  NeighborState *new_neighbor_states = GoalState_builder.add_neighbor_states();
+  new_neighbor_states->set_operation_type(OperationType::CREATE);
 
-  new_port_neighbor_states->set_operation_type(OperationType::NEIGHBOR_CREATE_UPDATE);
+  // fill in neighbor state structs for port 1
+  NeighborConfiguration *NeighborConfiguration_builder =
+          new_neighbor_states->mutable_configuration();
+  NeighborConfiguration_builder->set_revision_number(1);
 
-  // fill in port state structs for NEIGHBOR_CREATE_UPDATE for port 1
-  PortConfiguration *PortConfiguration_builder2 =
-          new_port_neighbor_states->mutable_configuration();
-  PortConfiguration_builder2->set_revision_number(2);
-  PortConfiguration_builder2->set_message_type(MessageType::DELTA);
-  PortConfiguration_builder2->set_network_type(vxlan_type);
+  NeighborConfiguration_builder->set_project_id(project_id);
+  NeighborConfiguration_builder->set_vpc_id(vpc_id_1);
+  NeighborConfiguration_builder->set_id(port_id_1);
+  NeighborConfiguration_builder->set_mac_address(vmac_address_1);
+  NeighborConfiguration_builder->set_host_ip_address(remote_ip_1);
 
-  PortConfiguration_builder2->set_project_id(project_id);
-  PortConfiguration_builder2->set_vpc_id(vpc_id_1);
-  PortConfiguration_builder2->set_mac_address(vmac_address_1);
-  PortConfiguration_builder2->set_admin_state_up(true);
-
-  PortConfiguration_HostInfo *portConfig_HostInfoBuilder2(new PortConfiguration_HostInfo);
-  portConfig_HostInfoBuilder2->set_ip_address(remote_ip_1);
-  PortConfiguration_builder2->set_allocated_host_info(portConfig_HostInfoBuilder2);
-
-  PortConfiguration_FixedIp *FixedIp_builder2 =
-          PortConfiguration_builder2->add_fixed_ips();
+  NeighborConfiguration_FixedIp *FixedIp_builder2 =
+          NeighborConfiguration_builder->add_fixed_ips();
+  FixedIp_builder2->set_neighbor_type(NeighborType::L2);
   FixedIp_builder2->set_subnet_id(subnet_id_1);
   FixedIp_builder2->set_ip_address(vip_address_1);
-
-  // delete br-int and br-tun bridges
-  ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
-          "del-br br-int", not_care_culminative_time, overall_rc);
-
-  ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
-          "del-br br-tun", not_care_culminative_time, overall_rc);
 
   // set demo mode
   bool previous_demo_mode = g_demo_mode;
@@ -1095,8 +1115,9 @@ TEST(ovs_l2_test_cases, DISABLED_2_ports_CREATE_test_traffic_CHILD)
   SubnetConiguration_builder->set_tunnel_id(30);
 
   // fill in port state structs for NEIGHBOR_CREATE_UPDATE for port 2
-  PortConfiguration_builder2->set_vpc_id(vpc_id_2);
-  PortConfiguration_builder2->set_mac_address(vmac_address_2);
+  NeighborConfiguration_builder->set_vpc_id(vpc_id_2);
+  NeighborConfiguration_builder->set_id(port_id_2);
+  NeighborConfiguration_builder->set_mac_address(vmac_address_2);
   FixedIp_builder2->set_subnet_id(subnet_id_2);
   FixedIp_builder2->set_ip_address(vip_address_2);
 
@@ -1130,7 +1151,7 @@ TEST(ovs_l2_test_cases, DISABLED_2_ports_CREATE_test_traffic_CHILD)
 
   // free the allocated configurations since we are done with it now
   new_port_states->clear_configuration();
-  new_port_neighbor_states->clear_configuration();
+  new_neighbor_states->clear_configuration();
   new_subnet_states->clear_configuration();
 
   // not deleting br-int and br-tun bridges so that parent can ping the two new ports

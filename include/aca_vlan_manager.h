@@ -15,6 +15,7 @@
 #ifndef ACA_VLAN_MANAGER_H
 #define ACA_VLAN_MANAGER_H
 
+#include "goalstateprovisioner.grpc.pb.h"
 #include <string>
 #include <list>
 #include <unordered_map>
@@ -34,25 +35,32 @@ struct vpc_table_entry {
   uint vlan_id;
   // list of ovs_ports names on this host in the same VPC to share the same internal vlan_id
   list<string> ovs_ports;
-  // list of output (e.g. vxlan) tunnel ports to the neighbor host communication in the same VPC
-  list<string> outports;
+  // hashtable of output (e.g. vxlan) tunnel ports to the neighbor host communication
+  // to neighbor port ID mapping in this VPC
+  // unordered_map <outports, list of neighbor port IDs>
+  unordered_map<string, list<string> > outports_neighbors_table;
 };
 
 class ACA_Vlan_Manager {
   public:
   static ACA_Vlan_Manager &get_instance();
 
+  void clear_all_data();
+
   uint get_or_create_vlan_id(string vpc_id);
 
-  void add_ovs_port(string vpc_id, string ovs_port);
+  int create_ovs_port(string vpc_id, string ovs_port, uint tunnel_id, ulong &culminative_time);
 
-  int remove_ovs_port(string vpc_id, string ovs_port);
+  int delete_ovs_port(string vpc_id, string ovs_port, uint tunnel_id, ulong &culminative_time);
 
-  void add_outport(string vpc_id, string outport);
+  int create_neighbor_outport(string neighbor_id, string vpc_id,
+                              alcor::schema::NetworkType network_type, string remote_host_ip,
+                              uint tunnel_id, ulong &culminative_time);
 
-  int remove_outport(string vpc_id, string outport);
+  int delete_neighbor_outport(string neighbor_id, string vpc_id,
+                              string outport_name, ulong &culminative_time);
 
-  int get_outports(string vpc_id, string &outports);
+  int get_outports_unsafe(string vpc_id, string &outports);
 
   // compiler will flag error when below is called
   ACA_Vlan_Manager(ACA_Vlan_Manager const &) = delete;

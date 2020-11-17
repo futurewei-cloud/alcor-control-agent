@@ -23,7 +23,7 @@ using namespace std;
 using namespace alcor::schema;
 
 // port id is stored as the key to ports table
-struct port_table_entry {
+struct neighbor_port_table_entry {
   string virtual_ip;
   string virtual_mac;
   string host_ip;
@@ -46,8 +46,8 @@ struct subnet_routing_table_entry {
   uint tunnel_id;
   string gateway_ip;
   string gateway_mac;
-  // list of ports within the subnet
-  unordered_map<string, port_table_entry> ports;
+  // list of neighbor ports within the subnet
+  unordered_map<string, neighbor_port_table_entry> neighbor_ports;
   // list of routing rules for this subnet
   unordered_map<string, routing_rule_entry> routing_rules;
 };

@@ -510,6 +510,7 @@ int ACA_OVS_L3_Programmer::create_or_update_neighbor_l3(
 
         // the openflow rule depends on whether the hosting ip is on this compute host or not
         if (is_port_on_same_host) {
+          // TODO: mod_dl_src to the destination gateway
           cmd_string = "add-flow br-tun \"table=0,priority=50,ip,dl_vlan=" +
                        to_string(source_vlan_id) + ",nw_dst=" + virtual_ip +
                        ",dl_dst=" + subnet_it->second.gateway_mac +
