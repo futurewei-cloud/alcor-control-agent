@@ -199,15 +199,15 @@ static inline bool aca_is_port_on_same_host(const std::string hosting_port_ip)
 
 static inline string aca_covert_cidr_to_netmask(const std::string cidr) {
   if (cidr.empty()) {
-    return nullptr;
+    return "";
   }
 
-  int pos = cidr.find("/");
-  if (pos < 0) {
-    return nullptr;
+  size_t slash_pos = cidr.find("/");
+  if (slash_pos == string::npos) {
+    return "";
   }
 
-  int netmask_num = std::stoi(cidr.substr(pos + 1));
+  int netmask_num = std::stoi(cidr.substr(slash_pos + 1));
   string netmask = "";
   bool over = false;
   for (int i = 1; i < 5; i++) {
@@ -230,19 +230,9 @@ static inline string aca_covert_cidr_to_netmask(const std::string cidr) {
   return netmask.substr(0, netmask.size() - 1);
 }
 
-static inline void split(const string& s, vector<string>& tokens, const string& delimiters = " ") {
-  string::size_type lastPos = s.find_first_not_of(delimiters, 0);
-  string::size_type pos = s.find_first_of(delimiters, lastPos);
-  while (string::npos != pos || string::npos != lastPos) {
-      tokens.push_back(s.substr(lastPos, pos - lastPos));
-      lastPos = s.find_first_not_of(delimiters, pos);
-      pos = s.find_first_of(delimiters, lastPos);
-  }
-}
-
 static inline long ip4tol(const string ip) {
   struct sockaddr_in sa;
-  if (inet_pton(AF_INET, ip.c_str(), $(sa.sin_addr) != 1) {
+  if (inet_pton(AF_INET, ip.c_str(), &(sa.sin_addr)) != 1) {
     throw std::invalid_argument("Virtual ipv4 address is not in the expect format");
   }
   return htonl(sa.sin_addr.s_addr);

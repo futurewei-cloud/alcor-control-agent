@@ -42,7 +42,12 @@ struct dhcp_entry_data {
     (pData)->port_host_name = (pCfg)->port_host_name;                          \
     (pData)->subnet_mask = (pCfg)->subnet_mask;                                \
     (pData)->gateway_address = (pCfg)->gateway_address;                        \
-    (pData)->dns_addresses = (pCfg)->dns_addresses;                            \
+    for (int i = 0; i < DHCP_MSG_OPTS_DNS_LENGTH; i++) {                       \
+      if ((pCfg)->dns_addresses[i].size() <= 0) {                                \
+        break;                                                                 \
+      }                                                                        \
+      (pData)->dns_addresses[i] = (pCfg)->dns_addresses[i];                        \
+    }                                                                          \
   } while (0)
 
 //BOOTP Message Type
@@ -290,7 +295,7 @@ class ACA_Dhcp_Server : public aca_dhcp_programming_if::ACA_Dhcp_Programming_Int
 
   unsigned short check_sum(unsigned char *a, int len);
   string _serialize_dhcp_message(dhcp_message *dhcpmsg);
-  string ACA_Dhcp_Server::_serialize_dhcp_ip_header_message(dhcp_message *dhcpmsg, int dhcp_message_len)
+  string _serialize_dhcp_ip_header_message(dhcp_message *dhcpmsg, int dhcp_message_len);
 
   /****************** Private variables ******************/
   int _dhcp_entry_thresh;

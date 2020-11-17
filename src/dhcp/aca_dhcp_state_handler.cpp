@@ -62,21 +62,26 @@ int Aca_Dhcp_State_Handler::update_dhcp_state_workitem(const DHCPState current_D
   stDhcpCfg.ipv6_address = current_DhcpConfiguration.ipv6_address();
   stDhcpCfg.port_host_name = current_DhcpConfiguration.port_host_name();
 
+  // handle dhcp dns entries
+  int cur_dns_index;
+  for (int i = 0; i < current_DhcpConfiguration.dns_entry_list_size() && i < DHCP_MSG_OPTS_DNS_LENGTH; i++) {
+    stDhcpCfg.dns_addresses[i] = current_DhcpConfiguration.dns_entry_list(i).entry();
+    cur_dns_index = i + 1;
+  }
+
   string subnet_id = current_DhcpConfiguration.subnet_id();
-  string gateway_address;
   for (int i = 0; i < parsed_struct.subnet_states_size(); i++) {
     SubnetState current_SubnetState = parsed_struct.subnet_states(i);
     SubnetConfiguration current_SubnetConfiguration = current_SubnetState.configuration();
     if (subnet_id == current_SubnetConfiguration.id()) {
-      assert(!current_SubnetConfiguration.gateway().ip_address());
-      assert(!current_SubnetConfiguration.cidr());
       stDhcpCfg.gateway_address = current_SubnetConfiguration.gateway().ip_address();
       stDhcpCfg.subnet_mask = aca_covert_cidr_to_netmask(current_SubnetConfiguration.cidr());
-      if (current_SubnetConfiguration.primary_dns()) {
-        stDhcpCfg.dns_addresses(0) = current_SubnetConfiguration.primary_dns();
-        if (current_SubnetConfiguration.secondary_dns()) {
-          stDhcpCfg.dns_addresses(1) = current_SubnetConfiguration.secondary_dns();
-        }
+      if (!current_SubnetConfiguration.primary_dns().empty() && cur_dns_index < DHCP_MSG_OPTS_DNS_LENGTH - 1) {
+        stDhcpCfg.dns_addresses[cur_dns_index++] = current_SubnetConfiguration.primary_dns();
+      }
+
+      if (!current_SubnetConfiguration.secondary_dns().empty() && cur_dns_index < DHCP_MSG_OPTS_DNS_LENGTH - 1) {
+        stDhcpCfg.dns_addresses[cur_dns_index++] = current_SubnetConfiguration.secondary_dns();
       }
       break;
     }
