@@ -766,16 +766,22 @@ dhcp_message *ACA_Dhcp_Server::_pack_dhcp_ack(dhcp_message *dhcpreq, dhcp_entry_
   opts_len += DHCP_OPT_CLV_HEADER + DHCP_OPT_LEN_4BYTE;
 
   //DHCP Options: subnet mask
-  _pack_dhcp_opt_subnet_mask(&pos[opts_len], pData->subnet_mask);
-  opts_len += DHCP_OPT_CLV_HEADER + DHCP_OPT_LEN_4BYTE;
+  if (!pData->subnet_mask.empty()) {
+    _pack_dhcp_opt_subnet_mask(&pos[opts_len], pData->subnet_mask);
+    opts_len += DHCP_OPT_CLV_HEADER + DHCP_OPT_LEN_4BYTE;
+  }
 
   //DHCP Options: router
-  _pack_dhcp_opt_router(&pos[opts_len], pData->gateway_address);
-  opts_len += DHCP_OPT_CLV_HEADER + DHCP_OPT_LEN_4BYTE;
+  if (!pData->gateway_address.empty()) {
+    _pack_dhcp_opt_router(&pos[opts_len], pData->gateway_address);
+    opts_len += DHCP_OPT_CLV_HEADER + DHCP_OPT_LEN_4BYTE;
+  }
 
   //DHCP Options: dns
-  int len = _pack_dhcp_opt_dns(&pos[opts_len], pData->dns_addresses);
-  opts_len += DHCP_OPT_CLV_HEADER + len;
+  if (!pData->dns_addresses[0].empty()) {
+    int len = _pack_dhcp_opt_dns(&pos[opts_len], pData->dns_addresses);
+    opts_len += DHCP_OPT_CLV_HEADER + len;
+  }
 
   //DHCP Options: end
   pos[opts_len] = DHCP_OPT_END;
