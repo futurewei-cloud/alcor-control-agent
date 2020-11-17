@@ -28,11 +28,12 @@ using namespace aca_dhcp_server;
 using namespace aca_dhcp_programming_if;
 using aca_comm_manager::Aca_Comm_Manager;
 using aca_net_config::Aca_Net_Config;
+using aca_ovs_l2_programmer::ACA_OVS_L2_Programmer;
 
 static string project_id = "99d9d709-8478-4b46-9f3f-000000000000";
 static string vpc_id_1 = "1b08a5bc-b718-11ea-b3de-111111111111";
 static string subnet_id_1 = "27330ae4-b718-11ea-b3de-111111111111";
-static string subnet_id_2 = "27330ae4-b718-11ea-b3de-222222222222"
+static string subnet_id_2 = "27330ae4-b718-11ea-b3de-222222222222";
 static string port_id_1 = "01111111-b718-11ea-b3de-111111111111";
 static string port_id_2 = "02222222-b718-11ea-b3de-111111111111";
 static string port_id_3 = "03333333-b718-11ea-b3de-111111111111";
@@ -226,6 +227,7 @@ TEST(dhcp_message_test_cases, get_options_valid)
 
 TEST(dhcp_request_test_case, l2_dhcp_test)
 {
+  ulong not_care_culminative_time = 0;
   string cmd_string;
   int overall_rc;
 
@@ -244,7 +246,7 @@ TEST(dhcp_request_test_case, l2_dhcp_test)
   DHCPState *new_dhcp_states = GoalState_builder.add_dhcp_states();
   SubnetState *new_subnet_states = GoalState_builder.add_subnet_states();
 
-  new_port_states->set_operation_type(OperationType::CREATE);
+  new_dhcp_states->set_operation_type(OperationType::CREATE);
 
   // fill in port state structs
   DHCPConfiguration *DHCPConfiguration_builder = new_dhcp_states->mutable_configuration();
@@ -364,6 +366,7 @@ TEST(dhcp_request_test_case, l2_dhcp_test)
 
 TEST(dhcp_request_test_case, l3_dhcp_test)
 {
+  ulong not_care_culminative_time = 0;
   string cmd_string;
   int overall_rc;
 
@@ -382,7 +385,7 @@ TEST(dhcp_request_test_case, l3_dhcp_test)
   DHCPState *new_dhcp_states = GoalState_builder.add_dhcp_states();
   SubnetState *new_subnet_states = GoalState_builder.add_subnet_states();
 
-  new_port_states->set_operation_type(OperationType::CREATE);
+  new_dhcp_states->set_operation_type(OperationType::CREATE);
 
   // fill in port state structs
   DHCPConfiguration *DHCPConfiguration_builder = new_dhcp_states->mutable_configuration();
@@ -425,7 +428,6 @@ TEST(dhcp_request_test_case, l3_dhcp_test)
   SubnetConiguration_builder->set_cidr(subnet2_cidr);
   SubnetConiguration_builder->set_tunnel_id(124);
 
-  auto *subnetConfig_GatewayBuilder(new SubnetConfiguration_Gateway);
   subnetConfig_GatewayBuilder->set_ip_address(subnet2_gw_ip);
   subnetConfig_GatewayBuilder->set_mac_address(subnet2_gw_mac);
   SubnetConiguration_builder->set_allocated_gateway(subnetConfig_GatewayBuilder);
