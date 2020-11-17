@@ -84,6 +84,7 @@ class ACA_OVS_L3_Programmer {
 
   string _host_dvr_mac;
 
+  // unordered_map <router IDs, unordered_map <subnet IDs, list of subnet routing tables>>
   unordered_map<string, unordered_map<string, subnet_routing_table_entry> > _routers_table;
 
   // mutex for reading and writing to routers_table

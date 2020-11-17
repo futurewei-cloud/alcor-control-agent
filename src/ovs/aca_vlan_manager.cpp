@@ -281,7 +281,7 @@ int ACA_Vlan_Manager::delete_neighbor_outport(string neighbor_id, string vpc_id,
         }
       }
 
-      // see if there is still *any* vpc still using this outport
+      // see if there is still *any* other vpc still using this outport
       bool outports_found = false;
       for (auto it : _vpcs_table) {
         auto current_outports_neighbors_table = it.second.outports_neighbors_table;
