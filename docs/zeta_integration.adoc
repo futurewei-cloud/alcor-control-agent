@@ -19,9 +19,9 @@ ACA as the openflow controller will install rules on ovs.
 . Gateway/Direct path. The path between the gateway node and the computing node is called the gateway path whereas VM to VM direct communication is called direct path. How to build gateway/direct path will be introduced later.
 
     .. When two VMs talk for the first time, the first packet will go through the gateway path;
-    .. The gateway node receieve the first packet and than send an OAM packet to the source host;
+    .. The gateway node receive the first packet and than send an OAM packet to the source host;
     .. The gateway node send the first packet (may be more than one due to delay) to the destination host;
-    .. The source host receieve the OAM packet then build VM to VM direct path. After this, all packets go throuth the direct path;
+    .. The source host receive the OAM packet then build VM to VM direct path. After this, all packets go throuth the direct path;
 
 
 == Bucketing System Design on Compute Node
@@ -48,7 +48,7 @@ Gateway path configuration happens when a VM boots up and there is no existing V
 
 . Alcor controller send goal state message which includes ZGC information (MAC and IP of FWDs) to ACA on the host;
 
-. ACA receieves the message and extract information of ZGC;
+. ACA receives the message and extract information of ZGC;
 
 . ACA determines whether the gateway path entry which has the same VLAN id has been installed in the flow table.
 
@@ -83,7 +83,7 @@ The ACA has the information about VLAN tag owned by each VM. The deletion of flo
 
 === Workflow for VM to VM Direct Path Configuration
 
-This happens when a gateway node receieve the first packet from compute node, then send OAM packet to the computing node.
+This happens when a gateway node receive the first packet from compute node, then send OAM packet to the computing node.
 
 . A gateway node receives the first packet from a compute node;
 
@@ -91,7 +91,7 @@ This happens when a gateway node receieve the first packet from compute node, th
 
 . The gateway node sends the OAM packet to the computing node;
 
-. The ovs on host receieves the OAM packet and pass it to ACA;
+. The ovs on host receives the OAM packet and pass it to ACA;
 
 . ACA parses OAM packet and extract information about the IP and mac of destination host and VM;
 
@@ -103,9 +103,9 @@ This happens when a gateway node receieve the first packet from compute node, th
 
 === OAM Packet Usage and Handling on ACA
 
-When ACA receieve OAM packet, it needs to parse it and decide what the action is.
+When ACA receive OAM packet, it needs to parse it and decide what the action is.
 
-. ACA receieves the OAM packet;
+. ACA receives the OAM packet;
 
 . ACA extracts OP_Code to determin whether to add (0x0000 0000) or delete (0x0000 0001) rules;
 
@@ -120,18 +120,95 @@ VM1 on Host1 starts to talk to VM2 on Host2. VM1 and VM2 belong to the same VPC,
 
 . VM1 sends a packet to VM2;
 
-. br-int on Host receieves the packet. The source MAC of this packet is MAC_VM1, and the destination MAC is MAC_Gateway_VM1;
+. br-int on Host receives the packet. The source MAC of this packet is MAC_VM1, and the destination MAC is MAC_Gateway_VM1;
 
-. br-int adds VLAN and sends the packet to ACA;
+. br-int adds VLAN and sends the packet to ACA based on the on-demand routing implementation (issue#134);
 
 . ACA matches MAC_Gateway_Host1 and adds on-demand openflow rule to flow table, and sends the first packet back to br-int;
 
-. br-int replaces the VLAN tag. Now the source MAC is MAC_Host1_DVR and the destination MAC is MAC_VM2;
+. br_int sends the packet to br_tun; Convert the source MAC to MAC_Host1_DVR and the destination MAC to MAC_VM2 with on-demand routing rule;
 
-. br_int sends the packet to br_tun;
+. If there is no direct path, send the packet to Zeta gateway path. Otherwise, this packet will go through direct VM path;
 
-. If there is no direct path, configure direct path vis gateway path. Otherwise, this packet will go through direct path;
+== Example for OpenFlow Rule Setting
 
+In this section, we will use the example topology described in Figure 3 to illustrate how to configure gateway path and direct path in the form of command line.
+
+=== Case 1: Gateway Path Configuration
+
+. Compute Node 1 (172.16.62.237)
+
+The command lines for gateway path configuration are as follows:
+
+    # ovs-ofctl -O OpenFlow13 add-group br-tun group_id=100,type=select,bucket=output:vxlan231,bucket=output:vxlan232
+    # ovs-ofctl -O OpenFlow13 add-group br-tun group_id=200,type=select,bucket=output:vxlan233,bucket=output:vxlan234
+    # ovs-ofctl add-flow br-tun table=22,priority=50,dl_vlan=100,actions="strip_vlan,load:0x1->NXM_NX_TUN_ID[],group:100"
+    # ovs-ofctl add-flow br-tun table=22,priority=50,dl_vlan=200,actions="strip_vlan,load:0x2->NXM_NX_TUN_ID[],group:200"
+    # ovs-ofctl add-flow br-tun table=0,priority=25,in_port="vxlan231",actions="resubmit(,4)"
+    # ovs-ofctl add-flow br-tun table=0,priority=25,in_port="vxlan232",actions="resubmit(,4)"
+    # ovs-ofctl add-flow br-tun table=0,priority=25,in_port="vxlan233",actions="resubmit(,4)"
+    # ovs-ofctl add-flow br-tun table=0,priority=25,in_port="vxlan234",actions="resubmit(,4)"
+    # ovs-ofctl add-flow br-tun table=4,priority=1,tun_id=0x1,actions="mod_vlan_vid:100,output:"patch-int""
+    # ovs-ofctl add-flow br-tun table=4,priority=1,tun_id=0x2,actions="mod_vlan_vid:200,output:"patch-int""
+
+After adding OpenFlow rules, the flow tables in br-tun are as follows:
+
+    cookie=0x0, duration=806.968s, table=0, n_packets=0, n_bytes=0, priority=1,in_port="patch-int" actions=resubmit(,2)
+    cookie=0x0, duration=41.454s, table=0, n_packets=0, n_bytes=0, priority=25,in_port=vxlan231 actions=resubmit(,4)
+    cookie=0x0, duration=35.429s, table=0, n_packets=0, n_bytes=0, priority=25,in_port=vxlan232 actions=resubmit(,4)
+    cookie=0x0, duration=29.654s, table=0, n_packets=0, n_bytes=0, priority=25,in_port=vxlan233 actions=resubmit(,4)
+    cookie=0x0, duration=23.110s, table=0, n_packets=0, n_bytes=0, priority=25,in_port=vxlan234 actions=resubmit(,4)
+    cookie=0x0, duration=186.068s, table=2, n_packets=0, n_bytes=0, priority=1,dl_dst=00:00:00:00:00:00/01:00:00:00:00:00 actions=resubmit(,20)
+    cookie=0x0, duration=174.437s, table=2, n_packets=0, n_bytes=0, priority=1,dl_dst=01:00:00:00:00:00/01:00:00:00:00:00 actions=resubmit(,22)
+    cookie=0x0, duration=14.078s, table=4, n_packets=0, n_bytes=0, priority=1,tun_id=0x1 actions=mod_vlan_vid:100,output:"patch-int"
+    cookie=0x0, duration=7.705s, table=4, n_packets=0, n_bytes=0, priority=1,tun_id=0x2 actions=mod_vlan_vid:200,output:"patch-int"
+    cookie=0x0, duration=159.449s, table=20, n_packets=0, n_bytes=0, priority=1 actions=resubmit(,22)
+    cookie=0x0, duration=63.974s, table=22, n_packets=0, n_bytes=0, priority=50,dl_vlan=100 actions=strip_vlan,load:0x1->NXM_NX_TUN_ID[],group:100
+    cookie=0x0, duration=57.318s, table=22, n_packets=0, n_bytes=0, priority=50,dl_vlan=200 actions=strip_vlan,load:0x2->NXM_NX_TUN_ID[],group:200
+
+. Compute Node 2 (172.168.62.238)
+
+The command lines for gateway path configuration are as follows:
+
+    # ovs-ofctl -O OpenFlow13 add-group br-tun group_id=100,type=select,bucket=output:vxlan231,bucket=output:vxlan232
+    # ovs-ofctl -O OpenFlow13 add-group br-tun group_id=200,type=select,bucket=output:vxlan233,bucket=output:vxlan234
+    # ovs-ofctl add-flow br-tun table=22,priority=50,dl_vlan=100,actions="strip_vlan,load:0x1->NXM_NX_TUN_ID[],group:100"
+    # ovs-ofctl add-flow br-tun table=22,priority=50,dl_vlan=200,actions="strip_vlan,load:0x2->NXM_NX_TUN_ID[],group:200"
+    # ovs-ofctl add-flow br-tun table=0,priority=25,in_port="vxlan231",actions="resubmit(,4)"
+    # ovs-ofctl add-flow br-tun table=0,priority=25,in_port="vxlan232",actions="resubmit(,4)"
+    # ovs-ofctl add-flow br-tun table=0,priority=25,in_port="vxlan233",actions="resubmit(,4)"
+    # ovs-ofctl add-flow br-tun table=0,priority=25,in_port="vxlan234",actions="resubmit(,4)"
+    # ovs-ofctl add-flow br-tun table=4,priority=1,tun_id=0x1,actions="mod_vlan_vid:100,output:"patch-int""
+    # ovs-ofctl add-flow br-tun table=4,priority=1,tun_id=0x2,actions="mod_vlan_vid:200,output:"patch-int""
+
+After adding OpenFlow rules, the flow tables in br-tun are as follows:
+
+ cookie=0x0, duration=129.879s, table=0, n_packets=0, n_bytes=0, priority=1,in_port="patch-int" actions=resubmit(,2)
+ cookie=0x0, duration=75.727s, table=0, n_packets=0, n_bytes=0, priority=25,in_port=vxlan231 actions=resubmit(,4)
+ cookie=0x0, duration=69.486s, table=0, n_packets=0, n_bytes=0, priority=25,in_port=vxlan232 actions=resubmit(,4)
+ cookie=0x0, duration=63.983s, table=0, n_packets=0, n_bytes=0, priority=25,in_port=vxlan233 actions=resubmit(,4)
+ cookie=0x0, duration=18.685s, table=0, n_packets=0, n_bytes=0, priority=25,in_port=vxlan234 actions=resubmit(,4)
+ cookie=0x0, duration=123.823s, table=2, n_packets=0, n_bytes=0, priority=1,dl_dst=00:00:00:00:00:00/01:00:00:00:00:00 actions=resubmit(,20)
+ cookie=0x0, duration=117.255s, table=2, n_packets=0, n_bytes=0, priority=1,dl_dst=01:00:00:00:00:00/01:00:00:00:00:00 actions=resubmit(,22)
+ cookie=0x0, duration=13.270s, table=4, n_packets=0, n_bytes=0, priority=1,tun_id=0x1 actions=mod_vlan_vid:100,output:"patch-int"
+ cookie=0x0, duration=7.172s, table=4, n_packets=0, n_bytes=0, priority=1,tun_id=0x2 actions=mod_vlan_vid:200,output:"patch-int"
+ cookie=0x0, duration=59.449s, table=20, n_packets=0, n_bytes=0, priority=1 actions=resubmit(,22)
+ cookie=0x0, duration=98.415s, table=22, n_packets=0, n_bytes=0, priority=50,dl_vlan=100 actions=strip_vlan,load:0x1->NXM_NX_TUN_ID[],group:100
+ cookie=0x0, duration=90.679s, table=22, n_packets=0, n_bytes=0, priority=50,dl_vlan=200 actions=strip_vlan,load:0x2->NXM_NX_TUN_ID[],group:200
+
+=== Case 2: Direct Path Configuration
+
+After the first packet from docker71 send to the gateway node, the gateway node will send an OAM packet to the compute node7, and a direct path between docker71 and docker81 will be built.
+
+. Computer Node 1 (172.16.62.237)
+
+ # ovs-ofctl add-flow br-tun table=20,priority=50,dl_vlan=100,ip,nw_src=192.168.1.71,nw_dst=192.168.1.81,actions="strip_vlan,load:0x1->NXM_NX_TUN_ID[],output:"vxlan238""
+ # ovs-ofctl add-flow br-tun table=0,priority=25,in_port="vxlan238",actions="resubmit(,4)"
+
+. Computer Node 2 (172.16.62.238)
+
+ # ovs-ofctl add-flow br-tun table=20,priority=50,dl_vlan=100,ip,nw_src=192.168.1.81,nw_dst=192.168.1.71,actions="strip_vlan,load:0x1->NXM_NX_TUN_ID[],output:"vxlan237""
+ # ovs-ofctl add-flow br-tun table=0,priority=25,in_port="vxlan237",actions="resubmit(,4)"
 
 == Code changes
 
@@ -146,7 +223,7 @@ Add code in aca_dataplane_ovs.h to support parsing ZGC information sended from A
     .. Define the interface for establishing direct path between VMs;
 
 . include/aca_zeta_state_handler.h
-    .. Define the interface to receieve goal state message from Alcor server;
+    .. Define the interface to receive goal state message from Alcor server;
 
 . include/aca_zeta_programming.h
     .. Define the data struct about gateway path configuration;

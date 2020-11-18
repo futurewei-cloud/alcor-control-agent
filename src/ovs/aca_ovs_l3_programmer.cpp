@@ -424,13 +424,12 @@ int ACA_OVS_L3_Programmer::delete_router(RouterConfiguration &current_RouterConf
   return overall_rc;
 }
 
-int ACA_OVS_L3_Programmer::create_neighbor_l3(const string vpc_id, const string subnet_id,
-                                              alcor::schema::NetworkType /* network_type */ ,
-                                              const string virtual_ip, const string virtual_mac,
-                                              const string remote_host_ip,
-                                              uint tunnel_id, ulong &culminative_time)
+int ACA_OVS_L3_Programmer::create_or_update_neighbor_l3(
+        const string vpc_id, const string subnet_id, alcor::schema::NetworkType /* network_type */,
+        const string virtual_ip, const string virtual_mac,
+        const string remote_host_ip, uint tunnel_id, ulong &culminative_time)
 {
-  ACA_LOG_DEBUG("%s", "ACA_OVS_L3_Programmer::create_neighbor_l3 ---> Entering\n");
+  ACA_LOG_DEBUG("%s", "ACA_OVS_L3_Programmer::create_or_update_neighbor_l3 ---> Entering\n");
 
   int overall_rc = EXIT_SUCCESS;
   bool found_subnet_in_router = false;
@@ -540,7 +539,7 @@ int ACA_OVS_L3_Programmer::create_neighbor_l3(const string vpc_id, const string 
     overall_rc = ENOENT;
   }
 
-  ACA_LOG_DEBUG("ACA_OVS_L3_Programmer::create_neighbor_l3 <--- Exiting, overall_rc = %d\n",
+  ACA_LOG_DEBUG("ACA_OVS_L3_Programmer::create_or_update_neighbor_l3 <--- Exiting, overall_rc = %d\n",
                 overall_rc);
 
   return overall_rc;
