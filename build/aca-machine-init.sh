@@ -36,7 +36,7 @@ echo "2--- installing librdkafka ---" && \
 
 echo "3--- installing cppkafka ---" && \
     apt-get update -y && apt-get install -y cmake 
-    git clone https://hub.fastgit.org/mfontanini/cppkafka.git /var/local/git/cppkafka && \
+    git clone https://github.com/mfontanini/cppkafka.git /var/local/git/cppkafka && \
     cd /var/local/git/cppkafka && \
     mkdir build && \
     cd build && \
@@ -56,9 +56,7 @@ echo "4--- installing grpc dependencies ---" && \
 # installing grpc and its dependencies
 GRPC_RELEASE_TAG="v1.24.x"
 echo "5--- cloning grpc repo ---" && \
-    git clone -b $GRPC_RELEASE_TAG https://hub.fastgit.org/grpc/grpc /var/local/git/grpc && \
-     rm -f /var/local/git/grpc/.gitmodules && \
-    cp ~/alcor-control-agent/build/.gitmodules /var/local/git/grpc && \
+    git clone -b $GRPC_RELEASE_TAG https://github.com/grpc/grpc /var/local/git/grpc && \
     cd /var/local/git/grpc && \
     git submodule update --init && \
     echo "--- installing c-ares ---" && \
@@ -95,7 +93,7 @@ echo "5--- cloning grpc repo ---" && \
 
 OVS_RELEASE_TAG="branch-2.12"
 echo "6--- installing openvswitch dependancies ---" && \
-    git clone -b $OVS_RELEASE_TAG https://hub.fastgit.org/openvswitch/ovs.git /var/local/git/openvswitch && \
+    git clone -b $OVS_RELEASE_TAG https://github.com/openvswitch/ovs.git /var/local/git/openvswitch && \
     cd /var/local/git/openvswitch && \
     ./boot.sh && \
     ./configure --prefix=/usr/local --localstatedir=/var --sysconfdir=/etc --enable-shared && \
@@ -119,12 +117,17 @@ echo "7--- installing pulsar dependacies ---" && \
 echo "8--- building alcor-control-agent"
 cd $BUILD/.. && cmake . && make
 
-if [ "$1" == "delete-bridges" ]; then
-  echo "9--- deleting br-tun and br-int if requested"
-  PATH=$PATH:/usr/local/share/openvswitch/scripts \
-      LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib
-  ovs-ctl --system-id=random --delete-bridges restart
-fi
+echo "9--- rebuilding br-tun and br-int"
+ovs-ctl --system-id=random --delete-bridges restart
+ovs-vsctl add-br br-int -- add-br br-tun
+ovs-vsctl \
+    -- add-port br-int patch-tun \
+    -- set interface patch-tun type=patch options:peer=patch-int \
+    -- add-port br-tun patch-int \
+    -- set interface patch-int type=patch options:peer=patch-tun
+
+ovs-ofctl add-flow br-tun "table=0, priority=1,in_port="patch-int" actions=resubmit(,2)"
+ovs-ofctl add-flow br-tun "table=2, priority=0 actions=resubmit(,22)"
 
 echo "10--- running alcor-control-agent"
 # sends output to null device, but stderr to console 
