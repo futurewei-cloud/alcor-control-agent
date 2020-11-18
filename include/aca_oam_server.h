@@ -87,23 +87,21 @@ class ACA_Oam_Server {
   ACA_Oam_Server();
   ~ACA_Oam_Server();
 
+  
+
   static ACA_Oam_Server &get_instance();
-
-  void _init_oam_ofp();
-
-  void _deinit_oam_ofp();
-
   void oams_recv(void *message);
 
+  private:
   uint8_t _get_message_type(oam_message *oammsg);
 
-  oam_match get_oam_match_field(oam_message *oammsg);
+  oam_match _get_oam_match_field(oam_message *oammsg);
 
-  oam_action get_oam_action_field(oam_message *oammsg);
+  oam_action _get_oam_action_field(oam_message *oammsg);
 
-  int add_direct_path(oam_match match, oam_action action);
+  int _add_direct_path(oam_match match, oam_action action);
 
-  int del_direct_path(oam_match match);
+  int _del_direct_path(oam_match match);
 
   void _init_oam_msg_ops();
 
@@ -119,7 +117,7 @@ class ACA_Oam_Server {
 
   string _get_mac_addr(uint8_t *mac);
 
-  string get_vpc_id(uint8_t *vni);
+  string _get_vpc_id(uint8_t *vni);
 };
 } // namespace aca_oam_server
 #endif // #ifndef ACA_OAM_SERVER_H

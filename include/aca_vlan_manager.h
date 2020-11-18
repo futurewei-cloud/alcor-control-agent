@@ -36,6 +36,7 @@ struct vpc_table_entry {
   list<string> ovs_ports;
   // list of output (e.g. vxlan) tunnel ports to the neighbor host communication in the same VPC
   list<string> outports;
+  uint32_t oam_server_port;
 };
 
 class ACA_Vlan_Manager {
@@ -53,6 +54,10 @@ class ACA_Vlan_Manager {
   int remove_outport(string vpc_id, string outport);
 
   int get_outports(string vpc_id, string &outports);
+
+  int get_oam_server_port(string vpc_id, uint32_t *port);
+
+  void set_oam_server_port(string vpc_id, uint32_t port);
 
   // compiler will flag error when below is called
   ACA_Vlan_Manager(ACA_Vlan_Manager const &) = delete;

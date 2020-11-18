@@ -188,4 +188,42 @@ int ACA_Vlan_Manager::get_outports(string vpc_id, string &outports)
   return overall_rc;
 }
 
+
+int ACA_Vlan_Manager::get_oam_server_port(string vpc_id, uint32_t *port)
+{
+  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::get_oam_server_port ---> Entering\n");
+  
+  int overall_rc;
+  // -----critical section starts-----
+  _vpcs_table_mutex.lock();
+  if (_vpcs_table.find(vpc_id) == _vpcs_table.end()) {
+    ACA_LOG_ERROR("vpc_id %s not find in vpc_table\n", vpc_id.c_str());
+    overall_rc = ENOENT;
+  } else {
+    *port = _vpcs_table[vpc_id].oam_server_port;
+    overall_rc = EXIT_SUCCESS;
+  }
+  _vpcs_table_mutex.unlock();
+  // -----critical section ends-----
+  ACA_LOG_DEBUG("ACA_Vlan_Manager::get_oam_server_port <--- Exiting, overall_rc = %d\n", overall_rc);
+
+  return overall_rc;
+}
+
+void ACA_Vlan_Manager::set_oam_server_port(string vpc_id, uint32_t port)
+{
+  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::set_oam_server_port ---> Entering\n");
+
+  // -----critical section starts-----
+  _vpcs_table_mutex.lock();
+  if (_vpcs_table.find(vpc_id) == _vpcs_table.end()) {
+    create_entry_unsafe(vpc_id);
+  }
+  _vpcs_table[vpc_id].oam_server_port = port;
+  _vpcs_table_mutex.unlock();
+  // -----critical section ends-----
+
+  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::set_oam_server_port <--- Exiting\n");
+}
+
 } // namespace aca_vlan_manager

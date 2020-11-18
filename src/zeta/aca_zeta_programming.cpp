@@ -15,9 +15,13 @@
 #include "aca_zeta_programming.h"
 #include "aca_ovs_l2_programmer.h"
 #include "aca_util.h"
-#include "goalstateprovisioner.grpc.pb.h"
 #include "aca_log.h"
+#include "aca_vlan_manager.h"
+#include "aca_oam_port_manager.h"
 
+using namespace aca_vlan_manager;
+using namespace aca_oam_port_manager;
+using namespace alcor::schema;
 namespace aca_zeta_programming
 {
 ACA_Zeta_Programming &ACA_Zeta_Programming::get_instance()
@@ -26,19 +30,66 @@ ACA_Zeta_Programming &ACA_Zeta_Programming::get_instance()
   return instance;
 }
 
-int ACA_Zeta_Programming::update_zeta_group_entry(zeta_config *zeta_config_in)
+int ACA_Zeta_Programming::update_zeta_config(const alcor::schema::VpcState current_VpcState)
+{
+  zeta_config stZetaCfg;
+  int overall_rc = EXIT_SUCCESS;
+
+  string vpc_id = current_VpcState.configuration().id();
+
+  AuxGateway current_ZetaState = current_VpcState.configuration().auxiliary_gateway();
+  if (current_ZetaState.auxgateway_type() == 0) {
+    ACA_LOG_INFO("%s", "AuxGateway_type is NONE!\n");
+  }
+
+  stZetaCfg.group_id = current_ZetaState.id();
+  for (auto destination : current_ZetaState.destinations()) {
+    stZetaCfg.zeta_buckets.push_back(destination.ip_address());
+  }
+  uint32_t oam_server_port = current_ZetaState.zeta_info().port_inband_operation();
+
+  //I am not sure if the logic of this part is correct?
+  switch (current_VpcState.operation_type()) {
+  case OperationType::CREATE or OperationType::UPDATE:
+    uint32_t port;
+    ACA_Vlan_Manager::get_instance().get_oam_server_port(vpc_id, &port);
+    // oam_server_port is not set
+    if (oam_server_port == 0) {
+      ACA_Vlan_Manager::get_instance().set_oam_server_port(vpc_id, oam_server_port);
+
+      //update oam_ports_table and add the OAM punt rule also if this is the first port in the VPC
+      Aca_Oam_Port_Manager::get_instance().add_vpc(oam_server_port, vpc_id);
+    }
+    // add the group bucket rule
+    overall_rc = update_zeta_group_entry(&stZetaCfg);
+    break;
+  case OperationType::DELETE:
+    // Reset oam_server_port to 0
+    ACA_Vlan_Manager::get_instance().set_oam_server_port(vpc_id, 0);
+
+    // update oam_ports_table and delete the OAM punt rule if the last port in the VPC has been deleted
+    Aca_Oam_Port_Manager::get_instance().remove_vpc(oam_server_port, vpc_id);
+    // delete the group bucket rule
+    overall_rc = delete_zeta_group_entry(&stZetaCfg);
+    break;
+  default:
+    ACA_LOG_ERROR("%s", "=====>wrong Zeta operation\n");
+    break;
+  }
+
+  return overall_rc;
+}
+
+int ACA_Zeta_Programming::update_zeta_group_entry(zeta_config *zeta_cfg)
 {
   unsigned long not_care_culminative_time;
   int overall_rc = EXIT_SUCCESS;
 
-  list<struct destination>::iterator it;
-
-  string cmd = "-O OpenFlow13 add-group br-tun group_id=" + zeta_config_in->id + ",type=select";
-
-  for (it = zeta_config_in->destinations.begin();
-       it != zeta_config_in->destinations.end(); it++) {
-    string outport_name =
-            aca_get_outport_name(alcor::schema::NetworkType::VXLAN, (*it).ip_address);
+  //adding group table
+  string cmd = "-O OpenFlow13 add-group br-tun group_id=" + zeta_cfg->group_id + ",type=select";
+  list<string>::iterator it;
+  for (it = zeta_cfg->zeta_buckets.begin(); it != zeta_cfg->zeta_buckets.end(); it++) {
+    string outport_name = aca_get_outport_name(alcor::schema::NetworkType::VXLAN, *it);
     cmd += ",bucket=output:" + outport_name;
   }
 
@@ -46,30 +97,32 @@ int ACA_Zeta_Programming::update_zeta_group_entry(zeta_config *zeta_config_in)
           cmd, not_care_culminative_time, overall_rc);
 
   if (overall_rc == EXIT_SUCCESS) {
-    ACA_LOG_INFO("%s", "Command succeeded!\n");
+    ACA_LOG_INFO("%s", "update_zeta_group_entry succeeded!\n");
   } else {
-    ACA_LOG_ERROR("Command failed!!! overrall_rc: %d\n", overall_rc);
+    ACA_LOG_ERROR("update_zeta_group_entry failed!!! overrall_rc: %d\n", overall_rc);
   }
 
   return overall_rc;
 }
 
-int ACA_Zeta_Programming::delete_zeta_group_entry(zeta_config *zeta_config_in)
+int ACA_Zeta_Programming::delete_zeta_group_entry(zeta_config *zeta_cfg)
 {
   unsigned long not_care_culminative_time;
 
   int overall_rc = EXIT_SUCCESS;
 
-  string cmd = "-O OpenFlow13 del-groups br-tun group_id=" + zeta_config_in->id;
+  //deleting group table
+  string cmd = "-O OpenFlow13 del-groups br-tun group_id=" + zeta_cfg->group_id;
   aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
           cmd, not_care_culminative_time, overall_rc);
 
   if (overall_rc == EXIT_SUCCESS) {
-    ACA_LOG_INFO("%s", "Command succeeded!\n");
+    ACA_LOG_INFO("%s", "delete_zeta_group_entry succeeded!\n");
   } else {
-    ACA_LOG_ERROR("Command failed!!! overrall_rc: %d\n", overall_rc);
+    ACA_LOG_ERROR("delete_zeta_group_entry failed!!! overrall_rc: %d\n", overall_rc);
   }
 
   return overall_rc;
 }
+
 } // namespace aca_zeta_programming

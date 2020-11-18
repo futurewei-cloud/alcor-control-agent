@@ -31,49 +31,12 @@ namespace aca_oam_server
 ACA_Oam_Server::ACA_Oam_Server()
 {
   _init_oam_msg_ops();
-  _init_oam_ofp();
+
 }
 
 ACA_Oam_Server::~ACA_Oam_Server()
 {
-  _deinit_oam_ofp();
-}
 
-void ACA_Oam_Server::_init_oam_ofp()
-{
-  int overall_rc = EXIT_SUCCESS;
-
-  // adding oam default flows
-  uint32_t oam_server_port = ACA_OVS_Control::get_instance().get_oam_server_port();
-  string opt = "table=0,priority=25,udp,udp_dst=" + to_string(oam_server_port) + ",actions=CONTROLLER";
-
-  overall_rc = ACA_OVS_Control::get_instance().add_flow("br-int", opt.c_str());
-
-  if (overall_rc == EXIT_SUCCESS) {
-    ACA_LOG_INFO("%s", "Command succeeded!\n");
-  } else {
-    ACA_LOG_ERROR("Command failed!!! overrall_rc: %d\n", overall_rc);
-  }
-
-  return;
-}
-
-void ACA_Oam_Server::_deinit_oam_ofp()
-{
-  int overall_rc = EXIT_SUCCESS;
-
-  uint32_t oam_server_port = ACA_OVS_Control::get_instance().get_oam_server_port();
-  string opt = "udp,udp_dst=" + to_string(oam_server_port);
-
-  // deleting oam default flows
-  overall_rc = ACA_OVS_Control::get_instance().del_flows("br-int", opt.c_str());
-
-  if (overall_rc == EXIT_SUCCESS) {
-    ACA_LOG_INFO("%s", "Command succeeded!\n");
-  } else {
-    ACA_LOG_ERROR("Command failed!!! overrall_rc: %d\n", overall_rc);
-  }
-  return;
 }
 
 ACA_Oam_Server &ACA_Oam_Server::get_instance()
@@ -148,6 +111,7 @@ uint8_t ACA_Oam_Server::_get_message_type(oam_message *oammsg)
   return (uint8_t)(ntohl(oammsg->op_code));
 }
 
+//Convert mac address to string
 string ACA_Oam_Server::_get_mac_addr(uint8_t *mac)
 {
   string mac_string;
@@ -172,7 +136,7 @@ void ACA_Oam_Server::_standardize_mac_address(string &mac_string)
   std::replace(mac_string.begin(), mac_string.end(), '-', ':');
 }
 
-string ACA_Oam_Server::get_vpc_id(uint8_t *vni)
+string ACA_Oam_Server::_get_vpc_id(uint8_t *vni)
 {
   string vpc_id;
   stringstream ss;
@@ -188,7 +152,7 @@ string ACA_Oam_Server::get_vpc_id(uint8_t *vni)
   return vpc_id;
 }
 
-oam_match ACA_Oam_Server::get_oam_match_field(oam_message *oammsg)
+oam_match ACA_Oam_Server::_get_oam_match_field(oam_message *oammsg)
 {
   oam_match match;
 
@@ -199,12 +163,12 @@ oam_match ACA_Oam_Server::get_oam_match_field(oam_message *oammsg)
   match.sport = to_string(ntohs(msg_data.src_port));
   match.dport = to_string(ntohs(msg_data.dst_port));
   match.proto = to_string(msg_data.proto);
-  match.vni = get_vpc_id(msg_data.vni);
+  match.vni = _get_vpc_id(msg_data.vni);
 
   return match;
 }
 
-oam_action ACA_Oam_Server::get_oam_action_field(oam_message *oammsg)
+oam_action ACA_Oam_Server::_get_oam_action_field(oam_message *oammsg)
 {
   oam_action action;
 
@@ -226,8 +190,8 @@ void ACA_Oam_Server::_parse_oam_flow_injection(oam_message *oammsg)
   unsigned long not_care_culminative_time;
   int overall_rc = EXIT_SUCCESS;
 
-  oam_match match = get_oam_match_field(oammsg);
-  oam_action action = get_oam_action_field(oammsg);
+  oam_match match = _get_oam_match_field(oammsg);
+  oam_action action = _get_oam_action_field(oammsg);
 
   string remote_host_ip = action.node_nw_dst;
   string vpc_id = match.vni;
@@ -239,7 +203,7 @@ void ACA_Oam_Server::_parse_oam_flow_injection(oam_message *oammsg)
     aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().create_update_neighbor_port(
             vpc_id, network_type, remote_host_ip, (uint)stoi(vpc_id), not_care_culminative_time);
   }
-  overall_rc = aca_oam_server::ACA_Oam_Server::add_direct_path(match, action);
+  overall_rc = aca_oam_server::ACA_Oam_Server::_add_direct_path(match, action);
 
   if (overall_rc == EXIT_SUCCESS) {
     ACA_LOG_INFO("%s", "Command succeeded!\n");
@@ -253,9 +217,9 @@ void ACA_Oam_Server::_parse_oam_flow_injection(oam_message *oammsg)
 void ACA_Oam_Server::_parse_oam_flow_deletion(oam_message *oammsg)
 {
   int overall_rc = EXIT_SUCCESS;
-  oam_match match = get_oam_match_field(oammsg);
+  oam_match match = _get_oam_match_field(oammsg);
 
-  overall_rc = del_direct_path(match);
+  overall_rc = _del_direct_path(match);
 
   if (overall_rc == EXIT_SUCCESS) {
     ACA_LOG_INFO("%s", "Command succeeded!\n");
@@ -266,7 +230,7 @@ void ACA_Oam_Server::_parse_oam_flow_deletion(oam_message *oammsg)
   return;
 }
 
-int ACA_Oam_Server::add_direct_path(oam_match match, oam_action action)
+int ACA_Oam_Server::_add_direct_path(oam_match match, oam_action action)
 {
   int overall_rc = EXIT_SUCCESS;
 
@@ -283,8 +247,9 @@ int ACA_Oam_Server::add_direct_path(oam_match match, oam_action action)
                       ",mod_nw_dst=" + action.inst_nw_dst +
                       ",idle_timeout=" + action.idle_timeout + ",output:" + outport_name;
 
-  string opt = "table=55,priority=50," + cmd_match + "," + cmd_action;
+  string opt = "table=20,priority=50," + cmd_match + "," + cmd_action;
 
+  // Add unicast rules in table20
   overall_rc = ACA_OVS_Control::get_instance().add_flow("br-tun", opt.c_str());
 
   if (overall_rc == EXIT_SUCCESS) {
@@ -296,13 +261,13 @@ int ACA_Oam_Server::add_direct_path(oam_match match, oam_action action)
   return overall_rc;
 }
 
-int ACA_Oam_Server::del_direct_path(oam_match match)
+int ACA_Oam_Server::_del_direct_path(oam_match match)
 {
   int overall_rc = EXIT_SUCCESS;
   string vlan_id = to_string(aca_vlan_manager::ACA_Vlan_Manager::get_instance().get_or_create_vlan_id(
           match.vni));
 
-  string opt = "table=55,priority=50,ip,nw_proto=" + match.proto +
+  string opt = "table=20,priority=50,ip,nw_proto=" + match.proto +
                ",nw_src=" + match.sip + ",nw_dst=" + match.dip +
                ",tp_src=" + match.sport + ",tp_dst=" + match.dport + ",dl_vlan=" + vlan_id;
 

@@ -17,29 +17,24 @@
 
 #include <string>
 #include <list>
+#include "goalstateprovisioner.grpc.pb.h"
 
 using namespace std;
 
 namespace aca_zeta_programming
 {
-struct destination {
-  string ip_address;
-  string mac_address;
-};
-
 struct zeta_config {
-  uint32_t AuxGateway_type;
-  string id;
-  list<struct destination> destinations;
-  struct zeta {
-    uint32_t port_inband_operation;
-  };
-  zeta extra_info;
+  string group_id;
+  //
+  list<string> zeta_buckets;
+  uint32_t port_inband_operation;
 };
 
 class ACA_Zeta_Programming {
   public:
   static ACA_Zeta_Programming &get_instance();
+
+  int update_zeta_config(const alcor::schema::VpcState current_VpcState);
 
   int update_zeta_group_entry(zeta_config *zeta_config_in);
 
