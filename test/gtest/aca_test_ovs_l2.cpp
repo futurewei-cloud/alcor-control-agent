@@ -677,9 +677,9 @@ TEST(ovs_l2_test_cases, DISABLED_2_ports_CREATE_test_traffic_PARENT)
   EXPECT_NE(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
 
-  // just clearing the port states and reuse the rest GoalState_builder2
+  // just clearing the port states and reuse the rest GoalState_builder
   new_port_states->clear_configuration();
-  GoalState_builder2.clear_port_states();
+  GoalState_builder.clear_port_states();
 
   // delete port 4 as L2 neighbor
   new_neighbor_states->set_operation_type(OperationType::DELETE);
