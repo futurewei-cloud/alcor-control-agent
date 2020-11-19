@@ -27,9 +27,9 @@
 using namespace std;
 using namespace alcor::schema;
 using namespace aca_vlan_manager;
-using aca_comm_manager::Aca_Comm_Manager;
-using aca_net_config::Aca_Net_Config;
-using aca_ovs_l2_programmer::ACA_OVS_L2_Programmer;
+using namespace aca_comm_manager;
+using namespace aca_net_config;
+using namespace aca_ovs_l2_programmer;
 
 // extern the string and helper functions from aca_test_ovs_util.cpp
 extern string project_id;
@@ -573,7 +573,7 @@ TEST(ovs_l2_test_cases, DISABLED_2_ports_CREATE_test_traffic_PARENT)
   NeighborState *new_neighbor_states = GoalState_builder.add_neighbor_states();
   new_neighbor_states->set_operation_type(OperationType::CREATE);
 
-  // fill in port state structs for NEIGHBOR_CREATE_UPDATE for port 3
+  // fill in neighbor state structs for port 3
   NeighborConfiguration *NeighborConfiguration_builder =
           new_neighbor_states->mutable_configuration();
   NeighborConfiguration_builder->set_revision_number(1);
@@ -622,7 +622,7 @@ TEST(ovs_l2_test_cases, DISABLED_2_ports_CREATE_test_traffic_PARENT)
   SubnetConiguration_builder->set_cidr("10.0.1.0/24");
   SubnetConiguration_builder->set_tunnel_id(30);
 
-  // fill in port state structs for NEIGHBOR_CREATE_UPDATE for port 4
+  // fill in neighbor state structs for port 4
   NeighborConfiguration_builder->set_vpc_id(vpc_id_2);
   NeighborConfiguration_builder->set_id(port_id_4);
   NeighborConfiguration_builder->set_mac_address(vmac_address_4);
@@ -677,12 +677,33 @@ TEST(ovs_l2_test_cases, DISABLED_2_ports_CREATE_test_traffic_PARENT)
   EXPECT_NE(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
 
+  // free the allocated configurations since we are done with it now
+  new_port_states->clear_configuration();
+  new_subnet_states->clear_configuration();
+
+  // delete port 4 as L2 neighbor
+  new_neighbor_states->set_operation_type(OperationType::DELETE);
+  overall_rc = Aca_Comm_Manager::get_instance().update_goal_state(
+          GoalState_builder, gsOperationalReply);
+  ASSERT_EQ(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
+
+  // should not be able to ping port 4 anymore
+  cmd_string = "ping -I " + vip_address_2 + " -c1 " + vip_address_4;
+  overall_rc = Aca_Net_Config::get_instance().execute_system_command(cmd_string);
+  EXPECT_NE(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
+
+  // but still have to ping port 3 since it is not deleted
+  cmd_string = "ping -I " + vip_address_1 + " -c1 " + vip_address_3;
+  overall_rc = Aca_Net_Config::get_instance().execute_system_command(cmd_string);
+  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
+
   // clean up
 
   // free the allocated configurations since we are done with it now
-  new_port_states->clear_configuration();
   new_neighbor_states->clear_configuration();
-  new_subnet_states->clear_configuration();
 
   // delete br-int and br-tun bridges
   ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(

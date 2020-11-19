@@ -27,11 +27,11 @@
 
 using namespace std;
 using namespace alcor::schema;
+using namespace aca_comm_manager;
+using namespace aca_net_config;
 using namespace aca_vlan_manager;
 using namespace aca_ovs_l2_programmer;
 using namespace aca_ovs_l3_programmer;
-using aca_comm_manager::Aca_Comm_Manager;
-using aca_net_config::Aca_Net_Config;
 
 string project_id = "99d9d709-8478-4b46-9f3f-000000000000";
 string vpc_id_1 = "1b08a5bc-b718-11ea-b3de-111111111111";
