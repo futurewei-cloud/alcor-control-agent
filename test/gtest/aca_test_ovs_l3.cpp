@@ -29,7 +29,7 @@ using aca_comm_manager::Aca_Comm_Manager;
 using aca_net_config::Aca_Net_Config;
 using aca_ovs_l2_programmer::ACA_OVS_L2_Programmer;
 
-// extern the string and helper functions from aca_test_ovs_l2.cpp
+// extern the string and helper functions from aca_test_ovs_util.cpp
 extern string project_id;
 extern string vpc_id_1;
 extern string vpc_id_2;
@@ -62,6 +62,10 @@ extern bool g_demo_mode;
 
 extern void aca_test_create_default_port_state(PortState *new_port_states);
 extern void aca_test_create_default_subnet_state(SubnetState *new_subnet_states);
+extern void aca_test_1_neighbor_CREATE_DELETE(NeighborType input_neighbor_type);
+extern void aca_test_1_port_CREATE_plus_neighbor_CREATE(NeighborType input_neighbor_type);
+extern void aca_test_10_neighbor_CREATE(NeighborType input_neighbor_type);
+extern void aca_test_create_default_router_goal_state(GoalState *goalState_builder);
 
 static string host1_dvr_mac_address = HOST_DVR_MAC_PREFIX + string("d7:f2:01");
 static string host2_dvr_mac_address = HOST_DVR_MAC_PREFIX + string("d7:f2:02");
@@ -168,7 +172,6 @@ TEST(ovs_l3_test_cases, ADD_DELETE_ROUTER_test_no_traffic)
   subnetConfig_GatewayBuilder2->set_mac_address(subnet2_gw_mac);
   SubnetConiguration_builder2->set_allocated_gateway(subnetConfig_GatewayBuilder2);
 
-  // create the router
   GoalStateOperationReply gsOperationalReply;
 
   // try to delete a non-existant router now
@@ -188,6 +191,21 @@ TEST(ovs_l3_test_cases, ADD_DELETE_ROUTER_test_no_traffic)
   overall_rc = Aca_Comm_Manager::get_instance().update_goal_state(
           GoalState_builder2, gsOperationalReply);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
+}
+
+TEST(ovs_l3_test_cases, 1_l3_neighbor_CREATE_DELETE)
+{
+  aca_test_1_neighbor_CREATE_DELETE(NeighborType::L3);
+}
+
+TEST(ovs_l3_test_cases, 1_port_CREATE_plus_l3_neighbor_CREATE)
+{
+  aca_test_1_port_CREATE_plus_neighbor_CREATE(NeighborType::L3);
+}
+
+TEST(ovs_l3_test_cases, 10_l3_neighbor_CREATE)
+{
+  aca_test_10_neighbor_CREATE(NeighborType::L3);
 }
 
 TEST(ovs_l3_test_cases, DISABLED_2_ports_ROUTING_test_traffic_one_machine)
@@ -348,72 +366,7 @@ TEST(ovs_l3_test_cases, DISABLED_2_ports_ROUTING_test_traffic_one_machine)
 
   // program the router
   GoalState GoalState_builder2;
-  RouterState *new_router_states = GoalState_builder2.add_router_states();
-  SubnetState *new_subnet_states1 = GoalState_builder2.add_subnet_states();
-  SubnetState *new_subnet_states2 = GoalState_builder2.add_subnet_states();
-
-  new_router_states->set_operation_type(OperationType::CREATE);
-
-  // fill in router state structs
-  RouterConfiguration *RouterConfiguration_builder =
-          new_router_states->mutable_configuration();
-  RouterConfiguration_builder->set_revision_number(1);
-
-  RouterConfiguration_builder->set_id("router_id1");
-  RouterConfiguration_builder->set_host_dvr_mac_address("fa:16:3e:d7:f2:02");
-
-  auto *RouterConfiguration_SubnetRoutingTable_builder1 =
-          RouterConfiguration_builder->add_subnet_routing_tables();
-  RouterConfiguration_SubnetRoutingTable_builder1->set_subnet_id(subnet_id_1);
-  auto *RouterConfiguration_SubnetRoutingRule_builder1 =
-          RouterConfiguration_SubnetRoutingTable_builder1->add_routing_rules();
-  RouterConfiguration_SubnetRoutingRule_builder1->set_operation_type(OperationType::CREATE);
-  RouterConfiguration_SubnetRoutingRule_builder1->set_id("12345");
-  RouterConfiguration_SubnetRoutingRule_builder1->set_name("routing_rule_1");
-  RouterConfiguration_SubnetRoutingRule_builder1->set_destination("154.12.42.24/32");
-  RouterConfiguration_SubnetRoutingRule_builder1->set_next_hop_ip("154.12.42.101");
-  auto *routerConfiguration_RoutingRuleExtraInfo_builder1(new RouterConfiguration_RoutingRuleExtraInfo);
-  routerConfiguration_RoutingRuleExtraInfo_builder1->set_destination_type(
-          DestinationType::INTERNET);
-  routerConfiguration_RoutingRuleExtraInfo_builder1->set_next_hop_mac("fa:16:3e:d7:aa:02");
-  RouterConfiguration_SubnetRoutingRule_builder1->set_allocated_routing_rule_extra_info(
-          routerConfiguration_RoutingRuleExtraInfo_builder1);
-
-  auto *RouterConfiguration_SubnetRoutingTable_builder2 =
-          RouterConfiguration_builder->add_subnet_routing_tables();
-  RouterConfiguration_SubnetRoutingTable_builder2->set_subnet_id(subnet_id_2);
-  auto *RouterConfiguration_SubnetRoutingRule_builder2 =
-          RouterConfiguration_SubnetRoutingTable_builder2->add_routing_rules();
-  RouterConfiguration_SubnetRoutingRule_builder2->set_operation_type(OperationType::UPDATE);
-  RouterConfiguration_SubnetRoutingRule_builder2->set_id("23456");
-  RouterConfiguration_SubnetRoutingRule_builder2->set_name("routing_rule_2");
-  RouterConfiguration_SubnetRoutingRule_builder2->set_destination("154.12.54.24/32");
-  RouterConfiguration_SubnetRoutingRule_builder2->set_next_hop_ip("154.12.54.101");
-  auto *routerConfiguration_RoutingRuleExtraInfo_builder2(new RouterConfiguration_RoutingRuleExtraInfo);
-  routerConfiguration_RoutingRuleExtraInfo_builder2->set_destination_type(DestinationType::VPC_GW);
-  routerConfiguration_RoutingRuleExtraInfo_builder2->set_next_hop_mac("fa:16:3e:d7:bb:02");
-  RouterConfiguration_SubnetRoutingRule_builder2->set_allocated_routing_rule_extra_info(
-          routerConfiguration_RoutingRuleExtraInfo_builder2);
-
-  // fill in subnet state1 structs
-  aca_test_create_default_subnet_state(new_subnet_states1);
-
-  // fill in subnet state2 structs
-  new_subnet_states2->set_operation_type(OperationType::INFO);
-
-  SubnetConfiguration *SubnetConiguration_builder2 =
-          new_subnet_states2->mutable_configuration();
-  SubnetConiguration_builder2->set_revision_number(1);
-  SubnetConiguration_builder2->set_project_id(project_id);
-  SubnetConiguration_builder2->set_vpc_id(vpc_id_2);
-  SubnetConiguration_builder2->set_id(subnet_id_2);
-  SubnetConiguration_builder2->set_cidr("10.10.1.0/24");
-  SubnetConiguration_builder2->set_tunnel_id(30);
-
-  auto *subnetConfig_GatewayBuilder2(new SubnetConfiguration_Gateway);
-  subnetConfig_GatewayBuilder2->set_ip_address(subnet2_gw_ip);
-  subnetConfig_GatewayBuilder2->set_mac_address(subnet2_gw_mac);
-  SubnetConiguration_builder2->set_allocated_gateway(subnetConfig_GatewayBuilder2);
+  aca_test_create_default_router_goal_state(&GoalState_builder2);
 
   // create the router
   overall_rc = Aca_Comm_Manager::get_instance().update_goal_state(
@@ -431,9 +384,6 @@ TEST(ovs_l3_test_cases, DISABLED_2_ports_ROUTING_test_traffic_one_machine)
           "docker exec con4 ping -c1 " + subnet2_gw_ip);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
-
-  // clear the allocated router configurations since we are done with it now
-  new_router_states->clear_configuration();
 
   // just clearing the router states and reuse the two subnet states in GoalState_builder2
   GoalState_builder2.clear_router_states();
@@ -502,8 +452,6 @@ TEST(ovs_l3_test_cases, DISABLED_2_ports_ROUTING_test_traffic_one_machine)
   // free the allocated configurations since we are done with it now
   new_neighbor_states3->clear_configuration();
   new_neighbor_states4->clear_configuration();
-  new_subnet_states1->clear_configuration();
-  new_subnet_states2->clear_configuration();
 
   // cleanup
 

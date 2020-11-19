@@ -59,6 +59,8 @@ class ACA_OVS_L3_Programmer {
   public:
   static ACA_OVS_L3_Programmer &get_instance();
 
+  void clear_all_data();
+
   int create_or_update_router(RouterConfiguration &current_RouterConfiguration,
                               GoalState &parsed_struct,
                               ulong &culminative_time_dataplane_programming_time);

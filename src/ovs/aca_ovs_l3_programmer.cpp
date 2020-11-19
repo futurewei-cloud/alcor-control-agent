@@ -42,6 +42,22 @@ ACA_OVS_L3_Programmer &ACA_OVS_L3_Programmer::get_instance()
   return instance;
 }
 
+void ACA_OVS_L3_Programmer::clear_all_data()
+{
+  ACA_LOG_DEBUG("%s", "ACA_OVS_L3_Programmer::clear_all_data ---> Entering\n");
+
+  // -----critical section starts-----
+  _routers_table_mutex.lock();
+  // All the elements in the unordered_map container are dropped:
+  // their destructors are called, and they are removed from the container,
+  // leaving _routers_table with a size of 0.
+  _routers_table.clear();
+  _routers_table_mutex.unlock();
+  // -----critical section ends-----
+
+  ACA_LOG_DEBUG("%s", "ACA_OVS_L3_Programmer::clear_all_data <--- Exiting\n");
+}
+
 int ACA_OVS_L3_Programmer::create_or_update_router(RouterConfiguration &current_RouterConfiguration,
                                                    GoalState &parsed_struct,
                                                    ulong &dataplane_programming_time)
@@ -516,7 +532,7 @@ int ACA_OVS_L3_Programmer::create_or_update_neighbor_l3(
           // because routing rule are for source packet transformation
           continue;
         }
-        ACA_LOG_DEBUG("subnet_id:%s\n ", subnet_it->first.c_str());
+        ACA_LOG_DEBUG("Found L3 neighbor subnet_id:%s\n ", subnet_it->first.c_str());
 
         source_vlan_id = ACA_Vlan_Manager::get_instance().get_or_create_vlan_id(
                 subnet_it->second.vpc_id);
