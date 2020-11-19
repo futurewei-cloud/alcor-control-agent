@@ -45,7 +45,6 @@ add_executable(
     gtest/aca_test_openflow.cpp
     gtest/aca_test_ovs_l2.cpp
     gtest/aca_test_ovs_l3.cpp
-    gtest/aca_test_oam.cpp
     gtest/aca_test_ovs_util.cpp
 )
 

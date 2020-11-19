@@ -40,7 +40,7 @@ class Aca_Oam_Port_Manager {
   Aca_Oam_Port_Manager(){};
   ~Aca_Oam_Port_Manager(){};
 
-  void _creat_oam_ofp(uint32_t port_id);
+  void _create_oam_ofp(uint32_t port_id);
   int _delete_oam_ofp(uint32_t port_id);
 
   unordered_map<uint32_t, unordered_set<string>> _oam_ports_table;

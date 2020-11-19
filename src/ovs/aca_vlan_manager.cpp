@@ -379,6 +379,7 @@ int ACA_Vlan_Manager::get_oam_server_port(string vpc_id, uint32_t *port)
   return overall_rc;
 }
 
+// Bind oam_server_port to vpc
 void ACA_Vlan_Manager::set_oam_server_port(string vpc_id, uint32_t port)
 {
   ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::set_oam_server_port ---> Entering\n");

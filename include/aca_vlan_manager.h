@@ -35,12 +35,13 @@ struct vpc_table_entry {
   uint vlan_id;
   // list of ovs_ports names on this host in the same VPC to share the same internal vlan_id
   list<string> ovs_ports;
-  
-  uint32_t oam_server_port;
+
   // hashtable of output (e.g. vxlan) tunnel ports to the neighbor host communication
   // to neighbor port ID mapping in this VPC
   // unordered_map <outports, list of neighbor port IDs>
   unordered_map<string, list<string> > outports_neighbors_table;
+
+  uint32_t oam_server_port;
 };
 
 class ACA_Vlan_Manager {

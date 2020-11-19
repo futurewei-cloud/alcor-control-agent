@@ -30,57 +30,56 @@ ACA_Zeta_Programming &ACA_Zeta_Programming::get_instance()
   return instance;
 }
 
-int ACA_Zeta_Programming::update_zeta_config(const alcor::schema::VpcState current_VpcState)
+int ACA_Zeta_Programming::update_zeta_config(const alcor::schema::AuxGateway current_AuxGateway, string vpc_id)
 {
   zeta_config stZetaCfg;
   int overall_rc = EXIT_SUCCESS;
 
-  string vpc_id = current_VpcState.configuration().id();
-
-  AuxGateway current_ZetaState = current_VpcState.configuration().auxiliary_gateway();
-  if (current_ZetaState.auxgateway_type() == 0) {
-    ACA_LOG_INFO("%s", "AuxGateway_type is NONE!\n");
-  }
-
-  stZetaCfg.group_id = current_ZetaState.id();
-  for (auto destination : current_ZetaState.destinations()) {
+  stZetaCfg.group_id = current_AuxGateway.id();
+  for (auto destination : current_AuxGateway.destinations()) {
     stZetaCfg.zeta_buckets.push_back(destination.ip_address());
   }
-  uint32_t oam_server_port = current_ZetaState.zeta_info().port_inband_operation();
+  uint32_t oam_server_port = current_AuxGateway.zeta_info().port_inband_operation();
 
-  //I am not sure if the logic of this part is correct?
-  switch (current_VpcState.operation_type()) {
-  case OperationType::CREATE or OperationType::UPDATE:
-    uint32_t port;
-    ACA_Vlan_Manager::get_instance().get_oam_server_port(vpc_id, &port);
-    // oam_server_port is not set
-    if (oam_server_port == 0) {
-      ACA_Vlan_Manager::get_instance().set_oam_server_port(vpc_id, oam_server_port);
+  uint32_t port;
+  ACA_Vlan_Manager::get_instance().get_oam_server_port(vpc_id, &port);
+  // oam_server_port is not set
+  if (port == 0) {
+    ACA_Vlan_Manager::get_instance().set_oam_server_port(vpc_id, oam_server_port);
 
-      //update oam_ports_table and add the OAM punt rule also if this is the first port in the VPC
-      Aca_Oam_Port_Manager::get_instance().add_vpc(oam_server_port, vpc_id);
-    }
-    // add the group bucket rule
-    overall_rc = update_zeta_group_entry(&stZetaCfg);
-    break;
-  case OperationType::DELETE:
-    // Reset oam_server_port to 0
-    ACA_Vlan_Manager::get_instance().set_oam_server_port(vpc_id, 0);
-
-    // update oam_ports_table and delete the OAM punt rule if the last port in the VPC has been deleted
-    Aca_Oam_Port_Manager::get_instance().remove_vpc(oam_server_port, vpc_id);
-    // delete the group bucket rule
-    overall_rc = delete_zeta_group_entry(&stZetaCfg);
-    break;
-  default:
-    ACA_LOG_ERROR("%s", "=====>wrong Zeta operation\n");
-    break;
+    //update oam_ports_table and add the OAM punt rule also if this is the first port in the VPC
+    Aca_Oam_Port_Manager::get_instance().add_vpc(oam_server_port, vpc_id);
   }
+  // add the group bucket rule
+  overall_rc = _update_zeta_group_entry(&stZetaCfg);
 
   return overall_rc;
 }
 
-int ACA_Zeta_Programming::update_zeta_group_entry(zeta_config *zeta_cfg)
+int ACA_Zeta_Programming::delete_zeta_config(const alcor::schema::AuxGateway current_AuxGateway, string vpc_id)
+{
+  zeta_config stZetaCfg;
+  int overall_rc = EXIT_SUCCESS;
+
+  stZetaCfg.group_id = current_AuxGateway.id();
+  for (auto destination : current_AuxGateway.destinations()) {
+    stZetaCfg.zeta_buckets.push_back(destination.ip_address());
+  }
+  uint32_t oam_server_port = current_AuxGateway.zeta_info().port_inband_operation();
+
+  // Reset oam_server_port to 0
+  ACA_Vlan_Manager::get_instance().set_oam_server_port(vpc_id, 0);
+
+  // update oam_ports_table and delete the OAM punt rule if the last port in the VPC has been deleted
+  Aca_Oam_Port_Manager::get_instance().remove_vpc(oam_server_port, vpc_id);
+
+  // delete the group bucket rule
+  overall_rc = _delete_zeta_group_entry(&stZetaCfg);
+
+  return overall_rc;
+}
+
+int ACA_Zeta_Programming::_update_zeta_group_entry(zeta_config *zeta_cfg)
 {
   unsigned long not_care_culminative_time;
   int overall_rc = EXIT_SUCCESS;
@@ -105,7 +104,7 @@ int ACA_Zeta_Programming::update_zeta_group_entry(zeta_config *zeta_cfg)
   return overall_rc;
 }
 
-int ACA_Zeta_Programming::delete_zeta_group_entry(zeta_config *zeta_cfg)
+int ACA_Zeta_Programming::_delete_zeta_group_entry(zeta_config *zeta_cfg)
 {
   unsigned long not_care_culminative_time;
 

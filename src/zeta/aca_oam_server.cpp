@@ -31,12 +31,10 @@ namespace aca_oam_server
 ACA_Oam_Server::ACA_Oam_Server()
 {
   _init_oam_msg_ops();
-
 }
 
 ACA_Oam_Server::~ACA_Oam_Server()
 {
-
 }
 
 ACA_Oam_Server &ACA_Oam_Server::get_instance()
@@ -111,12 +109,13 @@ uint8_t ACA_Oam_Server::_get_message_type(oam_message *oammsg)
   return (uint8_t)(ntohl(oammsg->op_code));
 }
 
-//Convert mac address to string
 string ACA_Oam_Server::_get_mac_addr(uint8_t *mac)
 {
   string mac_string;
   stringstream ss;
 
+  //Convert mac address to string
+  // from uint8[6] to string
   for (int i = 0; i < 6; i++) {
     ss << std::hex << std::setw(2) << std::setfill('0')
        << static_cast<unsigned int>(mac[i]);
@@ -195,13 +194,17 @@ void ACA_Oam_Server::_parse_oam_flow_injection(oam_message *oammsg)
 
   string remote_host_ip = action.node_nw_dst;
   string vpc_id = match.vni;
-
   alcor::schema::NetworkType network_type = alcor::schema::NetworkType::VXLAN;
 
   if (!aca_is_port_on_same_host(remote_host_ip)) {
     ACA_LOG_INFO("%s", "port_neighbor not exist!\n");
-    aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().create_update_neighbor_port(
-            vpc_id, network_type, remote_host_ip, (uint)stoi(vpc_id), not_care_culminative_time);
+    string neighbor_id;
+    // get netigbor_id
+
+    //crate neighbor_port
+    aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().create_or_update_neighbor_port(
+            neighbor_id, vpc_id, network_type, remote_host_ip,
+            (uint)stoi(vpc_id), not_care_culminative_time);
   }
   overall_rc = aca_oam_server::ACA_Oam_Server::_add_direct_path(match, action);
 

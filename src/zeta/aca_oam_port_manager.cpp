@@ -23,6 +23,14 @@ using namespace aca_ovs_control;
 
 namespace aca_oam_port_manager
 {
+Aca_Oam_Port_Manager &Aca_Oam_Port_Manager::get_instance()
+{
+  // Instance is destroyed when program exits.
+  // It is instantiated on first use.
+  static Aca_Oam_Port_Manager instance;
+  return instance;
+}
+
 // unsafe function, needs to be called inside oam_ports_table_mutex lock
 // this function assumes there is no existing entry for port_id
 void Aca_Oam_Port_Manager::create_entry_unsafe(uint32_t port_id)
@@ -36,11 +44,11 @@ void Aca_Oam_Port_Manager::create_entry_unsafe(uint32_t port_id)
 }
 
 // add the OAM punt rule
-void Aca_Oam_Port_Manager::_creat_oam_ofp(uint32_t port_id)
+void Aca_Oam_Port_Manager::_create_oam_ofp(uint32_t port_id)
 {
   int overall_rc = EXIT_SUCCESS;
 
-   string opt = "table=0,priority=25,udp,udp_dst=" + to_string(port_id) + ",actions=CONTROLLER";
+  string opt = "table=0,priority=25,udp,udp_dst=" + to_string(port_id) + ",actions=CONTROLLER";
 
   overall_rc = ACA_OVS_Control::get_instance().add_flow("br-int", opt.c_str());
 
@@ -78,7 +86,7 @@ void Aca_Oam_Port_Manager::add_vpc(uint32_t port_id, string vpc_id)
   _oam_ports_table_mutex.lock();
   if (_oam_ports_table.find(port_id) == _oam_ports_table.end()) {
     create_entry_unsafe(port_id);
-    _creat_oam_ofp(port_id);
+    _create_oam_ofp(port_id);
   }
   _oam_ports_table[port_id].emplace(vpc_id);
 
