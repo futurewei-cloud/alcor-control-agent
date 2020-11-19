@@ -677,9 +677,9 @@ TEST(ovs_l2_test_cases, DISABLED_2_ports_CREATE_test_traffic_PARENT)
   EXPECT_NE(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
 
-  // free the allocated configurations since we are done with it now
+  // just clearing the port states and reuse the rest GoalState_builder2
   new_port_states->clear_configuration();
-  new_subnet_states->clear_configuration();
+  GoalState_builder2.clear_port_states();
 
   // delete port 4 as L2 neighbor
   new_neighbor_states->set_operation_type(OperationType::DELETE);
@@ -704,6 +704,7 @@ TEST(ovs_l2_test_cases, DISABLED_2_ports_CREATE_test_traffic_PARENT)
 
   // free the allocated configurations since we are done with it now
   new_neighbor_states->clear_configuration();
+  new_subnet_states->clear_configuration();
 
   // delete br-int and br-tun bridges
   ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(

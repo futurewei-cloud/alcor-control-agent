@@ -342,7 +342,6 @@ TEST(ovs_l3_test_cases, DISABLED_2_ports_ROUTING_test_traffic_one_machine)
 
   // free the allocated configurations since we are done with it now
   new_port_states->clear_configuration();
-  new_subnet_states->clear_configuration();
 
   // program the router
   GoalState GoalState_builder2;
@@ -719,11 +718,6 @@ TEST(ovs_l3_test_cases, DISABLED_2_ports_ROUTING_test_traffic_PARENT)
           "docker exec con2 ping -c1 " + vip_address_3);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
 
-  // free the allocated configurations since we are done with it now
-  new_neighbor_states3->clear_configuration();
-  new_subnet_states1->clear_configuration();
-  new_subnet_states2->clear_configuration();
-
   // delete port 4 as L3 neighbor
   new_neighbor_states4->set_operation_type(OperationType::DELETE);
   overall_rc = Aca_Comm_Manager::get_instance().update_goal_state(
@@ -743,6 +737,9 @@ TEST(ovs_l3_test_cases, DISABLED_2_ports_ROUTING_test_traffic_PARENT)
   // cleanup
 
   // free the allocated configurations since we are done with it now
+  new_subnet_states1->clear_configuration();
+  new_subnet_states2->clear_configuration();
+  new_neighbor_states3->clear_configuration();
   new_neighbor_states4->clear_configuration();
 
   overall_rc = Aca_Net_Config::get_instance().execute_system_command("docker kill con1");
