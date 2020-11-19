@@ -762,7 +762,7 @@ dhcp_message *ACA_Dhcp_Server::_pack_dhcp_ack(dhcp_message *dhcpreq, dhcp_entry_
   opts_len += DHCP_OPT_CLV_HEADER + DHCP_OPT_LEN_4BYTE;
 
   //DHCP Options: server identifier
-  _pack_dhcp_opt_server_id(&pos[opts_len], DHCP_MSG_SERVER_ID); //Hard coded for 127.0.0.1
+  _pack_dhcp_opt_server_id(&pos[opts_len], DHCP_MSG_SERVER_ID); 
   opts_len += DHCP_OPT_CLV_HEADER + DHCP_OPT_LEN_4BYTE;
 
   //DHCP Options: subnet mask
@@ -810,7 +810,7 @@ dhcp_message *ACA_Dhcp_Server::_pack_dhcp_nak(dhcp_message *dhcpreq)
   opts_len += DHCP_OPT_CLV_HEADER + DHCP_OPT_LEN_1BYTE;
 
   //DHCP Options: server identifier
-  _pack_dhcp_opt_server_id(&pos[opts_len], DHCP_MSG_SERVER_ID); //Hard coded for 127.0.0.1
+  _pack_dhcp_opt_server_id(&pos[opts_len], DHCP_MSG_SERVER_ID); 
   opts_len += DHCP_OPT_CLV_HEADER + DHCP_OPT_LEN_4BYTE;
 
   //DHCP Options: end
@@ -907,7 +907,8 @@ string ACA_Dhcp_Server::_serialize_dhcp_message(dhcp_message *dhcpmsg)
     }
   }
 
-  int len = packet.length()/2;
+  // a byte contains two str char, we only need byte length
+  int len = packet.length() / 2; 
   packet.insert(0, _serialize_dhcp_ip_header_message(dhcpmsg, len));
   return packet;
 }

@@ -75,7 +75,7 @@ int Aca_Dhcp_State_Handler::update_dhcp_state_workitem(const DHCPState current_D
     SubnetConfiguration current_SubnetConfiguration = current_SubnetState.configuration();
     if (subnet_id == current_SubnetConfiguration.id()) {
       stDhcpCfg.gateway_address = current_SubnetConfiguration.gateway().ip_address();
-      stDhcpCfg.subnet_mask = aca_covert_cidr_to_netmask(current_SubnetConfiguration.cidr());
+      stDhcpCfg.subnet_mask = aca_convert_cidr_to_netmask(current_SubnetConfiguration.cidr());
       if (!current_SubnetConfiguration.primary_dns().empty() && cur_dns_index < DHCP_MSG_OPTS_DNS_LENGTH - 1) {
         stDhcpCfg.dns_addresses[cur_dns_index++] = current_SubnetConfiguration.primary_dns();
       }

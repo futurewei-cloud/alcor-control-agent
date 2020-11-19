@@ -197,11 +197,12 @@ static inline bool aca_is_port_on_same_host(const std::string hosting_port_ip)
   return (rc == EXIT_SUCCESS);
 }
 
-static inline string aca_covert_cidr_to_netmask(const std::string cidr) {
+static inline string aca_convert_cidr_to_netmask(const std::string cidr) {
   if (cidr.empty()) {
     return "";
   }
 
+  // get cidr netmask length str
   size_t slash_pos = cidr.find("/");
   if (slash_pos == string::npos) {
     return "";
@@ -209,18 +210,21 @@ static inline string aca_covert_cidr_to_netmask(const std::string cidr) {
 
   int netmask_num = std::stoi(cidr.substr(slash_pos + 1));
   string netmask = "";
-  bool over = false;
+  bool over = false; // mark whether ovs netmask_num
   for (int i = 1; i < 5; i++) {
     if (over) {
+      // if overed the remain is 0.
       netmask += "0.";
       continue;
     }
 
     if (i * 8 <= netmask_num) {
+      // before fixed is 255
       netmask += "255.";
     } else {
       over = true; 
       int tmp = 0;
+      // 
       for (int m = 1; m < netmask_num % 8 + 1; m++) {
         tmp += 1 << (8 - m);
       }  

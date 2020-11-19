@@ -123,11 +123,11 @@ struct udphear {
 };
 
 //DHCP message ip header field
-#define DHCP_MSG_IP_HEADER_SRC_IP (0x7f000101)
+#define DHCP_MSG_IP_HEADER_SRC_IP (0x7f000101) // hard code for dhcp src ip 127.0.1.1
 #define DHCP_MSG_IP_HEADER_DEST_IP (0xffffffff)
 #define DHCP_MSG_IP_HEADER_SRC_PORT (67)
 #define DHCP_MSG_IP_HEADER_DEST_PORT (68)
-#define DHCP_MSG_IP_HEADER_VERSION (69) //ip version + ip header length
+#define DHCP_MSG_IP_HEADER_VERSION (69) //ip version 4 + ip header length 0100 + 0101(length is base 4 bytes, all length=5*4=20)
 #define DHCP_MSG_IP_HEADER_PROTOCOL (17) //udp protocol
 #define DHCP_MSG_IP_HEADER_FREGMENT (0x4000) //don't fregment
 #define DHCP_MSG_IP_HEADER_TOL (16) //time to live
@@ -136,7 +136,7 @@ struct udphear {
 
 //DHCP message l2 layer
 #define DHCP_MSG_L2_HEADER_DEST_MAC ("ffffffffffff")
-#define DHCP_MSG_L2_HEADER_SRC_MAC ("60d755f7c209")
+#define DHCP_MSG_L2_HEADER_SRC_MAC ("60d755f7c209") // hard code for l2 src mac 60:d7:55:f7:c2:09
 #define DHCP_MSG_L2_HEADER_TYPE ("0800")
 
 struct dhcp_message {
@@ -209,7 +209,7 @@ struct dhcp_router {
 struct dhcp_dns {
   uint8_t code;
   uint8_t len;
-  uint8_t dns[DHCP_MSG_OPTS_DNS_LENGTH*4];
+  uint8_t dns[DHCP_MSG_OPTS_DNS_LENGTH*4]; // expand for dns array to 4 power,ip = 4*bytes
 };
 
 struct dhcp_req_ip {
