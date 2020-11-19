@@ -31,13 +31,19 @@ class ACA_OVS_L2_Programmer {
 
   int setup_ovs_bridges_if_need();
 
-  int configure_port(const std::string vpc_id, const std::string port_name,
-                     const std::string virtual_ip, uint tunnel_id, ulong &culminative_time);
+  int create_port(const std::string vpc_id, const std::string port_name,
+                  const std::string virtual_ip, uint tunnel_id, ulong &culminative_time);
 
-  int create_update_neighbor_port(const std::string vpc_id,
-                                  alcor::schema::NetworkType network_type,
-                                  const std::string remote_host_ip,
-                                  uint tunnel_id, ulong &culminative_time);
+  int delete_port(const std::string vpc_id, const std::string port_name,
+                  uint tunnel_id, ulong &culminative_time);
+
+  int create_or_update_neighbor_port(const std::string neighbor_id, const std::string vpc_id,
+                                     alcor::schema::NetworkType network_type,
+                                     const std::string remote_host_ip,
+                                     uint tunnel_id, ulong &culminative_time);
+
+  int delete_neighbor_port(const std::string neighbor_id, const std::string vpc_id,
+                           const std::string outport_name, ulong &culminative_time);
 
   void execute_ovsdb_command(const std::string cmd_string,
                              ulong &culminative_time, int &overall_rc);

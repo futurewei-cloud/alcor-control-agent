@@ -23,7 +23,7 @@ using namespace std;
 using namespace alcor::schema;
 
 // port id is stored as the key to ports table
-struct port_table_entry {
+struct neighbor_port_table_entry {
   string virtual_ip;
   string virtual_mac;
   string host_ip;
@@ -46,8 +46,8 @@ struct subnet_routing_table_entry {
   uint tunnel_id;
   string gateway_ip;
   string gateway_mac;
-  // list of ports within the subnet
-  unordered_map<string, port_table_entry> ports;
+  // list of neighbor ports within the subnet
+  unordered_map<string, neighbor_port_table_entry> neighbor_ports;
   // list of routing rules for this subnet
   unordered_map<string, routing_rule_entry> routing_rules;
 };
@@ -59,6 +59,8 @@ class ACA_OVS_L3_Programmer {
   public:
   static ACA_OVS_L3_Programmer &get_instance();
 
+  void clear_all_data();
+
   int create_or_update_router(RouterConfiguration &current_RouterConfiguration,
                               GoalState &parsed_struct,
                               ulong &culminative_time_dataplane_programming_time);
@@ -66,13 +68,14 @@ class ACA_OVS_L3_Programmer {
   int delete_router(RouterConfiguration &current_RouterConfiguration,
                     ulong &culminative_time_dataplane_programming_time);
 
-  // TODO: also need to add the corresponding update and delete operations
-  // at least the prototype but ideally the full implementation
-  int create_or_update_neighbor_l3(const string vpc_id, const string subnet_id,
-                                   alcor::schema::NetworkType network_type,
-                                   const string virtual_ip, const string virtual_mac,
+  int create_or_update_neighbor_l3(const string neighbor_id, const string vpc_id,
+                                   const string subnet_id, const string virtual_ip,
+                                   const string virtual_mac,
                                    const string remote_host_ip, uint tunnel_id,
                                    ulong &culminative_time_dataplane_programming_time);
+
+  int delete_neighbor_l3(const string neighbor_id, const string subnet_id,
+                         const string virtual_ip, ulong &culminative_time);
 
   // compiler will flag the error when below is called.
   ACA_OVS_L3_Programmer(ACA_OVS_L3_Programmer const &) = delete;
@@ -84,6 +87,7 @@ class ACA_OVS_L3_Programmer {
 
   string _host_dvr_mac;
 
+  // unordered_map <router IDs, unordered_map <subnet IDs, list of subnet routing tables>>
   unordered_map<string, unordered_map<string, subnet_routing_table_entry> > _routers_table;
 
   // mutex for reading and writing to routers_table

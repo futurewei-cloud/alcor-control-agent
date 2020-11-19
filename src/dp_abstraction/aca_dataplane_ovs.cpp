@@ -105,26 +105,67 @@ int ACA_Dataplane_OVS::update_port_state_workitem(const PortState current_PortSt
 
   PortConfiguration current_PortConfiguration = current_PortState.configuration();
 
-  // TODO: need to design the usage of current_PortConfiguration.revision_number()
-  assert(current_PortConfiguration.revision_number() > 0);
+  try {
+    // TODO: need to design the usage of current_PortConfiguration.revision_number()
+    assert(current_PortConfiguration.revision_number() > 0);
 
-  // TODO: handle current_PortConfiguration.admin_state_up = false
-  // need to look into the meaning of that during nova integration
-  assert(current_PortConfiguration.admin_state_up() == true);
-
-  switch (current_PortState.operation_type()) {
-  case OperationType::CREATE:
-
-    assert(current_PortConfiguration.message_type() == MessageType::FULL);
+    // TODO: handle current_PortConfiguration.admin_state_up = false
+    // need to look into the meaning of that during nova integration
+    assert(current_PortConfiguration.admin_state_up() == true);
 
     assert(!current_PortConfiguration.id().empty());
 
     generated_port_name = aca_get_port_name(current_PortConfiguration.id());
 
-    try {
-      if (!aca_validate_fixed_ips_size(current_PortConfiguration.fixed_ips_size())) {
-        throw std::invalid_argument("PortConfiguration.fixed_ips_size is less than zero");
+    if (!aca_validate_fixed_ips_size(current_PortConfiguration.fixed_ips_size())) {
+      throw std::invalid_argument("PortConfiguration.fixed_ips_size is less than zero");
+    }
+
+    // TODO: cache the subnet information to a dictionary to provide
+    // a faster look up for the next run, only use the below loop for
+    // cache miss.
+    // Look up the subnet configuration to query for tunnel_id
+    for (int j = 0; j < parsed_struct.subnet_states_size(); j++) {
+      SubnetConfiguration current_SubnetConfiguration =
+              parsed_struct.subnet_states(j).configuration();
+
+      ACA_LOG_DEBUG("current_SubnetConfiguration subnet ID: %s.\n",
+                    current_SubnetConfiguration.id().c_str());
+
+      if (parsed_struct.subnet_states(j).operation_type() == OperationType::INFO) {
+        if (current_SubnetConfiguration.id() ==
+            current_PortConfiguration.fixed_ips(0).subnet_id()) {
+          found_network_type = current_SubnetConfiguration.network_type();
+          found_tunnel_id = current_SubnetConfiguration.tunnel_id();
+          if (!aca_validate_tunnel_id(found_tunnel_id, found_network_type)) {
+            throw std::invalid_argument("found_tunnel_id is invalid");
+          }
+
+          found_cidr = current_SubnetConfiguration.cidr();
+          slash_pos = found_cidr.find('/');
+          if (slash_pos == string::npos) {
+            throw std::invalid_argument("'/' not found in cidr");
+          }
+
+          // substr can throw out_of_range and bad_alloc exceptions
+          found_prefix_len = found_cidr.substr(slash_pos + 1);
+
+          subnet_info_found = true;
+          break;
+        }
       }
+    }
+
+    if (!subnet_info_found) {
+      ACA_LOG_ERROR("Not able to find the info for port with subnet ID: %s.\n",
+                    current_PortConfiguration.fixed_ips(0).subnet_id().c_str());
+      overall_rc = -EXIT_FAILURE;
+      goto Done;
+    }
+
+    switch (current_PortState.operation_type()) {
+    case OperationType::CREATE:
+      assert(current_PortConfiguration.message_type() == MessageType::FULL);
 
       virtual_ip_address = current_PortConfiguration.fixed_ips(0).ip_address();
 
@@ -136,204 +177,73 @@ int ACA_Dataplane_OVS::update_port_state_workitem(const PortState current_PortSt
       virtual_mac_address = current_PortConfiguration.mac_address();
       if (!aca_validate_mac_address(virtual_mac_address.c_str())) {
         throw std::invalid_argument("virtual_mac_address is invalid");
-      }
-
-      // TODO: cache the subnet information to a dictionary to provide
-      // a faster look up for the next run, only use the below loop for
-      // cache miss.
-      // Look up the subnet configuration to query for tunnel_id
-      for (int j = 0; j < parsed_struct.subnet_states_size(); j++) {
-        SubnetConfiguration current_SubnetConfiguration =
-                parsed_struct.subnet_states(j).configuration();
-
-        ACA_LOG_DEBUG("current_SubnetConfiguration subnet ID: %s.\n",
-                      current_SubnetConfiguration.id().c_str());
-
-        if (parsed_struct.subnet_states(j).operation_type() == OperationType::INFO) {
-          if (current_SubnetConfiguration.id() ==
-              current_PortConfiguration.fixed_ips(0).subnet_id()) {
-            found_network_type = current_SubnetConfiguration.network_type();
-            found_tunnel_id = current_SubnetConfiguration.tunnel_id();
-            if (!aca_validate_tunnel_id(found_tunnel_id, found_network_type)) {
-              throw std::invalid_argument("found_tunnel_id is invalid");
-            }
-
-            found_cidr = current_SubnetConfiguration.cidr();
-            slash_pos = found_cidr.find('/');
-            if (slash_pos == string::npos) {
-              throw std::invalid_argument("'/' not found in cidr");
-            }
-
-            // substr can throw out_of_range and bad_alloc exceptions
-            found_prefix_len = found_cidr.substr(slash_pos + 1);
-
-            subnet_info_found = true;
-            break;
-          }
-        }
-      }
-
-      for(int j = 0; j < parsed_struct.vpc_states_size(); j++){
-        VpcConfiguration vpc_current_VpcConfiguration = parsed_struct.vpc_states(j).configuration();
-
-        ACA_LOG_DEBUG("current_VpcConfiguration vpc ID: %s.\n",
-                      current_VpcConfiguration.id().c_str());
-
-        if (parsed_struct.vpc_states(j).operation_type() == OperationType::INFO) {
-          if (current_VpcConfiguration.id() == current_PortConfiguration.vpc_id()) {
-            
-            //
-            
-            break;
-          }
-        }
-
-        
-      }
-
-
-
-
-      if (!subnet_info_found) {
-        ACA_LOG_ERROR("Not able to find the info for port with subnet ID: %s.\n",
-                      current_PortConfiguration.fixed_ips(0).subnet_id().c_str());
-        overall_rc = -EXIT_FAILURE;
-      } else {
-        overall_rc = EXIT_SUCCESS;
       }
 
       port_cidr = virtual_ip_address + "/" + found_prefix_len;
 
-      if (overall_rc == EXIT_SUCCESS) {
-        ACA_LOG_DEBUG("Port Operation: %s: port_id: %s, project_id:%s, vpc_id:%s, network_type:%d, "
-                      "virtual_ip_address:%s, virtual_mac_address:%s, generated_port_name: %s, port_cidr: %s, tunnel_id: %d\n",
-                      aca_get_operation_string(current_PortState.operation_type()),
-                      current_PortConfiguration.id().c_str(),
-                      current_PortConfiguration.project_id().c_str(),
-                      current_PortConfiguration.vpc_id().c_str(), found_network_type,
-                      virtual_ip_address.c_str(), virtual_mac_address.c_str(),
-                      generated_port_name.c_str(), port_cidr.c_str(), found_tunnel_id);
+      ACA_LOG_DEBUG("Port Operation: %s: port_id: %s, project_id:%s, vpc_id:%s, network_type:%d, "
+                    "virtual_ip_address:%s, virtual_mac_address:%s, generated_port_name: %s, port_cidr: %s, tunnel_id: %d\n",
+                    aca_get_operation_string(current_PortState.operation_type()),
+                    current_PortConfiguration.id().c_str(),
+                    current_PortConfiguration.project_id().c_str(),
+                    current_PortConfiguration.vpc_id().c_str(), found_network_type,
+                    virtual_ip_address.c_str(), virtual_mac_address.c_str(),
+                    generated_port_name.c_str(), port_cidr.c_str(), found_tunnel_id);
 
-        overall_rc = ACA_OVS_L2_Programmer::get_instance().configure_port(
-                current_PortConfiguration.vpc_id(), generated_port_name, port_cidr,
-                found_tunnel_id, culminative_dataplane_programming_time);
+      overall_rc = ACA_OVS_L2_Programmer::get_instance().create_port(
+              current_PortConfiguration.vpc_id(), generated_port_name, port_cidr,
+              found_tunnel_id, culminative_dataplane_programming_time);
+
+      break;
+
+    case OperationType::UPDATE:
+      // only delete scenario is supported now
+      // VM was created with port specified, then delete the VM
+      // ACA will receive update with no device_id and device_owner
+      if (!current_PortConfiguration.device_id().empty() ||
+          !current_PortConfiguration.device_owner().empty()) {
+        throw std::invalid_argument("Port Operation: update but device_id or device_owner not empty");
       }
+      [[fallthrough]];
+    case OperationType::DELETE:
+      // another delete scenario is supported here
+      // VM was created with without port specified, then delete the VM
+      // ACA will receive port operation delete
+      ACA_LOG_DEBUG("Port Operation: %s: port_id: %s, project_id:%s, vpc_id:%s, network_type:%d, "
+                    "generated_port_name: %s, tunnel_id: %d\n",
+                    aca_get_operation_string(current_PortState.operation_type()),
+                    current_PortConfiguration.id().c_str(),
+                    current_PortConfiguration.project_id().c_str(),
+                    current_PortConfiguration.vpc_id().c_str(), found_network_type,
+                    generated_port_name.c_str(), found_tunnel_id);
 
-    } catch (const std::invalid_argument &e) {
-      ACA_LOG_ERROR("Invalid argument exception caught while parsing port configuration, message: %s.\n",
-                    e.what());
-      overall_rc = -EINVAL;
-    } catch (const std::exception &e) {
-      ACA_LOG_ERROR("Exception caught while parsing port configuration, message: %s.\n",
-                    e.what());
-      overall_rc = -EFAULT;
-    } catch (...) {
-      ACA_LOG_CRIT("%s", "Unknown exception caught while parsing port configuration.\n");
-      overall_rc = -EFAULT;
+      overall_rc = ACA_OVS_L2_Programmer::get_instance().delete_port(
+              current_PortConfiguration.vpc_id(), generated_port_name,
+              found_tunnel_id, culminative_dataplane_programming_time);
+
+      break;
+
+    default:
+      ACA_LOG_ERROR("Invalid port state operation type %d\n",
+                    current_PortState.operation_type());
+      overall_rc = -EXIT_FAILURE;
+      break;
     }
 
-    break;
-
-  case OperationType::NEIGHBOR_CREATE_UPDATE:
-    /* deprecating */
-    assert(current_PortConfiguration.message_type() == MessageType::DELTA);
-
-    try {
-      if (current_PortConfiguration.fixed_ips_size() <= 0) {
-        ACA_LOG_ERROR("PortConfiguration.fixed_ips_size: %d.\n",
-                      current_PortConfiguration.fixed_ips_size());
-        throw std::invalid_argument("PortConfiguration.fixed_ips_size is less than zero");
-      }
-      virtual_ip_address = current_PortConfiguration.fixed_ips(0).ip_address();
-
-      // inet_pton returns 1 for success 0 for failure
-      if (inet_pton(AF_INET, virtual_ip_address.c_str(), &(sa.sin_addr)) != 1) {
-        throw std::invalid_argument("Virtual ip address is not in the expect format");
-      }
-
-      virtual_mac_address = current_PortConfiguration.mac_address();
-
-      if (!aca_validate_mac_address(virtual_mac_address.c_str())) {
-        throw std::invalid_argument("virtual_mac_address is invalid");
-      }
-
-      host_ip_address = current_PortConfiguration.host_info().ip_address();
-
-      // inet_pton returns 1 for success 0 for failure
-      if (inet_pton(AF_INET, host_ip_address.c_str(), &(sa.sin_addr)) != 1) {
-        throw std::invalid_argument("Neighbor host ip address is not in the expect format");
-      }
-
-      // TODO: cache the subnet information to a dictionary to provide
-      // a faster look up for the next run, only use the below loop for
-      // cache miss.
-      // Look up the subnet configuration to query for tunnel_id
-      for (int j = 0; j < parsed_struct.subnet_states_size(); j++) {
-        SubnetConfiguration current_SubnetConfiguration =
-                parsed_struct.subnet_states(j).configuration();
-
-        ACA_LOG_DEBUG("current_SubnetConfiguration subnet ID: %s.\n",
-                      current_SubnetConfiguration.id().c_str());
-
-        if (parsed_struct.subnet_states(j).operation_type() == OperationType::INFO) {
-          if (current_SubnetConfiguration.id() ==
-              current_PortConfiguration.fixed_ips(0).subnet_id()) {
-            found_network_type = current_SubnetConfiguration.network_type();
-            found_tunnel_id = current_SubnetConfiguration.tunnel_id();
-            if (!aca_validate_tunnel_id(found_tunnel_id, found_network_type)) {
-              throw std::invalid_argument("found_tunnel_id is invalid");
-            }
-
-            subnet_info_found = true;
-            break;
-          }
-        }
-      }
-
-      if (!subnet_info_found) {
-        ACA_LOG_ERROR("Not able to find the info for port with subnet ID: %s.\n",
-                      current_PortConfiguration.fixed_ips(0).subnet_id().c_str());
-        overall_rc = -EXIT_FAILURE;
-      } else {
-        overall_rc = EXIT_SUCCESS;
-      }
-
-      if (overall_rc == EXIT_SUCCESS) {
-        ACA_LOG_DEBUG("Port Operation:%s: project_id:%s, vpc_id:%s, network_type:%d, virtual_ip_address:%s, "
-                      "virtual_mac_address:%s, neighbor_host_ip_address:%s, tunnel_id:%d\n ",
-                      aca_get_operation_string(current_PortState.operation_type()),
-                      current_PortConfiguration.project_id().c_str(),
-                      current_PortConfiguration.vpc_id().c_str(), found_network_type,
-                      virtual_ip_address.c_str(), virtual_mac_address.c_str(),
-                      host_ip_address.c_str(), found_tunnel_id);
-
-        overall_rc = ACA_OVS_L2_Programmer::get_instance().create_update_neighbor_port(
-                current_PortConfiguration.vpc_id(),
-                current_PortConfiguration.network_type(), host_ip_address,
-                found_tunnel_id, culminative_dataplane_programming_time);
-      }
-
-    } catch (const std::invalid_argument &e) {
-      ACA_LOG_ERROR("Invalid argument exception caught while parsing port configuration, message: %s.\n",
-                    e.what());
-      overall_rc = -EINVAL;
-    } catch (const std::exception &e) {
-      ACA_LOG_ERROR("Exception caught while parsing port configuration, message: %s.\n",
-                    e.what());
-      overall_rc = -EFAULT;
-    } catch (...) {
-      ACA_LOG_CRIT("%s", "Unknown exception caught while parsing port configuration.\n");
-      overall_rc = -EFAULT;
-    }
-
-    break;
-
-  default:
-    ACA_LOG_ERROR("Invalid port state operation type %d\n",
-                  current_PortState.operation_type());
-    overall_rc = -EXIT_FAILURE;
-    break;
+  } catch (const std::invalid_argument &e) {
+    ACA_LOG_ERROR("Invalid argument exception caught while parsing port configuration, message: %s.\n",
+                  e.what());
+    overall_rc = -EINVAL;
+  } catch (const std::exception &e) {
+    ACA_LOG_ERROR("Exception caught while parsing port configuration, message: %s.\n",
+                  e.what());
+    overall_rc = -EFAULT;
+  } catch (...) {
+    ACA_LOG_CRIT("%s", "Unknown exception caught while parsing port configuration.\n");
+    overall_rc = -EFAULT;
   }
+
+Done:
 
   auto operation_end = chrono::steady_clock::now();
 
@@ -377,142 +287,157 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
   NeighborConfiguration current_NeighborConfiguration =
           current_NeighborState.configuration();
 
-  // TODO: need to design the usage of current_NeighborConfiguration.revision_number()
-  assert(current_NeighborConfiguration.revision_number() > 0);
+  try {
+    if (!aca_validate_fixed_ips_size(current_NeighborConfiguration.fixed_ips_size())) {
+      throw std::invalid_argument("NeighborConfiguration.fixed_ips_size is less than zero");
+    }
 
-  switch (current_NeighborState.operation_type()) {
-  case OperationType::CREATE:
-    [[fallthrough]];
-  case OperationType::UPDATE:
-    [[fallthrough]];
-  case OperationType::INFO:
+    // TODO: need to design the usage of current_NeighborConfiguration.revision_number()
+    assert(current_NeighborConfiguration.revision_number() > 0);
 
-    try {
-      if (!aca_validate_fixed_ips_size(current_NeighborConfiguration.fixed_ips_size())) {
-        throw std::invalid_argument("NeighborConfiguration.fixed_ips_size is less than zero");
-      }
+    for (int ip_index = 0;
+         ip_index < current_NeighborConfiguration.fixed_ips_size(); ip_index++) {
+      auto current_fixed_ip = current_NeighborConfiguration.fixed_ips(ip_index);
 
-      for (int ip_index = 0;
-           ip_index < current_NeighborConfiguration.fixed_ips_size(); ip_index++) {
-        auto current_fixed_ip = current_NeighborConfiguration.fixed_ips(ip_index);
+      if (current_fixed_ip.neighbor_type() == NeighborType::L2 ||
+          current_fixed_ip.neighbor_type() == NeighborType::L3) {
+        virtual_ip_address = current_fixed_ip.ip_address();
 
-        if (current_fixed_ip.neighbor_type() == NeighborType::L2 ||
-            current_fixed_ip.neighbor_type() == NeighborType::L3) {
-          virtual_ip_address = current_fixed_ip.ip_address();
+        // inet_pton returns 1 for success 0 for failure
+        if (inet_pton(AF_INET, virtual_ip_address.c_str(), &(sa.sin_addr)) != 1) {
+          throw std::invalid_argument("Virtual ip address is not in the expect format");
+        }
 
-          // inet_pton returns 1 for success 0 for failure
-          if (inet_pton(AF_INET, virtual_ip_address.c_str(), &(sa.sin_addr)) != 1) {
-            throw std::invalid_argument("Virtual ip address is not in the expect format");
-          }
+        virtual_mac_address = current_NeighborConfiguration.mac_address();
+        if (!aca_validate_mac_address(virtual_mac_address.c_str())) {
+          throw std::invalid_argument("virtual_mac_address is invalid");
+        }
 
-          virtual_mac_address = current_NeighborConfiguration.mac_address();
-          if (!aca_validate_mac_address(virtual_mac_address.c_str())) {
-            throw std::invalid_argument("virtual_mac_address is invalid");
-          }
+        host_ip_address = current_NeighborConfiguration.host_ip_address();
 
-          host_ip_address = current_NeighborConfiguration.host_ip_address();
+        // inet_pton returns 1 for success 0 for failure
+        if (inet_pton(AF_INET, host_ip_address.c_str(), &(sa.sin_addr)) != 1) {
+          throw std::invalid_argument("Neighbor host ip address is not in the expect format");
+        }
 
-          // inet_pton returns 1 for success 0 for failure
-          if (inet_pton(AF_INET, host_ip_address.c_str(), &(sa.sin_addr)) != 1) {
-            throw std::invalid_argument("Neighbor host ip address is not in the expect format");
-          }
+        // Look up the subnet configuration to query for tunnel_id
+        for (int j = 0; j < parsed_struct.subnet_states_size(); j++) {
+          SubnetConfiguration current_SubnetConfiguration =
+                  parsed_struct.subnet_states(j).configuration();
 
-          // Look up the subnet configuration to query for tunnel_id
-          for (int j = 0; j < parsed_struct.subnet_states_size(); j++) {
-            SubnetConfiguration current_SubnetConfiguration =
-                    parsed_struct.subnet_states(j).configuration();
+          ACA_LOG_DEBUG("current_SubnetConfiguration subnet ID: %s.\n",
+                        current_SubnetConfiguration.id().c_str());
 
-            ACA_LOG_DEBUG("current_SubnetConfiguration subnet ID: %s.\n",
-                          current_SubnetConfiguration.id().c_str());
+          if (parsed_struct.subnet_states(j).operation_type() == OperationType::INFO) {
+            if (current_SubnetConfiguration.id() == current_fixed_ip.subnet_id()) {
+              found_network_type = current_SubnetConfiguration.network_type();
 
-            if (parsed_struct.subnet_states(j).operation_type() == OperationType::INFO) {
-              if (current_SubnetConfiguration.id() == current_fixed_ip.subnet_id()) {
-                found_network_type = current_SubnetConfiguration.network_type();
-
-                found_tunnel_id = current_SubnetConfiguration.tunnel_id();
-                if (!aca_validate_tunnel_id(found_tunnel_id, found_network_type)) {
-                  throw std::invalid_argument("found_tunnel_id is invalid");
-                }
-
-                subnet_info_found = true;
-                break;
+              found_tunnel_id = current_SubnetConfiguration.tunnel_id();
+              if (!aca_validate_tunnel_id(found_tunnel_id, found_network_type)) {
+                throw std::invalid_argument("found_tunnel_id is invalid");
               }
+
+              subnet_info_found = true;
+              break;
             }
           }
+        }
 
-          if (!subnet_info_found) {
-            ACA_LOG_ERROR("Not able to find the info for neighbor ip_index: %d with subnet ID: %s.\n",
-                          ip_index, current_fixed_ip.subnet_id().c_str());
-            overall_rc = -EXIT_FAILURE;
+        if (!subnet_info_found) {
+          ACA_LOG_ERROR("Not able to find the info for neighbor ip_index: %d with subnet ID: %s.\n",
+                        ip_index, current_fixed_ip.subnet_id().c_str());
+          overall_rc = -EXIT_FAILURE;
+        } else {
+          ACA_LOG_DEBUG(
+                  "Neighbor Operation:%s: id: %s, neighbor_type:%s, project_id:%s, vpc_id:%s, network_type:%d, ip_index: %d,"
+                  "virtual_ip_address:%s, virtual_mac_address:%s, neighbor_host_ip_address:%s, tunnel_id:%d\n",
+                  aca_get_operation_string(current_NeighborState.operation_type()),
+                  current_NeighborConfiguration.id().c_str(),
+                  aca_get_neighbor_type_string(current_fixed_ip.neighbor_type()),
+                  current_NeighborConfiguration.project_id().c_str(),
+                  current_NeighborConfiguration.vpc_id().c_str(), found_network_type,
+                  ip_index, virtual_ip_address.c_str(), virtual_mac_address.c_str(),
+                  host_ip_address.c_str(), found_tunnel_id);
+
+          // with Alcor DVR, a cross subnet packet will be routed to the destination subnet.
+          // that means a L3 neighbor will become a L2 neighbor, therefore, call the below
+          // for both L2 and L3 neighbor update
+
+          // only need to update L2 neighbor info if it is not on the same compute host
+          bool is_neighbor_port_on_same_host = aca_is_port_on_same_host(host_ip_address);
+
+          if (is_neighbor_port_on_same_host) {
+            ACA_LOG_DEBUG("neighbor host: %s is on the same compute node, don't need to update L2 neighbor info.\n",
+                          host_ip_address.c_str());
+            overall_rc = EXIT_SUCCESS;
           } else {
-            ACA_LOG_DEBUG(
-                    "Neighbor Operation:%s: neighbor_type:%s, project_id:%s, vpc_id:%s, network_type:%d, ip_index: %d,"
-                    "virtual_ip_address:%s, virtual_mac_address:%s, neighbor_host_ip_address:%s, tunnel_id:%d\n",
-                    aca_get_operation_string(current_NeighborState.operation_type()),
-                    aca_get_neighbor_type_string(current_fixed_ip.neighbor_type()),
-                    current_NeighborConfiguration.project_id().c_str(),
-                    current_NeighborConfiguration.vpc_id().c_str(),
-                    found_network_type, ip_index, virtual_ip_address.c_str(),
-                    virtual_mac_address.c_str(), host_ip_address.c_str(), found_tunnel_id);
-
-            // with Alcor DVR, a cross subnet packet will be routed to the destination subnet.
-            // that means a L3 neighbor will become a L2 neighbor, therefore, call the below
-            // for both L2 and L3 neighbor update
-
-            // only need to update L2 neighbor info if it is not on the same compute host
-            bool is_neighbor_port_on_same_host = aca_is_port_on_same_host(host_ip_address);
-
-            if (is_neighbor_port_on_same_host) {
-              ACA_LOG_DEBUG("neighbor host: %s is on the same compute node, don't need to update L2 neighbor info.\n",
-                            host_ip_address.c_str());
-              overall_rc = EXIT_SUCCESS;
-            } else {
-              overall_rc = ACA_OVS_L2_Programmer::get_instance().create_update_neighbor_port(
+            if ((current_NeighborState.operation_type() == OperationType::CREATE) ||
+                (current_NeighborState.operation_type() == OperationType::UPDATE) ||
+                (current_NeighborState.operation_type() == OperationType::INFO)) {
+              overall_rc = ACA_OVS_L2_Programmer::get_instance().create_or_update_neighbor_port(
+                      current_NeighborConfiguration.id(),
                       current_NeighborConfiguration.vpc_id(), found_network_type, host_ip_address,
                       found_tunnel_id, culminative_dataplane_programming_time);
               // we can consider doing this L2 neighbor creation as an on demand rule to support scale
               // when we are ready to put the DVR rule as on demand, we should put the L2 neighbor rule
               // as on demand also
-            }
+            } else if (current_NeighborState.operation_type() == OperationType::DELETE) {
+              string outport_name =
+                      aca_get_outport_name(found_network_type, host_ip_address);
 
-            if (overall_rc == EXIT_SUCCESS) {
-              if (current_fixed_ip.neighbor_type() == NeighborType::L3) {
+              overall_rc = ACA_OVS_L2_Programmer::get_instance().delete_neighbor_port(
+                      current_NeighborConfiguration.id(),
+                      current_NeighborConfiguration.vpc_id(), outport_name,
+                      culminative_dataplane_programming_time);
+            } else {
+              ACA_LOG_ERROR("Invalid neighbor state operation type %d\n",
+                            current_NeighborState.operation_type());
+              overall_rc = -EXIT_FAILURE;
+            }
+          }
+
+          if (overall_rc == EXIT_SUCCESS) {
+            if (current_fixed_ip.neighbor_type() == NeighborType::L3) {
+              if ((current_NeighborState.operation_type() == OperationType::CREATE) ||
+                  (current_NeighborState.operation_type() == OperationType::UPDATE) ||
+                  (current_NeighborState.operation_type() == OperationType::INFO)) {
                 overall_rc = ACA_OVS_L3_Programmer::get_instance().create_or_update_neighbor_l3(
+                        current_NeighborConfiguration.id(),
                         current_NeighborConfiguration.vpc_id(),
-                        current_fixed_ip.subnet_id(), found_network_type,
-                        virtual_ip_address, virtual_mac_address, host_ip_address,
-                        found_tunnel_id, culminative_dataplane_programming_time);
+                        current_fixed_ip.subnet_id(), virtual_ip_address,
+                        virtual_mac_address, host_ip_address, found_tunnel_id,
+                        culminative_dataplane_programming_time);
+              } else if (current_NeighborState.operation_type() == OperationType::DELETE) {
+                overall_rc = ACA_OVS_L3_Programmer::get_instance().delete_neighbor_l3(
+                        current_NeighborConfiguration.id(), current_fixed_ip.subnet_id(),
+                        virtual_ip_address, culminative_dataplane_programming_time);
+              } else {
+                ACA_LOG_ERROR("Invalid neighbor state operation type %d\n",
+                              current_NeighborState.operation_type());
+                overall_rc = -EXIT_FAILURE;
               }
             }
           }
-        } else {
-          ACA_LOG_ERROR("Unknown neighbor_type: %d.\n",
-                        current_NeighborState.operation_type());
-          overall_rc = -EINVAL;
         }
+      } else {
+        ACA_LOG_ERROR("Unknown neighbor_type: %d.\n",
+                      current_NeighborState.operation_type());
+        overall_rc = -EINVAL;
+      }
 
-      } // for (int ip_index = 0; ip_index < current_NeighborConfiguration.fixed_ips_size(); ip_index++)
+    } // for (int ip_index = 0; ip_index < current_NeighborConfiguration.fixed_ips_size(); ip_index++)
 
-    } catch (const std::invalid_argument &e) {
-      ACA_LOG_ERROR("Invalid argument exception caught while parsing neighbor configuration, message: %s.\n",
-                    e.what());
-      overall_rc = -EINVAL;
-    } catch (const std::exception &e) {
-      ACA_LOG_ERROR("Exception caught while parsing neighbor configuration, message: %s.\n",
-                    e.what());
-      overall_rc = -EFAULT;
-    } catch (...) {
-      ACA_LOG_CRIT("%s", "Unknown exception caught while parsing neighbor configuration.\n");
-      overall_rc = -EFAULT;
-    }
-
-    break;
-
-  default:
-    ACA_LOG_ERROR("Invalid neighbor state operation type %d\n",
-                  current_NeighborState.operation_type());
-    overall_rc = -EXIT_FAILURE;
-    break;
+  } catch (const std::invalid_argument &e) {
+    ACA_LOG_ERROR("Invalid argument exception caught while parsing neighbor configuration, message: %s.\n",
+                  e.what());
+    overall_rc = -EINVAL;
+  } catch (const std::exception &e) {
+    ACA_LOG_ERROR("Exception caught while parsing neighbor configuration, message: %s.\n",
+                  e.what());
+    overall_rc = -EFAULT;
+  } catch (...) {
+    ACA_LOG_CRIT("%s", "Unknown exception caught while parsing neighbor configuration.\n");
+    overall_rc = -EFAULT;
   }
 
   auto operation_end = chrono::steady_clock::now();
