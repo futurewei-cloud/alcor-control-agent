@@ -173,6 +173,27 @@ int ACA_Dataplane_OVS::update_port_state_workitem(const PortState current_PortSt
         }
       }
 
+      for(int j = 0; j < parsed_struct.vpc_states_size(); j++){
+        VpcConfiguration vpc_current_VpcConfiguration = parsed_struct.vpc_states(j).configuration();
+
+        ACA_LOG_DEBUG("current_VpcConfiguration vpc ID: %s.\n",
+                      current_VpcConfiguration.id().c_str());
+
+        if (parsed_struct.vpc_states(j).operation_type() == OperationType::INFO) {
+          if (current_VpcConfiguration.id() == current_PortConfiguration.vpc_id()) {
+            
+            //
+            
+            break;
+          }
+        }
+
+        
+      }
+
+
+
+
       if (!subnet_info_found) {
         ACA_LOG_ERROR("Not able to find the info for port with subnet ID: %s.\n",
                       current_PortConfiguration.fixed_ips(0).subnet_id().c_str());

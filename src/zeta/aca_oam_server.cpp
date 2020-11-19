@@ -247,9 +247,8 @@ int ACA_Oam_Server::_add_direct_path(oam_match match, oam_action action)
                       ",mod_nw_dst=" + action.inst_nw_dst +
                       ",idle_timeout=" + action.idle_timeout + ",output:" + outport_name;
 
+  // Adding unicast rules in table20
   string opt = "table=20,priority=50," + cmd_match + "," + cmd_action;
-
-  // Add unicast rules in table20
   overall_rc = ACA_OVS_Control::get_instance().add_flow("br-tun", opt.c_str());
 
   if (overall_rc == EXIT_SUCCESS) {
