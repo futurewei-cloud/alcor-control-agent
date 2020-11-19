@@ -15,13 +15,14 @@
 #ifndef ACA_DHCP_PROGRAMMING_IF_H
 #define ACA_DHCP_PROGRAMMING_IF_H
 
+#include "aca_config.h"
 #include <string>
 
 using namespace std;
 
 namespace aca_dhcp_programming_if
 {
-#define DHCP_MSG_OPTS_DNS_LENGTH (5) //max 5 dns address
+
 struct dhcp_config {
   string mac_address;
   string ipv4_address;

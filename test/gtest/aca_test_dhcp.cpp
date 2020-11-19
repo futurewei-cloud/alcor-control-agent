@@ -389,10 +389,10 @@ TEST(dhcp_request_test_case, DISABLED_l3_dhcp_test)
           not_care_culminative_time, overall_rc);
   ASSERT_EQ(overall_rc, EXIT_SUCCESS);
 
-  // monitor br-int for dhcp request message
-  //ovs_monitor_thread = 
-    //new thread(bind(&ACA_OVS_Control::monitor, &ACA_OVS_Control::get_instance(), "br-int", "resume"));
-  //ovs_monitor_thread->detach();
+  //monitor br-int for dhcp request message
+  ovs_monitor_thread = 
+    new thread(bind(&ACA_OVS_Control::monitor, &ACA_OVS_Control::get_instance(), "br-int", "resume"));
+  ovs_monitor_thread->detach();
 
   GoalState GoalState_builder;
   DHCPState *new_dhcp_states = GoalState_builder.add_dhcp_states();
@@ -433,6 +433,7 @@ TEST(dhcp_request_test_case, DISABLED_l3_dhcp_test)
   ASSERT_EQ(overall_rc, EXIT_SUCCESS);
 
   // create a new port 2 in demo mode
+  DHCPConfiguration_builder->set_subnet_id(subnet_id_2);
   DHCPConfiguration_builder->set_mac_address(vmac_address_2);
   DHCPConfiguration_builder->set_ipv4_address(vip_address_2);
   DHCPConfiguration_builder->set_port_host_name(port_name_2);
@@ -510,19 +511,19 @@ TEST(dhcp_request_test_case, DISABLED_l3_dhcp_test)
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
 
   // up veth
-  cmd_string = "ip link netns exec " + dhcp_test_router_namespace + " ip link set gw1_ns up";
+  cmd_string = "ip netns exec " + dhcp_test_router_namespace + " ip link set gw1_ns up";
   overall_rc = Aca_Net_Config::get_instance().execute_system_command(cmd_string);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
 
-  cmd_string = "ip link netns exec " + dhcp_test_router_namespace + " ip link set gw2_ns up";
+  cmd_string = "ip netns exec " + dhcp_test_router_namespace + " ip link set gw2_ns up";
   overall_rc = Aca_Net_Config::get_instance().execute_system_command(cmd_string);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
 
-  cmd_string = "ip link netns exec " + dhcp_test_router_namespace + " ifconfig gw1_ns " + subnet1_gw_ip + "/24";
+  cmd_string = "ip netns exec " + dhcp_test_router_namespace + " ifconfig gw1_ns " + subnet1_gw_ip + "/24";
   overall_rc = Aca_Net_Config::get_instance().execute_system_command(cmd_string);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
 
-  cmd_string = "ip link netns exec " + dhcp_test_router_namespace + " ifconfig gw2_ns " + subnet2_gw_ip + "/24";
+  cmd_string = "ip netns exec " + dhcp_test_router_namespace + " ifconfig gw2_ns " + subnet2_gw_ip + "/24";
   overall_rc = Aca_Net_Config::get_instance().execute_system_command(cmd_string);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
 

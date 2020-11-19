@@ -199,18 +199,18 @@ static inline bool aca_is_port_on_same_host(const std::string hosting_port_ip)
 
 static inline string aca_convert_cidr_to_netmask(const std::string cidr) {
   if (cidr.empty()) {
-    return "";
+    throw std::invalid_argument("cidr is empty");
   }
 
   // get cidr netmask length str
   size_t slash_pos = cidr.find("/");
   if (slash_pos == string::npos) {
-    return "";
+    throw std::invalid_argument("'/' not found in cidr");
   }
 
   int netmask_num = std::stoi(cidr.substr(slash_pos + 1));
   string netmask = "";
-  bool over = false; // mark whether ovs netmask_num
+  bool over = false; // mark whether handle all netmask_num 
   for (int i = 1; i < 5; i++) {
     if (over) {
       // if overed the remain is 0.
@@ -224,7 +224,7 @@ static inline string aca_convert_cidr_to_netmask(const std::string cidr) {
     } else {
       over = true; 
       int tmp = 0;
-      // 
+      // dynamic netmask handle
       for (int m = 1; m < netmask_num % 8 + 1; m++) {
         tmp += 1 << (8 - m);
       }  
