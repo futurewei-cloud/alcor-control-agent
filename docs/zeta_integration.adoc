@@ -129,11 +129,8 @@ VM1 on Host1 starts to talk to VM2 on Host2. VM1 and VM2 belong to the same VPC,
 . br_int sends the packet to br_tun; Convert the source MAC to MAC_Host1_DVR and the destination MAC to MAC_VM2 with on-demand routing rule;
 
 . If there is no direct path, send the packet to Zeta gateway path. Otherwise, this packet will go through direct VM path;
-<<<<<<< HEAD
 
 == Example for OpenFlow Rule Setting
-=======
->>>>>>> 06f17423e325419f4a379cfa5e186ad6ebedc645
 
 In this section, we will use the example topology described in Figure 3 to illustrate how to configure gateway path and direct path in the form of command line.
 
