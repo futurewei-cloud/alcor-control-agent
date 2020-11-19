@@ -644,7 +644,7 @@ int ACA_OVS_L3_Programmer::delete_neighbor_l3(const string neighbor_id, const st
 
         // for the first implementation with static routing rules (non on-demand)
         // go ahead to remove it
-        string cmd_string = "del-flow br-tun \"table=0,priority=50,ip,dl_vlan=" +
+        string cmd_string = "del-flows br-tun \"table=0,priority=50,ip,dl_vlan=" +
                             to_string(source_vlan_id) + ",nw_dst=" + virtual_ip + "\" --strict";
 
         ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(

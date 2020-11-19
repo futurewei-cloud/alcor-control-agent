@@ -721,7 +721,7 @@ TEST(ovs_l3_test_cases, DISABLED_2_ports_ROUTING_test_traffic_PARENT)
   // delete port 4 as L3 neighbor
   new_neighbor_states4->set_operation_type(OperationType::DELETE);
   overall_rc = Aca_Comm_Manager::get_instance().update_goal_state(
-          GoalState_builder, gsOperationalReply);
+          GoalState_builder2, gsOperationalReply);
   ASSERT_EQ(overall_rc, EXIT_SUCCESS);
 
   // should not be able to ping port 4 anymore
