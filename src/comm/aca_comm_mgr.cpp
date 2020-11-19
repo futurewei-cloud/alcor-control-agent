@@ -187,7 +187,7 @@ void Aca_Comm_Manager::print_goal_state(GoalState parsed_struct)
     auto current_auxiliary_gateway = current_VpcConfiguration.auxiliary_gateway();
 
     fprintf(stdout, "current_auxiliary_gateway.auxgateway_type(): %d\n",
-            current_auxiliary_gateway.auxgateway_type());
+            current_auxiliary_gateway.aux_gateway_type());
 
     fprintf(stdout, "current_auxiliary_gateway.id(): %s\n",
             current_auxiliary_gateway.id().c_str());
