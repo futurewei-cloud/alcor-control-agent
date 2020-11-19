@@ -441,7 +441,6 @@ TEST(dhcp_request_test_case, DISABLED_l3_dhcp_test)
   SubnetConiguration_builder->set_cidr(subnet2_cidr);
   SubnetConiguration_builder->set_tunnel_id(124);
 
-  auto *subnetConfig_GatewayBuilder(new SubnetConfiguration_Gateway);
   subnetConfig_GatewayBuilder->set_ip_address(subnet2_gw_ip);
   subnetConfig_GatewayBuilder->set_mac_address(subnet2_gw_mac);
   SubnetConiguration_builder->set_allocated_gateway(subnetConfig_GatewayBuilder);
