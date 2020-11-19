@@ -444,7 +444,6 @@ TEST(dhcp_request_test_case, DISABLED_l3_dhcp_test)
 
   subnetConfig_GatewayBuilder->set_ip_address(subnet2_gw_ip);
   subnetConfig_GatewayBuilder->set_mac_address(subnet2_gw_mac);
-  SubnetConiguration_builder->set_allocated_gateway(subnetConfig_GatewayBuilder);
 
   overall_rc = Aca_Comm_Manager::get_instance().update_goal_state(
           GoalState_builder, gsOperationalReply);
