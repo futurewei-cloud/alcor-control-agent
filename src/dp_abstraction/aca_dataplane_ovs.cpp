@@ -373,7 +373,7 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
             if ((current_NeighborState.operation_type() == OperationType::CREATE) ||
                 (current_NeighborState.operation_type() == OperationType::UPDATE) ||
                 (current_NeighborState.operation_type() == OperationType::INFO)) {
-              overall_rc = ACA_OVS_L2_Programmer::get_instance().create_or_update_neighbor_port(
+              overall_rc = ACA_OVS_L2_Programmer::get_instance().create_or_update_l2_neighbor(
                       current_NeighborConfiguration.id(),
                       current_NeighborConfiguration.vpc_id(), found_network_type, host_ip_address,
                       found_tunnel_id, culminative_dataplane_programming_time);
@@ -384,7 +384,7 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
               string outport_name =
                       aca_get_outport_name(found_network_type, host_ip_address);
 
-              overall_rc = ACA_OVS_L2_Programmer::get_instance().delete_neighbor_port(
+              overall_rc = ACA_OVS_L2_Programmer::get_instance().delete_l2_neighbor(
                       current_NeighborConfiguration.id(),
                       current_NeighborConfiguration.vpc_id(), outport_name,
                       culminative_dataplane_programming_time);
@@ -400,14 +400,14 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
               if ((current_NeighborState.operation_type() == OperationType::CREATE) ||
                   (current_NeighborState.operation_type() == OperationType::UPDATE) ||
                   (current_NeighborState.operation_type() == OperationType::INFO)) {
-                overall_rc = ACA_OVS_L3_Programmer::get_instance().create_or_update_neighbor_l3(
+                overall_rc = ACA_OVS_L3_Programmer::get_instance().create_or_update_l3_neighbor(
                         current_NeighborConfiguration.id(),
                         current_NeighborConfiguration.vpc_id(),
                         current_fixed_ip.subnet_id(), virtual_ip_address,
                         virtual_mac_address, host_ip_address, found_tunnel_id,
                         culminative_dataplane_programming_time);
               } else if (current_NeighborState.operation_type() == OperationType::DELETE) {
-                overall_rc = ACA_OVS_L3_Programmer::get_instance().delete_neighbor_l3(
+                overall_rc = ACA_OVS_L3_Programmer::get_instance().delete_l3_neighbor(
                         current_NeighborConfiguration.id(), current_fixed_ip.subnet_id(),
                         virtual_ip_address, culminative_dataplane_programming_time);
               } else {

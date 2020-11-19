@@ -68,13 +68,13 @@ class ACA_OVS_L3_Programmer {
   int delete_router(RouterConfiguration &current_RouterConfiguration,
                     ulong &culminative_time_dataplane_programming_time);
 
-  int create_or_update_neighbor_l3(const string neighbor_id, const string vpc_id,
+  int create_or_update_l3_neighbor(const string neighbor_id, const string vpc_id,
                                    const string subnet_id, const string virtual_ip,
                                    const string virtual_mac,
                                    const string remote_host_ip, uint tunnel_id,
                                    ulong &culminative_time_dataplane_programming_time);
 
-  int delete_neighbor_l3(const string neighbor_id, const string subnet_id,
+  int delete_l3_neighbor(const string neighbor_id, const string subnet_id,
                          const string virtual_ip, ulong &culminative_time);
 
   // compiler will flag the error when below is called.

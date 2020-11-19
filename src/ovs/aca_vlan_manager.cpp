@@ -163,7 +163,7 @@ int ACA_Vlan_Manager::delete_ovs_port(string vpc_id, string ovs_port,
   ACA_LOG_DEBUG("ACA_Vlan_Manager::delete_ovs_port <--- Exiting, overall_rc = %d\n", overall_rc);
 
   return overall_rc;
-} // namespace aca_vlan_manager
+}
 
 int ACA_Vlan_Manager::create_neighbor_outport(string neighbor_id, string vpc_id,
                                               alcor::schema::NetworkType network_type,

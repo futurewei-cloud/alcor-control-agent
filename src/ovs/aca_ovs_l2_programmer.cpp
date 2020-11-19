@@ -268,11 +268,11 @@ int ACA_OVS_L2_Programmer::delete_port(const string vpc_id, const string port_na
   return overall_rc;
 }
 
-int ACA_OVS_L2_Programmer::create_or_update_neighbor_port(
+int ACA_OVS_L2_Programmer::create_or_update_l2_neighbor(
         const string neighbor_id, const string vpc_id, alcor::schema::NetworkType network_type,
         const string remote_host_ip, uint tunnel_id, ulong &culminative_time)
 {
-  ACA_LOG_DEBUG("%s", "ACA_OVS_L2_Programmer::create_or_update_neighbor_port ---> Entering\n");
+  ACA_LOG_DEBUG("%s", "ACA_OVS_L2_Programmer::create_or_update_l2_neighbor ---> Entering\n");
 
   if (neighbor_id.empty()) {
     throw std::invalid_argument("neighbor_id is empty");
@@ -295,17 +295,16 @@ int ACA_OVS_L2_Programmer::create_or_update_neighbor_port(
   int overall_rc = ACA_Vlan_Manager::get_instance().create_neighbor_outport(
           neighbor_id, vpc_id, network_type, remote_host_ip, tunnel_id, culminative_time);
 
-  ACA_LOG_DEBUG("ACA_OVS_L2_Programmer::create_or_update_neighbor_port <--- Exiting, overall_rc = %d\n",
+  ACA_LOG_DEBUG("ACA_OVS_L2_Programmer::create_or_update_l2_neighbor <--- Exiting, overall_rc = %d\n",
                 overall_rc);
 
   return overall_rc;
 }
 
-int ACA_OVS_L2_Programmer::delete_neighbor_port(const string neighbor_id,
-                                                const string vpc_id, const string outport_name,
-                                                ulong &culminative_time)
+int ACA_OVS_L2_Programmer::delete_l2_neighbor(const string neighbor_id, const string vpc_id,
+                                              const string outport_name, ulong &culminative_time)
 {
-  ACA_LOG_DEBUG("%s", "ACA_OVS_L2_Programmer::delete_neighbor_port ---> Entering\n");
+  ACA_LOG_DEBUG("%s", "ACA_OVS_L2_Programmer::delete_l2_neighbor ---> Entering\n");
 
   if (neighbor_id.empty()) {
     throw std::invalid_argument("neighbor_id is empty");
@@ -322,7 +321,7 @@ int ACA_OVS_L2_Programmer::delete_neighbor_port(const string neighbor_id,
   int overall_rc = ACA_Vlan_Manager::get_instance().delete_neighbor_outport(
           neighbor_id, vpc_id, outport_name, culminative_time);
 
-  ACA_LOG_DEBUG("ACA_OVS_L2_Programmer::delete_neighbor_port <--- Exiting, overall_rc = %d\n",
+  ACA_LOG_DEBUG("ACA_OVS_L2_Programmer::delete_l2_neighbor <--- Exiting, overall_rc = %d\n",
                 overall_rc);
 
   return overall_rc;
