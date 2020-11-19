@@ -19,6 +19,7 @@
 #include "aca_goal_state_handler.h"
 #include "goalstateprovisioner.grpc.pb.h"
 #include <future>
+#include <string>
 
 using namespace aca_dhcp_programming_if;
 using namespace alcor::schema;
@@ -45,6 +46,7 @@ Aca_Dhcp_State_Handler &Aca_Dhcp_State_Handler::get_instance()
 }
 
 int Aca_Dhcp_State_Handler::update_dhcp_state_workitem(const DHCPState current_DhcpState,
+                                                       GoalState &parsed_struct,
                                                        GoalStateOperationReply &gsOperationReply)
 {
   dhcp_config stDhcpCfg;
@@ -59,6 +61,31 @@ int Aca_Dhcp_State_Handler::update_dhcp_state_workitem(const DHCPState current_D
   stDhcpCfg.ipv4_address = current_DhcpConfiguration.ipv4_address();
   stDhcpCfg.ipv6_address = current_DhcpConfiguration.ipv6_address();
   stDhcpCfg.port_host_name = current_DhcpConfiguration.port_host_name();
+
+  // handle dhcp dns entries
+  int cur_dns_index;
+  for (int i = 0; i < current_DhcpConfiguration.dns_entry_list_size() && i < DHCP_MSG_OPTS_DNS_LENGTH; i++) {
+    stDhcpCfg.dns_addresses[i] = current_DhcpConfiguration.dns_entry_list(i).entry();
+    cur_dns_index = i + 1;
+  }
+
+  string subnet_id = current_DhcpConfiguration.subnet_id();
+  for (int i = 0; i < parsed_struct.subnet_states_size(); i++) {
+    SubnetState current_SubnetState = parsed_struct.subnet_states(i);
+    SubnetConfiguration current_SubnetConfiguration = current_SubnetState.configuration();
+    if (subnet_id == current_SubnetConfiguration.id()) {
+      stDhcpCfg.gateway_address = current_SubnetConfiguration.gateway().ip_address();
+      stDhcpCfg.subnet_mask = aca_convert_cidr_to_netmask(current_SubnetConfiguration.cidr());
+      if (!current_SubnetConfiguration.primary_dns().empty() && cur_dns_index < DHCP_MSG_OPTS_DNS_LENGTH - 1) {
+        stDhcpCfg.dns_addresses[cur_dns_index++] = current_SubnetConfiguration.primary_dns();
+      }
+
+      if (!current_SubnetConfiguration.secondary_dns().empty() && cur_dns_index < DHCP_MSG_OPTS_DNS_LENGTH - 1) {
+        stDhcpCfg.dns_addresses[cur_dns_index++] = current_SubnetConfiguration.secondary_dns();
+      }
+      break;
+    }
+  }
 
   switch (current_DhcpState.operation_type()) {
   case OperationType::CREATE:
@@ -102,10 +129,11 @@ int Aca_Dhcp_State_Handler::update_dhcp_states(GoalState &parsed_struct,
     ACA_LOG_DEBUG("=====>parsing dhcp states #%d\n", i);
 
     DHCPState current_DhcpState = parsed_struct.dhcp_states(i);
+     
 
     workitem_future.push_back(std::async(
             std::launch::async, &Aca_Dhcp_State_Handler::update_dhcp_state_workitem,
-            this, current_DhcpState, std::ref(gsOperationReply)));
+            this, current_DhcpState, std::ref(parsed_struct), std::ref(gsOperationReply)));
 
     //workitem_future.push_back(std::async(
     //        std::launch::async, &Aca_Dhcp_State_Handler::update_dhcp_state_workitem, this,
