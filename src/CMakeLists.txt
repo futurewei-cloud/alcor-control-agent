@@ -19,7 +19,8 @@ set(SOURCES
     ./dhcp/aca_dhcp_server.cpp
     ./zeta/aca_oam_server.cpp
     ./zeta/aca_zeta_programming.cpp  
-    ./zeta/aca_oam_port_manager.cpp
+    ./zeta/aca_oam_port_manager.cpp 
+    ./ovs/aca_arp_responder.cpp 
 )
 FIND_LIBRARY(RDKAFKA rdkafka /usr/lib/x86_64-linux-gnu NO_DEFAULT_PATH)
 FIND_LIBRARY(CPPKAFKA cppkafka /usr/local/lib NO_DEFAULT_PATH)
