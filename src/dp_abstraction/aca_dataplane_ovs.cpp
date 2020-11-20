@@ -30,6 +30,49 @@ using namespace aca_ovs_l3_programmer;
 
 namespace aca_dataplane_ovs
 {
+static bool
+aca_lookup_subnet_info(GoalState &parsed_struct, const string targeted_subnet_id,
+                       NetworkType found_network_type, uint found_tunnel_id,
+                       string found_cidr, string found_prefix_len)
+{
+  // TODO: cache the subnet information to a dictionary to provide
+  // a faster look up for the next run, only use the below loop for
+  // cache miss.
+  // Look up the subnet configuration to query for tunnel_id
+  for (int j = 0; j < parsed_struct.subnet_states_size(); j++) {
+    SubnetConfiguration current_SubnetConfiguration =
+            parsed_struct.subnet_states(j).configuration();
+
+    ACA_LOG_DEBUG("current_SubnetConfiguration subnet ID: %s.\n",
+                  current_SubnetConfiguration.id().c_str());
+
+    if (parsed_struct.subnet_states(j).operation_type() == OperationType::INFO) {
+      if (current_SubnetConfiguration.id() == targeted_subnet_id) {
+        found_network_type = current_SubnetConfiguration.network_type();
+        found_tunnel_id = current_SubnetConfiguration.tunnel_id();
+        if (!aca_validate_tunnel_id(found_tunnel_id, found_network_type)) {
+          throw std::invalid_argument("found_tunnel_id is invalid");
+        }
+
+        found_cidr = current_SubnetConfiguration.cidr();
+        size_t slash_pos = found_cidr.find('/');
+        if (slash_pos == string::npos) {
+          throw std::invalid_argument("'/' not found in cidr");
+        }
+
+        // substr can throw out_of_range and bad_alloc exceptions
+        found_prefix_len = found_cidr.substr(slash_pos + 1);
+
+        return true;
+      }
+    }
+  }
+
+  ACA_LOG_ERROR("Not able to find the info for port with subnet ID: %s.\n",
+                targeted_subnet_id.c_str());
+  return false;
+}
+
 int ACA_Dataplane_OVS::initialize()
 {
   // TODO: improve the logging system, and add logging to this module
@@ -87,15 +130,13 @@ int ACA_Dataplane_OVS::update_port_state_workitem(const PortState current_PortSt
   int overall_rc;
   string generated_port_name;
   struct sockaddr_in sa;
+  uint found_tunnel_id = 0;
+  NetworkType found_network_type = NetworkType::VXLAN;
   string found_cidr;
-  uint found_tunnel_id;
-  NetworkType found_network_type;
-  size_t slash_pos;
+  string found_prefix_len;
   string virtual_ip_address;
   string virtual_mac_address;
   string host_ip_address;
-  string found_prefix_len;
-  bool subnet_info_found = false;
   string port_cidr;
   ulong culminative_dataplane_programming_time = 0;
   ulong culminative_network_configuration_time = 0;
@@ -120,46 +161,13 @@ int ACA_Dataplane_OVS::update_port_state_workitem(const PortState current_PortSt
       throw std::invalid_argument("PortConfiguration.fixed_ips_size is less than zero");
     }
 
-    // TODO: cache the subnet information to a dictionary to provide
-    // a faster look up for the next run, only use the below loop for
-    // cache miss.
-    // Look up the subnet configuration to query for tunnel_id
-    for (int j = 0; j < parsed_struct.subnet_states_size(); j++) {
-      SubnetConfiguration current_SubnetConfiguration =
-              parsed_struct.subnet_states(j).configuration();
-
-      ACA_LOG_DEBUG("current_SubnetConfiguration subnet ID: %s.\n",
-                    current_SubnetConfiguration.id().c_str());
-
-      if (parsed_struct.subnet_states(j).operation_type() == OperationType::INFO) {
-        if (current_SubnetConfiguration.id() ==
-            current_PortConfiguration.fixed_ips(0).subnet_id()) {
-          found_network_type = current_SubnetConfiguration.network_type();
-          found_tunnel_id = current_SubnetConfiguration.tunnel_id();
-          if (!aca_validate_tunnel_id(found_tunnel_id, found_network_type)) {
-            throw std::invalid_argument("found_tunnel_id is invalid");
-          }
-
-          found_cidr = current_SubnetConfiguration.cidr();
-          slash_pos = found_cidr.find('/');
-          if (slash_pos == string::npos) {
-            throw std::invalid_argument("'/' not found in cidr");
-          }
-
-          // substr can throw out_of_range and bad_alloc exceptions
-          found_prefix_len = found_cidr.substr(slash_pos + 1);
-
-          subnet_info_found = true;
-          break;
-        }
-      }
-    }
-
-    if (!subnet_info_found) {
+    if (!aca_lookup_subnet_info(
+                parsed_struct, current_PortConfiguration.fixed_ips(0).subnet_id(),
+                found_network_type, found_tunnel_id, found_cidr, found_prefix_len)) {
       ACA_LOG_ERROR("Not able to find the info for port with subnet ID: %s.\n",
                     current_PortConfiguration.fixed_ips(0).subnet_id().c_str());
       overall_rc = -EXIT_FAILURE;
-      goto Done;
+      goto EXIT;
     }
 
     switch (current_PortState.operation_type()) {
@@ -242,7 +250,7 @@ int ACA_Dataplane_OVS::update_port_state_workitem(const PortState current_PortSt
     overall_rc = -EFAULT;
   }
 
-Done:
+EXIT:
 
   auto operation_end = chrono::steady_clock::now();
 

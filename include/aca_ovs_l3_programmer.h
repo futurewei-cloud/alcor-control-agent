@@ -47,8 +47,10 @@ struct subnet_routing_table_entry {
   string gateway_ip;
   string gateway_mac;
   // list of neighbor ports within the subnet
+  // hashtable <key: neighbor ID, value: neighbor_port_table_entry>
   unordered_map<string, neighbor_port_table_entry> neighbor_ports;
   // list of routing rules for this subnet
+  // hashtable <key: routing rule ID, value: routing_rule_entry>
   unordered_map<string, routing_rule_entry> routing_rules;
 };
 
@@ -87,7 +89,7 @@ class ACA_OVS_L3_Programmer {
 
   string _host_dvr_mac;
 
-  // unordered_map <router IDs, unordered_map <subnet IDs, list of subnet routing tables>>
+  // hashtable <key: router IDs, value: hashtable <key: subnet IDs, value: subnet_routing_table_entry> >
   unordered_map<string, unordered_map<string, subnet_routing_table_entry> > _routers_table;
 
   // mutex for reading and writing to routers_table
