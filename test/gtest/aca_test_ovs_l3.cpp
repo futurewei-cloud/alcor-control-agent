@@ -25,11 +25,11 @@
 
 using namespace std;
 using namespace alcor::schema;
-using aca_comm_manager::Aca_Comm_Manager;
-using aca_net_config::Aca_Net_Config;
-using aca_ovs_l2_programmer::ACA_OVS_L2_Programmer;
+using namespace aca_comm_manager;
+using namespace aca_net_config;
+using namespace aca_ovs_l2_programmer;
 
-// extern the string and helper functions from aca_test_ovs_l2.cpp
+// extern the string and helper functions from aca_test_ovs_util.cpp
 extern string project_id;
 extern string vpc_id_1;
 extern string vpc_id_2;
@@ -60,8 +60,13 @@ extern string subnet1_gw_mac;
 extern string subnet2_gw_mac;
 extern bool g_demo_mode;
 
+extern void aca_test_reset_environment();
 extern void aca_test_create_default_port_state(PortState *new_port_states);
 extern void aca_test_create_default_subnet_state(SubnetState *new_subnet_states);
+extern void aca_test_1_neighbor_CREATE_DELETE(NeighborType input_neighbor_type);
+extern void aca_test_1_port_CREATE_plus_neighbor_CREATE(NeighborType input_neighbor_type);
+extern void aca_test_10_neighbor_CREATE(NeighborType input_neighbor_type);
+extern void aca_test_create_default_router_goal_state(GoalState *goalState_builder);
 
 static string host1_dvr_mac_address = HOST_DVR_MAC_PREFIX + string("d7:f2:01");
 static string host2_dvr_mac_address = HOST_DVR_MAC_PREFIX + string("d7:f2:02");
@@ -168,7 +173,6 @@ TEST(ovs_l3_test_cases, ADD_DELETE_ROUTER_test_no_traffic)
   subnetConfig_GatewayBuilder2->set_mac_address(subnet2_gw_mac);
   SubnetConiguration_builder2->set_allocated_gateway(subnetConfig_GatewayBuilder2);
 
-  // create the router
   GoalStateOperationReply gsOperationalReply;
 
   // try to delete a non-existant router now
@@ -190,23 +194,27 @@ TEST(ovs_l3_test_cases, ADD_DELETE_ROUTER_test_no_traffic)
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
 }
 
+TEST(ovs_l3_test_cases, 1_l3_neighbor_CREATE_DELETE)
+{
+  aca_test_1_neighbor_CREATE_DELETE(NeighborType::L3);
+}
+
+TEST(ovs_l3_test_cases, 1_port_CREATE_plus_l3_neighbor_CREATE)
+{
+  aca_test_1_port_CREATE_plus_neighbor_CREATE(NeighborType::L3);
+}
+
+TEST(ovs_l3_test_cases, 10_l3_neighbor_CREATE)
+{
+  aca_test_10_neighbor_CREATE(NeighborType::L3);
+}
+
 TEST(ovs_l3_test_cases, DISABLED_2_ports_ROUTING_test_traffic_one_machine)
 {
-  ulong not_care_culminative_time = 0;
   string cmd_string;
   int overall_rc;
 
-  // delete and add br-int and br-tun bridges to clear everything
-  ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
-          "del-br br-int", not_care_culminative_time, overall_rc);
-
-  ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
-          "del-br br-tun", not_care_culminative_time, overall_rc);
-
-  // create and setup br-int and br-tun bridges, and their patch ports
-  overall_rc = ACA_OVS_L2_Programmer::get_instance().setup_ovs_bridges_if_need();
-  ASSERT_EQ(overall_rc, EXIT_SUCCESS);
-  overall_rc = EXIT_SUCCESS;
+  aca_test_reset_environment();
 
   // kill the docker instances just in case
   Aca_Net_Config::get_instance().execute_system_command("docker kill con3");
@@ -265,28 +273,24 @@ TEST(ovs_l3_test_cases, DISABLED_2_ports_ROUTING_test_traffic_one_machine)
 
   cmd_string = "ovs-docker add-port br-int eth0 con3 --ipaddress=" + vip_address_3 +
                "/24 --gateway=" + subnet1_gw_ip + " --macaddress=" + vmac_address_3;
-  Aca_Net_Config::get_instance().execute_system_command(cmd_string);
+  overall_rc = Aca_Net_Config::get_instance().execute_system_command(cmd_string);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
-  overall_rc = EXIT_SUCCESS;
 
   cmd_string = "ovs-docker set-vlan br-int eth0 con3 1";
-  Aca_Net_Config::get_instance().execute_system_command(cmd_string);
+  overall_rc = Aca_Net_Config::get_instance().execute_system_command(cmd_string);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
-  overall_rc = EXIT_SUCCESS;
 
-  Aca_Net_Config::get_instance().execute_system_command(
+  overall_rc = Aca_Net_Config::get_instance().execute_system_command(
           "docker run -itd --name con4 --net=none busybox sh");
 
   cmd_string = "ovs-docker add-port br-int eth0 con4 --ipaddress=" + vip_address_4 +
                "/24 --gateway=" + subnet2_gw_ip + " --macaddress=" + vmac_address_4;
-  Aca_Net_Config::get_instance().execute_system_command(cmd_string);
+  overall_rc = Aca_Net_Config::get_instance().execute_system_command(cmd_string);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
-  overall_rc = EXIT_SUCCESS;
 
   cmd_string = "ovs-docker set-vlan br-int eth0 con4 2";
-  Aca_Net_Config::get_instance().execute_system_command(cmd_string);
+  overall_rc = Aca_Net_Config::get_instance().execute_system_command(cmd_string);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
-  overall_rc = EXIT_SUCCESS;
 
   // configure new port 3
   GoalStateOperationReply gsOperationalReply;
@@ -294,7 +298,6 @@ TEST(ovs_l3_test_cases, DISABLED_2_ports_ROUTING_test_traffic_one_machine)
   overall_rc = Aca_Comm_Manager::get_instance().update_goal_state(
           GoalState_builder, gsOperationalReply);
   EXPECT_NE(overall_rc, EXIT_SUCCESS);
-  overall_rc = EXIT_SUCCESS;
 
   // setup the configuration for port 4
   PortConfiguration_builder->set_id(port_id_4);
@@ -314,7 +317,6 @@ TEST(ovs_l3_test_cases, DISABLED_2_ports_ROUTING_test_traffic_one_machine)
   overall_rc = Aca_Comm_Manager::get_instance().update_goal_state(
           GoalState_builder, gsOperationalReply);
   EXPECT_NE(overall_rc, EXIT_SUCCESS);
-  overall_rc = EXIT_SUCCESS;
 
   // restore demo mode
   g_demo_mode = previous_demo_mode;
@@ -323,117 +325,41 @@ TEST(ovs_l3_test_cases, DISABLED_2_ports_ROUTING_test_traffic_one_machine)
   overall_rc = Aca_Net_Config::get_instance().execute_system_command(
           "docker exec con3 ping -c1 " + vip_address_3);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
-  overall_rc = EXIT_SUCCESS;
 
   overall_rc = Aca_Net_Config::get_instance().execute_system_command(
           "docker exec con4 ping -c1 " + vip_address_4);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
-  overall_rc = EXIT_SUCCESS;
 
   // test traffic between the two newly created ports, it should not work
   // because they are from different subnet
   overall_rc = Aca_Net_Config::get_instance().execute_system_command(
           "docker exec con3 ping -c1 " + vip_address_4);
   EXPECT_NE(overall_rc, EXIT_SUCCESS);
-  overall_rc = EXIT_SUCCESS;
 
   overall_rc = Aca_Net_Config::get_instance().execute_system_command(
           "docker exec con4 ping -c1 " + vip_address_3);
   EXPECT_NE(overall_rc, EXIT_SUCCESS);
-  overall_rc = EXIT_SUCCESS;
 
   // free the allocated configurations since we are done with it now
   new_port_states->clear_configuration();
-  new_subnet_states->clear_configuration();
 
   // program the router
   GoalState GoalState_builder2;
-  RouterState *new_router_states = GoalState_builder2.add_router_states();
-  SubnetState *new_subnet_states1 = GoalState_builder2.add_subnet_states();
-  SubnetState *new_subnet_states2 = GoalState_builder2.add_subnet_states();
-
-  new_router_states->set_operation_type(OperationType::CREATE);
-
-  // fill in router state structs
-  RouterConfiguration *RouterConfiguration_builder =
-          new_router_states->mutable_configuration();
-  RouterConfiguration_builder->set_revision_number(1);
-
-  RouterConfiguration_builder->set_id("router_id1");
-  RouterConfiguration_builder->set_host_dvr_mac_address("fa:16:3e:d7:f2:02");
-
-  auto *RouterConfiguration_SubnetRoutingTable_builder1 =
-          RouterConfiguration_builder->add_subnet_routing_tables();
-  RouterConfiguration_SubnetRoutingTable_builder1->set_subnet_id(subnet_id_1);
-  auto *RouterConfiguration_SubnetRoutingRule_builder1 =
-          RouterConfiguration_SubnetRoutingTable_builder1->add_routing_rules();
-  RouterConfiguration_SubnetRoutingRule_builder1->set_operation_type(OperationType::CREATE);
-  RouterConfiguration_SubnetRoutingRule_builder1->set_id("12345");
-  RouterConfiguration_SubnetRoutingRule_builder1->set_name("routing_rule_1");
-  RouterConfiguration_SubnetRoutingRule_builder1->set_destination("154.12.42.24/32");
-  RouterConfiguration_SubnetRoutingRule_builder1->set_next_hop_ip("154.12.42.101");
-  auto *routerConfiguration_RoutingRuleExtraInfo_builder1(new RouterConfiguration_RoutingRuleExtraInfo);
-  routerConfiguration_RoutingRuleExtraInfo_builder1->set_destination_type(
-          DestinationType::INTERNET);
-  routerConfiguration_RoutingRuleExtraInfo_builder1->set_next_hop_mac("fa:16:3e:d7:aa:02");
-  RouterConfiguration_SubnetRoutingRule_builder1->set_allocated_routing_rule_extra_info(
-          routerConfiguration_RoutingRuleExtraInfo_builder1);
-
-  auto *RouterConfiguration_SubnetRoutingTable_builder2 =
-          RouterConfiguration_builder->add_subnet_routing_tables();
-  RouterConfiguration_SubnetRoutingTable_builder2->set_subnet_id(subnet_id_2);
-  auto *RouterConfiguration_SubnetRoutingRule_builder2 =
-          RouterConfiguration_SubnetRoutingTable_builder2->add_routing_rules();
-  RouterConfiguration_SubnetRoutingRule_builder2->set_operation_type(OperationType::UPDATE);
-  RouterConfiguration_SubnetRoutingRule_builder2->set_id("23456");
-  RouterConfiguration_SubnetRoutingRule_builder2->set_name("routing_rule_2");
-  RouterConfiguration_SubnetRoutingRule_builder2->set_destination("154.12.54.24/32");
-  RouterConfiguration_SubnetRoutingRule_builder2->set_next_hop_ip("154.12.54.101");
-  auto *routerConfiguration_RoutingRuleExtraInfo_builder2(new RouterConfiguration_RoutingRuleExtraInfo);
-  routerConfiguration_RoutingRuleExtraInfo_builder2->set_destination_type(DestinationType::VPC_GW);
-  routerConfiguration_RoutingRuleExtraInfo_builder2->set_next_hop_mac("fa:16:3e:d7:bb:02");
-  RouterConfiguration_SubnetRoutingRule_builder2->set_allocated_routing_rule_extra_info(
-          routerConfiguration_RoutingRuleExtraInfo_builder2);
-
-  // fill in subnet state1 structs
-  aca_test_create_default_subnet_state(new_subnet_states1);
-
-  // fill in subnet state2 structs
-  new_subnet_states2->set_operation_type(OperationType::INFO);
-
-  SubnetConfiguration *SubnetConiguration_builder2 =
-          new_subnet_states2->mutable_configuration();
-  SubnetConiguration_builder2->set_revision_number(1);
-  SubnetConiguration_builder2->set_project_id(project_id);
-  SubnetConiguration_builder2->set_vpc_id(vpc_id_2);
-  SubnetConiguration_builder2->set_id(subnet_id_2);
-  SubnetConiguration_builder2->set_cidr("10.10.1.0/24");
-  SubnetConiguration_builder2->set_tunnel_id(30);
-
-  auto *subnetConfig_GatewayBuilder2(new SubnetConfiguration_Gateway);
-  subnetConfig_GatewayBuilder2->set_ip_address(subnet2_gw_ip);
-  subnetConfig_GatewayBuilder2->set_mac_address(subnet2_gw_mac);
-  SubnetConiguration_builder2->set_allocated_gateway(subnetConfig_GatewayBuilder2);
+  aca_test_create_default_router_goal_state(&GoalState_builder2);
 
   // create the router
   overall_rc = Aca_Comm_Manager::get_instance().update_goal_state(
           GoalState_builder2, gsOperationalReply);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
-  overall_rc = EXIT_SUCCESS;
 
   // should be able to ping the GWs now
   overall_rc = Aca_Net_Config::get_instance().execute_system_command(
           "docker exec con3 ping -c1 " + subnet1_gw_ip);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
-  overall_rc = EXIT_SUCCESS;
 
   overall_rc = Aca_Net_Config::get_instance().execute_system_command(
           "docker exec con4 ping -c1 " + subnet2_gw_ip);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
-  overall_rc = EXIT_SUCCESS;
-
-  // clear the allocated router configurations since we are done with it now
-  new_router_states->clear_configuration();
 
   // just clearing the router states and reuse the two subnet states in GoalState_builder2
   GoalState_builder2.clear_router_states();
@@ -451,6 +377,7 @@ TEST(ovs_l3_test_cases, DISABLED_2_ports_ROUTING_test_traffic_one_machine)
 
   NeighborConfiguration_builder3->set_project_id(project_id);
   NeighborConfiguration_builder3->set_vpc_id(vpc_id_1);
+  NeighborConfiguration_builder3->set_id(port_id_3);
   NeighborConfiguration_builder3->set_name(port_name_3);
   NeighborConfiguration_builder3->set_mac_address(vmac_address_3);
   NeighborConfiguration_builder3->set_host_ip_address(remote_ip_2);
@@ -470,6 +397,7 @@ TEST(ovs_l3_test_cases, DISABLED_2_ports_ROUTING_test_traffic_one_machine)
 
   NeighborConfiguration_builder4->set_project_id(project_id);
   NeighborConfiguration_builder4->set_vpc_id(vpc_id_2);
+  NeighborConfiguration_builder4->set_id(port_id_4);
   NeighborConfiguration_builder4->set_name(port_name_4);
   NeighborConfiguration_builder4->set_mac_address(vmac_address_4);
   NeighborConfiguration_builder4->set_host_ip_address(remote_ip_2);
@@ -484,72 +412,41 @@ TEST(ovs_l3_test_cases, DISABLED_2_ports_ROUTING_test_traffic_one_machine)
   overall_rc = Aca_Comm_Manager::get_instance().update_goal_state(
           GoalState_builder2, gsOperationalReply);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
-  overall_rc = EXIT_SUCCESS;
 
   // should be able to ping each other now using router
   overall_rc = Aca_Net_Config::get_instance().execute_system_command(
           "docker exec con3 ping -c1 " + vip_address_4);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
-  overall_rc = EXIT_SUCCESS;
 
   overall_rc = Aca_Net_Config::get_instance().execute_system_command(
           "docker exec con4 ping -c1 " + vip_address_3);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
-  overall_rc = EXIT_SUCCESS;
 
   // free the allocated configurations since we are done with it now
   new_neighbor_states3->clear_configuration();
   new_neighbor_states4->clear_configuration();
-  new_subnet_states1->clear_configuration();
-  new_subnet_states2->clear_configuration();
 
   // cleanup
 
   overall_rc = Aca_Net_Config::get_instance().execute_system_command("docker kill con3");
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
-  overall_rc = EXIT_SUCCESS;
 
   overall_rc = Aca_Net_Config::get_instance().execute_system_command("docker rm con3");
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
-  overall_rc = EXIT_SUCCESS;
 
   overall_rc = Aca_Net_Config::get_instance().execute_system_command("docker kill con4");
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
-  overall_rc = EXIT_SUCCESS;
 
   overall_rc = Aca_Net_Config::get_instance().execute_system_command("docker rm con4");
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
-  overall_rc = EXIT_SUCCESS;
-
-  // delete br-int and br-tun bridges
-  ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
-          "del-br br-int", not_care_culminative_time, overall_rc);
-  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
-  overall_rc = EXIT_SUCCESS;
-
-  ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
-          "del-br br-tun", not_care_culminative_time, overall_rc);
-  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
-  overall_rc = EXIT_SUCCESS;
 }
 
 TEST(ovs_l3_test_cases, DISABLED_2_ports_ROUTING_test_traffic_PARENT)
 {
-  ulong not_care_culminative_time = 0;
   string cmd_string;
   int overall_rc;
 
-  // delete and add br-int and br-tun bridges to clear everything
-  ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
-          "del-br br-int", not_care_culminative_time, overall_rc);
-
-  ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
-          "del-br br-tun", not_care_culminative_time, overall_rc);
-
-  // create and setup br-int and br-tun bridges, and their patch ports
-  overall_rc = ACA_OVS_L2_Programmer::get_instance().setup_ovs_bridges_if_need();
-  ASSERT_EQ(overall_rc, EXIT_SUCCESS);
-  overall_rc = EXIT_SUCCESS;
+  aca_test_reset_environment();
 
   // kill the docker instances just in case
   Aca_Net_Config::get_instance().execute_system_command("docker kill con1");
@@ -603,33 +500,31 @@ TEST(ovs_l3_test_cases, DISABLED_2_ports_ROUTING_test_traffic_PARENT)
   bool previous_demo_mode = g_demo_mode;
   g_demo_mode = false;
 
-  Aca_Net_Config::get_instance().execute_system_command(
+  overall_rc = Aca_Net_Config::get_instance().execute_system_command(
           "docker run -itd --name con1 --net=none busybox sh");
+  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
 
   cmd_string = "ovs-docker add-port br-int eth0 con1 --ipaddress=" + vip_address_1 +
                "/24 --gateway=" + subnet1_gw_ip + " --macaddress=" + vmac_address_1;
-  Aca_Net_Config::get_instance().execute_system_command(cmd_string);
+  overall_rc = Aca_Net_Config::get_instance().execute_system_command(cmd_string);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
-  overall_rc = EXIT_SUCCESS;
 
   cmd_string = "ovs-docker set-vlan br-int eth0 con1 1";
-  Aca_Net_Config::get_instance().execute_system_command(cmd_string);
+  overall_rc = Aca_Net_Config::get_instance().execute_system_command(cmd_string);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
-  overall_rc = EXIT_SUCCESS;
 
-  Aca_Net_Config::get_instance().execute_system_command(
+  overall_rc = Aca_Net_Config::get_instance().execute_system_command(
           "docker run -itd --name con2 --net=none busybox sh");
+  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
 
   cmd_string = "ovs-docker add-port br-int eth0 con2 --ipaddress=" + vip_address_2 +
                "/24 --gateway=" + subnet2_gw_ip + " --macaddress=" + vmac_address_2;
-  Aca_Net_Config::get_instance().execute_system_command(cmd_string);
+  overall_rc = Aca_Net_Config::get_instance().execute_system_command(cmd_string);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
-  overall_rc = EXIT_SUCCESS;
 
   cmd_string = "ovs-docker set-vlan br-int eth0 con2 2";
-  Aca_Net_Config::get_instance().execute_system_command(cmd_string);
+  overall_rc = Aca_Net_Config::get_instance().execute_system_command(cmd_string);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
-  overall_rc = EXIT_SUCCESS;
 
   // configure new port 1
   GoalStateOperationReply gsOperationalReply;
@@ -657,7 +552,6 @@ TEST(ovs_l3_test_cases, DISABLED_2_ports_ROUTING_test_traffic_PARENT)
   overall_rc = Aca_Comm_Manager::get_instance().update_goal_state(
           GoalState_builder, gsOperationalReply);
   EXPECT_NE(overall_rc, EXIT_SUCCESS);
-  overall_rc = EXIT_SUCCESS;
 
   // restore demo mode
   g_demo_mode = previous_demo_mode;
@@ -666,35 +560,29 @@ TEST(ovs_l3_test_cases, DISABLED_2_ports_ROUTING_test_traffic_PARENT)
   overall_rc = Aca_Net_Config::get_instance().execute_system_command(
           "docker exec con1 ping -c1 " + vip_address_1);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
-  overall_rc = EXIT_SUCCESS;
 
   overall_rc = Aca_Net_Config::get_instance().execute_system_command(
           "docker exec con2 ping -c1 " + vip_address_2);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
-  overall_rc = EXIT_SUCCESS;
 
   // test traffic between the ports without router on same subnet
   // expect to fail before neighbor info is not programmed yet
   overall_rc = Aca_Net_Config::get_instance().execute_system_command(
           "docker exec con1 ping -c1 " + vip_address_3);
   EXPECT_NE(overall_rc, EXIT_SUCCESS);
-  overall_rc = EXIT_SUCCESS;
 
   overall_rc = Aca_Net_Config::get_instance().execute_system_command(
           "docker exec con2 ping -c1 " + vip_address_4);
   EXPECT_NE(overall_rc, EXIT_SUCCESS);
-  overall_rc = EXIT_SUCCESS;
 
   // test traffic between the ports without router on different subnet
   overall_rc = Aca_Net_Config::get_instance().execute_system_command(
           "docker exec con1 ping -c1 " + vip_address_4);
   EXPECT_NE(overall_rc, EXIT_SUCCESS);
-  overall_rc = EXIT_SUCCESS;
 
   overall_rc = Aca_Net_Config::get_instance().execute_system_command(
           "docker exec con2 ping -c1 " + vip_address_3);
   EXPECT_NE(overall_rc, EXIT_SUCCESS);
-  overall_rc = EXIT_SUCCESS;
 
   // free the allocated configurations since we are done with it now
   new_port_states->clear_configuration();
@@ -747,18 +635,15 @@ TEST(ovs_l3_test_cases, DISABLED_2_ports_ROUTING_test_traffic_PARENT)
   overall_rc = Aca_Comm_Manager::get_instance().update_goal_state(
           GoalState_builder2, gsOperationalReply);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
-  overall_rc = EXIT_SUCCESS;
 
   // should be able to ping the GWs now
   overall_rc = Aca_Net_Config::get_instance().execute_system_command(
           "docker exec con1 ping -c1 " + subnet1_gw_ip);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
-  overall_rc = EXIT_SUCCESS;
 
   overall_rc = Aca_Net_Config::get_instance().execute_system_command(
           "docker exec con2 ping -c1 " + subnet2_gw_ip);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
-  overall_rc = EXIT_SUCCESS;
 
   // clear the allocated router configurations since we are done with it now
   new_router_states->clear_configuration();
@@ -779,6 +664,7 @@ TEST(ovs_l3_test_cases, DISABLED_2_ports_ROUTING_test_traffic_PARENT)
 
   NeighborConfiguration_builder3->set_project_id(project_id);
   NeighborConfiguration_builder3->set_vpc_id(vpc_id_1);
+  NeighborConfiguration_builder3->set_id(port_id_3);
   NeighborConfiguration_builder3->set_name(port_name_3);
   NeighborConfiguration_builder3->set_mac_address(vmac_address_3);
   NeighborConfiguration_builder3->set_host_ip_address(remote_ip_2);
@@ -798,6 +684,7 @@ TEST(ovs_l3_test_cases, DISABLED_2_ports_ROUTING_test_traffic_PARENT)
 
   NeighborConfiguration_builder4->set_project_id(project_id);
   NeighborConfiguration_builder4->set_vpc_id(vpc_id_2);
+  NeighborConfiguration_builder4->set_id(port_id_4);
   NeighborConfiguration_builder4->set_name(port_name_4);
   NeighborConfiguration_builder4->set_mac_address(vmac_address_4);
   NeighborConfiguration_builder4->set_host_ip_address(remote_ip_2);
@@ -812,83 +699,68 @@ TEST(ovs_l3_test_cases, DISABLED_2_ports_ROUTING_test_traffic_PARENT)
   overall_rc = Aca_Comm_Manager::get_instance().update_goal_state(
           GoalState_builder2, gsOperationalReply);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
-  overall_rc = EXIT_SUCCESS;
 
   // test traffic between the ports with router on same subnet
   overall_rc = Aca_Net_Config::get_instance().execute_system_command(
           "docker exec con1 ping -c1 " + vip_address_3);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
-  overall_rc = EXIT_SUCCESS;
 
   overall_rc = Aca_Net_Config::get_instance().execute_system_command(
           "docker exec con2 ping -c1 " + vip_address_4);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
-  overall_rc = EXIT_SUCCESS;
 
-  // test traffic between the ports without router on different subnet
+  // test traffic between the ports with router on different subnet
   overall_rc = Aca_Net_Config::get_instance().execute_system_command(
           "docker exec con1 ping -c1 " + vip_address_4);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
-  overall_rc = EXIT_SUCCESS;
 
   overall_rc = Aca_Net_Config::get_instance().execute_system_command(
           "docker exec con2 ping -c1 " + vip_address_3);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
-  overall_rc = EXIT_SUCCESS;
 
-  // free the allocated configurations since we are done with it now
-  new_neighbor_states3->clear_configuration();
-  new_neighbor_states4->clear_configuration();
-  new_subnet_states1->clear_configuration();
-  new_subnet_states2->clear_configuration();
+  // delete port 4 as L3 neighbor
+  new_neighbor_states4->set_operation_type(OperationType::DELETE);
+  overall_rc = Aca_Comm_Manager::get_instance().update_goal_state(
+          GoalState_builder2, gsOperationalReply);
+  ASSERT_EQ(overall_rc, EXIT_SUCCESS);
+
+  // should not be able to ping port 4 anymore
+  overall_rc = Aca_Net_Config::get_instance().execute_system_command(
+          "docker exec con1 ping -c1 " + vip_address_4);
+  EXPECT_NE(overall_rc, EXIT_SUCCESS);
+
+  // but still have to ping port 3 since it is not deleted
+  overall_rc = Aca_Net_Config::get_instance().execute_system_command(
+          "docker exec con2 ping -c1 " + vip_address_3);
+  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
 
   // cleanup
 
+  // free the allocated configurations since we are done with it now
+  new_subnet_states1->clear_configuration();
+  new_subnet_states2->clear_configuration();
+  new_neighbor_states3->clear_configuration();
+  new_neighbor_states4->clear_configuration();
+
   overall_rc = Aca_Net_Config::get_instance().execute_system_command("docker kill con1");
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
-  overall_rc = EXIT_SUCCESS;
 
   overall_rc = Aca_Net_Config::get_instance().execute_system_command("docker rm con1");
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
-  overall_rc = EXIT_SUCCESS;
 
   overall_rc = Aca_Net_Config::get_instance().execute_system_command("docker kill con2");
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
-  overall_rc = EXIT_SUCCESS;
 
   overall_rc = Aca_Net_Config::get_instance().execute_system_command("docker rm con2");
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
-  overall_rc = EXIT_SUCCESS;
-
-  // delete br-int and br-tun bridges
-  ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
-          "del-br br-int", not_care_culminative_time, overall_rc);
-  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
-  overall_rc = EXIT_SUCCESS;
-
-  ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
-          "del-br br-tun", not_care_culminative_time, overall_rc);
-  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
-  overall_rc = EXIT_SUCCESS;
 }
 
 TEST(ovs_l3_test_cases, DISABLED_2_ports_ROUTING_test_traffic_CHILD)
 {
-  ulong not_care_culminative_time = 0;
   string cmd_string;
   int overall_rc;
 
-  // delete and add br-int and br-tun bridges to clear everything
-  ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
-          "del-br br-int", not_care_culminative_time, overall_rc);
-
-  ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
-          "del-br br-tun", not_care_culminative_time, overall_rc);
-
-  // create and setup br-int and br-tun bridges, and their patch ports
-  overall_rc = ACA_OVS_L2_Programmer::get_instance().setup_ovs_bridges_if_need();
-  ASSERT_EQ(overall_rc, EXIT_SUCCESS);
-  overall_rc = EXIT_SUCCESS;
+  aca_test_reset_environment();
 
   // kill the docker instances just in case
   Aca_Net_Config::get_instance().execute_system_command("docker kill con3");
@@ -942,33 +814,31 @@ TEST(ovs_l3_test_cases, DISABLED_2_ports_ROUTING_test_traffic_CHILD)
   bool previous_demo_mode = g_demo_mode;
   g_demo_mode = false;
 
-  Aca_Net_Config::get_instance().execute_system_command(
+  overall_rc = Aca_Net_Config::get_instance().execute_system_command(
           "docker run -itd --name con3 --net=none busybox sh");
+  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
 
   cmd_string = "ovs-docker add-port br-int eth0 con3 --ipaddress=" + vip_address_3 +
                "/24 --gateway=" + subnet1_gw_ip + " --macaddress=" + vmac_address_3;
   Aca_Net_Config::get_instance().execute_system_command(cmd_string);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
-  overall_rc = EXIT_SUCCESS;
 
   cmd_string = "ovs-docker set-vlan br-int eth0 con3 1";
   Aca_Net_Config::get_instance().execute_system_command(cmd_string);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
-  overall_rc = EXIT_SUCCESS;
 
-  Aca_Net_Config::get_instance().execute_system_command(
+  overall_rc = Aca_Net_Config::get_instance().execute_system_command(
           "docker run -itd --name con4 --net=none busybox sh");
+  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
 
   cmd_string = "ovs-docker add-port br-int eth0 con4 --ipaddress=" + vip_address_4 +
                "/24 --gateway=" + subnet2_gw_ip + " --macaddress=" + vmac_address_4;
-  Aca_Net_Config::get_instance().execute_system_command(cmd_string);
+  overall_rc = Aca_Net_Config::get_instance().execute_system_command(cmd_string);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
-  overall_rc = EXIT_SUCCESS;
 
   cmd_string = "ovs-docker set-vlan br-int eth0 con4 2";
-  Aca_Net_Config::get_instance().execute_system_command(cmd_string);
+  overall_rc = Aca_Net_Config::get_instance().execute_system_command(cmd_string);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
-  overall_rc = EXIT_SUCCESS;
 
   // configure new port 3
   GoalStateOperationReply gsOperationalReply;
@@ -976,7 +846,6 @@ TEST(ovs_l3_test_cases, DISABLED_2_ports_ROUTING_test_traffic_CHILD)
   overall_rc = Aca_Comm_Manager::get_instance().update_goal_state(
           GoalState_builder, gsOperationalReply);
   EXPECT_NE(overall_rc, EXIT_SUCCESS);
-  overall_rc = EXIT_SUCCESS;
 
   // setup the configuration for port 4
   PortConfiguration_builder->set_id(port_id_4);
@@ -996,7 +865,6 @@ TEST(ovs_l3_test_cases, DISABLED_2_ports_ROUTING_test_traffic_CHILD)
   overall_rc = Aca_Comm_Manager::get_instance().update_goal_state(
           GoalState_builder, gsOperationalReply);
   EXPECT_NE(overall_rc, EXIT_SUCCESS);
-  overall_rc = EXIT_SUCCESS;
 
   // restore demo mode
   g_demo_mode = previous_demo_mode;
@@ -1005,12 +873,10 @@ TEST(ovs_l3_test_cases, DISABLED_2_ports_ROUTING_test_traffic_CHILD)
   overall_rc = Aca_Net_Config::get_instance().execute_system_command(
           "docker exec con3 ping -c1 " + vip_address_3);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
-  overall_rc = EXIT_SUCCESS;
 
   overall_rc = Aca_Net_Config::get_instance().execute_system_command(
           "docker exec con4 ping -c1 " + vip_address_4);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
-  overall_rc = EXIT_SUCCESS;
 
   // free the allocated configurations since we are done with it now
   new_port_states->clear_configuration();
@@ -1063,18 +929,15 @@ TEST(ovs_l3_test_cases, DISABLED_2_ports_ROUTING_test_traffic_CHILD)
   overall_rc = Aca_Comm_Manager::get_instance().update_goal_state(
           GoalState_builder2, gsOperationalReply);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
-  overall_rc = EXIT_SUCCESS;
 
   // should be able to ping the GWs now
   overall_rc = Aca_Net_Config::get_instance().execute_system_command(
           "docker exec con3 ping -c1 " + subnet1_gw_ip);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
-  overall_rc = EXIT_SUCCESS;
 
   overall_rc = Aca_Net_Config::get_instance().execute_system_command(
           "docker exec con4 ping -c1 " + subnet2_gw_ip);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
-  overall_rc = EXIT_SUCCESS;
 
   // clear the allocated router configurations since we are done with it now
   new_router_states->clear_configuration();
@@ -1095,6 +958,7 @@ TEST(ovs_l3_test_cases, DISABLED_2_ports_ROUTING_test_traffic_CHILD)
 
   NeighborConfiguration_builder3->set_project_id(project_id);
   NeighborConfiguration_builder3->set_vpc_id(vpc_id_1);
+  NeighborConfiguration_builder3->set_id(port_id_1);
   NeighborConfiguration_builder3->set_name(port_name_1);
   NeighborConfiguration_builder3->set_mac_address(vmac_address_1);
   NeighborConfiguration_builder3->set_host_ip_address(remote_ip_1);
@@ -1114,6 +978,7 @@ TEST(ovs_l3_test_cases, DISABLED_2_ports_ROUTING_test_traffic_CHILD)
 
   NeighborConfiguration_builder4->set_project_id(project_id);
   NeighborConfiguration_builder4->set_vpc_id(vpc_id_2);
+  NeighborConfiguration_builder4->set_id(port_id_2);
   NeighborConfiguration_builder4->set_name(port_name_2);
   NeighborConfiguration_builder4->set_mac_address(vmac_address_2);
   NeighborConfiguration_builder4->set_host_ip_address(remote_ip_1);
@@ -1128,7 +993,6 @@ TEST(ovs_l3_test_cases, DISABLED_2_ports_ROUTING_test_traffic_CHILD)
   overall_rc = Aca_Comm_Manager::get_instance().update_goal_state(
           GoalState_builder2, gsOperationalReply);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
-  overall_rc = EXIT_SUCCESS;
 
   // cleanup
 

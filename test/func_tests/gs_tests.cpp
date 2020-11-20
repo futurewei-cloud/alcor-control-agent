@@ -548,17 +548,6 @@ void parse_goalstate(GoalState parsed_struct, GoalState GoalState_builder)
       assert(parsed_struct.vpc_states(i).configuration().subnet_ids(j).id() ==
              GoalState_builder.vpc_states(i).configuration().subnet_ids(j).id());
     }
-
-    assert(parsed_struct.vpc_states(i).configuration().routes_size() ==
-           GoalState_builder.vpc_states(i).configuration().routes_size());
-
-    for (int k = 0; k < parsed_struct.vpc_states(i).configuration().routes_size(); k++) {
-      assert(parsed_struct.vpc_states(i).configuration().routes(k).destination() ==
-             GoalState_builder.vpc_states(i).configuration().routes(k).destination());
-
-      assert(parsed_struct.vpc_states(i).configuration().routes(k).next_hop() ==
-             GoalState_builder.vpc_states(i).configuration().routes(k).next_hop());
-    }
   }
 
   fprintf(stdout, "All content matched!\n");
@@ -667,7 +656,8 @@ int main(int argc, char *argv[])
 
   GoalState parsed_struct;
 
-  rc = Aca_Comm_Manager::get_instance().deserialize((const unsigned char*)buffer, size, parsed_struct);
+  rc = Aca_Comm_Manager::get_instance().deserialize(
+          (const unsigned char *)buffer, size, parsed_struct);
 
   if (buffer != NULL) {
     free(buffer);
