@@ -47,8 +47,10 @@ struct subnet_routing_table_entry {
   string gateway_ip;
   string gateway_mac;
   // list of neighbor ports within the subnet
+  // hashtable <key: neighbor ID, value: neighbor_port_table_entry>
   unordered_map<string, neighbor_port_table_entry> neighbor_ports;
   // list of routing rules for this subnet
+  // hashtable <key: routing rule ID, value: routing_rule_entry>
   unordered_map<string, routing_rule_entry> routing_rules;
 };
 
@@ -68,17 +70,16 @@ class ACA_OVS_L3_Programmer {
   int delete_router(RouterConfiguration &current_RouterConfiguration,
                     ulong &culminative_time_dataplane_programming_time);
 
-  int create_or_update_neighbor_l3(const string neighbor_id, const string vpc_id,
+  int create_or_update_l3_neighbor(const string neighbor_id, const string vpc_id,
                                    const string subnet_id, const string virtual_ip,
                                    const string virtual_mac,
                                    const string remote_host_ip, uint tunnel_id,
                                    ulong &culminative_time_dataplane_programming_time);
 
   int delete_neighbor_l3(const string neighbor_id, const string subnet_id,
-                         const string virtual_ip, ulong &culminative_time);
 
+  int delete_l3_neighbor(const string neighbor_id, const string subnet_id,
   // compiler will flag the error when below is called.
-  ACA_OVS_L3_Programmer(ACA_OVS_L3_Programmer const &) = delete;
   void operator=(ACA_OVS_L3_Programmer const &) = delete;
 
   private:
@@ -87,12 +88,8 @@ class ACA_OVS_L3_Programmer {
 
   string _host_dvr_mac;
 
-  // unordered_map <router IDs, unordered_map <subnet IDs, list of subnet routing tables>>
+  // hashtable <key: router IDs, value: hashtable <key: subnet IDs, value: subnet_routing_table_entry> >
   unordered_map<string, unordered_map<string, subnet_routing_table_entry> > _routers_table;
 
   // mutex for reading and writing to routers_table
-  // consider using a read / write lock to improve performance
-  mutex _routers_table_mutex;
-};
 } // namespace aca_ovs_l3_programmer
-#endif // #ifndef ACA_OVS_L3_PROGRAMMER_H

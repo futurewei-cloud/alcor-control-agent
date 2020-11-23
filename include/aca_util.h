@@ -19,6 +19,7 @@
 #include "aca_log.h"
 #include "goalstateprovisioner.grpc.pb.h"
 #include <string>
+#include <arpa/inet.h>
 
 // the hashed digits for the outport postfix string is based on remote IP string,
 // it should be more than enough for the number of hosts in a region
@@ -196,4 +197,48 @@ static inline bool aca_is_port_on_same_host(const std::string hosting_port_ip)
   return (rc == EXIT_SUCCESS);
 }
 
+static inline string aca_convert_cidr_to_netmask(const std::string cidr) {
+  if (cidr.empty()) {
+    throw std::invalid_argument("cidr is empty");
+  }
+
+  // get cidr netmask length str
+  size_t slash_pos = cidr.find("/");
+  if (slash_pos == string::npos) {
+    throw std::invalid_argument("'/' not found in cidr");
+  }
+
+  int netmask_num = std::stoi(cidr.substr(slash_pos + 1));
+  string netmask = "";
+  bool over = false; // mark whether handle all netmask_num 
+  for (int i = 1; i < 5; i++) {
+    if (over) {
+      // if overed the remain is 0.
+      netmask += "0.";
+      continue;
+    }
+
+    if (i * 8 <= netmask_num) {
+      // before fixed is 255
+      netmask += "255.";
+    } else {
+      over = true; 
+      int tmp = 0;
+      // dynamic netmask handle
+      for (int m = 1; m < netmask_num % 8 + 1; m++) {
+        tmp += 1 << (8 - m);
+      }  
+      netmask += std::to_string(tmp) + ".";
+    }
+  }
+  return netmask.substr(0, netmask.size() - 1);
+}
+
+static inline long ip4tol(const string ip) {
+  struct sockaddr_in sa;
+  if (inet_pton(AF_INET, ip.c_str(), &(sa.sin_addr)) != 1) {
+    throw std::invalid_argument("Virtual ipv4 address is not in the expect format");
+  }
+  return sa.sin_addr.s_addr;
+}
 #endif

@@ -34,12 +34,12 @@ class ACA_Zeta_Programming {
   public:
   static ACA_Zeta_Programming &get_instance();
 
-  int update_zeta_config(const alcor::schema::AuxGateway current_AuxGateway, string vpc_id);
+  int create_or_update_zeta_config(const alcor::schema::AuxGateway current_AuxGateway, const string vpc_id);
 
-  int delete_zeta_config(const alcor::schema::AuxGateway current_AuxGateway, string vpc_id);
+  int delete_zeta_config(const alcor::schema::AuxGateway current_AuxGateway, const string vpc_id);
 
   private:
-  int _update_zeta_group_entry(zeta_config *zeta_config_in);
+  int _create_or_update_zeta_group_entry(zeta_config *zeta_config_in);
 
   int _delete_zeta_group_entry(zeta_config *zeta_config_in);
 };

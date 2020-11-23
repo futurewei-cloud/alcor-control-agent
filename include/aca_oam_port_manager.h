@@ -27,6 +27,9 @@ namespace aca_oam_port_manager
 {
 class Aca_Oam_Port_Manager {
   public:
+  Aca_Oam_Port_Manager();
+  ~Aca_Oam_Port_Manager();
+
   static Aca_Oam_Port_Manager &get_instance();
 
   void create_entry_unsafe(uint32_t port_id);
@@ -37,13 +40,11 @@ class Aca_Oam_Port_Manager {
   bool is_oam_server_port(uint32_t port_id);
 
   private:
-  Aca_Oam_Port_Manager(){};
-  ~Aca_Oam_Port_Manager(){};
-
   void _create_oam_ofp(uint32_t port_id);
   int _delete_oam_ofp(uint32_t port_id);
+  void _clear_all_data();
 
-  unordered_map<uint32_t, unordered_set<string>> _oam_ports_table;
+  unordered_map<uint32_t, unordered_set<string> > _oam_ports_table;
 
   // mutex for reading and writing to _oam_ports_table
   mutex _oam_ports_table_mutex;

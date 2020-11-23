@@ -23,4 +23,6 @@
 #define HOST_DVR_MAC_PREFIX "fe:16:11:"
 #define HOST_DVR_MAC_MATCH HOST_DVR_MAC_PREFIX + "00:00:00/ff:ff:ff:00:00:00"
 
+#define DHCP_MSG_OPTS_DNS_LENGTH (5) //max 5 dns address
+
 #endif // #ifndef ACA_CONFIG_H

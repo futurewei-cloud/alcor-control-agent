@@ -459,12 +459,12 @@ int ACA_OVS_L3_Programmer::delete_router(RouterConfiguration &current_RouterConf
   return overall_rc;
 }
 
-int ACA_OVS_L3_Programmer::create_or_update_neighbor_l3(
+int ACA_OVS_L3_Programmer::create_or_update_l3_neighbor(
         const string neighbor_id, const string vpc_id, const string subnet_id,
         const string virtual_ip, const string virtual_mac,
         const string remote_host_ip, uint tunnel_id, ulong &culminative_time)
 {
-  ACA_LOG_DEBUG("%s", "ACA_OVS_L3_Programmer::create_or_update_neighbor_l3 ---> Entering\n");
+  ACA_LOG_DEBUG("%s", "ACA_OVS_L3_Programmer::create_or_update_l3_neighbor ---> Entering\n");
 
   int overall_rc = EXIT_SUCCESS;
   bool found_subnet_in_router = false;
@@ -576,7 +576,97 @@ int ACA_OVS_L3_Programmer::create_or_update_neighbor_l3(
     overall_rc = ENOENT;
   }
 
-  ACA_LOG_DEBUG("ACA_OVS_L3_Programmer::create_or_update_neighbor_l3 <--- Exiting, overall_rc = %d\n",
+  ACA_LOG_DEBUG("ACA_OVS_L3_Programmer::create_or_update_l3_neighbor <--- Exiting, overall_rc = %d\n",
+                overall_rc);
+
+  return overall_rc;
+}
+
+int ACA_OVS_L3_Programmer::delete_l3_neighbor(const string neighbor_id, const string subnet_id,
+                                              const string virtual_ip, ulong &culminative_time)
+{
+  ACA_LOG_DEBUG("%s", "ACA_OVS_L3_Programmer::delete_l3_neighbor ---> Entering\n");
+
+  int overall_rc = EXIT_SUCCESS;
+  bool found_subnet_in_router = false;
+  int source_vlan_id;
+
+  if (neighbor_id.empty()) {
+    throw std::invalid_argument("neighbor_id is empty");
+  }
+
+  if (subnet_id.empty()) {
+    throw std::invalid_argument("subnet_id is empty");
+  }
+
+  if (virtual_ip.empty()) {
+    throw std::invalid_argument("virtual_ip is empty");
+  }
+
+  // going through our list of routers
+  for (auto router_it = _routers_table.begin();
+       router_it != _routers_table.end(); router_it++) {
+    ACA_LOG_DEBUG("router ID:%s\n ", router_it->first.c_str());
+
+    // try to see if the destination subnet GW is connected to the current router
+    auto found_subnet = router_it->second.find(subnet_id);
+
+    if (found_subnet == router_it->second.end()) {
+      // subnet not found in this router, go look at the next router
+      continue;
+    } else {
+      // destination subnet found!
+      found_subnet_in_router = true;
+
+      // for each other subnet connected to this router, delete the routing rule
+      for (auto subnet_it = router_it->second.begin();
+           subnet_it != router_it->second.end(); subnet_it++) {
+        if (subnet_it->first == subnet_id) {
+          // for the destination subnet, remove the tracking neighbor port
+          if (subnet_it->second.neighbor_ports.erase(neighbor_id)) {
+            ACA_LOG_INFO("Successfuly cleaned up entry for neighbor_id %s\n",
+                         neighbor_id.c_str());
+            overall_rc = EXIT_SUCCESS;
+          } else {
+            ACA_LOG_ERROR("Failed to clean up entry for neighbor_id %s\n",
+                          neighbor_id.c_str());
+            overall_rc = EXIT_FAILURE;
+          }
+
+          // skip the destination neighbor subnet for the static routing rule below
+          // because routing rule are for source packet transformation
+          continue;
+        }
+        ACA_LOG_DEBUG("subnet_id:%s\n ", subnet_it->first.c_str());
+
+        source_vlan_id = ACA_Vlan_Manager::get_instance().get_or_create_vlan_id(
+                subnet_it->second.vpc_id);
+
+        // for the first implementation with static routing rules (non on-demand)
+        // go ahead to remove it
+        string cmd_string = "del-flows br-tun \"table=0,priority=50,ip,dl_vlan=" +
+                            to_string(source_vlan_id) + ",nw_dst=" + virtual_ip + "\" --strict";
+
+        ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
+                cmd_string, culminative_time, overall_rc);
+
+        // once we have the on demand routing rule implemented, we will need remove any
+        // on demand routing rule assoicated this deleted neighbor to stop the traffic
+        // immediately, we cannot rely on the rule's idle timout
+      }
+      // we found our interested router from _routers_table which has the destination subnet GW connected to it.
+      // Since each subnet GW can only be connected to one router, therefore, there is no point to look at other
+      // routers on the higher level for (auto router_it = _routers_table.begin();...) loop
+      break;
+    }
+  }
+
+  if (!found_subnet_in_router) {
+    ACA_LOG_ERROR("subnet_id %s not found in our local routers\n", subnet_id.c_str());
+    overall_rc = ENOENT;
+  }
+
+  ACA_LOG_DEBUG("ACA_OVS_L3_Programmer::delete_l3_neighbor <--- Exiting, overall_rc = %d\n",
                 overall_rc);
 
   return overall_rc;

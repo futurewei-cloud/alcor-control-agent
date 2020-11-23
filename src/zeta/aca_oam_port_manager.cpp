@@ -23,6 +23,14 @@ using namespace aca_ovs_control;
 
 namespace aca_oam_port_manager
 {
+Aca_Oam_Port_Manager::~Aca_Oam_Port_Manager()
+{
+  for (auto port : _oam_ports_table) {
+    _delete_oam_ofp(port);
+  }
+  clear_all_data();
+}
+
 Aca_Oam_Port_Manager &Aca_Oam_Port_Manager::get_instance()
 {
   // Instance is destroyed when program exits.
@@ -41,41 +49,6 @@ void Aca_Oam_Port_Manager::create_entry_unsafe(uint32_t port_id)
   _oam_ports_table.emplace(port_id, vpcs_table);
 
   ACA_LOG_DEBUG("%s", "Aca_Oam_Port_Manager::create_entry_unsafe <--- Exiting\n");
-}
-
-// add the OAM punt rule
-void Aca_Oam_Port_Manager::_create_oam_ofp(uint32_t port_id)
-{
-  int overall_rc = EXIT_SUCCESS;
-
-  string opt = "table=0,priority=25,udp,udp_dst=" + to_string(port_id) + ",actions=CONTROLLER";
-
-  overall_rc = ACA_OVS_Control::get_instance().add_flow("br-int", opt.c_str());
-
-  if (overall_rc == EXIT_SUCCESS) {
-    ACA_LOG_INFO("%s", "creat_oam_ofp succeeded!\n");
-  } else {
-    ACA_LOG_ERROR("creat_oam_ofp failed!!! overrall_rc: %d\n", overall_rc);
-  }
-
-  return;
-}
-
-// delete the OAM punt rule
-int Aca_Oam_Port_Manager::_delete_oam_ofp(uint32_t port_id)
-{
-  int overall_rc = EXIT_SUCCESS;
-
-  string opt = "udp,udp_dst=" + to_string(port_id);
-
-  overall_rc = ACA_OVS_Control::get_instance().del_flows("br-int", opt.c_str());
-
-  if (overall_rc == EXIT_SUCCESS) {
-    ACA_LOG_INFO("%s", "delete_oam_ofp succeeded!\n");
-  } else {
-    ACA_LOG_ERROR("delete_oam_ofp failed!!! overrall_rc: %d\n", overall_rc);
-  }
-  return overall_rc;
 }
 
 // update oam_ports_table and add the OAM punt rule also if this is the first port in the VPC
@@ -148,6 +121,57 @@ bool Aca_Oam_Port_Manager::is_oam_server_port(uint32_t port_id)
                 overall_rc);
 
   return overall_rc;
+}
+
+// add the OAM punt rule
+void Aca_Oam_Port_Manager::_create_oam_ofp(uint32_t port_id)
+{
+  int overall_rc = EXIT_SUCCESS;
+
+  string opt = "table=0,priority=25,udp,udp_dst=" + to_string(port_id) + ",actions=CONTROLLER";
+
+  overall_rc = ACA_OVS_Control::get_instance().add_flow("br-int", opt.c_str());
+
+  if (overall_rc == EXIT_SUCCESS) {
+    ACA_LOG_INFO("%s", "creat_oam_ofp succeeded!\n");
+  } else {
+    ACA_LOG_ERROR("creat_oam_ofp failed!!! overrall_rc: %d\n", overall_rc);
+  }
+
+  return;
+}
+
+// delete the OAM punt rule
+int Aca_Oam_Port_Manager::_delete_oam_ofp(uint32_t port_id)
+{
+  int overall_rc = EXIT_SUCCESS;
+
+  string opt = "udp,udp_dst=" + to_string(port_id);
+
+  overall_rc = ACA_OVS_Control::get_instance().del_flows("br-int", opt.c_str());
+
+  if (overall_rc == EXIT_SUCCESS) {
+    ACA_LOG_INFO("%s", "delete_oam_ofp succeeded!\n");
+  } else {
+    ACA_LOG_ERROR("delete_oam_ofp failed!!! overrall_rc: %d\n", overall_rc);
+  }
+  return overall_rc;
+}
+
+void Aca_Oam_Port_Manager::_clear_all_data()
+{
+  ACA_LOG_DEBUG("%s", "Aca_Oam_Port_Manager::clear_all_data ---> Entering\n");
+
+  // -----critical section starts-----
+  _oam_ports_table_mutex.lock();
+  // All the elements in the unordered_map container are dropped:
+  // their destructors are called, and they are removed from the container,
+  // leaving _oam_ports_table with a size of 0.
+  _oam_ports_table.clear();
+  _oam_ports_table_mutex.unlock();
+  // -----critical section ends-----
+
+  ACA_LOG_DEBUG("%s", "Aca_Oam_Port_Manager::clear_all_data <--- Exiting\n");
 }
 
 } // namespace aca_oam_port_manager

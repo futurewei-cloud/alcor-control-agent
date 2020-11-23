@@ -30,7 +30,8 @@ ACA_Zeta_Programming &ACA_Zeta_Programming::get_instance()
   return instance;
 }
 
-int ACA_Zeta_Programming::update_zeta_config(const alcor::schema::AuxGateway current_AuxGateway, string vpc_id)
+int ACA_Zeta_Programming::create_or_update_zeta_config(const alcor::schema::AuxGateway current_AuxGateway,
+                                             const string vpc_id)
 {
   zeta_config stZetaCfg;
   int overall_rc = EXIT_SUCCESS;
@@ -56,7 +57,8 @@ int ACA_Zeta_Programming::update_zeta_config(const alcor::schema::AuxGateway cur
   return overall_rc;
 }
 
-int ACA_Zeta_Programming::delete_zeta_config(const alcor::schema::AuxGateway current_AuxGateway, string vpc_id)
+int ACA_Zeta_Programming::delete_zeta_config(const alcor::schema::AuxGateway current_AuxGateway,
+                                             const string vpc_id)
 {
   zeta_config stZetaCfg;
   int overall_rc = EXIT_SUCCESS;
@@ -79,7 +81,7 @@ int ACA_Zeta_Programming::delete_zeta_config(const alcor::schema::AuxGateway cur
   return overall_rc;
 }
 
-int ACA_Zeta_Programming::_update_zeta_group_entry(zeta_config *zeta_cfg)
+int ACA_Zeta_Programming::_create_or_update_zeta_group_entry(zeta_config *zeta_cfg)
 {
   unsigned long not_care_culminative_time;
   int overall_rc = EXIT_SUCCESS;

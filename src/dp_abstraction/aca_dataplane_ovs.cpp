@@ -32,6 +32,77 @@ using namespace aca_zeta_programming;
 
 namespace aca_dataplane_ovs
 {
+static bool aca_lookup_subnet_info(GoalState &parsed_struct, const string targeted_subnet_id,
+                                   NetworkType &found_network_type,
+                                   uint &found_tunnel_id, string &found_prefix_len)
+{
+  // TODO: cache the subnet information to a dictionary to provide
+  // a faster look up for the next run, only use the below loop for
+  // cache miss.
+  // Look up the subnet configuration to query for tunnel_id
+  for (int j = 0; j < parsed_struct.subnet_states_size(); j++) {
+    SubnetConfiguration current_SubnetConfiguration =
+            parsed_struct.subnet_states(j).configuration();
+
+    ACA_LOG_DEBUG("current_SubnetConfiguration subnet ID: %s.\n",
+                  current_SubnetConfiguration.id().c_str());
+
+    if (parsed_struct.subnet_states(j).operation_type() == OperationType::INFO) {
+      if (current_SubnetConfiguration.id() == targeted_subnet_id) {
+        found_network_type = current_SubnetConfiguration.network_type();
+        found_tunnel_id = current_SubnetConfiguration.tunnel_id();
+        if (!aca_validate_tunnel_id(found_tunnel_id, found_network_type)) {
+          throw std::invalid_argument("found_tunnel_id is invalid");
+        }
+
+        string found_cidr = current_SubnetConfiguration.cidr();
+        size_t slash_pos = found_cidr.find('/');
+        if (slash_pos == string::npos) {
+          throw std::invalid_argument("'/' not found in cidr");
+        }
+
+        // substr can throw out_of_range and bad_alloc exceptions
+        found_prefix_len = found_cidr.substr(slash_pos + 1);
+
+        return true;
+      }
+    }
+  }
+
+  ACA_LOG_ERROR("Not able to find the info for port with subnet ID: %s.\n",
+                targeted_subnet_id.c_str());
+  return false;
+}
+
+static bool aca_lookup_auxgateway_info(GoalState &parsed_struct, const string targeted_vpc_id,
+                                       AuxGateway &found_auxgateway)
+{
+  // TODO: cache the subnet information to a dictionary to provide
+  // a faster look up for the next run, only use the below loop for
+  // cache miss.
+  // Look up the subnet configuration to query for tunnel_id
+  for (int j = 0; j < parsed_struct.vpc_states_size(); j++) {
+    VpcConfiguration current_VpcConfiguration =
+            parsed_struct.vpc_states(j).configuration();
+
+    ACA_LOG_DEBUG("current_VpcConfiguration Vpc ID: %s.\n",
+                  current_VpcConfiguration.id().c_str());
+
+    if (parsed_struct.vpc_states(j).operation_type() == OperationType::INFO) {
+      if (current_VpcConfiguration.id() == current_PortConfiguration.vpc_id()) {
+        found_auxgateway =
+                parsed_struct.vpc_states(j).configuration().auxiliary_gateway();
+
+        return true;
+      }
+    }
+  }
+
+  ACA_LOG_ERROR("Not able to find auxgateway info for port with vpc ID: %s.\n",
+                targeted_subnet_id.c_str());
+  return false;
+}
+
 int ACA_Dataplane_OVS::initialize()
 {
   // TODO: improve the logging system, and add logging to this module
@@ -90,20 +161,16 @@ int ACA_Dataplane_OVS::update_port_state_workitem(const PortState current_PortSt
   int overall_rc;
   string generated_port_name;
   struct sockaddr_in sa;
-  string found_cidr;
   uint found_tunnel_id;
   NetworkType found_network_type;
-  size_t slash_pos;
+  string found_prefix_len;
   string virtual_ip_address;
   string virtual_mac_address;
   string host_ip_address;
-  string found_prefix_len;
-  bool subnet_info_found = false;
-  bool auxgateway_info_found = false;
   string port_cidr;
+  AuxGateway found_auxgateway;
   ulong culminative_dataplane_programming_time = 0;
   ulong culminative_network_configuration_time = 0;
-  AuxGateway current_AuxGateway;
 
   auto operation_start = chrono::steady_clock::now();
 
@@ -125,71 +192,21 @@ int ACA_Dataplane_OVS::update_port_state_workitem(const PortState current_PortSt
       throw std::invalid_argument("PortConfiguration.fixed_ips_size is less than zero");
     }
 
-    // TODO: cache the subnet information to a dictionary to provide
-    // a faster look up for the next run, only use the below loop for
-    // cache miss.
-    // Look up the subnet configuration to query for tunnel_id
-    for (int j = 0; j < parsed_struct.subnet_states_size(); j++) {
-      SubnetConfiguration current_SubnetConfiguration =
-              parsed_struct.subnet_states(j).configuration();
-
-      ACA_LOG_DEBUG("current_SubnetConfiguration subnet ID: %s.\n",
-                    current_SubnetConfiguration.id().c_str());
-
-      if (parsed_struct.subnet_states(j).operation_type() == OperationType::INFO) {
-        if (current_SubnetConfiguration.id() ==
-            current_PortConfiguration.fixed_ips(0).subnet_id()) {
-          found_network_type = current_SubnetConfiguration.network_type();
-          found_tunnel_id = current_SubnetConfiguration.tunnel_id();
-          if (!aca_validate_tunnel_id(found_tunnel_id, found_network_type)) {
-            throw std::invalid_argument("found_tunnel_id is invalid");
-          }
-
-          found_cidr = current_SubnetConfiguration.cidr();
-          slash_pos = found_cidr.find('/');
-          if (slash_pos == string::npos) {
-            throw std::invalid_argument("'/' not found in cidr");
-          }
-
-          // substr can throw out_of_range and bad_alloc exceptions
-          found_prefix_len = found_cidr.substr(slash_pos + 1);
-
-          subnet_info_found = true;
-          break;
-        }
-      }
-    }
-
-    if (!subnet_info_found) {
+    if (!aca_lookup_subnet_info(
+                parsed_struct, current_PortConfiguration.fixed_ips(0).subnet_id(),
+                found_network_type, found_tunnel_id, found_prefix_len)) {
       ACA_LOG_ERROR("Not able to find the info for port with subnet ID: %s.\n",
                     current_PortConfiguration.fixed_ips(0).subnet_id().c_str());
       overall_rc = -EXIT_FAILURE;
-      goto Done;
+      goto EXIT;
     }
 
-    for (int j = 0; j < parsed_struct.vpc_states_size(); j++) {
-      VpcConfiguration current_VpcConfiguration =
-              parsed_struct.vpc_states(j).configuration();
-
-      ACA_LOG_DEBUG("current_VpcConfiguration Vpc ID: %s.\n",
-                    current_VpcConfiguration.id().c_str());
-
-      if (parsed_struct.vpc_states(j).operation_type() == OperationType::INFO) {
-        if (current_VpcConfiguration.id() == current_PortConfiguration.vpc_id()) {
-          current_AuxGateway =
-                  parsed_struct.vpc_states(j).configuration().auxiliary_gateway();
-
-          auxgateway_info_found = true;
-          break;
-        }
-      }
-    }
-
-    if (!auxgateway_info_found) {
-      ACA_LOG_ERROR("Not able to find the info for port with vpc ID: %s.\n",
+    if (!aca_lookup_auxgateway_info(parsed_struct, current_PortConfiguration.vpc_id(),
+                                    &found_auxgateway)) {
+      ACA_LOG_ERROR("Not able to find the info for port with subnet ID: %s.\n",
                     current_PortConfiguration.vpc_id().c_str());
       overall_rc = -EXIT_FAILURE;
-      goto Done;
+      goto EXIT;
     }
 
     switch (current_PortState.operation_type()) {
@@ -210,13 +227,6 @@ int ACA_Dataplane_OVS::update_port_state_workitem(const PortState current_PortSt
 
       port_cidr = virtual_ip_address + "/" + found_prefix_len;
 
-      if (current_AuxGateway.auxgateway_type() == ZETA) {
-        ACA_LOG_INFO("%s", "AuxGateway_type is zeta!\n");
-        // Update the zeta settings of vpc
-        overall_rc = ACA_Zeta_Programming::get_instance().update_zeta_config(
-                current_AuxGateway, current_PortConfiguration.vpc_id());
-      }
-
       ACA_LOG_DEBUG("Port Operation: %s: port_id: %s, project_id:%s, vpc_id:%s, network_type:%d, "
                     "virtual_ip_address:%s, virtual_mac_address:%s, generated_port_name: %s, port_cidr: %s, tunnel_id: %d\n",
                     aca_get_operation_string(current_PortState.operation_type()),
@@ -229,6 +239,13 @@ int ACA_Dataplane_OVS::update_port_state_workitem(const PortState current_PortSt
       overall_rc = ACA_OVS_L2_Programmer::get_instance().create_port(
               current_PortConfiguration.vpc_id(), generated_port_name, port_cidr,
               found_tunnel_id, culminative_dataplane_programming_time);
+
+      if (found_auxgateway.auxgateway_type() == ZETA) {
+        ACA_LOG_INFO("%s", "AuxGateway_type is zeta!\n");
+        // Update the zeta settings of vpc
+        overall_rc = ACA_Zeta_Programming::get_instance().create_or_update_zeta_config(
+                found_auxgateway, current_PortConfiguration.vpc_id());
+      }
 
       break;
 
@@ -257,11 +274,11 @@ int ACA_Dataplane_OVS::update_port_state_workitem(const PortState current_PortSt
               current_PortConfiguration.vpc_id(), generated_port_name,
               found_tunnel_id, culminative_dataplane_programming_time);
 
-      if (current_AuxGateway.auxgateway_type() == ZETA) {
+      if (found_auxgateway.auxgateway_type() == ZETA) {
         ACA_LOG_INFO("%s", "AuxGateway_type is zeta!\n");
         // Delete the zeta settings of vpc
-        overall_rc = ACA_Zeta_Programming::get_instance().update_zeta_config(
-                current_AuxGateway, current_PortConfiguration.vpc_id());
+        overall_rc = ACA_Zeta_Programming::get_instance().delete_zeta_config(
+                found_auxgateway, current_PortConfiguration.vpc_id());
       }
 
       break;
@@ -286,7 +303,7 @@ int ACA_Dataplane_OVS::update_port_state_workitem(const PortState current_PortSt
     overall_rc = -EFAULT;
   }
 
-Done:
+EXIT:
 
   auto operation_end = chrono::steady_clock::now();
 
@@ -417,7 +434,7 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
             if ((current_NeighborState.operation_type() == OperationType::CREATE) ||
                 (current_NeighborState.operation_type() == OperationType::UPDATE) ||
                 (current_NeighborState.operation_type() == OperationType::INFO)) {
-              overall_rc = ACA_OVS_L2_Programmer::get_instance().create_or_update_neighbor_port(
+              overall_rc = ACA_OVS_L2_Programmer::get_instance().create_or_update_l2_neighbor(
                       current_NeighborConfiguration.id(),
                       current_NeighborConfiguration.vpc_id(), found_network_type, host_ip_address,
                       found_tunnel_id, culminative_dataplane_programming_time);
@@ -428,11 +445,8 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
               string outport_name =
                       aca_get_outport_name(found_network_type, host_ip_address);
 
-              overall_rc = ACA_OVS_L2_Programmer::get_instance().delete_neighbor_port(
-                      current_NeighborConfiguration.id(),
-                      current_NeighborConfiguration.vpc_id(), outport_name,
-                      culminative_dataplane_programming_time);
-            } else {
+              == == == = overall_rc = ACA_OVS_L2_Programmer::get_instance().delete_l2_neighbor(
+                               culminative_dataplane_programming_time);
               ACA_LOG_ERROR("Invalid neighbor state operation type %d\n",
                             current_NeighborState.operation_type());
               overall_rc = -EXIT_FAILURE;
@@ -444,14 +458,14 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
               if ((current_NeighborState.operation_type() == OperationType::CREATE) ||
                   (current_NeighborState.operation_type() == OperationType::UPDATE) ||
                   (current_NeighborState.operation_type() == OperationType::INFO)) {
-                overall_rc = ACA_OVS_L3_Programmer::get_instance().create_or_update_neighbor_l3(
+                overall_rc = ACA_OVS_L3_Programmer::get_instance().create_or_update_l3_neighbor(
                         current_NeighborConfiguration.id(),
                         current_NeighborConfiguration.vpc_id(),
                         current_fixed_ip.subnet_id(), virtual_ip_address,
                         virtual_mac_address, host_ip_address, found_tunnel_id,
                         culminative_dataplane_programming_time);
               } else if (current_NeighborState.operation_type() == OperationType::DELETE) {
-                overall_rc = ACA_OVS_L3_Programmer::get_instance().delete_neighbor_l3(
+                overall_rc = ACA_OVS_L3_Programmer::get_instance().delete_l3_neighbor(
                         current_NeighborConfiguration.id(), current_fixed_ip.subnet_id(),
                         virtual_ip_address, culminative_dataplane_programming_time);
               } else {
