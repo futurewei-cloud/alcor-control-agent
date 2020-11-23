@@ -157,9 +157,6 @@ class ACA_OVS_Control {
   void print_payload(const u_char *payload, int len);
   void print_hex_ascii_line(const u_char *payload, int len, int offset);
 
-  void set_oam_server_port(uint32_t port);
-  uint32_t get_oam_server_port();
-
   /* ethernet headers are always exactly 14 bytes [1] */
   #define SIZE_ETHERNET 14
 
