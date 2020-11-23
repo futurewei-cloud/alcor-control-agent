@@ -273,7 +273,7 @@ void ACA_OVS_Control::parse_packet(uint32_t in_port, void *packet)
                   (uint32_t)udp_dport)) {
         ACA_LOG_INFO("%s", "   Message Type: OAM\n");
         aca_oam_server::ACA_Oam_Server::get_instance().oams_recv(
-                const_cast<unsigned char *>(payload));
+                (uint32_t)udp_dport, const_cast<unsigned char *>(payload));
       }
     }
   }

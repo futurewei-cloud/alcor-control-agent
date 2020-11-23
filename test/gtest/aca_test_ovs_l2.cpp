@@ -178,11 +178,7 @@ TEST(ovs_l2_test_cases, 2_ports_CREATE_test_traffic_plus_neighbor_internal)
   string outport_name = aca_get_outport_name(vxlan_type, remote_ip_1);
 
   // insert neighbor info
-<<<<<<< HEAD
-  overall_rc = ACA_OVS_L2_Programmer::get_instance().create_or_update_neighbor_port(
-=======
   overall_rc = ACA_OVS_L2_Programmer::get_instance().create_or_update_l2_neighbor(
->>>>>>> master
           port_id_4, vpc_id_1, vxlan_type, remote_ip_1, 20, not_care_culminative_time);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
@@ -194,11 +190,7 @@ TEST(ovs_l2_test_cases, 2_ports_CREATE_test_traffic_plus_neighbor_internal)
   overall_rc = EXIT_SUCCESS;
 
   // delete neighbor info
-<<<<<<< HEAD
-  overall_rc = ACA_OVS_L2_Programmer::get_instance().delete_neighbor_port(
-=======
   overall_rc = ACA_OVS_L2_Programmer::get_instance().delete_l2_neighbor(
->>>>>>> master
           port_id_4, vpc_id_1, outport_name, not_care_culminative_time);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;

@@ -52,7 +52,7 @@ int ACA_Zeta_Programming::create_or_update_zeta_config(const alcor::schema::AuxG
     Aca_Oam_Port_Manager::get_instance().add_vpc(oam_server_port, vpc_id);
   }
   // add the group bucket rule
-  overall_rc = _update_zeta_group_entry(&stZetaCfg);
+  overall_rc = _create_or_update_zeta_group_entry(&stZetaCfg);
 
   return overall_rc;
 }

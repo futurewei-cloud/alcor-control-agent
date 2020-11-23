@@ -28,7 +28,6 @@ namespace aca_oam_server
 {
 //OAM Message Type
 #define SIZE_OP_CODE 8
-//#define OAM_SOCKET_PORT 8300
 #define OAM_MSG_FLOW_INJECTION (0x0)
 #define OAM_MSG_FLOW_DELETION (0x1)
 #define OAM_MSG_NONE (0x3)
@@ -87,10 +86,8 @@ class ACA_Oam_Server {
   ACA_Oam_Server();
   ~ACA_Oam_Server();
 
-  
-
   static ACA_Oam_Server &get_instance();
-  void oams_recv(void *message);
+  void oams_recv(uint32_t udp_dport, void *message);
 
   private:
   uint8_t _get_message_type(oam_message *oammsg);
@@ -109,11 +106,16 @@ class ACA_Oam_Server {
 
   void _standardize_mac_address(string &mac_string);
 
-  void _parse_oam_flow_injection(oam_message *oammsg);
+  bool _check_oam_server_port(uint32_t udp_dport, oam_match match);
 
-  void _parse_oam_flow_deletion(oam_message *oammsg);
+  void _parse_oam_flow_injection(uint32_t udp_dport, oam_message *oammsg);
 
-  void (aca_oam_server::ACA_Oam_Server ::*_parse_oam_msg_ops[OAM_MSG_MAX])(oam_message *oammsg);
+  void _parse_oam_flow_deletion(uint32_t udp_dport, oam_message *oammsg);
+
+  void _parse_oam_none(uint32_t /* in_port */, oam_message *oammsg);
+
+  void (aca_oam_server::ACA_Oam_Server ::*_parse_oam_msg_ops[OAM_MSG_MAX])(uint32_t udp_dpost,
+                                                                           oam_message *oammsg);
 
   string _get_mac_addr(uint8_t *mac);
 

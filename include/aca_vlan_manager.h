@@ -39,6 +39,7 @@ struct vpc_table_entry {
   // to neighbor port ID mapping in this VPC
   // unordered_map <outports, list of neighbor port IDs>
   unordered_map<string, list<string> > outports_neighbors_table;
+  
   uint32_t oam_server_port;
 };
 

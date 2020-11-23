@@ -64,7 +64,7 @@ bool ACA_Oam_Server::_validate_oam_message(oam_message *oammsg)
   return true;
 }
 
-void ACA_Oam_Server::oams_recv(void *message)
+void ACA_Oam_Server::oams_recv(uint32_t udp_dport, void *message)
 {
   oam_message *oammsg = nullptr;
 
@@ -82,7 +82,7 @@ void ACA_Oam_Server::oams_recv(void *message)
 
   uint8_t msg_type = (uint8_t)_get_message_type(oammsg);
 
-  (this->*_parse_oam_msg_ops[msg_type])(oammsg);
+  (this->*_parse_oam_msg_ops[msg_type])(udp_dport, oammsg);
 
   return;
 }
@@ -93,6 +93,7 @@ void ACA_Oam_Server::_init_oam_msg_ops()
           &aca_oam_server::ACA_Oam_Server::_parse_oam_flow_injection;
   _parse_oam_msg_ops[OAM_MSG_FLOW_DELETION] =
           &aca_oam_server::ACA_Oam_Server::_parse_oam_flow_deletion;
+  _parse_oam_msg_ops[OAM_MSG_NONE] = &aca_oam_server::ACA_Oam_Server::_parse_oam_none;
 }
 
 uint8_t ACA_Oam_Server::_get_message_type(oam_message *oammsg)
@@ -151,6 +152,7 @@ string ACA_Oam_Server::_get_vpc_id(uint8_t *vni)
   return vpc_id;
 }
 
+//extract data for flow table matching from the oam message
 oam_match ACA_Oam_Server::_get_oam_match_field(oam_message *oammsg)
 {
   oam_match match;
@@ -167,6 +169,7 @@ oam_match ACA_Oam_Server::_get_oam_match_field(oam_message *oammsg)
   return match;
 }
 
+//extract the data used for the flow table action from the oam message
 oam_action ACA_Oam_Server::_get_oam_action_field(oam_message *oammsg)
 {
   oam_action action;
@@ -184,12 +187,34 @@ oam_action ACA_Oam_Server::_get_oam_action_field(oam_message *oammsg)
   return action;
 }
 
-void ACA_Oam_Server::_parse_oam_flow_injection(oam_message *oammsg)
+//check whether the udp_dport is the oam server port of the vpc
+bool ACA_Oam_Server::_check_oam_server_port(uint32_t udp_dport, oam_match match)
+{
+  uint32_t oam_port_of_vpc;
+  aca_vlan_manager::ACA_Vlan_Manager::get_instance().get_oam_server_port(
+          match.vni, &oam_port_of_vpc);
+
+  if (udp_dport == oam_port_of_vpc) {
+    ACA_LOG_INFO("%s", "oam server port is correct!\n");
+    return true;
+  } else {
+    ACA_LOG_ERROR("%s", "oam server port is incorrect!!!");
+    return false;
+  }
+}
+
+void ACA_Oam_Server::_parse_oam_flow_injection(uint32_t udp_dport, oam_message *oammsg)
 {
   unsigned long not_care_culminative_time;
   int overall_rc = EXIT_SUCCESS;
 
   oam_match match = _get_oam_match_field(oammsg);
+
+  // check whether the udp_dport is the oam server port of the vpc
+  if (!_check_oam_server_port(udp_dport, match)) {
+    return;
+  }
+
   oam_action action = _get_oam_action_field(oammsg);
 
   string remote_host_ip = action.node_nw_dst;
@@ -202,7 +227,7 @@ void ACA_Oam_Server::_parse_oam_flow_injection(oam_message *oammsg)
     // get netigbor_id
 
     //crate neighbor_port
-    aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().create_or_update_neighbor_port(
+    aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().create_or_update_l2_neighbor(
             neighbor_id, vpc_id, network_type, remote_host_ip,
             (uint)stoi(vpc_id), not_care_culminative_time);
   }
@@ -217,10 +242,14 @@ void ACA_Oam_Server::_parse_oam_flow_injection(oam_message *oammsg)
   return;
 }
 
-void ACA_Oam_Server::_parse_oam_flow_deletion(oam_message *oammsg)
+void ACA_Oam_Server::_parse_oam_flow_deletion(uint32_t udp_dport, oam_message *oammsg)
 {
   int overall_rc = EXIT_SUCCESS;
   oam_match match = _get_oam_match_field(oammsg);
+  // check whether the udp_dport is the oam server port of the vpc
+  if (!_check_oam_server_port(udp_dport, match)) {
+    return;
+  }
 
   overall_rc = _del_direct_path(match);
 
@@ -230,6 +259,12 @@ void ACA_Oam_Server::_parse_oam_flow_deletion(oam_message *oammsg)
     ACA_LOG_ERROR("Command failed!!! overrall_rc: %d\n", overall_rc);
   }
 
+  return;
+}
+
+void ACA_Oam_Server::_parse_oam_none(uint32_t /* in_port */, oam_message *oammsg)
+{
+  ACA_LOG_ERROR("Wrong OAM message type! (Message type = %d)\n", _get_message_type(oammsg));
   return;
 }
 

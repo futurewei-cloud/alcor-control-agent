@@ -13,22 +13,26 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "aca_log.h"
 #include "aca_oam_port_manager.h"
+#include "aca_log.h"
 #include <errno.h>
-#include <algorithm>
 #include "aca_ovs_control.h"
 
 using namespace aca_ovs_control;
 
 namespace aca_oam_port_manager
 {
+Aca_Oam_Port_Manager::Aca_Oam_Port_Manager()
+{
+}
+
 Aca_Oam_Port_Manager::~Aca_Oam_Port_Manager()
 {
-  for (auto port : _oam_ports_table) {
-    _delete_oam_ofp(port);
+  //clear all oam punt rules
+  for (auto entry : _oam_ports_table) {
+    _delete_oam_ofp(entry.first);
   }
-  clear_all_data();
+  _clear_all_data();
 }
 
 Aca_Oam_Port_Manager &Aca_Oam_Port_Manager::get_instance()
@@ -52,7 +56,7 @@ void Aca_Oam_Port_Manager::create_entry_unsafe(uint32_t port_id)
 }
 
 // update oam_ports_table and add the OAM punt rule also if this is the first port in the VPC
-void Aca_Oam_Port_Manager::add_vpc(uint32_t port_id, string vpc_id)
+void Aca_Oam_Port_Manager::add_vpc(uint32_t port_id, const string vpc_id)
 {
   ACA_LOG_DEBUG("%s", "Aca_Oam_Port_Manager::add_vpc ---> Entering\n");
   // -----critical section starts-----
@@ -70,7 +74,7 @@ void Aca_Oam_Port_Manager::add_vpc(uint32_t port_id, string vpc_id)
 }
 
 // update oam_ports_table and delete the OAM punt rule if the last port in the VPC has been deleted
-int Aca_Oam_Port_Manager::remove_vpc(uint32_t port_id, string vpc_id)
+int Aca_Oam_Port_Manager::remove_vpc(uint32_t port_id, const string vpc_id)
 {
   ACA_LOG_DEBUG("%s", "Aca_Oam_Port_Manager::remove_vpc ---> Entering\n");
 

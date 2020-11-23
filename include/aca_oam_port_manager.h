@@ -33,8 +33,8 @@ class Aca_Oam_Port_Manager {
   static Aca_Oam_Port_Manager &get_instance();
 
   void create_entry_unsafe(uint32_t port_id);
-  void add_vpc(uint32_t port, string vpc_id);
-  int remove_vpc(uint32_t port, string vpc_id);
+  void add_vpc(uint32_t port, const string vpc_id);
+  int remove_vpc(uint32_t port, const string vpc_id);
 
   //Determine whether the port is an oam_server_port
   bool is_oam_server_port(uint32_t port_id);
@@ -48,8 +48,6 @@ class Aca_Oam_Port_Manager {
 
   // mutex for reading and writing to _oam_ports_table
   mutex _oam_ports_table_mutex;
-
-  void create_entry_unsafe(string vpc_id);
 };
 
 } // namespace aca_oam_port_manager
