@@ -77,7 +77,8 @@ int Aca_Comm_Manager::update_goal_state(GoalState &goal_state_message,
   int rc = EXIT_SUCCESS;
   auto start = chrono::steady_clock::now();
 
-  ACA_LOG_DEBUG("%s", "Starting to update goal state\n");
+  ACA_LOG_DEBUG("Starting to update goal state with format_version: %u\n",
+                goal_state_message.format_version());
 
   ACA_LOG_INFO("[METRICS] Goal state message size is: %lu bytes\n",
                goal_state_message.ByteSizeLong());
@@ -224,14 +225,11 @@ void Aca_Comm_Manager::print_goal_state(GoalState parsed_struct)
     fprintf(stdout, "current_SubnetConfiguration.id(): %s\n",
             current_SubnetConfiguration.id().c_str());
 
-    fprintf(stdout, "current_SubnetConfiguration.message_type(): %d\n",
-            current_SubnetConfiguration.message_type());
+    fprintf(stdout, "current_SubnetConfiguration.update_type(): %d\n",
+            current_SubnetConfiguration.update_type());
 
     fprintf(stdout, "current_SubnetConfiguration.network_type(): %d\n",
             current_SubnetConfiguration.network_type());
-
-    fprintf(stdout, "current_SubnetConfiguration.project_id(): %s\n",
-            current_SubnetConfiguration.project_id().c_str());
 
     fprintf(stdout, "current_SubnetConfiguration.vpc_id(): %s\n",
             current_SubnetConfiguration.vpc_id().c_str());
@@ -254,14 +252,19 @@ void Aca_Comm_Manager::print_goal_state(GoalState parsed_struct)
     fprintf(stdout, "current_SubnetConfiguration.dhcp_enable(): %d \n",
             current_SubnetConfiguration.dhcp_enable());
 
+    for (int j = 0; j < current_SubnetConfiguration.extra_dhcp_options_size(); j++) {
+      fprintf(stdout, "current_SubnetConfiguration.extra_dhcp_options(%d): name: %s, value %s \n",
+              j, current_SubnetConfiguration.extra_dhcp_options(j).name().c_str(),
+              current_SubnetConfiguration.extra_dhcp_options(j).value().c_str());
+    }
+
+    for (int j = 0; j < current_SubnetConfiguration.dns_entry_list_size(); j++) {
+      fprintf(stdout, "current_SubnetConfiguration.dns_entry_list(%d): entry %s \n",
+              j, current_SubnetConfiguration.dns_entry_list(j).entry().c_str());
+    }
+
     fprintf(stdout, "current_SubnetConfiguration.availability_zone(): %s \n",
             current_SubnetConfiguration.availability_zone().c_str());
-
-    fprintf(stdout, "current_SubnetConfiguration.primary_dns(): %s \n",
-            current_SubnetConfiguration.primary_dns().c_str());
-
-    fprintf(stdout, "current_SubnetConfiguration.secondary_dns(): %s \n",
-            current_SubnetConfiguration.secondary_dns().c_str());
 
     printf("\n");
   }
@@ -279,17 +282,11 @@ void Aca_Comm_Manager::print_goal_state(GoalState parsed_struct)
     fprintf(stdout, "current_PortConfiguration.request_id(): %s\n",
             current_PortConfiguration.request_id().c_str());
 
-    fprintf(stdout, "current_PortConfiguration.message_type(): %d\n",
-            current_PortConfiguration.message_type());
+    fprintf(stdout, "current_PortConfiguration.update_type(): %d\n",
+            current_PortConfiguration.update_type());
 
     fprintf(stdout, "current_PortConfiguration.id(): %s\n",
             current_PortConfiguration.id().c_str());
-
-    fprintf(stdout, "current_PortConfiguration.network_type(): %d\n",
-            current_PortConfiguration.network_type());
-
-    fprintf(stdout, "current_PortConfiguration.project_id(): %s\n",
-            current_PortConfiguration.project_id().c_str());
 
     fprintf(stdout, "current_PortConfiguration.vpc_id(): %s\n",
             current_PortConfiguration.vpc_id().c_str());
@@ -354,11 +351,8 @@ void Aca_Comm_Manager::print_goal_state(GoalState parsed_struct)
     fprintf(stdout, "current_NeighborConfiguration.request_id(): %s\n",
             current_NeighborConfiguration.request_id().c_str());
 
-    fprintf(stdout, "current_NeighborConfiguration.message_type(): %d\n",
-            current_NeighborConfiguration.message_type());
-
-    fprintf(stdout, "current_NeighborConfiguration.project_id(): %s\n",
-            current_NeighborConfiguration.project_id().c_str());
+    fprintf(stdout, "current_NeighborConfiguration.update_type(): %d\n",
+            current_NeighborConfiguration.update_type());
 
     fprintf(stdout, "current_NeighborConfiguration.vpc_id(): %s\n",
             current_NeighborConfiguration.vpc_id().c_str());
@@ -410,9 +404,6 @@ void Aca_Comm_Manager::print_goal_state(GoalState parsed_struct)
 
     fprintf(stdout, "current_SecurityGroupConfiguration.update_type(): %d\n",
             current_SecurityGroupConfiguration.update_type());
-
-    fprintf(stdout, "current_SecurityGroupConfiguration.project_id(): %s\n",
-            current_SecurityGroupConfiguration.project_id().c_str());
 
     fprintf(stdout, "current_SecurityGroupConfiguration.vpc_id(): %s\n",
             current_SecurityGroupConfiguration.vpc_id().c_str());
@@ -476,17 +467,6 @@ void Aca_Comm_Manager::print_goal_state(GoalState parsed_struct)
 
     fprintf(stdout, "current_DHCPConfiguration.port_host_name(): %s \n",
             current_DHCPConfiguration.port_host_name().c_str());
-
-    for (int j = 0; j < current_DHCPConfiguration.extra_dhcp_options_size(); j++) {
-      fprintf(stdout, "current_DHCPConfiguration.extra_dhcp_options(%d): name: %s, value %s \n",
-              j, current_DHCPConfiguration.extra_dhcp_options(j).name().c_str(),
-              current_DHCPConfiguration.extra_dhcp_options(j).value().c_str());
-    }
-
-    for (int j = 0; j < current_DHCPConfiguration.dns_entry_list_size(); j++) {
-      fprintf(stdout, "current_DHCPConfiguration.dns_entry_list(%d): entry %s \n",
-              j, current_DHCPConfiguration.dns_entry_list(j).entry().c_str());
-    }
 
     printf("\n");
   }

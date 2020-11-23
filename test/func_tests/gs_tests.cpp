@@ -204,7 +204,6 @@ class GoalStateProvisionerClient {
     SubnetConfiguration *SubnetConiguration_builder =
             new_subnet_states->mutable_configuration();
     SubnetConiguration_builder->set_revision_number(1);
-    SubnetConiguration_builder->set_project_id(project_id);
     SubnetConiguration_builder->set_vpc_id(vpc_id_1);
     SubnetConiguration_builder->set_id(subnet_id_1);
     SubnetConiguration_builder->set_cidr("10.0.0.0/24");
@@ -221,7 +220,6 @@ class GoalStateProvisionerClient {
             new_neighbor_states->mutable_configuration();
     NeighborConfiguration_builder->set_revision_number(1);
 
-    NeighborConfiguration_builder->set_project_id(project_id);
     NeighborConfiguration_builder->set_vpc_id(vpc_id_1);
     NeighborConfiguration_builder->set_mac_address(vmac_address_1);
 
@@ -336,7 +334,6 @@ class GoalStateProvisionerClient {
       SubnetConfiguration *SubnetConiguration_builder =
               new_subnet_states->mutable_configuration();
       SubnetConiguration_builder->set_revision_number(1);
-      SubnetConiguration_builder->set_project_id(project_id);
       SubnetConiguration_builder->set_vpc_id(vpc_id_1);
       SubnetConiguration_builder->set_id(subnet_id_1);
       SubnetConiguration_builder->set_cidr("10.0.0.0/24");
@@ -353,7 +350,6 @@ class GoalStateProvisionerClient {
               new_neighbor_states->mutable_configuration();
       NeighborConfiguration_builder->set_revision_number(1);
 
-      NeighborConfiguration_builder->set_project_id(project_id);
       NeighborConfiguration_builder->set_vpc_id(vpc_id_1);
       NeighborConfiguration_builder->set_mac_address(vmac_address_1);
 
@@ -437,9 +433,6 @@ void parse_goalstate(GoalState parsed_struct, GoalState GoalState_builder)
     assert(parsed_struct.port_states(i).operation_type() ==
            GoalState_builder.port_states(i).operation_type());
 
-    assert(parsed_struct.port_states(i).configuration().project_id() ==
-           GoalState_builder.port_states(i).configuration().project_id());
-
     assert(parsed_struct.port_states(i).configuration().id() ==
            GoalState_builder.port_states(i).configuration().id());
 
@@ -502,9 +495,6 @@ void parse_goalstate(GoalState parsed_struct, GoalState GoalState_builder)
   for (int i = 0; i < parsed_struct.subnet_states_size(); i++) {
     assert(parsed_struct.subnet_states(i).operation_type() ==
            GoalState_builder.subnet_states(i).operation_type());
-
-    assert(parsed_struct.subnet_states(i).configuration().project_id() ==
-           GoalState_builder.subnet_states(i).configuration().project_id());
 
     assert(parsed_struct.subnet_states(i).configuration().vpc_id() ==
            GoalState_builder.subnet_states(i).configuration().vpc_id());
@@ -610,7 +600,6 @@ int main(int argc, char *argv[])
   SubnetConfiguration *SubnetConiguration_builder =
           new_subnet_states->mutable_configuration();
   SubnetConiguration_builder->set_revision_number(1);
-  SubnetConiguration_builder->set_project_id("99d9d709-8478-4b46-9f3f-000000000000");
   SubnetConiguration_builder->set_vpc_id("99d9d709-8478-4b46-9f3f-000000000000");
   SubnetConiguration_builder->set_id("27330ae4-b718-11ea-b3de-111111111111");
   SubnetConiguration_builder->set_cidr("10.0.0.0/24");
@@ -628,7 +617,6 @@ int main(int argc, char *argv[])
           new_neighbor_states->mutable_configuration();
   NeighborConfiguration_builder->set_revision_number(1);
 
-  NeighborConfiguration_builder->set_project_id("99d9d709-8478-4b46-9f3f-000000000000");
   NeighborConfiguration_builder->set_vpc_id("1b08a5bc-b718-11ea-b3de-111122223333");
   NeighborConfiguration_builder->set_name("portname1");
   NeighborConfiguration_builder->set_mac_address("fa:16:3e:d7:f2:6c");

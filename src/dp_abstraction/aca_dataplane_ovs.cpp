@@ -170,7 +170,9 @@ int ACA_Dataplane_OVS::update_port_state_workitem(const PortState current_PortSt
 
     switch (current_PortState.operation_type()) {
     case OperationType::CREATE:
-      assert(current_PortConfiguration.message_type() == MessageType::FULL);
+      if (current_PortConfiguration.update_type() != UpdateType::FULL) {
+        throw std::invalid_argument("current_PortConfiguration.update_type should be UpdateType::FULL");
+      }
 
       virtual_ip_address = current_PortConfiguration.fixed_ips(0).ip_address();
 
@@ -186,11 +188,10 @@ int ACA_Dataplane_OVS::update_port_state_workitem(const PortState current_PortSt
 
       port_cidr = virtual_ip_address + "/" + found_prefix_len;
 
-      ACA_LOG_DEBUG("Port Operation: %s: port_id: %s, project_id:%s, vpc_id:%s, network_type:%d, "
+      ACA_LOG_DEBUG("Port Operation: %s: port_id: %s, vpc_id:%s, network_type:%d, "
                     "virtual_ip_address:%s, virtual_mac_address:%s, generated_port_name: %s, port_cidr: %s, tunnel_id: %d\n",
                     aca_get_operation_string(current_PortState.operation_type()),
                     current_PortConfiguration.id().c_str(),
-                    current_PortConfiguration.project_id().c_str(),
                     current_PortConfiguration.vpc_id().c_str(), found_network_type,
                     virtual_ip_address.c_str(), virtual_mac_address.c_str(),
                     generated_port_name.c_str(), port_cidr.c_str(), found_tunnel_id);
@@ -214,11 +215,10 @@ int ACA_Dataplane_OVS::update_port_state_workitem(const PortState current_PortSt
       // another delete scenario is supported here
       // VM was created with without port specified, then delete the VM
       // ACA will receive port operation delete
-      ACA_LOG_DEBUG("Port Operation: %s: port_id: %s, project_id:%s, vpc_id:%s, network_type:%d, "
+      ACA_LOG_DEBUG("Port Operation: %s: port_id: %s vpc_id:%s, network_type:%d, "
                     "generated_port_name: %s, tunnel_id: %d\n",
                     aca_get_operation_string(current_PortState.operation_type()),
                     current_PortConfiguration.id().c_str(),
-                    current_PortConfiguration.project_id().c_str(),
                     current_PortConfiguration.vpc_id().c_str(), found_network_type,
                     generated_port_name.c_str(), found_tunnel_id);
 
@@ -354,12 +354,11 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
           overall_rc = -EXIT_FAILURE;
         } else {
           ACA_LOG_DEBUG(
-                  "Neighbor Operation:%s: id: %s, neighbor_type:%s, project_id:%s, vpc_id:%s, network_type:%d, ip_index: %d,"
+                  "Neighbor Operation:%s: id: %s, neighbor_type:%s, vpc_id:%s, network_type:%d, ip_index: %d,"
                   "virtual_ip_address:%s, virtual_mac_address:%s, neighbor_host_ip_address:%s, tunnel_id:%d\n",
                   aca_get_operation_string(current_NeighborState.operation_type()),
                   current_NeighborConfiguration.id().c_str(),
                   aca_get_neighbor_type_string(current_fixed_ip.neighbor_type()),
-                  current_NeighborConfiguration.project_id().c_str(),
                   current_NeighborConfiguration.vpc_id().c_str(), found_network_type,
                   ip_index, virtual_ip_address.c_str(), virtual_mac_address.c_str(),
                   host_ip_address.c_str(), found_tunnel_id);

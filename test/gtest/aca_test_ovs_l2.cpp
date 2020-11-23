@@ -323,10 +323,9 @@ TEST(ovs_l2_test_cases, 2_ports_CREATE_test_traffic)
   // fill in port state structs
   PortConfiguration *PortConfiguration_builder = new_port_states->mutable_configuration();
   PortConfiguration_builder->set_revision_number(1);
-  PortConfiguration_builder->set_message_type(MessageType::FULL);
+  PortConfiguration_builder->set_update_type(UpdateType::FULL);
   PortConfiguration_builder->set_id(port_id_1);
 
-  PortConfiguration_builder->set_project_id(project_id);
   PortConfiguration_builder->set_vpc_id(vpc_id_1);
   PortConfiguration_builder->set_name(port_name_1);
   PortConfiguration_builder->set_mac_address(vmac_address_1);
@@ -442,10 +441,9 @@ TEST(ovs_l2_test_cases, 10_ports_CREATE)
     PortConfiguration *PortConfiguration_builder =
             new_port_states->mutable_configuration();
     PortConfiguration_builder->set_revision_number(1);
-    PortConfiguration_builder->set_message_type(MessageType::FULL);
+    PortConfiguration_builder->set_update_type(UpdateType::FULL);
     PortConfiguration_builder->set_id(i_string);
 
-    PortConfiguration_builder->set_project_id(project_id);
     PortConfiguration_builder->set_vpc_id(vpc_id_1);
     PortConfiguration_builder->set_name(port_name);
     PortConfiguration_builder->set_mac_address(vmac_address_1);
@@ -540,10 +538,9 @@ TEST(ovs_l2_test_cases, DISABLED_2_ports_CREATE_test_traffic_PARENT)
   // fill in port state structs for port 1
   PortConfiguration *PortConfiguration_builder = new_port_states->mutable_configuration();
   PortConfiguration_builder->set_revision_number(1);
-  PortConfiguration_builder->set_message_type(MessageType::FULL);
+  PortConfiguration_builder->set_update_type(UpdateType::FULL);
   PortConfiguration_builder->set_id(port_id_1);
 
-  PortConfiguration_builder->set_project_id(project_id);
   PortConfiguration_builder->set_vpc_id(vpc_id_1);
   PortConfiguration_builder->set_name(port_name_1);
   PortConfiguration_builder->set_mac_address(vmac_address_1);
@@ -563,7 +560,6 @@ TEST(ovs_l2_test_cases, DISABLED_2_ports_CREATE_test_traffic_PARENT)
   SubnetConfiguration *SubnetConiguration_builder =
           new_subnet_states->mutable_configuration();
   SubnetConiguration_builder->set_revision_number(1);
-  SubnetConiguration_builder->set_project_id(project_id);
   SubnetConiguration_builder->set_vpc_id(vpc_id_1);
   SubnetConiguration_builder->set_id(subnet_id_1);
   SubnetConiguration_builder->set_cidr("10.0.0.0/24");
@@ -578,7 +574,6 @@ TEST(ovs_l2_test_cases, DISABLED_2_ports_CREATE_test_traffic_PARENT)
           new_neighbor_states->mutable_configuration();
   NeighborConfiguration_builder->set_revision_number(1);
 
-  NeighborConfiguration_builder->set_project_id(project_id);
   NeighborConfiguration_builder->set_vpc_id(vpc_id_1);
   NeighborConfiguration_builder->set_id(port_id_3);
   NeighborConfiguration_builder->set_mac_address(vmac_address_3);
@@ -747,10 +742,9 @@ TEST(ovs_l2_test_cases, DISABLED_2_ports_CREATE_test_traffic_CHILD)
   // fill in port state structs for port 3
   PortConfiguration *PortConfiguration_builder = new_port_states->mutable_configuration();
   PortConfiguration_builder->set_revision_number(1);
-  PortConfiguration_builder->set_message_type(MessageType::FULL);
+  PortConfiguration_builder->set_update_type(UpdateType::FULL);
   PortConfiguration_builder->set_id(port_id_3);
 
-  PortConfiguration_builder->set_project_id(project_id);
   PortConfiguration_builder->set_vpc_id(vpc_id_1);
   PortConfiguration_builder->set_name(port_name_3);
   PortConfiguration_builder->set_mac_address(vmac_address_3);
@@ -770,7 +764,6 @@ TEST(ovs_l2_test_cases, DISABLED_2_ports_CREATE_test_traffic_CHILD)
   SubnetConfiguration *SubnetConiguration_builder =
           new_subnet_states->mutable_configuration();
   SubnetConiguration_builder->set_revision_number(1);
-  SubnetConiguration_builder->set_project_id(project_id);
   SubnetConiguration_builder->set_vpc_id(vpc_id_1);
   SubnetConiguration_builder->set_id(subnet_id_1);
   SubnetConiguration_builder->set_cidr("10.0.0.0/24");
@@ -785,7 +778,6 @@ TEST(ovs_l2_test_cases, DISABLED_2_ports_CREATE_test_traffic_CHILD)
           new_neighbor_states->mutable_configuration();
   NeighborConfiguration_builder->set_revision_number(1);
 
-  NeighborConfiguration_builder->set_project_id(project_id);
   NeighborConfiguration_builder->set_vpc_id(vpc_id_1);
   NeighborConfiguration_builder->set_id(port_id_1);
   NeighborConfiguration_builder->set_mac_address(vmac_address_1);

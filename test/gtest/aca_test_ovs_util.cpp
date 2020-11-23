@@ -89,10 +89,9 @@ void aca_test_create_default_port_state(PortState *new_port_states)
 
   PortConfiguration *PortConfiguration_builder = new_port_states->mutable_configuration();
   PortConfiguration_builder->set_revision_number(1);
-  PortConfiguration_builder->set_message_type(MessageType::FULL);
+  PortConfiguration_builder->set_update_type(UpdateType::FULL);
   PortConfiguration_builder->set_id(port_id_1);
 
-  PortConfiguration_builder->set_project_id(project_id);
   PortConfiguration_builder->set_vpc_id(vpc_id_1);
   PortConfiguration_builder->set_name(port_name_1);
   PortConfiguration_builder->set_mac_address(vmac_address_1);
@@ -114,7 +113,6 @@ void aca_test_create_default_subnet_state(SubnetState *new_subnet_states)
   SubnetConfiguration *SubnetConiguration_builder =
           new_subnet_states->mutable_configuration();
   SubnetConiguration_builder->set_revision_number(1);
-  SubnetConiguration_builder->set_project_id(project_id);
   SubnetConiguration_builder->set_vpc_id(vpc_id_1);
   SubnetConiguration_builder->set_id(subnet_id_1);
   SubnetConiguration_builder->set_cidr("10.0.0.0/24");
@@ -184,7 +182,6 @@ void aca_test_create_default_router_goal_state(GoalState *goalState_builder)
   SubnetConfiguration *SubnetConiguration_builder2 =
           new_subnet_states2->mutable_configuration();
   SubnetConiguration_builder2->set_revision_number(1);
-  SubnetConiguration_builder2->set_project_id(project_id);
   SubnetConiguration_builder2->set_vpc_id(vpc_id_2);
   SubnetConiguration_builder2->set_id(subnet_id_2);
   SubnetConiguration_builder2->set_cidr("10.10.1.0/24");
@@ -224,7 +221,6 @@ void aca_test_1_neighbor_CREATE_DELETE(NeighborType input_neighbor_type)
           new_neighbor_states->mutable_configuration();
   NeighborConfiguration_builder->set_revision_number(1);
 
-  NeighborConfiguration_builder->set_project_id(project_id);
   NeighborConfiguration_builder->set_vpc_id(vpc_id_1);
   NeighborConfiguration_builder->set_id(port_id_3);
   NeighborConfiguration_builder->set_mac_address(vmac_address_3);
@@ -301,7 +297,6 @@ void aca_test_1_port_CREATE_plus_neighbor_CREATE(NeighborType input_neighbor_typ
           new_neighbor_states->mutable_configuration();
   NeighborConfiguration_builder->set_revision_number(1);
 
-  NeighborConfiguration_builder->set_project_id(project_id);
   NeighborConfiguration_builder->set_vpc_id(vpc_id_1);
   NeighborConfiguration_builder->set_id(port_id_3);
   NeighborConfiguration_builder->set_mac_address(vmac_address_3);
@@ -384,7 +379,6 @@ void aca_test_10_neighbor_CREATE(NeighborType input_neighbor_type)
             new_neighbor_states->mutable_configuration();
     NeighborConfiguration_builder->set_revision_number(1);
 
-    NeighborConfiguration_builder->set_project_id(project_id);
     NeighborConfiguration_builder->set_vpc_id("1b08a5bc-b718-11ea-b3de-111122223333");
     NeighborConfiguration_builder->set_id(neighbor_id);
     NeighborConfiguration_builder->set_name(port_name);

@@ -30,8 +30,8 @@ using namespace aca_dhcp_server;
 using namespace aca_dhcp_programming_if;
 using aca_comm_manager::Aca_Comm_Manager;
 using aca_net_config::Aca_Net_Config;
-using aca_ovs_l2_programmer::ACA_OVS_L2_Programmer;
 using aca_ovs_control::ACA_OVS_Control;
+using aca_ovs_l2_programmer::ACA_OVS_L2_Programmer;
 
 thread *ovs_monitor_thread = NULL;
 
@@ -249,8 +249,9 @@ TEST(dhcp_request_test_case, DISABLED_l2_dhcp_test)
   ASSERT_EQ(overall_rc, EXIT_SUCCESS);
 
   // monitor br-int for dhcp request message
-  ovs_monitor_thread = 
-    new thread(bind(&ACA_OVS_Control::monitor, &ACA_OVS_Control::get_instance(), "br-int", "resume"));
+  ovs_monitor_thread =
+          new thread(bind(&ACA_OVS_Control::monitor,
+                          &ACA_OVS_Control::get_instance(), "br-int", "resume"));
   ovs_monitor_thread->detach();
 
   GoalState GoalState_builder;
@@ -262,22 +263,17 @@ TEST(dhcp_request_test_case, DISABLED_l2_dhcp_test)
   // fill in port state structs
   DHCPConfiguration *DHCPConfiguration_builder = new_dhcp_states->mutable_configuration();
   DHCPConfiguration_builder->set_revision_number(1);
-  DHCPConfiguration_builder->set_message_type(MessageType::FULL);
+  DHCPConfiguration_builder->set_update_type(UpdateType::FULL);
 
   DHCPConfiguration_builder->set_subnet_id(subnet_id_1);
   DHCPConfiguration_builder->set_mac_address(vmac_address_1);
   DHCPConfiguration_builder->set_ipv4_address(vip_address_1);
   DHCPConfiguration_builder->set_port_host_name(port_name_1);
 
-  // dns entry
-  DHCPConfiguration_DnsEntry *DnsEntry_builder = DHCPConfiguration_builder->add_dns_entry_list();
-  DnsEntry_builder->set_entry(port_dns_entry);
-
   // fill in subnet state structs
   SubnetConfiguration *SubnetConiguration_builder =
           new_subnet_states->mutable_configuration();
   SubnetConiguration_builder->set_revision_number(1);
-  SubnetConiguration_builder->set_project_id(project_id);
   SubnetConiguration_builder->set_vpc_id(vpc_id_1);
   SubnetConiguration_builder->set_id(subnet_id_1);
   SubnetConiguration_builder->set_cidr(subnet1_cidr);
@@ -287,6 +283,11 @@ TEST(dhcp_request_test_case, DISABLED_l2_dhcp_test)
   subnetConfig_GatewayBuilder->set_ip_address(subnet1_gw_ip);
   subnetConfig_GatewayBuilder->set_mac_address(subnet1_gw_mac);
   SubnetConiguration_builder->set_allocated_gateway(subnetConfig_GatewayBuilder);
+
+  // dns entry
+  SubnetConfiguration_DnsEntry *DnsEntry_builder =
+          SubnetConiguration_builder->add_dns_entry_list();
+  DnsEntry_builder->set_entry(port_dns_entry);
 
   // create a new port 1 in demo mode
   GoalStateOperationReply gsOperationalReply;
@@ -342,7 +343,7 @@ TEST(dhcp_request_test_case, DISABLED_l2_dhcp_test)
   Aca_Net_Config::get_instance().execute_system_command(cmd_string);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
 
-  // test ping 
+  // test ping
   cmd_string = "docker exec con1 ping -c1 " + vip_address_3;
   overall_rc = Aca_Net_Config::get_instance().execute_system_command(cmd_string);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
@@ -354,12 +355,10 @@ TEST(dhcp_request_test_case, DISABLED_l2_dhcp_test)
   overall_rc = EXIT_SUCCESS;
 
   // clean up
-  overall_rc = Aca_Net_Config::get_instance().execute_system_command(
-              "ovs-docker del-ports br-int con1");
+  overall_rc = Aca_Net_Config::get_instance().execute_system_command("ovs-docker del-ports br-int con1");
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
 
-  overall_rc = Aca_Net_Config::get_instance().execute_system_command(
-              "ovs-docker del-ports br-int con2");
+  overall_rc = Aca_Net_Config::get_instance().execute_system_command("ovs-docker del-ports br-int con2");
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
 
   overall_rc = Aca_Net_Config::get_instance().execute_system_command("docker rm con1 -f");
@@ -383,15 +382,16 @@ TEST(dhcp_request_test_case, DISABLED_l3_dhcp_test)
   overall_rc = ACA_OVS_L2_Programmer::get_instance().setup_ovs_bridges_if_need();
   ASSERT_EQ(overall_rc, EXIT_SUCCESS);
 
-  // re adding dhcp default flows
+  // re-adding dhcp default flows
   ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
           "add-flow br-int \"table=0,priority=25,udp,udp_src=68,udp_dst=67,actions=CONTROLLER\"",
           not_care_culminative_time, overall_rc);
   ASSERT_EQ(overall_rc, EXIT_SUCCESS);
 
-  //monitor br-int for dhcp request message
-  ovs_monitor_thread = 
-    new thread(bind(&ACA_OVS_Control::monitor, &ACA_OVS_Control::get_instance(), "br-int", "resume"));
+  // monitor br-int for dhcp request message
+  ovs_monitor_thread =
+          new thread(bind(&ACA_OVS_Control::monitor,
+                          &ACA_OVS_Control::get_instance(), "br-int", "resume"));
   ovs_monitor_thread->detach();
 
   GoalState GoalState_builder;
@@ -403,7 +403,7 @@ TEST(dhcp_request_test_case, DISABLED_l3_dhcp_test)
   // fill in port state structs
   DHCPConfiguration *DHCPConfiguration_builder = new_dhcp_states->mutable_configuration();
   DHCPConfiguration_builder->set_revision_number(1);
-  DHCPConfiguration_builder->set_message_type(MessageType::FULL);
+  DHCPConfiguration_builder->set_update_type(UpdateType::FULL);
 
   DHCPConfiguration_builder->set_subnet_id(subnet_id_1);
   DHCPConfiguration_builder->set_mac_address(vmac_address_1);
@@ -414,7 +414,6 @@ TEST(dhcp_request_test_case, DISABLED_l3_dhcp_test)
   SubnetConfiguration *SubnetConiguration_builder =
           new_subnet_states->mutable_configuration();
   SubnetConiguration_builder->set_revision_number(1);
-  SubnetConiguration_builder->set_project_id(project_id);
   SubnetConiguration_builder->set_vpc_id(vpc_id_1);
   SubnetConiguration_builder->set_id(subnet_id_1);
   SubnetConiguration_builder->set_cidr(subnet1_cidr);
@@ -518,11 +517,13 @@ TEST(dhcp_request_test_case, DISABLED_l3_dhcp_test)
   overall_rc = Aca_Net_Config::get_instance().execute_system_command(cmd_string);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
 
-  cmd_string = "ip netns exec " + dhcp_test_router_namespace + " ifconfig gw1_ns " + subnet1_gw_ip + "/24";
+  cmd_string = "ip netns exec " + dhcp_test_router_namespace +
+               " ifconfig gw1_ns " + subnet1_gw_ip + "/24";
   overall_rc = Aca_Net_Config::get_instance().execute_system_command(cmd_string);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
 
-  cmd_string = "ip netns exec " + dhcp_test_router_namespace + " ifconfig gw2_ns " + subnet2_gw_ip + "/24";
+  cmd_string = "ip netns exec " + dhcp_test_router_namespace +
+               " ifconfig gw2_ns " + subnet2_gw_ip + "/24";
   overall_rc = Aca_Net_Config::get_instance().execute_system_command(cmd_string);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
 
@@ -550,8 +551,8 @@ TEST(dhcp_request_test_case, DISABLED_l3_dhcp_test)
   ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
           "set port gw2_ovs tag=2", not_care_culminative_time, overall_rc);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
- 
-  // test ping 
+
+  // test ping
   cmd_string = "docker exec con1 ping -c1 " + vip_address_2;
   overall_rc = Aca_Net_Config::get_instance().execute_system_command(cmd_string);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
@@ -573,12 +574,10 @@ TEST(dhcp_request_test_case, DISABLED_l3_dhcp_test)
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
 
   // clear docker ovs ports
-  overall_rc = Aca_Net_Config::get_instance().execute_system_command(
-              "ovs-docker del-ports br-int con1");
+  overall_rc = Aca_Net_Config::get_instance().execute_system_command("ovs-docker del-ports br-int con1");
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
 
-  overall_rc = Aca_Net_Config::get_instance().execute_system_command(
-              "ovs-docker del-ports br-int con2");
+  overall_rc = Aca_Net_Config::get_instance().execute_system_command("ovs-docker del-ports br-int con2");
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
 
   // clear ip link and namespace
@@ -596,4 +595,4 @@ TEST(dhcp_request_test_case, DISABLED_l3_dhcp_test)
   // free the allocated configurations since we are done with it now
   new_dhcp_states->clear_configuration();
   new_subnet_states->clear_configuration();
-}  
+}
