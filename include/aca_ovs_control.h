@@ -224,8 +224,6 @@ class ACA_OVS_Control {
   private:
   ACA_OVS_Control(){};
   ~ACA_OVS_Control(){};
-
-  uint32_t oam_server_port = 8300;
 };
 } // namespace aca_ovs_control
 #endif // #ifndef ACA_OVS_CONTROL_H

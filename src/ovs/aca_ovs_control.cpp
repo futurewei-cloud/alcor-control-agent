@@ -367,12 +367,4 @@ void ACA_OVS_Control::print_hex_ascii_line(const u_char *payload, int len, int o
   return;
 }
 
-void ACA_OVS_Control::set_oam_server_port(uint32_t port)
-{
-  this->oam_server_port = port;
-}
-uint32_t ACA_OVS_Control::get_oam_server_port()
-{
-  return this->oam_server_port;
-}
 } // namespace aca_ovs_control
