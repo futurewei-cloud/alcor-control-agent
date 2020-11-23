@@ -301,14 +301,14 @@ int ACA_OVS_L2_Programmer::create_or_update_l2_neighbor(
   return overall_rc;
 }
 
-<<<<<<< HEAD
-int ACA_OVS_L2_Programmer::delete_neighbor_port(const string neighbor_id,
-                                                const string vpc_id, const string outport_name,
-                                                ulong &culminative_time)
->>>>>>> master
+int ACA_OVS_L2_Programmer::delete_l2_neighbor(const string neighbor_id, const string vpc_id,
+                                              const string outport_name, ulong &culminative_time)
+{
+  ACA_LOG_DEBUG("%s", "ACA_OVS_L2_Programmer::delete_l2_neighbor ---> Entering\n");
 
   if (neighbor_id.empty()) {
     throw std::invalid_argument("neighbor_id is empty");
+  }
 
   if (vpc_id.empty()) {
     throw std::invalid_argument("vpc_id is empty");

@@ -459,7 +459,11 @@ int ACA_OVS_L3_Programmer::delete_router(RouterConfiguration &current_RouterConf
   return overall_rc;
 }
 
+<<<<<<< HEAD
+int ACA_OVS_L3_Programmer::create_or_update_neighbor_l3(
+=======
 int ACA_OVS_L3_Programmer::create_or_update_l3_neighbor(
+>>>>>>> master
         const string neighbor_id, const string vpc_id, const string subnet_id,
         const string virtual_ip, const string virtual_mac,
         const string remote_host_ip, uint tunnel_id, ulong &culminative_time)

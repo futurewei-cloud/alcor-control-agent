@@ -76,10 +76,11 @@ class ACA_OVS_L3_Programmer {
                                    const string remote_host_ip, uint tunnel_id,
                                    ulong &culminative_time_dataplane_programming_time);
 
-  int delete_neighbor_l3(const string neighbor_id, const string subnet_id,
-
   int delete_l3_neighbor(const string neighbor_id, const string subnet_id,
+                         const string virtual_ip, ulong &culminative_time);
+
   // compiler will flag the error when below is called.
+  ACA_OVS_L3_Programmer(ACA_OVS_L3_Programmer const &) = delete;
   void operator=(ACA_OVS_L3_Programmer const &) = delete;
 
   private:
@@ -92,4 +93,8 @@ class ACA_OVS_L3_Programmer {
   unordered_map<string, unordered_map<string, subnet_routing_table_entry> > _routers_table;
 
   // mutex for reading and writing to routers_table
+  // consider using a read / write lock to improve performance
+  mutex _routers_table_mutex;
+};
 } // namespace aca_ovs_l3_programmer
+#endif // #ifndef ACA_OVS_L3_PROGRAMMER_H
