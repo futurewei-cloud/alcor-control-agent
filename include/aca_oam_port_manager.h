@@ -44,7 +44,7 @@ class Aca_Oam_Port_Manager {
   int _delete_oam_ofp(uint32_t port_id);
   void _clear_all_data();
 
-  unordered_map<uint32_t, unordered_set<string> > _oam_ports_table;
+  unordered_map<uint32_t, unordered_set<uint32_t> > _oam_ports_table;
 
   // mutex for reading and writing to _oam_ports_table
   mutex _oam_ports_table_mutex;

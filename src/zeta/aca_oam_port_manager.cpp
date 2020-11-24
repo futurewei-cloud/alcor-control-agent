@@ -49,14 +49,14 @@ void Aca_Oam_Port_Manager::create_entry_unsafe(uint32_t port_id)
 {
   ACA_LOG_DEBUG("%s", "Aca_Oam_Port_Manager::create_entry_unsafe ---> Entering\n");
 
-  unordered_set<string> vpcs_table;
+  unordered_set<uint32_t> vpcs_table;
   _oam_ports_table.emplace(port_id, vpcs_table);
 
   ACA_LOG_DEBUG("%s", "Aca_Oam_Port_Manager::create_entry_unsafe <--- Exiting\n");
 }
 
 // update oam_ports_table and add the OAM punt rule also if this is the first port in the VPC
-void Aca_Oam_Port_Manager::add_vpc(uint32_t port_id, const string vpc_id)
+void Aca_Oam_Port_Manager::add_vpc(uint32_t port_id, uint32_t tunnel_id)
 {
   ACA_LOG_DEBUG("%s", "Aca_Oam_Port_Manager::add_vpc ---> Entering\n");
   // -----critical section starts-----
@@ -65,7 +65,7 @@ void Aca_Oam_Port_Manager::add_vpc(uint32_t port_id, const string vpc_id)
     create_entry_unsafe(port_id);
     _create_oam_ofp(port_id);
   }
-  _oam_ports_table[port_id].emplace(vpc_id);
+  _oam_ports_table[port_id].emplace(tunnel_id);
 
   _oam_ports_table_mutex.unlock();
   // -----critical section ends-----
@@ -74,11 +74,12 @@ void Aca_Oam_Port_Manager::add_vpc(uint32_t port_id, const string vpc_id)
 }
 
 // update oam_ports_table and delete the OAM punt rule if the last port in the VPC has been deleted
-int Aca_Oam_Port_Manager::remove_vpc(uint32_t port_id, const string vpc_id)
+int Aca_Oam_Port_Manager::remove_vpc(uint32_t port_id, uint32_t tunnel_id)
 {
   ACA_LOG_DEBUG("%s", "Aca_Oam_Port_Manager::remove_vpc ---> Entering\n");
 
-  int overall_rc;
+  int 
+  ;
 
   // -----critical section starts-----
   _oam_ports_table_mutex.lock();
@@ -86,7 +87,7 @@ int Aca_Oam_Port_Manager::remove_vpc(uint32_t port_id, const string vpc_id)
     ACA_LOG_ERROR("port id %u not find in oam_ports_table\n", port_id);
     overall_rc = ENOENT;
   } else {
-    _oam_ports_table[port_id].erase(vpc_id);
+    _oam_ports_table[port_id].erase(tunnel_id);
     // clean up the oam_ports_table entry and oam flow rule if there is no port assoicated
     if (_oam_ports_table[port_id].empty()) {
       if (_oam_ports_table.erase(port_id) == 1 && _delete_oam_ofp(port_id) == EXIT_SUCCESS) {
@@ -111,13 +112,15 @@ bool Aca_Oam_Port_Manager::is_oam_server_port(uint32_t port_id)
 {
   ACA_LOG_DEBUG("%s", "Aca_Oam_Port_Manager::is_oam_server_port ---> Entering\n");
 
-  bool overall_rc = true;
+  bool overall_rc;
 
   // -----critical section starts-----
   _oam_ports_table_mutex.lock();
   if (_oam_ports_table.find(port_id) == _oam_ports_table.end()) {
     ACA_LOG_ERROR("port id %u not find in oam_ports_table\n", port_id);
     overall_rc = false;
+  }else{
+    overall_rc = true;
   }
   _oam_ports_table_mutex.unlock();
   // -----critical section ends-----
@@ -130,7 +133,7 @@ bool Aca_Oam_Port_Manager::is_oam_server_port(uint32_t port_id)
 // add the OAM punt rule
 void Aca_Oam_Port_Manager::_create_oam_ofp(uint32_t port_id)
 {
-  int overall_rc = EXIT_SUCCESS;
+  int overall_rc;
 
   string opt = "table=0,priority=25,udp,udp_dst=" + to_string(port_id) + ",actions=CONTROLLER";
 
@@ -148,7 +151,7 @@ void Aca_Oam_Port_Manager::_create_oam_ofp(uint32_t port_id)
 // delete the OAM punt rule
 int Aca_Oam_Port_Manager::_delete_oam_ofp(uint32_t port_id)
 {
-  int overall_rc = EXIT_SUCCESS;
+  int overall_rc;
 
   string opt = "udp,udp_dst=" + to_string(port_id);
 

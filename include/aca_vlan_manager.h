@@ -39,7 +39,7 @@ struct vpc_table_entry {
   // to neighbor port ID mapping in this VPC
   // unordered_map <outports, list of neighbor port IDs>
   unordered_map<string, list<string> > outports_neighbors_table;
-  
+
   uint32_t oam_server_port;
 };
 
@@ -63,10 +63,6 @@ class ACA_Vlan_Manager {
                               string outport_name, ulong &culminative_time);
 
   int get_outports_unsafe(string vpc_id, string &outports);
-
-  int get_oam_server_port(string vpc_id, uint32_t *port);
-
-  void set_oam_server_port(string vpc_id, uint32_t port);
 
   // compiler will flag error when below is called
   ACA_Vlan_Manager(ACA_Vlan_Manager const &) = delete;

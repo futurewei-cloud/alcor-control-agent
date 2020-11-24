@@ -123,7 +123,10 @@ int ACA_OVS_L2_Programmer::setup_ovs_bridges_if_need()
     execute_openflow_command("add-flow br-tun \"table=0,priority=1,in_port=\"patch-int\" actions=resubmit(,2)\"",
                              not_care_culminative_time, overall_rc);
 
-    execute_openflow_command("add-flow br-tun \"table=2,priority=1 actions=resubmit(,22)\"",
+    execute_openflow_command("add-flow br-tun \"table=2,priority=1,dl_dst=00:00:00:00:00:00/01:00:00:00:00:00 actions=resubmit(,20)\"",
+                             not_care_culminative_time, overall_rc);
+
+    execute_openflow_command("add-flow br-tun \"table=2,priority=1,dl_dst=01:00:00:00:00:00/01:00:00:00:00:00 actions=resubmit(,22)\"",
                              not_care_culminative_time, overall_rc);
 
     execute_openflow_command("add-flow br-tun \"table=0,priority=25,arp,arp_op=1,in_port=\"patch-int\" actions=resubmit(,51)\"",

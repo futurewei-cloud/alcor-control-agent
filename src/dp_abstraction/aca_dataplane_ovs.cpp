@@ -74,25 +74,25 @@ static bool aca_lookup_subnet_info(GoalState &parsed_struct, const string target
   return false;
 }
 
-static bool aca_lookup_auxgateway_info(GoalState &parsed_struct, const string targeted_vpc_id,
-                                       AuxGateway &found_auxgateway)
+static bool
+aca_lookup_auxgateway_info(GoalState &parsed_struct, const string targeted_vpc_id,
+                           AuxGateway &found_auxgateway, uint32_t &found_tunnel_id)
 {
-  // TODO: cache the subnet information to a dictionary to provide
+  // TODO: cache the auxgateway information to a dictionary to provide
   // a faster look up for the next run, only use the below loop for
   // cache miss.
-  // Look up the subnet configuration to query for tunnel_id
-  for (int j = 0; j < parsed_struct.vpc_states_size(); j++) {
+  // Look up the vpc configuration to query for auxgateway
+  for (int i = 0; i < parsed_struct.vpc_states_size(); i++) {
     VpcConfiguration current_VpcConfiguration =
-            parsed_struct.vpc_states(j).configuration();
+            parsed_struct.vpc_states(i).configuration();
 
     ACA_LOG_DEBUG("current_VpcConfiguration Vpc ID: %s.\n",
                   current_VpcConfiguration.id().c_str());
 
-    if (parsed_struct.vpc_states(j).operation_type() == OperationType::INFO) {
+    if (parsed_struct.vpc_states(i).operation_type() == OperationType::INFO) {
       if (current_VpcConfiguration.id() == targeted_vpc_id) {
         found_auxgateway =
-                parsed_struct.vpc_states(j).configuration().auxiliary_gateway();
-
+                parsed_struct.vpc_states(i).configuration().auxiliary_gateway();
         return true;
       }
     }
@@ -202,7 +202,7 @@ int ACA_Dataplane_OVS::update_port_state_workitem(const PortState current_PortSt
     }
 
     if (!aca_lookup_auxgateway_info(parsed_struct, current_PortConfiguration.vpc_id(),
-                                    found_auxgateway)) {
+                                    found_auxgateway, found_tunnel_id)) {
       ACA_LOG_ERROR("Not able to find the info for port with subnet ID: %s.\n",
                     current_PortConfiguration.vpc_id().c_str());
       overall_rc = -EXIT_FAILURE;
@@ -245,7 +245,7 @@ int ACA_Dataplane_OVS::update_port_state_workitem(const PortState current_PortSt
         ACA_LOG_INFO("%s", "AuxGateway_type is zeta!\n");
         // Update the zeta settings of vpc
         overall_rc = ACA_Zeta_Programming::get_instance().create_or_update_zeta_config(
-                found_auxgateway, current_PortConfiguration.vpc_id());
+                found_auxgateway, current_PortConfiguration.vpc_id(), found_tunnel_id);
       }
 
       break;
@@ -278,7 +278,7 @@ int ACA_Dataplane_OVS::update_port_state_workitem(const PortState current_PortSt
         ACA_LOG_INFO("%s", "AuxGateway_type is zeta!\n");
         // Delete the zeta settings of vpc
         overall_rc = ACA_Zeta_Programming::get_instance().delete_zeta_config(
-                found_auxgateway, current_PortConfiguration.vpc_id());
+                found_auxgateway, current_PortConfiguration.vpc_id(), found_tunnel_id);
       }
 
       break;

@@ -104,8 +104,6 @@ class ACA_Oam_Server {
 
   bool _validate_oam_message(oam_message *oammsg);
 
-  void _standardize_mac_address(string &mac_string);
-
   bool _check_oam_server_port(uint32_t udp_dport, oam_match match);
 
   void _parse_oam_flow_injection(uint32_t udp_dport, oam_message *oammsg);
