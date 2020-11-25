@@ -74,9 +74,8 @@ static bool aca_lookup_subnet_info(GoalState &parsed_struct, const string target
   return false;
 }
 
-static bool
-aca_lookup_auxgateway_info(GoalState &parsed_struct, const string targeted_vpc_id,
-                           AuxGateway &found_auxgateway, uint32_t &found_tunnel_id)
+static bool aca_lookup_auxgateway_info(GoalState &parsed_struct, const string targeted_vpc_id,
+                                       AuxGateway &found_auxgateway)
 {
   // TODO: cache the auxgateway information to a dictionary to provide
   // a faster look up for the next run, only use the below loop for
@@ -113,7 +112,7 @@ int ACA_Dataplane_OVS::update_vpc_state_workitem(const VpcState /* current_VpcSt
                                                  GoalStateOperationReply & /* gsOperationReply */)
 {
   // TO BE IMPLEMENTED
-
+  
   return ENOSYS;
 }
 
@@ -202,7 +201,7 @@ int ACA_Dataplane_OVS::update_port_state_workitem(const PortState current_PortSt
     }
 
     if (!aca_lookup_auxgateway_info(parsed_struct, current_PortConfiguration.vpc_id(),
-                                    found_auxgateway, found_tunnel_id)) {
+                                    found_auxgateway)) {
       ACA_LOG_ERROR("Not able to find the info for port with subnet ID: %s.\n",
                     current_PortConfiguration.vpc_id().c_str());
       overall_rc = -EXIT_FAILURE;

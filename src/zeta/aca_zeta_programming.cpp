@@ -31,21 +31,29 @@ ACA_Zeta_Programming &ACA_Zeta_Programming::get_instance()
 }
 
 int ACA_Zeta_Programming::create_or_update_zeta_config(const alcor::schema::AuxGateway current_AuxGateway,
-                                             const string vpc_id, uint32_t tunnel_id)
+                                                       const string vpc_id, uint32_t tunnel_id)
 {
-  zeta_config stZetaCfg;
+  unsigned long not_care_culminative_time;
   int overall_rc;
+  zeta_config stZetaCfg;
 
   stZetaCfg.group_id = current_AuxGateway.id();
   for (auto destination : current_AuxGateway.destinations()) {
     stZetaCfg.zeta_buckets.push_back(destination.ip_address());
+    string remote_host_ip = destination.ip_address();
+    if (!aca_is_port_on_same_host(remote_host_ip)) {
+      ACA_LOG_INFO("%s", "port_neighbor not exist!\n");
+      //crate neighbor_port
+      aca_vlan_manager::ACA_Vlan_Manager::get_instance().create_neighbor_outport(
+              alcor::schema::NetworkType::VXLAN, remote_host_ip, tunnel_id,
+              not_care_culminative_time);
+    }
   }
   uint32_t oam_server_port = current_AuxGateway.zeta_info().port_inband_operation();
 
-  uint32_t port;
-  ACA_Vlan_Manager::get_instance().get_oam_server_port(vpc_id, &port);
+  uint32_t oam_port = ACA_Vlan_Manager::get_instance().get_oam_server_port(vpc_id);
   // oam_server_port is not set
-  if (port == 0) {
+  if (oam_port == 0) {
     ACA_Vlan_Manager::get_instance().set_oam_server_port(vpc_id, oam_server_port);
 
     //update oam_ports_table and add the OAM punt rule also if this is the first port in the VPC

@@ -33,6 +33,8 @@ namespace aca_vlan_manager
 {
 struct vpc_table_entry {
   uint vlan_id;
+
+  uint32_t tunnel_id;
   // list of ovs_ports names on this host in the same VPC to share the same internal vlan_id
   list<string> ovs_ports;
   // hashtable of output (e.g. vxlan) tunnel ports to the neighbor host communication
@@ -51,6 +53,8 @@ class ACA_Vlan_Manager {
 
   uint get_or_create_vlan_id(string vpc_id);
 
+  uint get_or_create_vlan_id(uint32_t tunnel_id);
+
   int create_ovs_port(string vpc_id, string ovs_port, uint tunnel_id, ulong &culminative_time);
 
   int delete_ovs_port(string vpc_id, string ovs_port, uint tunnel_id, ulong &culminative_time);
@@ -59,10 +63,23 @@ class ACA_Vlan_Manager {
                               alcor::schema::NetworkType network_type, string remote_host_ip,
                               uint tunnel_id, ulong &culminative_time);
 
+  // create a neighbor port without specifying vpc_id and neighbor ID
+  int create_neighbor_outport(alcor::schema::NetworkType network_type,
+                                                string remote_host_ip, uint tunnel_id,
+                                                ulong &culminative_time);
+
   int delete_neighbor_outport(string neighbor_id, string vpc_id,
                               string outport_name, ulong &culminative_time);
 
   int get_outports_unsafe(string vpc_id, string &outports);
+
+  int get_oam_server_port(string vpc_id);
+
+  int get_oam_server_port(uint32_t tunnel_id);
+
+  void set_oam_server_port(string vpc_id, uint32_t port_number);
+
+  void set_oam_server_port(uint32_t tunnel_id, uint32_t port_number);
 
   // compiler will flag error when below is called
   ACA_Vlan_Manager(ACA_Vlan_Manager const &) = delete;

@@ -32,19 +32,19 @@ class Aca_Oam_Port_Manager {
 
   static Aca_Oam_Port_Manager &get_instance();
 
-  void create_entry_unsafe(uint32_t port_id);
-  void add_vpc(uint32_t port, uint32 tunnel_id);
+  void create_entry_unsafe(uint32_t port_number);
+  void add_vpc(uint32_t port, uint32_t tunnel_id);
   int remove_vpc(uint32_t port, uint32_t tunnel_id);
 
   //Determine whether the port is an oam_server_port
-  bool is_oam_server_port(uint32_t port_id);
+  bool is_oam_server_port(uint32_t port_number);
 
   private:
-  void _create_oam_ofp(uint32_t port_id);
-  int _delete_oam_ofp(uint32_t port_id);
+  int _create_oam_ofp(uint32_t port_number);
+  int _delete_oam_ofp(uint32_t port_number);
   void _clear_all_data();
 
-  // unordered_map <oam_server_port_id, set of tunnel IDs>
+  // unordered_map <oam port number, set of tunnel IDs>
   unordered_map<uint32_t, unordered_set<uint32_t> > _oam_ports_table;
 
   // mutex for reading and writing to _oam_ports_table
