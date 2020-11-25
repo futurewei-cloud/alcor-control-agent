@@ -34,7 +34,7 @@ int ACA_Zeta_Programming::create_or_update_zeta_config(const alcor::schema::AuxG
                                              const string vpc_id, uint32_t tunnel_id)
 {
   zeta_config stZetaCfg;
-  int overall_rc = EXIT_SUCCESS;
+  int overall_rc;
 
   stZetaCfg.group_id = current_AuxGateway.id();
   for (auto destination : current_AuxGateway.destinations()) {
@@ -61,7 +61,7 @@ int ACA_Zeta_Programming::delete_zeta_config(const alcor::schema::AuxGateway cur
                                              const string vpc_id, uint32_t tunnel_id)
 {
   zeta_config stZetaCfg;
-  int overall_rc = EXIT_SUCCESS;
+  int overall_rc;
 
   stZetaCfg.group_id = current_AuxGateway.id();
   for (auto destination : current_AuxGateway.destinations()) {
@@ -84,7 +84,7 @@ int ACA_Zeta_Programming::delete_zeta_config(const alcor::schema::AuxGateway cur
 int ACA_Zeta_Programming::_create_or_update_zeta_group_entry(zeta_config *zeta_cfg)
 {
   unsigned long not_care_culminative_time;
-  int overall_rc = EXIT_SUCCESS;
+  int overall_rc;
 
   //adding group table
   string cmd = "-O OpenFlow13 add-group br-tun group_id=" + zeta_cfg->group_id + ",type=select";
@@ -94,6 +94,7 @@ int ACA_Zeta_Programming::_create_or_update_zeta_group_entry(zeta_config *zeta_c
     cmd += ",bucket=output:" + outport_name;
   }
 
+  //add flow for i
   aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
           cmd, not_care_culminative_time, overall_rc);
 
@@ -110,7 +111,7 @@ int ACA_Zeta_Programming::_delete_zeta_group_entry(zeta_config *zeta_cfg)
 {
   unsigned long not_care_culminative_time;
 
-  int overall_rc = EXIT_SUCCESS;
+  int overall_rc;
 
   //deleting group table
   string cmd = "-O OpenFlow13 del-groups br-tun group_id=" + zeta_cfg->group_id;

@@ -43,93 +43,6 @@ Aca_Oam_Port_Manager &Aca_Oam_Port_Manager::get_instance()
   return instance;
 }
 
-// unsafe function, needs to be called inside oam_ports_table_mutex lock
-// this function assumes there is no existing entry for port_id
-void Aca_Oam_Port_Manager::create_entry_unsafe(uint32_t port_id)
-{
-  ACA_LOG_DEBUG("%s", "Aca_Oam_Port_Manager::create_entry_unsafe ---> Entering\n");
-
-  unordered_set<uint32_t> vpcs_table;
-  _oam_ports_table.emplace(port_id, vpcs_table);
-
-  ACA_LOG_DEBUG("%s", "Aca_Oam_Port_Manager::create_entry_unsafe <--- Exiting\n");
-}
-
-// update oam_ports_table and add the OAM punt rule also if this is the first port in the VPC
-void Aca_Oam_Port_Manager::add_vpc(uint32_t port_id, uint32_t tunnel_id)
-{
-  ACA_LOG_DEBUG("%s", "Aca_Oam_Port_Manager::add_vpc ---> Entering\n");
-  // -----critical section starts-----
-  _oam_ports_table_mutex.lock();
-  if (_oam_ports_table.find(port_id) == _oam_ports_table.end()) {
-    create_entry_unsafe(port_id);
-    _create_oam_ofp(port_id);
-  }
-  _oam_ports_table[port_id].emplace(tunnel_id);
-
-  _oam_ports_table_mutex.unlock();
-  // -----critical section ends-----
-
-  ACA_LOG_DEBUG("%s", "ACA_OVS_Programmer::add_vpc <--- Exiting\n");
-}
-
-// update oam_ports_table and delete the OAM punt rule if the last port in the VPC has been deleted
-int Aca_Oam_Port_Manager::remove_vpc(uint32_t port_id, uint32_t tunnel_id)
-{
-  ACA_LOG_DEBUG("%s", "Aca_Oam_Port_Manager::remove_vpc ---> Entering\n");
-
-  int 
-  ;
-
-  // -----critical section starts-----
-  _oam_ports_table_mutex.lock();
-  if (_oam_ports_table.find(port_id) == _oam_ports_table.end()) {
-    ACA_LOG_ERROR("port id %u not find in oam_ports_table\n", port_id);
-    overall_rc = ENOENT;
-  } else {
-    _oam_ports_table[port_id].erase(tunnel_id);
-    // clean up the oam_ports_table entry and oam flow rule if there is no port assoicated
-    if (_oam_ports_table[port_id].empty()) {
-      if (_oam_ports_table.erase(port_id) == 1 && _delete_oam_ofp(port_id) == EXIT_SUCCESS) {
-        ACA_LOG_INFO("Successfuly cleaned up entry for port_id %u\n", port_id);
-        overall_rc = EXIT_SUCCESS;
-      } else {
-        ACA_LOG_ERROR("Failed to clean up entry for port_id %u\n", port_id);
-        overall_rc = EXIT_FAILURE;
-      }
-    }
-  }
-  _oam_ports_table_mutex.unlock();
-  // -----critical section ends-----
-
-  ACA_LOG_DEBUG("Aca_Oam_Port_Manager::remove_vpc <--- Exiting, overall_rc = %d\n", overall_rc);
-
-  return overall_rc;
-}
-
-// Determine whether the port is oam server port
-bool Aca_Oam_Port_Manager::is_oam_server_port(uint32_t port_id)
-{
-  ACA_LOG_DEBUG("%s", "Aca_Oam_Port_Manager::is_oam_server_port ---> Entering\n");
-
-  bool overall_rc;
-
-  // -----critical section starts-----
-  _oam_ports_table_mutex.lock();
-  if (_oam_ports_table.find(port_id) == _oam_ports_table.end()) {
-    ACA_LOG_ERROR("port id %u not find in oam_ports_table\n", port_id);
-    overall_rc = false;
-  }else{
-    overall_rc = true;
-  }
-  _oam_ports_table_mutex.unlock();
-  // -----critical section ends-----
-  ACA_LOG_DEBUG("Aca_Oam_Port_Manager::is_oam_server_port <--- Exiting, overall_rc = %d\n",
-                overall_rc);
-
-  return overall_rc;
-}
-
 // add the OAM punt rule
 void Aca_Oam_Port_Manager::_create_oam_ofp(uint32_t port_id)
 {
@@ -179,6 +92,92 @@ void Aca_Oam_Port_Manager::_clear_all_data()
   // -----critical section ends-----
 
   ACA_LOG_DEBUG("%s", "Aca_Oam_Port_Manager::clear_all_data <--- Exiting\n");
+}
+
+// unsafe function, needs to be called inside oam_ports_table_mutex lock
+// this function assumes there is no existing entry for port_id
+void Aca_Oam_Port_Manager::create_entry_unsafe(uint32_t port_id)
+{
+  ACA_LOG_DEBUG("%s", "Aca_Oam_Port_Manager::create_entry_unsafe ---> Entering\n");
+
+  unordered_set<uint32_t> tunnel_ids_table;
+  _oam_ports_table.emplace(port_id, tunnel_ids_table);
+
+  ACA_LOG_DEBUG("%s", "Aca_Oam_Port_Manager::create_entry_unsafe <--- Exiting\n");
+}
+
+// update oam_ports_table and add the OAM punt rule also if this is the first port in the VPC
+void Aca_Oam_Port_Manager::add_vpc(uint32_t port_id, uint32_t tunnel_id)
+{
+  ACA_LOG_DEBUG("%s", "Aca_Oam_Port_Manager::add_vpc ---> Entering\n");
+  // -----critical section starts-----
+  _oam_ports_table_mutex.lock();
+  if (_oam_ports_table.find(port_id) == _oam_ports_table.end()) {
+    create_entry_unsafe(port_id);
+    _create_oam_ofp(port_id);
+  }
+  _oam_ports_table[port_id].emplace(tunnel_id);
+
+  _oam_ports_table_mutex.unlock();
+  // -----critical section ends-----
+
+  ACA_LOG_DEBUG("%s", "ACA_OVS_Programmer::add_vpc <--- Exiting\n");
+}
+
+// update oam_ports_table and delete the OAM punt rule if the last port in the VPC has been deleted
+int Aca_Oam_Port_Manager::remove_vpc(uint32_t port_id, uint32_t tunnel_id)
+{
+  ACA_LOG_DEBUG("%s", "Aca_Oam_Port_Manager::remove_vpc ---> Entering\n");
+
+  int overall_rc;
+
+  // -----critical section starts-----
+  _oam_ports_table_mutex.lock();
+  if (_oam_ports_table.find(port_id) == _oam_ports_table.end()) {
+    ACA_LOG_ERROR("port id %u not find in oam_ports_table\n", port_id);
+    overall_rc = ENOENT;
+  } else {
+    _oam_ports_table[port_id].erase(tunnel_id);
+    // clean up the oam_ports_table entry and oam flow rule if there is no port assoicated
+    if (_oam_ports_table[port_id].empty()) {
+      if (_oam_ports_table.erase(port_id) == 1 && _delete_oam_ofp(port_id) == EXIT_SUCCESS) {
+        ACA_LOG_INFO("Successfuly cleaned up entry for port_id %u\n", port_id);
+        overall_rc = EXIT_SUCCESS;
+      } else {
+        ACA_LOG_ERROR("Failed to clean up entry for port_id %u\n", port_id);
+        overall_rc = EXIT_FAILURE;
+      }
+    }
+  }
+  _oam_ports_table_mutex.unlock();
+  // -----critical section ends-----
+
+  ACA_LOG_DEBUG("Aca_Oam_Port_Manager::remove_vpc <--- Exiting, overall_rc = %d\n", overall_rc);
+
+  return overall_rc;
+}
+
+// Determine whether the port is oam server port
+bool Aca_Oam_Port_Manager::is_oam_server_port(uint32_t port_id)
+{
+  ACA_LOG_DEBUG("%s", "Aca_Oam_Port_Manager::is_oam_server_port ---> Entering\n");
+
+  bool overall_rc;
+
+  // -----critical section starts-----
+  _oam_ports_table_mutex.lock();
+  if (_oam_ports_table.find(port_id) == _oam_ports_table.end()) {
+    ACA_LOG_ERROR("port id %u not find in oam_ports_table\n", port_id);
+    overall_rc = false;
+  } else {
+    overall_rc = true;
+  }
+  _oam_ports_table_mutex.unlock();
+  // -----critical section ends-----
+  ACA_LOG_DEBUG("Aca_Oam_Port_Manager::is_oam_server_port <--- Exiting, overall_rc = %d\n",
+                overall_rc);
+
+  return overall_rc;
 }
 
 } // namespace aca_oam_port_manager
