@@ -13,14 +13,13 @@
 // limitations under the License.
 
 #include "gtest/gtest.h"
+#define private public
 #include "aca_oam_server.h"
 #include "aca_util.h"
 #include "goalstateprovisioner.grpc.pb.h"
 #include <string.h>
 #include "aca_ovs_control.h"
 #include "aca_vlan_manager.h"
-
-#define private public
 
 using namespace aca_oam_server;
 

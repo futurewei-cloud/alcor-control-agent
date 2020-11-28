@@ -255,6 +255,7 @@ void ACA_Oam_Server::_parse_oam_none(uint32_t /* in_port */, oam_message *oammsg
 
 int ACA_Oam_Server::_add_direct_path(oam_match match, oam_action action)
 {
+  unsigned long not_care_culminative_time;
   int overall_rc;
   //
 
@@ -272,8 +273,9 @@ int ACA_Oam_Server::_add_direct_path(oam_match match, oam_action action)
                       ",idle_timeout=" + action.idle_timeout + ",output:" + outport_name;
 
   // Adding unicast rules in table20
-  string opt = "table=20,priority=50," + cmd_match + "," + cmd_action;
-  overall_rc = ACA_OVS_Control::get_instance().add_flow("br-tun", opt.c_str());
+  string opt = "ovs-ofctl add flow table=20,priority=50," + cmd_match + "," + cmd_action;
+  aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
+          opt, not_care_culminative_time, overall_rc);
 
   if (overall_rc == EXIT_SUCCESS) {
     ACA_LOG_INFO("%s", "Add direct path succeeded!\n");
