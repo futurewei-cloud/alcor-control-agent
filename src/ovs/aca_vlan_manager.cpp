@@ -82,6 +82,30 @@ uint ACA_Vlan_Manager::get_or_create_vlan_id(string vpc_id)
   return acquired_vlan_id;
 }
 
+// convert tunnel_id to vpc_id
+string ACA_Vlan_Manager::get_vpc_id(uint tunnel_id)
+{
+  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::get_vpc_id ---> Entering\n");
+
+  int overall_rc = ENOENT;
+  string vpc_id;
+  // -----critical section starts-----
+  _vpcs_table_mutex.lock();
+  unordered_map<string, vpc_table_entry>::iterator iter;
+  for (iter = _vpcs_table.begin(); iter != _vpcs_table.end(); iter++) {
+    vpc_table_entry entry = iter->second;
+    if (entry.tunnel_id == tunnel_id) {
+      vpc_id = iter->first;
+      overall_rc = EXIT_SUCCESS;
+      break;
+    }
+  }
+  _vpcs_table_mutex.unlock();
+  // -----critical section ends-----
+  return vpc_id;
+  ACA_LOG_DEBUG("ACA_Vlan_Manager::get_vpc_id <--- Exiting, overall_rc = %d\n", overall_rc);
+}
+
 int ACA_Vlan_Manager::create_ovs_port(string vpc_id, string ovs_port,
                                       uint tunnel_id, ulong &culminative_time)
 {
@@ -363,7 +387,7 @@ int ACA_Vlan_Manager::get_oam_server_port(string vpc_id)
   ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::get_oam_server_port ---> Entering\n");
 
   int overall_rc;
-  uint32_t port_number;
+  uint port_number;
   // -----critical section starts-----
   _vpcs_table_mutex.lock();
   if (_vpcs_table.find(vpc_id) == _vpcs_table.end()) {
@@ -383,35 +407,8 @@ int ACA_Vlan_Manager::get_oam_server_port(string vpc_id)
   return port_number;
 }
 
-//query oam_port with tunnel_id
-int ACA_Vlan_Manager::get_oam_server_port(uint32_t tunnel_id)
-{
-  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::get_oam_server_port ---> Entering\n");
-
-  uint32_t port_number = 0;
-  int overall_rc = ENOENT;
-  // -----critical section starts-----
-  _vpcs_table_mutex.lock();
-  unordered_map<string, vpc_table_entry>::iterator iter;
-  for (iter = _vpcs_table.begin(); iter != _vpcs_table.end(); iter++) {
-    vpc_table_entry entry = iter->second;
-    if (entry.tunnel_id == tunnel_id) {
-      port_number = entry.oam_server_port;
-      overall_rc = EXIT_SUCCESS;
-      break;
-    }
-  }
-
-  _vpcs_table_mutex.unlock();
-  // -----critical section ends-----
-  ACA_LOG_DEBUG("ACA_Vlan_Manager::get_oam_server_port <--- Exiting, overall_rc = %d\n",
-                overall_rc);
-
-  return port_number;
-}
-
 // Bind oam_server_port to vpc
-void ACA_Vlan_Manager::set_oam_server_port(string vpc_id, uint32_t port_number)
+void ACA_Vlan_Manager::set_oam_server_port(string vpc_id, uint port_number)
 {
   ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::set_oam_server_port ---> Entering\n");
 
@@ -427,28 +424,37 @@ void ACA_Vlan_Manager::set_oam_server_port(string vpc_id, uint32_t port_number)
   ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::set_oam_server_port <--- Exiting\n");
 }
 
-#ifdef __GNUC__
-#  define UNUSE(x) UNUSE_ ## x __attribute__((__unused__))
-#else
-#  define UNUSE(x) UNUSE_ ## x
-#endif
-
-void ACA_Vlan_Manager::set_oam_server_port(uint32_t UNUSE(tunnel_id), uint32_t UNUSE(port_number))
-{
-  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::set_oam_server_port ---> Entering\n");
-
-  //TBD.
-
-  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::set_oam_server_port <--- Exiting\n");
-}
-
 // create a neighbor port without specifying vpc_id and neighbor ID
-int ACA_Vlan_Manager::create_neighbor_outport(alcor::schema::NetworkType UNUSE(network_type),
-                                              string UNUSE(remote_host_ip), uint UNUSE(tunnel_id),
-                                              ulong &UNUSE(culminative_time))
+int ACA_Vlan_Manager::create_neighbor_outport(alcor::schema::NetworkType network_type,
+                                              string remote_host_ip, uint tunnel_id,
+                                              ulong &culminative_time)
 {
-  int overall_rc = EXIT_FAILURE;
-  // TBD.
+  int overall_rc = EXIT_SUCCESS;
+
+  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::create_neighbor_outport ---> Entering\n");
+
+  string outport_name = aca_get_outport_name(network_type, remote_host_ip);
+
+  // use vpc_id to query vlan_manager to lookup an existing vpc_id entry to get its
+  // internal vlan id or to create a new vpc_id entry to get a new internal vlan id
+  string vpc_id = this->get_vpc_id(tunnel_id);
+
+  // since this is a new outport, configure OVS and openflow rule
+  string cmd_string =
+          "--may-exist add-port br-tun " + outport_name + " -- set interface " +
+          outport_name + " type=" + aca_get_network_type_string(network_type) +
+          " options:df_default=true options:egress_pkt_mark=0 options:in_key=flow options:out_key=flow options:remote_ip=" +
+          remote_host_ip;
+
+  ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
+          cmd_string, culminative_time, overall_rc);
+
+  // incoming from neighbor through vxlan port (based on remote IP)
+  cmd_string = "add-flow br-tun \"table=0,priority=25,in_port=\"" +
+               outport_name + "\" actions=resubmit(,4)\"";
+
+  ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
+          cmd_string, culminative_time, overall_rc);
 
   ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::create_neighbor_outport <--- Exiting\n");
 

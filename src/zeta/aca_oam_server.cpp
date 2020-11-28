@@ -52,7 +52,7 @@ bool ACA_Oam_Server::_validate_oam_message(oam_message *oammsg)
     return false;
   }
 
-  if (OAM_MSG_FLOW_INJECTION != oammsg->op_code || OAM_MSG_FLOW_DELETION != oammsg->op_code) {
+  if (OAM_MSG_FLOW_INJECTION != oammsg->op_code && OAM_MSG_FLOW_DELETION != oammsg->op_code) {
     retcode = -1;
     ACA_LOG_ERROR("%s", "Invalid 'op_code' field for OAM message!\n");
   }
@@ -64,7 +64,7 @@ bool ACA_Oam_Server::_validate_oam_message(oam_message *oammsg)
   return true;
 }
 
-void ACA_Oam_Server::oams_recv(uint32_t udp_dport, void *message)
+void ACA_Oam_Server::oams_recv(uint udp_dport, void *message)
 {
   oam_message *oammsg = nullptr;
 
@@ -103,7 +103,7 @@ uint8_t ACA_Oam_Server::_get_message_type(oam_message *oammsg)
     return OAM_MSG_NONE;
   }
 
-  if (!oammsg->op_code) {
+  if (oammsg->op_code != OAM_MSG_FLOW_INJECTION && oammsg->op_code != OAM_MSG_FLOW_DELETION) {
     return OAM_MSG_NONE;
   }
 
@@ -178,9 +178,9 @@ oam_action ACA_Oam_Server::_get_oam_action_field(oam_message *oammsg)
 }
 
 //check whether the udp_dport is the oam server port of the vpc
-bool ACA_Oam_Server::_check_oam_server_port(uint32_t udp_dport, oam_match match)
+bool ACA_Oam_Server::_check_oam_server_port(uint udp_dport, oam_match match)
 {
-  uint32_t oam_port =
+  uint oam_port =
           aca_vlan_manager::ACA_Vlan_Manager::get_instance().get_oam_server_port(match.vni);
 
   if (udp_dport == oam_port) {
@@ -192,7 +192,7 @@ bool ACA_Oam_Server::_check_oam_server_port(uint32_t udp_dport, oam_match match)
   }
 }
 
-void ACA_Oam_Server::_parse_oam_flow_injection(uint32_t udp_dport, oam_message *oammsg)
+void ACA_Oam_Server::_parse_oam_flow_injection(uint udp_dport, oam_message *oammsg)
 {
   unsigned long not_care_culminative_time;
   int overall_rc;
@@ -207,7 +207,7 @@ void ACA_Oam_Server::_parse_oam_flow_injection(uint32_t udp_dport, oam_message *
   oam_action action = _get_oam_action_field(oammsg);
 
   string remote_host_ip = action.node_nw_dst;
-  uint32_t tunnel_id = strtoul(match.vni.c_str(), NULL, 10);
+  uint tunnel_id = strtoul(match.vni.c_str(), NULL, 10);
   alcor::schema::NetworkType network_type = alcor::schema::NetworkType::VXLAN;
 
   if (!aca_is_port_on_same_host(remote_host_ip)) {
@@ -227,7 +227,7 @@ void ACA_Oam_Server::_parse_oam_flow_injection(uint32_t udp_dport, oam_message *
   return;
 }
 
-void ACA_Oam_Server::_parse_oam_flow_deletion(uint32_t udp_dport, oam_message *oammsg)
+void ACA_Oam_Server::_parse_oam_flow_deletion(uint udp_dport, oam_message *oammsg)
 {
   int overall_rc;
   oam_match match = _get_oam_match_field(oammsg);
@@ -247,7 +247,7 @@ void ACA_Oam_Server::_parse_oam_flow_deletion(uint32_t udp_dport, oam_message *o
   return;
 }
 
-void ACA_Oam_Server::_parse_oam_none(uint32_t /* in_port */, oam_message *oammsg)
+void ACA_Oam_Server::_parse_oam_none(uint /* in_port */, oam_message *oammsg)
 {
   ACA_LOG_ERROR("Wrong OAM message type! (Message type = %d)\n", _get_message_type(oammsg));
   return;
@@ -257,29 +257,29 @@ int ACA_Oam_Server::_add_direct_path(oam_match match, oam_action action)
 {
   unsigned long not_care_culminative_time;
   int overall_rc;
-  //
-
-  string vlan_id = to_string(aca_vlan_manager::ACA_Vlan_Manager::get_instance().get_or_create_vlan_id(
-          match.vni));
+  string vpc_id = aca_vlan_manager::ACA_Vlan_Manager::get_instance().get_vpc_id(
+          strtoul(match.vni.c_str(), NULL, 10));
+  string vlan_id = to_string(
+          aca_vlan_manager::ACA_Vlan_Manager::get_instance().get_or_create_vlan_id(vpc_id));
   string outport_name =
           aca_get_outport_name(alcor::schema::NetworkType::VXLAN, action.node_nw_dst);
 
   string cmd_match = "ip,nw_proto=" + match.proto + ",nw_src=" + match.sip +
                      ",nw_dst=" + match.dip + ",tp_src=" + match.sport +
                      ",tp_dst=" + match.dport + ",dl_vlan=" + vlan_id;
-  string cmd_action = "action=\"strip_vlan,load:" + match.vni +
+  string cmd_action = "actions=strip_vlan,load:" + match.vni +
                       "->NXM_NX_TUN_ID[],mod_dl_dst=" + action.inst_dl_dst +
-                      ",mod_nw_dst=" + action.inst_nw_dst +
-                      ",idle_timeout=" + action.idle_timeout + ",output:" + outport_name;
+                      ",mod_nw_dst=" + action.inst_nw_dst + ",output:" + outport_name;
 
   // Adding unicast rules in table20
-  string opt = "ovs-ofctl add flow table=20,priority=50," + cmd_match + "," + cmd_action;
+  string opt = "add-flow br-tun table=20,priority=50," + cmd_match + "," + cmd_action;
   aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
           opt, not_care_culminative_time, overall_rc);
 
   if (overall_rc == EXIT_SUCCESS) {
     ACA_LOG_INFO("%s", "Add direct path succeeded!\n");
   } else {
+    //ACA_LOG_INFO("%s\n", opt.c_str());
     ACA_LOG_ERROR("Add direct path failed!!! overrall_rc: %d\n", overall_rc);
   }
 
@@ -289,8 +289,10 @@ int ACA_Oam_Server::_add_direct_path(oam_match match, oam_action action)
 int ACA_Oam_Server::_del_direct_path(oam_match match)
 {
   int overall_rc;
-  string vlan_id = to_string(aca_vlan_manager::ACA_Vlan_Manager::get_instance().get_or_create_vlan_id(
-          match.vni));
+  string vpc_id = aca_vlan_manager::ACA_Vlan_Manager::get_instance().get_vpc_id(
+          strtoul(match.vni.c_str(), NULL, 10));
+  string vlan_id = to_string(
+          aca_vlan_manager::ACA_Vlan_Manager::get_instance().get_or_create_vlan_id(vpc_id));
 
   string opt = "table=20,priority=50,ip,nw_proto=" + match.proto +
                ",nw_src=" + match.sip + ",nw_dst=" + match.dip +

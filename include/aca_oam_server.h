@@ -27,11 +27,10 @@ using namespace std;
 namespace aca_oam_server
 {
 //OAM Message Type
-#define SIZE_OP_CODE 8
-#define OAM_MSG_FLOW_INJECTION (0x0)
-#define OAM_MSG_FLOW_DELETION (0x1)
-#define OAM_MSG_NONE (0x3)
-#define OAM_MSG_MAX (0x3)
+#define OAM_MSG_FLOW_INJECTION (0)
+#define OAM_MSG_FLOW_DELETION (1)
+#define OAM_MSG_NONE (3)
+#define OAM_MSG_MAX (3)
 
 struct oam_match {
   string sip;

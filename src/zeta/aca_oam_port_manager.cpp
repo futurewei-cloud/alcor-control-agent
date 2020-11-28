@@ -44,7 +44,7 @@ Aca_Oam_Port_Manager &Aca_Oam_Port_Manager::get_instance()
 }
 
 // add the OAM punt rule
-int Aca_Oam_Port_Manager::_create_oam_ofp(uint32_t port_number)
+int Aca_Oam_Port_Manager::_create_oam_ofp(uint port_number)
 {
   int overall_rc;
 
@@ -62,7 +62,7 @@ int Aca_Oam_Port_Manager::_create_oam_ofp(uint32_t port_number)
 }
 
 // delete the OAM punt rule
-int Aca_Oam_Port_Manager::_delete_oam_ofp(uint32_t port_number)
+int Aca_Oam_Port_Manager::_delete_oam_ofp(uint port_number)
 {
   int overall_rc;
 
@@ -96,18 +96,18 @@ void Aca_Oam_Port_Manager::_clear_all_data()
 
 // unsafe function, needs to be called inside oam_ports_table_mutex lock
 // this function assumes there is no existing entry for port_number
-void Aca_Oam_Port_Manager::create_entry_unsafe(uint32_t port_number)
+void Aca_Oam_Port_Manager::create_entry_unsafe(uint port_number)
 {
   ACA_LOG_DEBUG("%s", "Aca_Oam_Port_Manager::create_entry_unsafe ---> Entering\n");
 
-  unordered_set<uint32_t> tunnel_ids_table;
+  unordered_set<uint> tunnel_ids_table;
   _oam_ports_table.emplace(port_number, tunnel_ids_table);
 
   ACA_LOG_DEBUG("%s", "Aca_Oam_Port_Manager::create_entry_unsafe <--- Exiting\n");
 }
 
 // update oam_ports_table and add the OAM punt rule also if this is the first port in the VPC
-void Aca_Oam_Port_Manager::add_vpc(uint32_t port_number, uint32_t tunnel_id)
+void Aca_Oam_Port_Manager::add_vpc(uint port_number, uint tunnel_id)
 {
   ACA_LOG_DEBUG("%s", "Aca_Oam_Port_Manager::add_vpc ---> Entering\n");
   // -----critical section starts-----
@@ -125,7 +125,7 @@ void Aca_Oam_Port_Manager::add_vpc(uint32_t port_number, uint32_t tunnel_id)
 }
 
 // update oam_ports_table and delete the OAM punt rule if the last port in the VPC has been deleted
-int Aca_Oam_Port_Manager::remove_vpc(uint32_t port_number, uint32_t tunnel_id)
+int Aca_Oam_Port_Manager::remove_vpc(uint port_number, uint tunnel_id)
 {
   ACA_LOG_DEBUG("%s", "Aca_Oam_Port_Manager::remove_vpc ---> Entering\n");
 
@@ -158,7 +158,7 @@ int Aca_Oam_Port_Manager::remove_vpc(uint32_t port_number, uint32_t tunnel_id)
 }
 
 // Determine whether the port is oam server port
-bool Aca_Oam_Port_Manager::is_oam_server_port(uint32_t port_number)
+bool Aca_Oam_Port_Manager::is_oam_server_port(uint port_number)
 {
   ACA_LOG_DEBUG("%s", "Aca_Oam_Port_Manager::is_oam_server_port ---> Entering\n");
 
