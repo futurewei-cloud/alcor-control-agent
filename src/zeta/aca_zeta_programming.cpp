@@ -31,7 +31,7 @@ ACA_Zeta_Programming &ACA_Zeta_Programming::get_instance()
 }
 
 int ACA_Zeta_Programming::create_or_update_zeta_config(const alcor::schema::AuxGateway current_AuxGateway,
-                                                       const string vpc_id, uint32_t tunnel_id)
+                                                       const string vpc_id, uint tunnel_id)
 {
   unsigned long not_care_culminative_time;
   int overall_rc;
@@ -49,9 +49,9 @@ int ACA_Zeta_Programming::create_or_update_zeta_config(const alcor::schema::AuxG
               not_care_culminative_time);
     }
   }
-  uint32_t oam_server_port = current_AuxGateway.zeta_info().port_inband_operation();
+  uint oam_server_port = current_AuxGateway.zeta_info().port_inband_operation();
 
-  uint32_t oam_port = ACA_Vlan_Manager::get_instance().get_oam_server_port(vpc_id);
+  uint oam_port = ACA_Vlan_Manager::get_instance().get_oam_server_port(vpc_id);
   // oam_server_port is not set
   if (oam_port == 0) {
     ACA_Vlan_Manager::get_instance().set_oam_server_port(vpc_id, oam_server_port);
@@ -66,7 +66,7 @@ int ACA_Zeta_Programming::create_or_update_zeta_config(const alcor::schema::AuxG
 }
 
 int ACA_Zeta_Programming::delete_zeta_config(const alcor::schema::AuxGateway current_AuxGateway,
-                                             const string vpc_id, uint32_t tunnel_id)
+                                             const string vpc_id, uint tunnel_id)
 {
   zeta_config stZetaCfg;
   int overall_rc;
@@ -75,7 +75,7 @@ int ACA_Zeta_Programming::delete_zeta_config(const alcor::schema::AuxGateway cur
   for (auto destination : current_AuxGateway.destinations()) {
     stZetaCfg.zeta_buckets.push_back(destination.ip_address());
   }
-  uint32_t oam_server_port = current_AuxGateway.zeta_info().port_inband_operation();
+  uint oam_server_port = current_AuxGateway.zeta_info().port_inband_operation();
 
   // Reset oam_server_port to 0
   ACA_Vlan_Manager::get_instance().set_oam_server_port(vpc_id, 0);
