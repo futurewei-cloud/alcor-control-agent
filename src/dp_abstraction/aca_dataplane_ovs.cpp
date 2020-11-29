@@ -112,7 +112,6 @@ int ACA_Dataplane_OVS::update_vpc_state_workitem(const VpcState /* current_VpcSt
                                                  GoalStateOperationReply & /* gsOperationReply */)
 {
   // TO BE IMPLEMENTED
-  
   return ENOSYS;
 }
 
@@ -202,10 +201,10 @@ int ACA_Dataplane_OVS::update_port_state_workitem(const PortState current_PortSt
 
     if (!aca_lookup_auxgateway_info(parsed_struct, current_PortConfiguration.vpc_id(),
                                     found_auxgateway)) {
-      ACA_LOG_ERROR("Not able to find the info for port with subnet ID: %s.\n",
-                    current_PortConfiguration.vpc_id().c_str());
-      overall_rc = -EXIT_FAILURE;
-      goto EXIT;
+      // mark as warning for now to support the current workflow
+      // the code should proceed assuming this is a non aux gateway (zeta) supported port
+      ACA_LOG_WARN("Not able to find auxgateway info for port with vpc ID: %s.\n",
+                   current_PortConfiguration.vpc_id().c_str());
     }
 
     switch (current_PortState.operation_type()) {
