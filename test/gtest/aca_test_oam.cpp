@@ -114,9 +114,9 @@ TEST(oam_message_test_cases, add_direct_path_valid)
 
   aca_oam_server::ACA_Oam_Server::get_instance()._add_direct_path(match, action);
 
-  string cmd = "table=20,priority=50,ip,nw_proto=" + match.proto +
-               ",nw_src=" + match.sip + ",nw_dst=" + match.dip +
-               ",tp_src=" + match.sport + ",tp_dst=" + match.dport + ",dl_vlan=" + vlan_id;
+  string cmd = "table=20,ip,nw_proto=" + match.proto + ",nw_src=" + match.sip +
+               ",nw_dst=" + match.dip + ",tp_src=" + match.sport +
+               ",tp_dst=" + match.dport + ",dl_vlan=" + vlan_id;
 
   retcode = ACA_OVS_Control::get_instance().flow_exists("br-tun", cmd.c_str());
   EXPECT_EQ(retcode, EXIT_SUCCESS);
@@ -134,11 +134,11 @@ TEST(oam_message_test_cases, del_direct_path_valid)
   match.dip = vip_address_2;
   match.sport = "55";
   match.dport = "77";
-  match.vni = "300";
+  match.vni = "400";
   match.proto = "6";
 
   action.inst_nw_dst = vip_address_3;
-  action.node_nw_dst = remote_ip_1;
+  action.node_nw_dst = remote_ip_2;
   action.inst_dl_dst = vmac_address_1;
   action.node_dl_dst = vmac_address_2;
   action.idle_timeout = "120";
@@ -155,18 +155,14 @@ TEST(oam_message_test_cases, del_direct_path_valid)
   string vlan_id = to_string(
           aca_vlan_manager::ACA_Vlan_Manager::get_instance().get_or_create_vlan_id(vpc_id));
 
-  string cmd_test = "table=20,priority=50,dl_vlan=100,ip,nw_src=192.168.1.71,nw_dst=192.168.1.81,actions=strip_vlan,load:0x1->NXM_NX_TUN_ID[],output:vxlan-40668915";
-
-  aca_ovs_control::ACA_OVS_Control::get_instance().add_flow("br_tun", cmd_test.c_str());
-
   aca_oam_server::ACA_Oam_Server::get_instance()._add_direct_path(match, action);
 
   aca_oam_server::ACA_Oam_Server::get_instance()._del_direct_path(match);
 
-  string cmd = "table=20,priority=50,ip,nw_proto=" + match.proto +
-               ",nw_src=" + match.sip + ",nw_dst=" + match.dip +
-               ",tp_src=" + match.sport + ",tp_dst=" + match.dport + ",dl_vlan=" + vlan_id;
+  string cmd = "table=20,ip,nw_proto=" + match.proto + ",nw_src=" + match.sip +
+               ",nw_dst=" + match.dip + ",tp_src=" + match.sport +
+               ",tp_dst=" + match.dport + ",dl_vlan=" + vlan_id;
 
   retcode = ACA_OVS_Control::get_instance().flow_exists("br-tun", cmd.c_str());
-  EXPECT_EQ(retcode, EXIT_SUCCESS);
+  EXPECT_EQ(retcode, EXIT_FAILURE);
 }
