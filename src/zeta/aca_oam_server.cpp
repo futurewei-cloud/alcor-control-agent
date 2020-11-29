@@ -256,7 +256,7 @@ void ACA_Oam_Server::_parse_oam_none(uint /* in_port */, oam_message *oammsg)
 int ACA_Oam_Server::_add_direct_path(oam_match match, oam_action action)
 {
   unsigned long not_care_culminative_time;
-  int overall_rc;
+  int overall_rc = EXIT_SUCCESS;
   string vpc_id = aca_vlan_manager::ACA_Vlan_Manager::get_instance().get_vpc_id(
           strtoul(match.vni.c_str(), NULL, 10));
   string vlan_id = to_string(
@@ -267,12 +267,13 @@ int ACA_Oam_Server::_add_direct_path(oam_match match, oam_action action)
   string cmd_match = "ip,nw_proto=" + match.proto + ",nw_src=" + match.sip +
                      ",nw_dst=" + match.dip + ",tp_src=" + match.sport +
                      ",tp_dst=" + match.dport + ",dl_vlan=" + vlan_id;
-  string cmd_action = "actions=strip_vlan,load:" + match.vni +
+  string cmd_action = ",actions=\"strip_vlan,load:" + match.vni +
                       "->NXM_NX_TUN_ID[],mod_dl_dst=" + action.inst_dl_dst +
-                      ",mod_nw_dst=" + action.inst_nw_dst + ",output:" + outport_name;
+                      ",mod_nw_dst=" + action.inst_nw_dst + ",output:" + outport_name +"\"";
 
   // Adding unicast rules in table20
-  string opt = "add-flow br-tun table=20,priority=50," + cmd_match + "," + cmd_action;
+  string opt = "add-flow br-tun table=20,priority=50,idle_timeout=" + action.idle_timeout +
+               "," + cmd_match + cmd_action;
   aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
           opt, not_care_culminative_time, overall_rc);
 
