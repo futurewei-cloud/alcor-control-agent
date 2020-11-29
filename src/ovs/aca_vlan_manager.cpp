@@ -163,7 +163,7 @@ int ACA_Vlan_Manager::delete_ovs_port(string vpc_id, string ovs_port,
   ACA_LOG_DEBUG("ACA_Vlan_Manager::delete_ovs_port <--- Exiting, overall_rc = %d\n", overall_rc);
 
   return overall_rc;
-}
+} // namespace aca_vlan_manager
 
 int ACA_Vlan_Manager::create_neighbor_outport(string neighbor_id, string vpc_id,
                                               alcor::schema::NetworkType network_type,
@@ -353,6 +353,104 @@ int ACA_Vlan_Manager::get_outports_unsafe(string vpc_id, string &outports)
   }
 
   ACA_LOG_DEBUG("ACA_Vlan_Manager::get_outports <--- Exiting, overall_rc = %d\n", overall_rc);
+
+  return overall_rc;
+}
+
+//query oam_port with vpc_id
+int ACA_Vlan_Manager::get_oam_server_port(string vpc_id)
+{
+  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::get_oam_server_port ---> Entering\n");
+
+  int overall_rc;
+  uint32_t port_number;
+  // -----critical section starts-----
+  _vpcs_table_mutex.lock();
+  if (_vpcs_table.find(vpc_id) == _vpcs_table.end()) {
+    ACA_LOG_ERROR("vpc_id %s not find in vpc_table\n", vpc_id.c_str());
+    // If the vpc cannot be found, set the port number to 0.
+    port_number = 0;
+    overall_rc = ENOENT;
+  } else {
+    port_number = _vpcs_table[vpc_id].oam_server_port;
+    overall_rc = EXIT_SUCCESS;
+  }
+  _vpcs_table_mutex.unlock();
+  // -----critical section ends-----
+  ACA_LOG_DEBUG("ACA_Vlan_Manager::get_oam_server_port <--- Exiting, overall_rc = %d\n",
+                overall_rc);
+
+  return port_number;
+}
+
+//query oam_port with tunnel_id
+int ACA_Vlan_Manager::get_oam_server_port(uint32_t tunnel_id)
+{
+  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::get_oam_server_port ---> Entering\n");
+
+  uint32_t port_number = 0;
+  int overall_rc = ENOENT;
+  // -----critical section starts-----
+  _vpcs_table_mutex.lock();
+  unordered_map<string, vpc_table_entry>::iterator iter;
+  for (iter = _vpcs_table.begin(); iter != _vpcs_table.end(); iter++) {
+    vpc_table_entry entry = iter->second;
+    if (entry.tunnel_id == tunnel_id) {
+      port_number = entry.oam_server_port;
+      overall_rc = EXIT_SUCCESS;
+      break;
+    }
+  }
+
+  _vpcs_table_mutex.unlock();
+  // -----critical section ends-----
+  ACA_LOG_DEBUG("ACA_Vlan_Manager::get_oam_server_port <--- Exiting, overall_rc = %d\n",
+                overall_rc);
+
+  return port_number;
+}
+
+// Bind oam_server_port to vpc
+void ACA_Vlan_Manager::set_oam_server_port(string vpc_id, uint32_t port_number)
+{
+  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::set_oam_server_port ---> Entering\n");
+
+  // -----critical section starts-----
+  _vpcs_table_mutex.lock();
+  if (_vpcs_table.find(vpc_id) == _vpcs_table.end()) {
+    create_entry_unsafe(vpc_id);
+  }
+  _vpcs_table[vpc_id].oam_server_port = port_number;
+  _vpcs_table_mutex.unlock();
+  // -----critical section ends-----
+
+  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::set_oam_server_port <--- Exiting\n");
+}
+
+#ifdef __GNUC__
+#  define UNUSE(x) UNUSE_ ## x __attribute__((__unused__))
+#else
+#  define UNUSE(x) UNUSE_ ## x
+#endif
+
+void ACA_Vlan_Manager::set_oam_server_port(uint32_t UNUSE(tunnel_id), uint32_t UNUSE(port_number))
+{
+  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::set_oam_server_port ---> Entering\n");
+
+  //TBD.
+
+  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::set_oam_server_port <--- Exiting\n");
+}
+
+// create a neighbor port without specifying vpc_id and neighbor ID
+int ACA_Vlan_Manager::create_neighbor_outport(alcor::schema::NetworkType UNUSE(network_type),
+                                              string UNUSE(remote_host_ip), uint UNUSE(tunnel_id),
+                                              ulong &UNUSE(culminative_time))
+{
+  int overall_rc = EXIT_FAILURE;
+  // TBD.
+
+  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::create_neighbor_outport <--- Exiting\n");
 
   return overall_rc;
 }

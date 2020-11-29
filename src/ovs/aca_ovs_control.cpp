@@ -33,6 +33,8 @@
 #include <netinet/ip.h>
 #include <arpa/inet.h>
 #include "aca_dhcp_server.h"
+#include "aca_oam_server.h"
+#include "aca_oam_port_manager.h"
 
 using namespace std;
 using namespace ovs_control;
@@ -82,7 +84,8 @@ int ACA_OVS_Control::control()
     packet_out(target, options);
   } else {
     cout << "Usage: -c <command> -t <target> -o <options>" << endl;
-    cout << "   commands: monitor, dump-flows, add-flow, mod-flows, del-flows, packet-out..." << endl;
+    cout << "   commands: monitor, dump-flows, add-flow, mod-flows, del-flows, packet-out..."
+         << endl;
     cout << "   target: swtich name, such as br-int, br-tun, ..." << endl;
     cout << "   options: " << endl;
     cout << "      moinor: \"[miss-len] [invalid-ttl] [resume] [watch:format]\"" << endl;
@@ -103,7 +106,7 @@ int ACA_OVS_Control::dump_flows(const char *bridge, const char *opt)
 
 int ACA_OVS_Control::flow_exists(const char *bridge, const char *flow)
 {
-  int rc = -EINVAL;  
+  int rc = -EINVAL;
   rc = OVS_Control::get_instance().dump_flows(bridge, flow, false);
   return rc;
 }
@@ -228,8 +231,8 @@ void ACA_OVS_Control::parse_packet(uint32_t in_port, void *packet)
         ACA_LOG_INFO("   Payload (%d bytes):\n", size_payload);
         // print_payload(payload, size_payload);
       }
-    } 
-  } else if (ip->ip_p == IPPROTO_UDP) {  
+    }
+  } else if (ip->ip_p == IPPROTO_UDP) {
     /* define/compute udp header offset */
     const struct sniff_udp *udp =
             (struct sniff_udp *)(base + SIZE_ETHERNET + vlan_len + size_ip);
@@ -263,6 +266,14 @@ void ACA_OVS_Control::parse_packet(uint32_t in_port, void *packet)
         ACA_LOG_INFO("%s", "   Message Type: DHCP\n");
         aca_dhcp_server::ACA_Dhcp_Server::get_instance().dhcps_recv(
                 in_port, const_cast<unsigned char *>(payload));
+      }
+
+      /* oam message procedure */
+      if (aca_oam_port_manager::Aca_Oam_Port_Manager::get_instance().is_oam_server_port(
+                  (uint32_t)udp_dport)) {
+        ACA_LOG_INFO("%s", "   Message Type: OAM\n");
+        aca_oam_server::ACA_Oam_Server::get_instance().oams_recv(
+                (uint32_t)udp_dport, const_cast<unsigned char *>(payload));
       }
     }
   }

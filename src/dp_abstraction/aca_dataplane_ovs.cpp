@@ -22,11 +22,13 @@
 #include "aca_util.h"
 #include <errno.h>
 #include <arpa/inet.h>
+#include "aca_zeta_programming.h"
 
 using namespace std;
 using namespace alcor::schema;
 using namespace aca_ovs_l2_programmer;
 using namespace aca_ovs_l3_programmer;
+using namespace aca_zeta_programming;
 
 namespace aca_dataplane_ovs
 {
@@ -72,6 +74,34 @@ static bool aca_lookup_subnet_info(GoalState &parsed_struct, const string target
   return false;
 }
 
+static bool aca_lookup_auxgateway_info(GoalState &parsed_struct, const string targeted_vpc_id,
+                                       AuxGateway &found_auxgateway)
+{
+  // TODO: cache the auxgateway information to a dictionary to provide
+  // a faster look up for the next run, only use the below loop for
+  // cache miss.
+  // Look up the vpc configuration to query for auxgateway
+  for (int i = 0; i < parsed_struct.vpc_states_size(); i++) {
+    VpcConfiguration current_VpcConfiguration =
+            parsed_struct.vpc_states(i).configuration();
+
+    ACA_LOG_DEBUG("current_VpcConfiguration Vpc ID: %s.\n",
+                  current_VpcConfiguration.id().c_str());
+
+    if (parsed_struct.vpc_states(i).operation_type() == OperationType::INFO) {
+      if (current_VpcConfiguration.id() == targeted_vpc_id) {
+        found_auxgateway =
+                parsed_struct.vpc_states(i).configuration().auxiliary_gateway();
+        return true;
+      }
+    }
+  }
+
+  ACA_LOG_ERROR("Not able to find auxgateway info for port with vpc ID: %s.\n",
+                targeted_vpc_id.c_str());
+  return false;
+}
+
 int ACA_Dataplane_OVS::initialize()
 {
   // TODO: improve the logging system, and add logging to this module
@@ -82,6 +112,7 @@ int ACA_Dataplane_OVS::update_vpc_state_workitem(const VpcState /* current_VpcSt
                                                  GoalStateOperationReply & /* gsOperationReply */)
 {
   // TO BE IMPLEMENTED
+
   return ENOSYS;
 }
 
@@ -136,6 +167,7 @@ int ACA_Dataplane_OVS::update_port_state_workitem(const PortState current_PortSt
   string virtual_mac_address;
   string host_ip_address;
   string port_cidr;
+  AuxGateway found_auxgateway;
   ulong culminative_dataplane_programming_time = 0;
   ulong culminative_network_configuration_time = 0;
 
@@ -166,6 +198,14 @@ int ACA_Dataplane_OVS::update_port_state_workitem(const PortState current_PortSt
                     current_PortConfiguration.fixed_ips(0).subnet_id().c_str());
       overall_rc = -EXIT_FAILURE;
       goto EXIT;
+    }
+
+    if (!aca_lookup_auxgateway_info(parsed_struct, current_PortConfiguration.vpc_id(),
+                                    found_auxgateway)) {
+      // mark as warning for now to support the current workflow
+      // the code should proceed assuming this is a non aux gateway (zeta) supported port
+      ACA_LOG_WARN("Not able to find auxgateway info for port with vpc ID: %s.\n",
+                   current_PortConfiguration.vpc_id().c_str());
     }
 
     switch (current_PortState.operation_type()) {
@@ -200,6 +240,13 @@ int ACA_Dataplane_OVS::update_port_state_workitem(const PortState current_PortSt
               current_PortConfiguration.vpc_id(), generated_port_name, port_cidr,
               found_tunnel_id, culminative_dataplane_programming_time);
 
+      if (found_auxgateway.aux_gateway_type() == ZETA) {
+        ACA_LOG_INFO("%s", "AuxGateway_type is zeta!\n");
+        // Update the zeta settings of vpc
+        overall_rc = ACA_Zeta_Programming::get_instance().create_or_update_zeta_config(
+                found_auxgateway, current_PortConfiguration.vpc_id(), found_tunnel_id);
+      }
+
       break;
 
     case OperationType::UPDATE:
@@ -225,6 +272,13 @@ int ACA_Dataplane_OVS::update_port_state_workitem(const PortState current_PortSt
       overall_rc = ACA_OVS_L2_Programmer::get_instance().delete_port(
               current_PortConfiguration.vpc_id(), generated_port_name,
               found_tunnel_id, culminative_dataplane_programming_time);
+
+      if (found_auxgateway.aux_gateway_type() == ZETA) {
+        ACA_LOG_INFO("%s", "AuxGateway_type is zeta!\n");
+        // Delete the zeta settings of vpc
+        overall_rc = ACA_Zeta_Programming::get_instance().delete_zeta_config(
+                found_auxgateway, current_PortConfiguration.vpc_id(), found_tunnel_id);
+      }
 
       break;
 
