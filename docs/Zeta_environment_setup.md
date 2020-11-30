@@ -127,19 +127,18 @@
 
 #### Step 2: gtest - ACA test cases initialize
 
--   Use gtest create br-int, br-tun, patch ports, create ports filled with vpc-id, port-name and configure gateway path
+-   Use gtest to configure gateway path, and add a openflow rule on both computer nodes to receive oam packets
 -   The steps of gtest about Zeta mainly have the following steps:
-    -   delete the old br-int and br-tun, and create new br-int and br-tun, and patch ports between br-int and br-tun
-    -   create a port and the information of this port should be the same as that posted to ZGC by REST API
-    -   add a rule in table 0, its function is to jump to table 2 when the packet comes from "patch-int"
-    -   add a rule in table 2, its function is to jump to table 22  
-    -   create group entries according to ZGC info received from ZGC
-    -   add a rule in table 22, its function is to jump to the corresponding group table entry according to vlan id
+    -   delete the old br-int and br-tun, and create new br-int and br-tun, and patch ports between br-int and br-tun;
+    -   create a port and the information of this port should be the same as that posted to ZGC by REST API;
+    -   add the OAM punt rule to receive oam packets from gateway;
+    -   add group entry configure gateway path;
+    -   the ports on the two computing nodes begin to communicate. 
+- Observe whether the gateway path is successful through "n_packet";
 
+#### Step 3: First packet upload to gateways by default
 
-#### Step 3: Firest packet upload to gateways by default
-
-#### Step 4: Firest packet forwarded to destination by gateawy
+#### Step 4: First packet forwarded to destination by gateawy
 
 #### Step 5: Gateways reply OAM packet
 
