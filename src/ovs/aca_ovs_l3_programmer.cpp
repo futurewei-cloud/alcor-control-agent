@@ -212,7 +212,7 @@ int ACA_OVS_L3_Programmer::create_or_update_router(RouterConfiguration &current_
           // don't need to handle the gateway_ip and gateway_mac change, because that will
           // require the subnet to remove the gateway port and add in a new one
 
-          source_vlan_id = ACA_Vlan_Manager::get_instance().get_or_create_vlan_id(found_vpc_id);
+          source_vlan_id = ACA_Vlan_Manager::get_instance().get_or_create_vlan_id(found_tunnel_id);
 
           current_gateway_mac = found_gateway_mac;
           current_gateway_mac.erase(
@@ -409,7 +409,7 @@ int ACA_OVS_L3_Programmer::delete_router(RouterConfiguration &current_RouterConf
     ACA_LOG_DEBUG("Subnet_id entry to delete:%s\n", subnet_entry_to_delete.c_str());
 
     source_vlan_id = ACA_Vlan_Manager::get_instance().get_or_create_vlan_id(
-            subnet_it->second.vpc_id);
+            subnet_it->second.tunnel_id);
 
     current_gateway_mac = subnet_it->second.gateway_mac;
     current_gateway_mac.erase(
@@ -534,10 +534,10 @@ int ACA_OVS_L3_Programmer::create_or_update_l3_neighbor(
         ACA_LOG_DEBUG("Found L3 neighbor subnet_id:%s\n ", subnet_it->first.c_str());
 
         source_vlan_id = ACA_Vlan_Manager::get_instance().get_or_create_vlan_id(
-                subnet_it->second.vpc_id);
+                subnet_it->second.tunnel_id);
 
         destination_vlan_id =
-                ACA_Vlan_Manager::get_instance().get_or_create_vlan_id(vpc_id);
+                ACA_Vlan_Manager::get_instance().get_or_create_vlan_id(tunnel_id);
 
         // for the first implementation, we will go ahead and program the on demand routing rule here
         // in the future, the programming of the on demand rule will be triggered by the first packet
@@ -639,7 +639,7 @@ int ACA_OVS_L3_Programmer::delete_l3_neighbor(const string neighbor_id, const st
         ACA_LOG_DEBUG("subnet_id:%s\n ", subnet_it->first.c_str());
 
         source_vlan_id = ACA_Vlan_Manager::get_instance().get_or_create_vlan_id(
-                subnet_it->second.vpc_id);
+                subnet_it->second.tunnel_id);
 
         // for the first implementation with static routing rules (non on-demand)
         // go ahead to remove it

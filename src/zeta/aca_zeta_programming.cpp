@@ -31,7 +31,8 @@ ACA_Zeta_Programming &ACA_Zeta_Programming::get_instance()
 }
 
 int ACA_Zeta_Programming::create_or_update_zeta_config(const alcor::schema::AuxGateway current_AuxGateway,
-                                                       const string vpc_id, uint32_t tunnel_id)
+                                                       const string /*vpc_id*/,
+                                                       uint32_t tunnel_id)
 {
   unsigned long not_care_culminative_time;
   int overall_rc;
@@ -51,10 +52,10 @@ int ACA_Zeta_Programming::create_or_update_zeta_config(const alcor::schema::AuxG
   }
   uint32_t oam_server_port = current_AuxGateway.zeta_info().port_inband_operation();
 
-  uint32_t oam_port = ACA_Vlan_Manager::get_instance().get_oam_server_port(vpc_id);
+  uint32_t oam_port = ACA_Vlan_Manager::get_instance().get_oam_server_port(tunnel_id);
   // oam_server_port is not set
   if (oam_port == 0) {
-    ACA_Vlan_Manager::get_instance().set_oam_server_port(vpc_id, oam_server_port);
+    ACA_Vlan_Manager::get_instance().set_oam_server_port(tunnel_id, oam_server_port);
 
     //update oam_ports_table and add the OAM punt rule also if this is the first port in the VPC
     Aca_Oam_Port_Manager::get_instance().add_vpc(oam_server_port, tunnel_id);
@@ -66,7 +67,7 @@ int ACA_Zeta_Programming::create_or_update_zeta_config(const alcor::schema::AuxG
 }
 
 int ACA_Zeta_Programming::delete_zeta_config(const alcor::schema::AuxGateway current_AuxGateway,
-                                             const string vpc_id, uint32_t tunnel_id)
+                                             const string /*vpc_id*/, uint32_t tunnel_id)
 {
   zeta_config stZetaCfg;
   int overall_rc;
@@ -78,7 +79,7 @@ int ACA_Zeta_Programming::delete_zeta_config(const alcor::schema::AuxGateway cur
   uint32_t oam_server_port = current_AuxGateway.zeta_info().port_inband_operation();
 
   // Reset oam_server_port to 0
-  ACA_Vlan_Manager::get_instance().set_oam_server_port(vpc_id, 0);
+  ACA_Vlan_Manager::get_instance().set_oam_server_port(tunnel_id, 0);
 
   // update oam_ports_table and delete the OAM punt rule if the last port in the VPC has been deleted
   Aca_Oam_Port_Manager::get_instance().remove_vpc(oam_server_port, tunnel_id);

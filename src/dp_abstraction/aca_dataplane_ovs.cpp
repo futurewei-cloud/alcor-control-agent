@@ -444,9 +444,8 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
                       aca_get_outport_name(found_network_type, host_ip_address);
 
               overall_rc = ACA_OVS_L2_Programmer::get_instance().delete_l2_neighbor(
-                      current_NeighborConfiguration.id(),
-                      current_NeighborConfiguration.vpc_id(), outport_name,
-                      culminative_dataplane_programming_time);
+                      current_NeighborConfiguration.id(), found_tunnel_id,
+                      outport_name, culminative_dataplane_programming_time);
             } else {
               ACA_LOG_ERROR("Invalid neighbor state operation type %d\n",
                             current_NeighborState.operation_type());
