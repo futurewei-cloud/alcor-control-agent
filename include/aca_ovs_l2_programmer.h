@@ -42,7 +42,7 @@ class ACA_OVS_L2_Programmer {
                                    const std::string remote_host_ip,
                                    uint tunnel_id, ulong &culminative_time);
 
-  int delete_l2_neighbor(const std::string neighbor_id, const std::string vpc_id,
+  int delete_l2_neighbor(const std::string neighbor_id, uint tunnel_id,
                          const std::string outport_name, ulong &culminative_time);
 
   void execute_ovsdb_command(const std::string cmd_string,

@@ -36,13 +36,7 @@ extern string remote_ip_2;
 
 alcor::schema::NetworkType network_type = alcor::schema::NetworkType::VXLAN;
 
-string tunnel_id_1 = "555";
-string tunnel_id_2 = "666";
 
-string vlan_id_1 = "100";
-string vlan_id_2 = "200";
-
-string outport_name_1 = "vx9999";
 
 using namespace aca_ovs_control;
 
@@ -107,10 +101,8 @@ TEST(oam_message_test_cases, add_direct_path_valid)
             network_type, action.node_nw_dst, 300, not_care_culminative_time);
   }
 
-  string vpc_id = aca_vlan_manager::ACA_Vlan_Manager::get_instance().get_vpc_id(
-          strtoul(match.vni.c_str(), NULL, 10));
-  string vlan_id = to_string(
-          aca_vlan_manager::ACA_Vlan_Manager::get_instance().get_or_create_vlan_id(vpc_id));
+  string vlan_id = to_string(aca_vlan_manager::ACA_Vlan_Manager::get_instance().get_or_create_vlan_id(
+          strtoul(match.vni.c_str(), NULL, 10)));
 
   aca_oam_server::ACA_Oam_Server::get_instance()._add_direct_path(match, action);
 
@@ -150,10 +142,8 @@ TEST(oam_message_test_cases, del_direct_path_valid)
             network_type, action.node_nw_dst, 300, not_care_culminative_time);
   }
 
-  string vpc_id = aca_vlan_manager::ACA_Vlan_Manager::get_instance().get_vpc_id(
-          strtoul(match.vni.c_str(), NULL, 10));
-  string vlan_id = to_string(
-          aca_vlan_manager::ACA_Vlan_Manager::get_instance().get_or_create_vlan_id(vpc_id));
+  string vlan_id = to_string(aca_vlan_manager::ACA_Vlan_Manager::get_instance().get_or_create_vlan_id(
+          strtoul(match.vni.c_str(), NULL, 10)));
 
   aca_oam_server::ACA_Oam_Server::get_instance()._add_direct_path(match, action);
 

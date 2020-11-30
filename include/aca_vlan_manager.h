@@ -34,12 +34,11 @@ namespace aca_vlan_manager
 struct vpc_table_entry {
   uint vlan_id;
 
-  uint tunnel_id;
   // list of ovs_ports names on this host in the same VPC to share the same internal vlan_id
   list<string> ovs_ports;
+
   // hashtable of output (e.g. vxlan) tunnel ports to the neighbor host communication
-  // to neighbor port ID mapping in this VPC
-  // unordered_map <outports, list of neighbor port IDs>
+  // hashtable <key: outports string, value: list of neighbor port IDs>
   unordered_map<string, list<string> > outports_neighbors_table;
 
   uint oam_server_port;
@@ -51,9 +50,7 @@ class ACA_Vlan_Manager {
 
   void clear_all_data();
 
-  uint get_or_create_vlan_id(string vpc_id);
-
-  string get_vpc_id(uint tunnel_id);
+  uint get_or_create_vlan_id(uint tunnel_id);
 
   int create_ovs_port(string vpc_id, string ovs_port, uint tunnel_id, ulong &culminative_time);
 
@@ -67,14 +64,14 @@ class ACA_Vlan_Manager {
   int create_neighbor_outport(alcor::schema::NetworkType network_type, string remote_host_ip,
                               uint tunnel_id, ulong &culminative_time);
 
-  int delete_neighbor_outport(string neighbor_id, string vpc_id,
+  int delete_neighbor_outport(string neighbor_id, uint tunnel_id,
                               string outport_name, ulong &culminative_time);
 
-  int get_outports_unsafe(string vpc_id, string &outports);
+  int get_outports_unsafe(uint tunnel_id, string &outports);
 
-  int get_oam_server_port(string vpc_id);
+  uint get_oam_server_port(uint tunnel_id);
 
-  void set_oam_server_port(string vpc_id, uint port_number);
+  void set_oam_server_port(uint tunnel_id, uint port_number);
 
   // compiler will flag error when below is called
   ACA_Vlan_Manager(ACA_Vlan_Manager const &) = delete;
@@ -84,12 +81,13 @@ class ACA_Vlan_Manager {
   ACA_Vlan_Manager(){};
   ~ACA_Vlan_Manager(){};
 
-  unordered_map<string, vpc_table_entry> _vpcs_table;
+  // hashtable <key: tunnel ID, value: vpc_table_entry>
+  unordered_map<uint, vpc_table_entry> _vpcs_table;
 
   // mutex for reading and writing to _vpcs_table
   mutex _vpcs_table_mutex;
 
-  void create_entry_unsafe(string vpc_id);
+  void create_entry_unsafe(uint tunnel_id);
 };
 } // namespace aca_vlan_manager
 #endif // #ifndef ACA_VLAN_MANAGER_H
