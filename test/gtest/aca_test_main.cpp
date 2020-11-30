@@ -34,6 +34,7 @@ string g_ofctl_target = EMPTY_STRING;
 string g_ofctl_options = EMPTY_STRING;
 string remote_ip_1 = "172.17.0.2"; // for docker network
 string remote_ip_2 = "172.17.0.3"; // for docker network
+uint neighbors_to_create = 10;
 
 static string mq_broker_ip = "pulsar://localhost:6650"; //for the broker running in localhost
 static string mq_test_topic = "my-topic";
@@ -91,7 +92,7 @@ int main(int argc, char **argv)
 
   testing::InitGoogleTest(&argc, argv);
 
-  while ((option = getopt(argc, argv, "p:c:")) != -1) {
+  while ((option = getopt(argc, argv, "p:c:n:")) != -1) {
     switch (option) {
     case 'p':
       remote_ip_1 = optarg;
@@ -99,11 +100,15 @@ int main(int argc, char **argv)
     case 'c':
       remote_ip_2 = optarg;
       break;
+    case 'n':
+      neighbors_to_create = std::stoi(optarg);
+      break;
     default: /* the '?' case when the option is not recognized */
       fprintf(stderr,
               "Usage: %s\n"
               "\t\t[-m parent machine IP]\n"
-              "\t\t[-c child machine IP]\n",
+              "\t\t[-c child machine IP]\n"
+              "\t\t[-n neighbors to create (default: 10)]\n",
               argv[0]);
       exit(EXIT_FAILURE);
     }
