@@ -218,7 +218,7 @@ void ACA_Oam_Server::_parse_oam_flow_injection(uint udp_dport, oam_message *oamm
     aca_vlan_manager::ACA_Vlan_Manager::get_instance().create_neighbor_outport(
             network_type, remote_host_ip, tunnel_id, not_care_culminative_time);
   }
-  overall_rc = aca_oam_server::ACA_Oam_Server::_add_direct_path(match, action);
+  overall_rc = _add_direct_path(match, action);
 
   if (overall_rc == EXIT_SUCCESS) {
     ACA_LOG_INFO("%s", "Flow injection succeeded!\n");

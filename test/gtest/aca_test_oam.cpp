@@ -36,8 +36,6 @@ extern string remote_ip_2;
 
 alcor::schema::NetworkType network_type = alcor::schema::NetworkType::VXLAN;
 
-
-
 using namespace aca_ovs_control;
 
 TEST(oam_message_test_cases, oams_recv_valid)
@@ -104,6 +102,7 @@ TEST(oam_message_test_cases, add_direct_path_valid)
   string vlan_id = to_string(aca_vlan_manager::ACA_Vlan_Manager::get_instance().get_or_create_vlan_id(
           strtoul(match.vni.c_str(), NULL, 10)));
 
+  // add unicast rule
   aca_oam_server::ACA_Oam_Server::get_instance()._add_direct_path(match, action);
 
   string cmd = "table=20,ip,nw_proto=" + match.proto + ",nw_src=" + match.sip +
@@ -112,47 +111,4 @@ TEST(oam_message_test_cases, add_direct_path_valid)
 
   retcode = ACA_OVS_Control::get_instance().flow_exists("br-tun", cmd.c_str());
   EXPECT_EQ(retcode, EXIT_SUCCESS);
-}
-
-TEST(oam_message_test_cases, del_direct_path_valid)
-{
-  int retcode = 0;
-  unsigned long not_care_culminative_time;
-
-  oam_match match;
-  oam_action action;
-
-  match.sip = vip_address_1;
-  match.dip = vip_address_2;
-  match.sport = "55";
-  match.dport = "77";
-  match.vni = "400";
-  match.proto = "6";
-
-  action.inst_nw_dst = vip_address_3;
-  action.node_nw_dst = remote_ip_2;
-  action.inst_dl_dst = vmac_address_1;
-  action.node_dl_dst = vmac_address_2;
-  action.idle_timeout = "120";
-
-  if (!aca_is_port_on_same_host(action.node_nw_dst)) {
-    ACA_LOG_INFO("%s", "port_neighbor not exist!\n");
-    //crate neighbor_port
-    aca_vlan_manager::ACA_Vlan_Manager::get_instance().create_neighbor_outport(
-            network_type, action.node_nw_dst, 300, not_care_culminative_time);
-  }
-
-  string vlan_id = to_string(aca_vlan_manager::ACA_Vlan_Manager::get_instance().get_or_create_vlan_id(
-          strtoul(match.vni.c_str(), NULL, 10)));
-
-  aca_oam_server::ACA_Oam_Server::get_instance()._add_direct_path(match, action);
-
-  aca_oam_server::ACA_Oam_Server::get_instance()._del_direct_path(match);
-
-  string cmd = "table=20,ip,nw_proto=" + match.proto + ",nw_src=" + match.sip +
-               ",nw_dst=" + match.dip + ",tp_src=" + match.sport +
-               ",tp_dst=" + match.dport + ",dl_vlan=" + vlan_id;
-
-  retcode = ACA_OVS_Control::get_instance().flow_exists("br-tun", cmd.c_str());
-  EXPECT_EQ(retcode, EXIT_FAILURE);
 }

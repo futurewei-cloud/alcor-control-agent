@@ -48,14 +48,18 @@ string auxGateway_id_2 = "22";
 
 uint tunnel_id_1 = 555;
 uint tunnel_id_2 = 666;
+uint oam_port_1 = 6799;
+uint oam_port_2 = 6800;
 
 TEST(zeta_programming_test_cases, create_or_update_zeta_config_valid)
 {
   int retcode = 0;
 
+  // fill in auxgateway state structs
   AuxGateway new_auxGateway;
   new_auxGateway.set_id(auxGateway_id_1);
-
+  AuxGateway_zeta *zeta_info = new_auxGateway.mutable_zeta_info();
+  zeta_info->set_port_inband_operation(oam_port_1);
   AuxGateway_destination *destinaton;
 
   destinaton = new_auxGateway.add_destinations();
@@ -76,9 +80,11 @@ TEST(zeta_programming_test_cases, delete_zeta_config_valid)
 {
   int retcode = 0;
 
+  // fill in auxgateway state structs
   AuxGateway new_auxGateway;
   new_auxGateway.set_id(auxGateway_id_1);
-
+  AuxGateway_zeta *zeta_info = new_auxGateway.mutable_zeta_info();
+  zeta_info->set_port_inband_operation(oam_port_1);
   AuxGateway_destination *destinaton;
 
   destinaton = new_auxGateway.add_destinations();
@@ -95,20 +101,24 @@ TEST(zeta_programming_test_cases, delete_zeta_config_valid)
   EXPECT_EQ(retcode, EXIT_SUCCESS);
 }
 
-TEST(zeta_programming_test_cases, DISABLED_l2_auxgateway_test)
+TEST(zeta_programming_test_cases, DISABLED_auxgateway_test)
 {
   int retcode;
   GoalState GoalState_builder;
   VpcState *new_vpc_states = GoalState_builder.add_vpc_states();
   PortState *new_port_states = GoalState_builder.add_port_states();
 
+  // fill in vpc state structs
   VpcConfiguration *VpcConfiguration_builder = new_vpc_states->mutable_configuration();
-
   VpcConfiguration_builder->set_tunnel_id(tunnel_id_1);
   VpcConfiguration_builder->set_id(vpc_id_1);
-  AuxGateway *auxGateway = VpcConfiguration_builder->mutable_auxiliary_gateway();
 
+  // fill in auxgateway state structs
+  AuxGateway *auxGateway = VpcConfiguration_builder->mutable_auxiliary_gateway();
   auxGateway->set_id(auxGateway_id_2);
+
+  AuxGateway_zeta *zeta_info = auxGateway->mutable_zeta_info();
+  zeta_info->set_port_inband_operation(oam_port_2);
 
   AuxGateway_destination *destinaton;
 
@@ -120,10 +130,9 @@ TEST(zeta_programming_test_cases, DISABLED_l2_auxgateway_test)
   destinaton->set_ip_address(remote_ip_2);
   destinaton->set_mac_address(node_mac_address_2);
 
+  // fill in port state structs
   PortConfiguration *PortConfiguration_builder = new_port_states->mutable_configuration();
-
   PortConfiguration_builder->set_vpc_id(vpc_id_1);
-
   new_port_states->set_operation_type(OperationType::CREATE);
 
   GoalStateOperationReply gsOperationalReply;
