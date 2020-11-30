@@ -61,6 +61,7 @@ extern string subnet2_gw_ip;
 extern string subnet1_gw_mac;
 extern string subnet2_gw_mac;
 extern bool g_demo_mode;
+extern uint neighbors_to_create;
 
 extern void aca_test_create_default_port_state(PortState *new_port_states);
 extern void aca_test_create_default_subnet_state(SubnetState *new_subnet_states);
@@ -513,7 +514,7 @@ TEST(ovs_l2_test_cases, 10_l2_neighbor_CREATE)
 
 TEST(ovs_l2_test_cases, 1_port_CREATE_plus_10_l2_neighbor_CREATE)
 {
-  aca_test_1_port_CREATE_plus_X_neighbors_CREATE(NeighborType::L2, 10);
+  aca_test_1_port_CREATE_plus_X_neighbors_CREATE(NeighborType::L2, neighbors_to_create);
 }
 
 TEST(ovs_l2_test_cases, DISABLED_2_ports_CREATE_test_traffic_PARENT)
