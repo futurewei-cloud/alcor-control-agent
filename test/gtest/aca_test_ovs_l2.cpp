@@ -67,6 +67,8 @@ extern void aca_test_create_default_subnet_state(SubnetState *new_subnet_states)
 extern void aca_test_1_neighbor_CREATE_DELETE(NeighborType input_neighbor_type);
 extern void aca_test_1_port_CREATE_plus_neighbor_CREATE(NeighborType input_neighbor_type);
 extern void aca_test_10_neighbor_CREATE(NeighborType input_neighbor_type);
+extern void aca_test_1_port_CREATE_plus_X_neighbors_CREATE(NeighborType input_neighbor_type,
+                                                           uint neighbors_to_create);
 
 // TODO: setup bridge when br-int is up and br-tun is gone
 
@@ -191,7 +193,7 @@ TEST(ovs_l2_test_cases, 2_ports_CREATE_test_traffic_plus_neighbor_internal)
 
   // delete neighbor info
   overall_rc = ACA_OVS_L2_Programmer::get_instance().delete_l2_neighbor(
-          port_id_4, vpc_id_1, outport_name, not_care_culminative_time);
+          port_id_4, 20, outport_name, not_care_culminative_time);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
 
@@ -507,6 +509,11 @@ TEST(ovs_l2_test_cases, 1_port_CREATE_plus_l2_neighbor_CREATE)
 TEST(ovs_l2_test_cases, 10_l2_neighbor_CREATE)
 {
   aca_test_10_neighbor_CREATE(NeighborType::L2);
+}
+
+TEST(ovs_l2_test_cases, 1_port_CREATE_plus_10_l2_neighbor_CREATE)
+{
+  aca_test_1_port_CREATE_plus_X_neighbors_CREATE(NeighborType::L2, 10);
 }
 
 TEST(ovs_l2_test_cases, DISABLED_2_ports_CREATE_test_traffic_PARENT)

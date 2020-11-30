@@ -192,7 +192,7 @@ int ACA_OVS_L2_Programmer::create_port(const string vpc_id, const string port_na
 
   // use vpc_id to query vlan_manager to lookup an existing vpc_id entry to get its
   // internal vlan id or to create a new vpc_id entry to get a new internal vlan id
-  int internal_vlan_id = ACA_Vlan_Manager::get_instance().get_or_create_vlan_id(vpc_id);
+  int internal_vlan_id = ACA_Vlan_Manager::get_instance().get_or_create_vlan_id(tunnel_id);
 
   ACA_Vlan_Manager::get_instance().create_ovs_port(vpc_id, port_name, tunnel_id, culminative_time);
 
@@ -307,7 +307,7 @@ int ACA_OVS_L2_Programmer::create_or_update_l2_neighbor(
   return overall_rc;
 }
 
-int ACA_OVS_L2_Programmer::delete_l2_neighbor(const string neighbor_id, const string vpc_id,
+int ACA_OVS_L2_Programmer::delete_l2_neighbor(const string neighbor_id, uint tunnel_id,
                                               const string outport_name, ulong &culminative_time)
 {
   ACA_LOG_DEBUG("%s", "ACA_OVS_L2_Programmer::delete_l2_neighbor ---> Entering\n");
@@ -316,8 +316,8 @@ int ACA_OVS_L2_Programmer::delete_l2_neighbor(const string neighbor_id, const st
     throw std::invalid_argument("neighbor_id is empty");
   }
 
-  if (vpc_id.empty()) {
-    throw std::invalid_argument("vpc_id is empty");
+  if (tunnel_id == 0) {
+    throw std::invalid_argument("tunnel_id is 0");
   }
 
   if (outport_name.empty()) {
@@ -325,7 +325,7 @@ int ACA_OVS_L2_Programmer::delete_l2_neighbor(const string neighbor_id, const st
   }
 
   int overall_rc = ACA_Vlan_Manager::get_instance().delete_neighbor_outport(
-          neighbor_id, vpc_id, outport_name, culminative_time);
+          neighbor_id, tunnel_id, outport_name, culminative_time);
 
   ACA_LOG_DEBUG("ACA_OVS_L2_Programmer::delete_l2_neighbor <--- Exiting, overall_rc = %d\n",
                 overall_rc);

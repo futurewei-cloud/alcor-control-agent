@@ -156,7 +156,9 @@ oam_match ACA_Oam_Server::_get_oam_match_field(oam_message *oammsg)
   match.sport = to_string(ntohs(msg_data.src_port));
   match.dport = to_string(ntohs(msg_data.dst_port));
   match.proto = to_string(msg_data.proto);
-  match.vni = _get_vpc_id(msg_data.vni);
+  // TODO: figure out the conversion from 4 bytes VNI to tunnel_id string
+  // why don't we make match.vni as uint?
+  // match.vni = _get_vpc_id(msg_data.vni);
 
   return match;
 }
@@ -180,8 +182,8 @@ oam_action ACA_Oam_Server::_get_oam_action_field(oam_message *oammsg)
 //check whether the udp_dport is the oam server port of the vpc
 bool ACA_Oam_Server::_check_oam_server_port(uint32_t udp_dport, oam_match match)
 {
-  uint32_t oam_port =
-          aca_vlan_manager::ACA_Vlan_Manager::get_instance().get_oam_server_port(match.vni);
+  uint32_t oam_port = aca_vlan_manager::ACA_Vlan_Manager::get_instance().get_oam_server_port(
+          std::stoul(match.vni));
 
   if (udp_dport == oam_port) {
     ACA_LOG_INFO("%s", "oam port is correct!\n");
@@ -259,7 +261,7 @@ int ACA_Oam_Server::_add_direct_path(oam_match match, oam_action action)
   //
 
   string vlan_id = to_string(aca_vlan_manager::ACA_Vlan_Manager::get_instance().get_or_create_vlan_id(
-          match.vni));
+          std::stoul(match.vni)));
   string outport_name =
           aca_get_outport_name(alcor::schema::NetworkType::VXLAN, action.node_nw_dst);
 
@@ -288,7 +290,7 @@ int ACA_Oam_Server::_del_direct_path(oam_match match)
 {
   int overall_rc;
   string vlan_id = to_string(aca_vlan_manager::ACA_Vlan_Manager::get_instance().get_or_create_vlan_id(
-          match.vni));
+          std::stoul(match.vni)));
 
   string opt = "table=20,priority=50,ip,nw_proto=" + match.proto +
                ",nw_src=" + match.sip + ",nw_dst=" + match.dip +
