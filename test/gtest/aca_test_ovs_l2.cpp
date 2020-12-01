@@ -479,22 +479,21 @@ TEST(ovs_l2_test_cases, 10_ports_CREATE)
   ulong total_port_create_time = 0;
 
   for (int i = 0; i < PORTS_TO_CREATE; i++) {
-    ACA_LOG_DEBUG("Port State(%d) took: %u nanoseconds or %u milliseconds\n", i,
-                  gsOperationReply.operation_statuses(i).state_elapse_time(),
-                  gsOperationReply.operation_statuses(i).state_elapse_time() / 1000000);
+    ACA_LOG_DEBUG("Port State(%d) took: %u microseconds or %u milliseconds\n",
+                  i, gsOperationReply.operation_statuses(i).state_elapse_time(),
+                  gsOperationReply.operation_statuses(i).state_elapse_time() / 1000);
 
     total_port_create_time += gsOperationReply.operation_statuses(i).state_elapse_time();
   }
 
   ulong average_port_create_time = total_port_create_time / PORTS_TO_CREATE;
 
-  ACA_LOG_INFO("Average Port Create of %d took: %lu nanoseconds or %lu milliseconds\n",
-               PORTS_TO_CREATE, average_port_create_time,
-               average_port_create_time / 1000000);
+  ACA_LOG_INFO("Average Port Create of %d took: %lu microseconds or %lu milliseconds\n",
+               PORTS_TO_CREATE, average_port_create_time, average_port_create_time / 1000);
 
-  ACA_LOG_INFO("[TEST METRICS] Elapsed time for message total operation took: %u nanoseconds or %u milliseconds\n",
+  ACA_LOG_INFO("[TEST METRICS] Elapsed time for message total operation took: %u microseconds or %u milliseconds\n",
                gsOperationReply.message_total_operation_time(),
-               gsOperationReply.message_total_operation_time() / 1000000);
+               gsOperationReply.message_total_operation_time() / 1000);
 }
 
 TEST(ovs_l2_test_cases, 1_l2_neighbor_CREATE_DELETE)

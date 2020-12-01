@@ -44,8 +44,18 @@ string g_grpc_port = EMPTY_STRING;
 string g_ofctl_command = EMPTY_STRING;
 string g_ofctl_target = EMPTY_STRING;
 string g_ofctl_options = EMPTY_STRING;
-std::atomic_ulong g_total_network_configuration_time(0);
+
+// total time for execute_system_command in microseconds
+std::atomic_ulong g_total_execute_system_time(0);
+// total time for execute_ovsdb_command in microseconds
+std::atomic_ulong g_total_execute_ovsdb_time(0);
+// total time for execute_openflow_command in microseconds
+std::atomic_ulong g_total_execute_openflow_time(0);
+// total time for vpcs_table_mutex in microseconds
+std::atomic_ulong g_total_vpcs_table_mutex_time(0);
+// total time for goal state update in microseconds
 std::atomic_ulong g_total_update_GS_time(0);
+// total time for ACA message in microseconds
 std::atomic_ulong g_total_ACA_Message_time(0);
 bool g_demo_mode = false;
 bool g_debug_mode = false;
@@ -67,12 +77,24 @@ using std::string;
 
 static void aca_cleanup()
 {
-  ACA_LOG_DEBUG("g_total_network_configuration_time = %lu nanoseconds or %lu milliseconds\n",
-                g_total_network_configuration_time.load(),
-                g_total_network_configuration_time.load() / 1000000);
+  ACA_LOG_DEBUG("g_total_execute_system_time = %lu microseconds or %lu milliseconds\n",
+                g_total_execute_system_time.load(),
+                g_total_execute_system_time.load() / 1000);
 
-  ACA_LOG_DEBUG("g_total_update_GS_time = %lu nanoseconds or %lu milliseconds\n",
-                g_total_update_GS_time.load(), g_total_update_GS_time.load() / 1000000);
+  ACA_LOG_DEBUG("g_total_execute_ovsdb_time = %lu microseconds or %lu milliseconds\n",
+                g_total_execute_ovsdb_time.load(),
+                g_total_execute_ovsdb_time.load() / 1000);
+
+  ACA_LOG_DEBUG("g_total_execute_openflow_time = %lu microseconds or %lu milliseconds\n",
+                g_total_execute_openflow_time.load(),
+                g_total_execute_openflow_time.load() / 1000);
+
+  ACA_LOG_DEBUG("g_total_vpcs_table_mutex_time = %lu microseconds or %lu milliseconds\n",
+                g_total_vpcs_table_mutex_time.load(),
+                g_total_vpcs_table_mutex_time.load() / 1000);
+
+  ACA_LOG_DEBUG("g_total_update_GS_time = %lu microseconds or %lu milliseconds\n",
+                g_total_update_GS_time.load(), g_total_update_GS_time.load() / 1000);
 
   ACA_LOG_INFO("%s", "Program exiting, cleaning up...\n");
 
@@ -93,14 +115,14 @@ void print_goalstateReply(GoalStateOperationReply gsOperationReply)
                   gsOperationReply.operation_statuses(i).operation_type());
     ACA_LOG_DEBUG("gsOperationReply(%d) - operation_status: %d\n", i,
                   gsOperationReply.operation_statuses(i).operation_status());
-    ACA_LOG_DEBUG("gsOperationReply(%d) - total_operation_time: %u nanoseconds or %u milliseconds\n",
+    ACA_LOG_DEBUG("gsOperationReply(%d) - total_operation_time: %u microseconds or %u milliseconds\n",
                   i, gsOperationReply.operation_statuses(i).state_elapse_time(),
-                  gsOperationReply.operation_statuses(i).state_elapse_time() / 1000000);
+                  gsOperationReply.operation_statuses(i).state_elapse_time() / 1000);
   }
 
-  ACA_LOG_DEBUG("[METRICS] ACA message_total_operation_time: %u nanoseconds or %u milliseconds\n",
+  ACA_LOG_DEBUG("[METRICS] ACA message_total_operation_time: %u microseconds or %u milliseconds\n",
                 gsOperationReply.message_total_operation_time(),
-                gsOperationReply.message_total_operation_time() / 1000000);
+                gsOperationReply.message_total_operation_time() / 1000);
 
   g_total_ACA_Message_time += gsOperationReply.message_total_operation_time();
 }
@@ -125,33 +147,34 @@ class GoalStateProvisionerClient {
 
     auto after_rpc_ptr = std::chrono::steady_clock::now();
 
-    auto rpc_ptr_ns = cast_to_nanoseconds(after_rpc_ptr - before_rpc_ptr).count();
+    auto rpc_ptr_time = cast_to_microseconds(after_rpc_ptr - before_rpc_ptr).count();
 
-    ACA_LOG_INFO("[METRICS] rpc_ptr took: %ld nanoseconds or %ld milliseconds\n",
-                 rpc_ptr_ns, rpc_ptr_ns / 1000000);
+    ACA_LOG_INFO("[METRICS] rpc_ptr took: %ld microseconds or %ld milliseconds\n",
+                 rpc_ptr_time, rpc_ptr_time / 1000);
 
     rpc->StartCall();
 
     auto after_start_call = std::chrono::steady_clock::now();
 
-    auto start_call_ns = cast_to_nanoseconds(after_start_call - after_rpc_ptr).count();
+    auto start_call_time =
+            cast_to_microseconds(after_start_call - after_rpc_ptr).count();
 
-    ACA_LOG_INFO("[METRICS] start_call took: %ld nanoseconds or %ld milliseconds\n",
-                 start_call_ns, start_call_ns / 1000000);
+    ACA_LOG_INFO("[METRICS] start_call took: %ld microseconds or %ld milliseconds\n",
+                 start_call_time, start_call_time / 1000);
 
     rpc->Finish(&reply, &status, (void *)1);
 
     auto after_finish = std::chrono::steady_clock::now();
 
-    auto finish_ns = cast_to_nanoseconds(after_finish - after_start_call).count();
+    auto finish_time = cast_to_microseconds(after_finish - after_start_call).count();
 
-    ACA_LOG_INFO("[METRICS] finish took: %ld nanoseconds or %ld milliseconds\n",
-                 finish_ns, finish_ns / 1000000);
+    ACA_LOG_INFO("[METRICS] finish took: %ld microseconds or %ld milliseconds\n",
+                 finish_time, finish_time / 1000);
 
-    auto total_ns = cast_to_nanoseconds(after_finish - before_rpc_ptr).count();
+    auto total_time = cast_to_microseconds(after_finish - before_rpc_ptr).count();
 
-    ACA_LOG_INFO("[METRICS] total async took: %ld nanoseconds or %ld milliseconds\n",
-                 total_ns, total_ns / 1000000);
+    ACA_LOG_INFO("[METRICS] total async took: %ld microseconds or %ld milliseconds\n",
+                 total_time, total_time / 1000);
 
     void *got_tag;
     bool ok = false;
@@ -177,10 +200,11 @@ class GoalStateProvisionerClient {
 
     auto after_sync_call = std::chrono::steady_clock::now();
 
-    auto sync_call_ns = cast_to_nanoseconds(after_sync_call - before_sync_call).count();
+    auto sync_call_time =
+            cast_to_microseconds(after_sync_call - before_sync_call).count();
 
-    ACA_LOG_INFO("[METRICS] PushNetworkResourceStates sync call took: %ld nanoseconds or %ld milliseconds\n",
-                 sync_call_ns, sync_call_ns / 1000000);
+    ACA_LOG_INFO("[METRICS] PushNetworkResourceStates sync call took: %ld microseconds or %ld milliseconds\n",
+                 sync_call_time, sync_call_time / 1000);
 
     if (!status.ok()) {
       ACA_LOG_ERROR("%s", "RPC call failed\n");
@@ -245,18 +269,18 @@ class GoalStateProvisionerClient {
 
     auto after_send_goalstate = std::chrono::steady_clock::now();
 
-    auto send_goalstate_ns =
-            cast_to_nanoseconds(after_send_goalstate - before_send_goalstate).count();
+    auto send_goalstate_time =
+            cast_to_microseconds(after_send_goalstate - before_send_goalstate).count();
 
-    ACA_LOG_INFO("[***METRICS***] Grand ACA message_total_operation_time: %lu nanoseconds or %lu milliseconds\n",
-                 g_total_ACA_Message_time.load(), g_total_ACA_Message_time.load() / 1000000);
+    ACA_LOG_INFO("[***METRICS***] Grand ACA message_total_operation_time: %lu microseconds or %lu milliseconds\n",
+                 g_total_ACA_Message_time.load(), g_total_ACA_Message_time.load() / 1000);
 
-    ACA_LOG_INFO("[***METRICS***] GRPC E2E send_goalstate_sync call took: %ld nanoseconds or %ld milliseconds\n",
-                 send_goalstate_ns, send_goalstate_ns / 1000000);
+    ACA_LOG_INFO("[***METRICS***] GRPC E2E send_goalstate_sync call took: %ld microseconds or %ld milliseconds\n",
+                 send_goalstate_time, send_goalstate_time / 1000);
 
-    ACA_LOG_INFO("[***METRICS***] Total GRPC latency/usage for sync call: %ld nanoseconds or %ld milliseconds\n",
-                 send_goalstate_ns - g_total_ACA_Message_time.load(),
-                 (send_goalstate_ns - g_total_ACA_Message_time.load()) / 1000000);
+    ACA_LOG_INFO("[***METRICS***] Total GRPC latency/usage for sync call: %ld microseconds or %ld milliseconds\n",
+                 send_goalstate_time - g_total_ACA_Message_time.load(),
+                 (send_goalstate_time - g_total_ACA_Message_time.load()) / 1000);
   }
 
   int send_goalstate_stream_one(GoalState &goalState, GoalStateOperationReply &gsOperationReply)
@@ -270,11 +294,11 @@ class GoalStateProvisionerClient {
 
     auto after_stream_create = std::chrono::steady_clock::now();
 
-    auto stream_create_ns =
-            cast_to_nanoseconds(after_stream_create - before_stream_create).count();
+    auto stream_create_time =
+            cast_to_microseconds(after_stream_create - before_stream_create).count();
 
-    ACA_LOG_INFO("[METRICS] stream_create call took: %ld nanoseconds or %ld milliseconds\n",
-                 stream_create_ns, stream_create_ns / 1000000);
+    ACA_LOG_INFO("[METRICS] stream_create call took: %ld microseconds or %ld milliseconds\n",
+                 stream_create_time, stream_create_time / 1000);
 
     std::thread writer([stream, goalState]() {
       stream->Write(goalState);
@@ -283,11 +307,11 @@ class GoalStateProvisionerClient {
 
     auto after_write_done = std::chrono::steady_clock::now();
 
-    auto write_done_ns =
-            cast_to_nanoseconds(after_write_done - after_stream_create).count();
+    auto write_done_time =
+            cast_to_microseconds(after_write_done - after_stream_create).count();
 
-    ACA_LOG_INFO("[METRICS] write_done call took: %ld nanoseconds or %ld milliseconds\n",
-                 write_done_ns, write_done_ns / 1000000);
+    ACA_LOG_INFO("[METRICS] write_done call took: %ld microseconds or %ld milliseconds\n",
+                 write_done_time, write_done_time / 1000);
 
     while (stream->Read(&gsOperationReply)) {
       ACA_LOG_INFO("%s", "Received one streaming GoalStateOperationReply\n");
@@ -319,11 +343,11 @@ class GoalStateProvisionerClient {
 
     auto after_stream_create = std::chrono::steady_clock::now();
 
-    auto stream_create_ns =
-            cast_to_nanoseconds(after_stream_create - before_stream_create).count();
+    auto stream_create_time =
+            cast_to_microseconds(after_stream_create - before_stream_create).count();
 
-    ACA_LOG_INFO("[METRICS] stream_create call took: %ld nanoseconds or %ld milliseconds\n",
-                 stream_create_ns, stream_create_ns / 1000000);
+    ACA_LOG_INFO("[METRICS] stream_create call took: %ld microseconds or %ld milliseconds\n",
+                 stream_create_time, stream_create_time / 1000);
 
     std::thread writer([stream, states_to_create, ip_prefix]() {
       GoalState GoalState_builder;
@@ -376,11 +400,11 @@ class GoalStateProvisionerClient {
 
     auto after_write_done = std::chrono::steady_clock::now();
 
-    auto write_done_ns =
-            cast_to_nanoseconds(after_write_done - after_stream_create).count();
+    auto write_done_time =
+            cast_to_microseconds(after_write_done - after_stream_create).count();
 
-    ACA_LOG_INFO("[METRICS] write_done call took: %ld nanoseconds or %ld milliseconds\n",
-                 write_done_ns, write_done_ns / 1000000);
+    ACA_LOG_INFO("[METRICS] write_done call took: %ld microseconds or %ld milliseconds\n",
+                 write_done_time, write_done_time / 1000);
 
     GoalStateOperationReply gsOperationReply;
     while (stream->Read(&gsOperationReply)) {
@@ -393,18 +417,18 @@ class GoalStateProvisionerClient {
 
     auto after_send_goalstate = std::chrono::steady_clock::now();
 
-    auto send_goalstate_ns =
-            cast_to_nanoseconds(after_send_goalstate - before_send_goalstate).count();
+    auto send_goalstate_time =
+            cast_to_microseconds(after_send_goalstate - before_send_goalstate).count();
 
-    ACA_LOG_INFO("[***METRICS***] Grand ACA message_total_operation_time: %lu nanoseconds or %lu milliseconds\n",
-                 g_total_ACA_Message_time.load(), g_total_ACA_Message_time.load() / 1000000);
+    ACA_LOG_INFO("[***METRICS***] Grand ACA message_total_operation_time: %lu microseconds or %lu milliseconds\n",
+                 g_total_ACA_Message_time.load(), g_total_ACA_Message_time.load() / 1000);
 
-    ACA_LOG_INFO("[***METRICS***] Grand send_goalstate_sync call took: %ld nanoseconds or %ld milliseconds\n",
-                 send_goalstate_ns, send_goalstate_ns / 1000000);
+    ACA_LOG_INFO("[***METRICS***] Grand send_goalstate_sync call took: %ld microseconds or %ld milliseconds\n",
+                 send_goalstate_time, send_goalstate_time / 1000);
 
-    ACA_LOG_INFO("[***METRICS***] Total GRPC latency/usage for stream call: %ld nanoseconds or %ld milliseconds\n",
-                 send_goalstate_ns - g_total_ACA_Message_time.load(),
-                 (send_goalstate_ns - g_total_ACA_Message_time.load()) / 1000000);
+    ACA_LOG_INFO("[***METRICS***] Total GRPC latency/usage for stream call: %ld microseconds or %ld milliseconds\n",
+                 send_goalstate_time - g_total_ACA_Message_time.load(),
+                 (send_goalstate_time - g_total_ACA_Message_time.load()) / 1000);
 
     if (!status.ok()) {
       ACA_LOG_ERROR("%s", "RPC call failed\n");
@@ -668,11 +692,11 @@ int main(int argc, char *argv[])
 
   auto after_grpc_client = std::chrono::steady_clock::now();
 
-  auto async_client_ns =
-          cast_to_nanoseconds(after_grpc_client - before_grpc_client).count();
+  auto async_client_time =
+          cast_to_microseconds(after_grpc_client - before_grpc_client).count();
 
-  ACA_LOG_INFO("[METRICS] grpc_client took: %ld nanoseconds or %ld milliseconds\n",
-               async_client_ns, async_client_ns / 1000000);
+  ACA_LOG_INFO("[METRICS] grpc_client took: %ld microseconds or %ld milliseconds\n",
+               async_client_time, async_client_time / 1000);
 
   ACA_LOG_INFO("%s", "-------------- sending one goal state async --------------\n");
 
@@ -684,11 +708,11 @@ int main(int argc, char *argv[])
 
   auto after_send_goalstate = std::chrono::steady_clock::now();
 
-  auto send_goalstate_ns =
-          cast_to_nanoseconds(after_send_goalstate - before_send_goalstate).count();
+  auto send_goalstate_time =
+          cast_to_microseconds(after_send_goalstate - before_send_goalstate).count();
 
-  ACA_LOG_INFO("[***METRICS***] send_goalstate_async call took: %ld nanoseconds or %ld milliseconds\n",
-               send_goalstate_ns, send_goalstate_ns / 1000000);
+  ACA_LOG_INFO("[***METRICS***] send_goalstate_async call took: %ld microseconds or %ld milliseconds\n",
+               send_goalstate_time, send_goalstate_time / 1000);
 
   print_goalstateReply(async_reply);
 
@@ -725,11 +749,11 @@ int main(int argc, char *argv[])
 
     after_send_goalstate = std::chrono::steady_clock::now();
 
-    send_goalstate_ns =
-            cast_to_nanoseconds(after_send_goalstate - before_send_goalstate).count();
+    send_goalstate_time =
+            cast_to_microseconds(after_send_goalstate - before_send_goalstate).count();
 
-    ACA_LOG_INFO("[***METRICS***] send_goalstate_stream_one call took: %ld nanoseconds or %ld milliseconds\n",
-                 send_goalstate_ns, send_goalstate_ns / 1000000);
+    ACA_LOG_INFO("[***METRICS***] send_goalstate_stream_one call took: %ld microseconds or %ld milliseconds\n",
+                 send_goalstate_time, send_goalstate_time / 1000);
 
     print_goalstateReply(stream_reply);
 

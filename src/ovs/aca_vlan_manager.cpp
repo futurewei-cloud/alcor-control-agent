@@ -23,6 +23,8 @@
 using namespace aca_ovs_control;
 using namespace aca_ovs_l2_programmer;
 
+extern std::atomic_ulong g_total_vpcs_table_mutex_time;
+
 namespace aca_vlan_manager
 {
 ACA_Vlan_Manager &ACA_Vlan_Manager::get_instance()
@@ -37,6 +39,7 @@ void ACA_Vlan_Manager::clear_all_data()
 {
   ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::clear_all_data ---> Entering\n");
 
+  auto vpcs_table_mutex_start = chrono::steady_clock::now();
   // -----critical section starts-----
   _vpcs_table_mutex.lock();
   // All the elements in the unordered_map container are dropped:
@@ -45,6 +48,15 @@ void ACA_Vlan_Manager::clear_all_data()
   _vpcs_table.clear();
   _vpcs_table_mutex.unlock();
   // -----critical section ends-----
+  auto vpcs_table_mutex_end = chrono::steady_clock::now();
+
+  g_total_vpcs_table_mutex_time +=
+          cast_to_microseconds(vpcs_table_mutex_end - vpcs_table_mutex_start).count();
+
+  // auto vpcs_table_mutex_elapse_time =
+  //         cast_to_microseconds(vpcs_table_mutex_end - vpcs_table_mutex_start).count();
+
+  // g_total_vpcs_table_mutex_time += vpcs_table_mutex_elapse_time;
 
   ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::clear_all_data <--- Exiting\n");
 }
@@ -68,6 +80,7 @@ uint ACA_Vlan_Manager::get_or_create_vlan_id(uint tunnel_id)
 {
   ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::get_or_create_vlan_id ---> Entering\n");
 
+  auto vpcs_table_mutex_start = chrono::steady_clock::now();
   // -----critical section starts-----
   _vpcs_table_mutex.lock();
   if (_vpcs_table.find(tunnel_id) == _vpcs_table.end()) {
@@ -76,6 +89,10 @@ uint ACA_Vlan_Manager::get_or_create_vlan_id(uint tunnel_id)
   uint acquired_vlan_id = _vpcs_table[tunnel_id].vlan_id;
   _vpcs_table_mutex.unlock();
   // -----critical section ends-----
+  auto vpcs_table_mutex_end = chrono::steady_clock::now();
+
+  g_total_vpcs_table_mutex_time +=
+          cast_to_microseconds(vpcs_table_mutex_end - vpcs_table_mutex_start).count();
 
   ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::get_or_create_vlan_id <--- Exiting\n");
 
@@ -97,6 +114,7 @@ int ACA_Vlan_Manager::create_ovs_port(string /*vpc_id*/, string ovs_port,
           "add-flow br-tun \"table=4, priority=1,tun_id=" + to_string(tunnel_id) +
           " actions=mod_vlan_vid:" + to_string(internal_vlan_id) + ",output:\"patch-int\"\"";
 
+  auto vpcs_table_mutex_start = chrono::steady_clock::now();
   // -----critical section starts-----
   _vpcs_table_mutex.lock();
   if (_vpcs_table.find(tunnel_id) == _vpcs_table.end()) {
@@ -112,6 +130,10 @@ int ACA_Vlan_Manager::create_ovs_port(string /*vpc_id*/, string ovs_port,
   _vpcs_table[tunnel_id].ovs_ports.push_back(ovs_port);
   _vpcs_table_mutex.unlock();
   // -----critical section ends-----
+  auto vpcs_table_mutex_end = chrono::steady_clock::now();
+
+  g_total_vpcs_table_mutex_time +=
+          cast_to_microseconds(vpcs_table_mutex_end - vpcs_table_mutex_start).count();
 
   ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::create_ovs_port <--- Exiting\n");
 
@@ -130,6 +152,7 @@ int ACA_Vlan_Manager::delete_ovs_port(string /*vpc_id*/, string ovs_port,
   // internal vlan id
   int internal_vlan_id = ACA_Vlan_Manager::get_instance().get_or_create_vlan_id(tunnel_id);
 
+  auto vpcs_table_mutex_start = chrono::steady_clock::now();
   // -----critical section starts-----
   _vpcs_table_mutex.lock();
   if (_vpcs_table.find(tunnel_id) == _vpcs_table.end()) {
@@ -159,6 +182,10 @@ int ACA_Vlan_Manager::delete_ovs_port(string /*vpc_id*/, string ovs_port,
   }
   _vpcs_table_mutex.unlock();
   // -----critical section ends-----
+  auto vpcs_table_mutex_end = chrono::steady_clock::now();
+
+  g_total_vpcs_table_mutex_time +=
+          cast_to_microseconds(vpcs_table_mutex_end - vpcs_table_mutex_start).count();
 
   ACA_LOG_DEBUG("ACA_Vlan_Manager::delete_ovs_port <--- Exiting, overall_rc = %d\n", overall_rc);
 
@@ -180,6 +207,7 @@ int ACA_Vlan_Manager::create_neighbor_outport(string neighbor_id, string /*vpc_i
   // internal vlan id or to create a new vpc_id entry to get a new internal vlan id
   int internal_vlan_id = this->get_or_create_vlan_id(tunnel_id);
 
+  auto vpcs_table_mutex_start = chrono::steady_clock::now();
   // -----critical section starts-----
   _vpcs_table_mutex.lock();
 
@@ -233,6 +261,10 @@ int ACA_Vlan_Manager::create_neighbor_outport(string neighbor_id, string /*vpc_i
 
   _vpcs_table_mutex.unlock();
   // -----critical section ends-----
+  auto vpcs_table_mutex_end = chrono::steady_clock::now();
+
+  g_total_vpcs_table_mutex_time +=
+          cast_to_microseconds(vpcs_table_mutex_end - vpcs_table_mutex_start).count();
 
   ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::create_neighbor_outport <--- Exiting\n");
 
@@ -250,6 +282,7 @@ int ACA_Vlan_Manager::delete_neighbor_outport(string neighbor_id, uint tunnel_id
 
   int internal_vlan_id = this->get_or_create_vlan_id(tunnel_id);
 
+  auto vpcs_table_mutex_start = chrono::steady_clock::now();
   // -----critical section starts-----
   _vpcs_table_mutex.lock();
   if (_vpcs_table.find(tunnel_id) == _vpcs_table.end()) {
@@ -320,6 +353,10 @@ int ACA_Vlan_Manager::delete_neighbor_outport(string neighbor_id, uint tunnel_id
   }
   _vpcs_table_mutex.unlock();
   // -----critical section ends-----
+  auto vpcs_table_mutex_end = chrono::steady_clock::now();
+
+  g_total_vpcs_table_mutex_time +=
+          cast_to_microseconds(vpcs_table_mutex_end - vpcs_table_mutex_start).count();
 
   ACA_LOG_DEBUG("ACA_Vlan_Manager::delete_neighbor_outport <--- Exiting, overall_rc = %d\n",
                 overall_rc);
@@ -365,6 +402,7 @@ uint ACA_Vlan_Manager::get_oam_server_port(uint tunnel_id)
 
   uint port_number;
 
+  auto vpcs_table_mutex_start = chrono::steady_clock::now();
   // -----critical section starts-----
   _vpcs_table_mutex.lock();
   if (_vpcs_table.find(tunnel_id) == _vpcs_table.end()) {
@@ -376,6 +414,10 @@ uint ACA_Vlan_Manager::get_oam_server_port(uint tunnel_id)
   }
   _vpcs_table_mutex.unlock();
   // -----critical section ends-----
+  auto vpcs_table_mutex_end = chrono::steady_clock::now();
+
+  g_total_vpcs_table_mutex_time +=
+          cast_to_microseconds(vpcs_table_mutex_end - vpcs_table_mutex_start).count();
 
   ACA_LOG_DEBUG("ACA_Vlan_Manager::get_oam_server_port <--- Exiting, port_number=%u\n",
                 port_number);
@@ -388,6 +430,7 @@ void ACA_Vlan_Manager::set_oam_server_port(uint tunnel_id, uint port_number)
 {
   ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::set_oam_server_port ---> Entering\n");
 
+  auto vpcs_table_mutex_start = chrono::steady_clock::now();
   // -----critical section starts-----
   _vpcs_table_mutex.lock();
   if (_vpcs_table.find(tunnel_id) == _vpcs_table.end()) {
@@ -396,6 +439,10 @@ void ACA_Vlan_Manager::set_oam_server_port(uint tunnel_id, uint port_number)
   _vpcs_table[tunnel_id].oam_server_port = port_number;
   _vpcs_table_mutex.unlock();
   // -----critical section ends-----
+  auto vpcs_table_mutex_end = chrono::steady_clock::now();
+
+  g_total_vpcs_table_mutex_time +=
+          cast_to_microseconds(vpcs_table_mutex_end - vpcs_table_mutex_start).count();
 
   ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::set_oam_server_port <--- Exiting\n");
 }

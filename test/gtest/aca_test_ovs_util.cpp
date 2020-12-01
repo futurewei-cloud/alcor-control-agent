@@ -406,9 +406,9 @@ void aca_test_10_neighbor_CREATE(NeighborType input_neighbor_type)
   ulong total_neighbor_create_time = 0;
 
   for (int i = 0; i < NEIGHBORS_TO_CREATE; i++) {
-    ACA_LOG_DEBUG("Neighbor State(%d) took: %u nanoseconds or %u milliseconds\n",
+    ACA_LOG_DEBUG("Neighbor State(%d) took: %u microseconds or %u milliseconds\n",
                   i, gsOperationReply.operation_statuses(i).state_elapse_time(),
-                  gsOperationReply.operation_statuses(i).state_elapse_time() / 1000000);
+                  gsOperationReply.operation_statuses(i).state_elapse_time() / 1000);
 
     total_neighbor_create_time +=
             gsOperationReply.operation_statuses(i).state_elapse_time();
@@ -416,13 +416,13 @@ void aca_test_10_neighbor_CREATE(NeighborType input_neighbor_type)
 
   ulong average_neighbor_create_time = total_neighbor_create_time / NEIGHBORS_TO_CREATE;
 
-  ACA_LOG_INFO("Average NeighborType: %d Create of %d took: %lu nanoseconds or %lu milliseconds\n",
-               input_neighbor_type, NEIGHBORS_TO_CREATE, average_neighbor_create_time,
-               average_neighbor_create_time / 1000000);
+  ACA_LOG_INFO("Average NeighborType: %d Create of %d took: %lu microseconds or %lu milliseconds\n",
+               input_neighbor_type, NEIGHBORS_TO_CREATE,
+               average_neighbor_create_time, average_neighbor_create_time / 1000);
 
-  ACA_LOG_INFO("[TEST METRICS] Elapsed time for message total operation took: %u nanoseconds or %u milliseconds\n",
+  ACA_LOG_INFO("[TEST METRICS] Elapsed time for message total operation took: %u microseconds or %u milliseconds\n",
                gsOperationReply.message_total_operation_time(),
-               gsOperationReply.message_total_operation_time() / 1000000);
+               gsOperationReply.message_total_operation_time() / 1000);
 }
 
 void aca_test_1_port_CREATE_plus_X_neighbors_CREATE(NeighborType input_neighbor_type,
@@ -507,11 +507,11 @@ void aca_test_1_port_CREATE_plus_X_neighbors_CREATE(NeighborType input_neighbor_
 
   // we have neighbors_to_create + 1 port state created
   for (uint i = 0; i < neighbors_to_create + 1; i++) {
-    ACA_LOG_DEBUG("Number: %d Resource Type: %d with id: %s took: %u nanoseconds or %u milliseconds\n",
+    ACA_LOG_DEBUG("Number: %d Resource Type: %d with id: %s took: %u microseconds or %u milliseconds\n",
                   i, gsOperationReply.operation_statuses(i).resource_type(),
                   gsOperationReply.operation_statuses(i).resource_id().c_str(),
                   gsOperationReply.operation_statuses(i).state_elapse_time(),
-                  gsOperationReply.operation_statuses(i).state_elapse_time() / 1000000);
+                  gsOperationReply.operation_statuses(i).state_elapse_time() / 1000);
 
     total_neighbor_create_time +=
             gsOperationReply.operation_statuses(i).state_elapse_time();
@@ -519,11 +519,11 @@ void aca_test_1_port_CREATE_plus_X_neighbors_CREATE(NeighborType input_neighbor_
 
   ulong average_neighbor_create_time = total_neighbor_create_time / neighbors_to_create;
 
-  ACA_LOG_INFO("Average port + neighbor states with NeighborType: %d Create of %d took: %lu nanoseconds or %lu milliseconds\n",
-               input_neighbor_type, neighbors_to_create, average_neighbor_create_time,
-               average_neighbor_create_time / 1000000);
+  ACA_LOG_INFO("Average port + neighbor states with NeighborType: %d Create of %d took: %lu microseconds or %lu milliseconds\n",
+               input_neighbor_type, neighbors_to_create,
+               average_neighbor_create_time, average_neighbor_create_time / 1000);
 
-  ACA_LOG_INFO("[TEST METRICS] Elapsed time for message total operation took: %u nanoseconds or %u milliseconds\n",
+  ACA_LOG_INFO("[TEST METRICS] Elapsed time for message total operation took: %u microseconds or %u milliseconds\n",
                gsOperationReply.message_total_operation_time(),
-               gsOperationReply.message_total_operation_time() / 1000000);
+               gsOperationReply.message_total_operation_time() / 1000);
 }

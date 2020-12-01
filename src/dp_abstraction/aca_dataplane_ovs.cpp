@@ -143,7 +143,7 @@ int ACA_Dataplane_OVS::update_subnet_state_workitem(const SubnetState current_Su
   auto operation_end = chrono::steady_clock::now();
 
   auto operation_total_time =
-          cast_to_nanoseconds(operation_end - operation_start).count();
+          cast_to_microseconds(operation_end - operation_start).count();
 
   aca_goal_state_handler::Aca_Goal_State_Handler::get_instance().add_goal_state_operation_status(
           gsOperationReply, current_SubnetConfiguration.id(), SUBNET,
@@ -307,7 +307,7 @@ EXIT:
   auto operation_end = chrono::steady_clock::now();
 
   auto operation_total_time =
-          cast_to_nanoseconds(operation_end - operation_start).count();
+          cast_to_microseconds(operation_end - operation_start).count();
 
   aca_goal_state_handler::Aca_Goal_State_Handler::get_instance().add_goal_state_operation_status(
           gsOperationReply, current_PortConfiguration.id(), ResourceType::PORT,
@@ -500,7 +500,7 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
   auto operation_end = chrono::steady_clock::now();
 
   auto operation_total_time =
-          cast_to_nanoseconds(operation_end - operation_start).count();
+          cast_to_microseconds(operation_end - operation_start).count();
 
   aca_goal_state_handler::Aca_Goal_State_Handler::get_instance().add_goal_state_operation_status(
           gsOperationReply, current_NeighborConfiguration.id(),
@@ -557,7 +557,7 @@ int ACA_Dataplane_OVS::update_router_state_workitem(RouterState current_RouterSt
   auto operation_end = chrono::steady_clock::now();
 
   auto operation_total_time =
-          cast_to_nanoseconds(operation_end - operation_start).count();
+          cast_to_microseconds(operation_end - operation_start).count();
 
   aca_goal_state_handler::Aca_Goal_State_Handler::get_instance().add_goal_state_operation_status(
           gsOperationReply, current_RouterConfiguration.id(),

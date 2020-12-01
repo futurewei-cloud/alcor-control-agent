@@ -130,10 +130,10 @@ int Aca_Comm_Manager::update_goal_state(GoalState &goal_state_message,
 
   auto end = chrono::steady_clock::now();
 
-  auto message_total_operation_time = cast_to_nanoseconds(end - start).count();
+  auto message_total_operation_time = cast_to_microseconds(end - start).count();
 
-  ACA_LOG_INFO("[METRICS] Elapsed time for message total operation took: %ld nanoseconds or %ld milliseconds\n",
-               message_total_operation_time, message_total_operation_time / 1000000);
+  ACA_LOG_INFO("[METRICS] Elapsed time for message total operation took: %ld microseconds or %ld milliseconds\n",
+               message_total_operation_time, message_total_operation_time / 1000);
 
   gsOperationReply.set_message_total_operation_time(
           message_total_operation_time + gsOperationReply.message_total_operation_time());
