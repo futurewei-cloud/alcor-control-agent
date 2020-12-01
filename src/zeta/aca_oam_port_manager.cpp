@@ -99,7 +99,7 @@ void Aca_Oam_Port_Manager::_clear_all_data()
 void Aca_Oam_Port_Manager::create_entry_unsafe(uint port_number)
 {
   ACA_LOG_DEBUG("%s", "Aca_Oam_Port_Manager::create_entry_unsafe ---> Entering\n");
-  
+
   _oam_ports_cache.emplace(port_number);
 
   ACA_LOG_DEBUG("%s", "Aca_Oam_Port_Manager::create_entry_unsafe <--- Exiting\n");
@@ -115,8 +115,6 @@ void Aca_Oam_Port_Manager::add_port_number(uint port_number)
     create_entry_unsafe(port_number);
     _create_oam_ofp(port_number);
   }
-  _oam_ports_cache.emplace(port_number);
-
   _oam_ports_cache_mutex.unlock();
   // -----critical section ends-----
 
@@ -136,19 +134,21 @@ int Aca_Oam_Port_Manager::remove_port_number(uint port_number)
     ACA_LOG_ERROR("port id %u not find in oam_ports_table\n", port_number);
     overall_rc = ENOENT;
   } else {
-    // clean up the oam_ports_table entry and oam flow rule if there is no port assoicated
-    if (_oam_ports_cache.erase(port_number) == 1 && _delete_oam_ofp(port_number) == EXIT_SUCCESS) {
+    // clean up the oam_ports_table entry
+    if (_oam_ports_cache.erase(port_number) == 1) {
       ACA_LOG_INFO("Successfuly cleaned up entry for port_number %u\n", port_number);
       overall_rc = EXIT_SUCCESS;
     } else {
       ACA_LOG_ERROR("Failed to clean up entry for port_number %u\n", port_number);
       overall_rc = EXIT_FAILURE;
     }
+    overall_rc = _delete_oam_ofp(port_number);
   }
   _oam_ports_cache_mutex.unlock();
   // -----critical section ends-----
 
-  ACA_LOG_DEBUG("Aca_Oam_Port_Manager::remove_port_number <--- Exiting, overall_rc = %d\n", overall_rc);
+  ACA_LOG_DEBUG("Aca_Oam_Port_Manager::remove_port_number <--- Exiting, overall_rc = %d\n",
+                overall_rc);
 
   return overall_rc;
 }
