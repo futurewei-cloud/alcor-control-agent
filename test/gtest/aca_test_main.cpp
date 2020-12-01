@@ -24,14 +24,25 @@ using namespace aca_message_pulsar;
 #define ACALOGNAME "AlcorControlAgentTest"
 
 // Global variables
-std::atomic_ulong g_total_network_configuration_time(0);
-std::atomic_ulong g_total_update_GS_time(0);
-bool g_debug_mode = true;
-bool g_demo_mode = false;
 static char EMPTY_STRING[] = "";
 string g_ofctl_command = EMPTY_STRING;
 string g_ofctl_target = EMPTY_STRING;
 string g_ofctl_options = EMPTY_STRING;
+
+// total time for execute_system_command in microseconds
+std::atomic_ulong g_total_execute_system_time(0);
+// total time for execute_ovsdb_command in microseconds
+std::atomic_ulong g_total_execute_ovsdb_time(0);
+// total time for execute_openflow_command in microseconds
+std::atomic_ulong g_total_execute_openflow_time(0);
+// total time for vpcs_table_mutex in microseconds
+std::atomic_ulong g_total_vpcs_table_mutex_time(0);
+// total time for goal state update in microseconds
+std::atomic_ulong g_total_update_GS_time(0);
+
+bool g_debug_mode = true;
+bool g_demo_mode = false;
+
 string remote_ip_1 = "172.17.0.2"; // for docker network
 string remote_ip_2 = "172.17.0.3"; // for docker network
 uint neighbors_to_create = 10;
@@ -65,12 +76,24 @@ TEST(pulsar_test_cases, DISABLED_pulsar_consumer_test)
 
 static void aca_cleanup()
 {
-  ACA_LOG_DEBUG("g_total_network_configuration_time = %lu nanoseconds or %lu milliseconds\n",
-                g_total_network_configuration_time.load(),
-                g_total_network_configuration_time.load() / 1000000);
+  ACA_LOG_DEBUG("g_total_execute_system_time = %lu microseconds or %lu milliseconds\n",
+                g_total_execute_system_time.load(),
+                g_total_execute_system_time.load() / 1000);
 
-  ACA_LOG_DEBUG("g_total_update_GS_time = %lu nanoseconds or %lu milliseconds\n",
-                g_total_update_GS_time.load(), g_total_update_GS_time.load() / 1000000);
+  ACA_LOG_DEBUG("g_total_execute_ovsdb_time = %lu microseconds or %lu milliseconds\n",
+                g_total_execute_ovsdb_time.load(),
+                g_total_execute_ovsdb_time.load() / 1000);
+
+  ACA_LOG_DEBUG("g_total_execute_openflow_time = %lu microseconds or %lu milliseconds\n",
+                g_total_execute_openflow_time.load(),
+                g_total_execute_openflow_time.load() / 1000);
+
+  ACA_LOG_DEBUG("g_total_vpcs_table_mutex_time = %lu microseconds or %lu milliseconds\n",
+                g_total_vpcs_table_mutex_time.load(),
+                g_total_vpcs_table_mutex_time.load() / 1000);
+
+  ACA_LOG_DEBUG("g_total_update_GS_time = %lu microseconds or %lu milliseconds\n",
+                g_total_update_GS_time.load(), g_total_update_GS_time.load() / 1000);
 
   ACA_LOG_INFO("%s", "Program exiting, cleaning up...\n");
 
