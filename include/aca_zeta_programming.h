@@ -17,9 +17,12 @@
 
 #include <string>
 #include <list>
+#include <atomic>
 #include "goalstateprovisioner.grpc.pb.h"
 
+
 using namespace std;
+static atomic_uint current_available_group_id(1);
 
 namespace aca_zeta_programming
 {
@@ -34,6 +37,8 @@ class ACA_Zeta_Programming {
   public:
   static ACA_Zeta_Programming &get_instance();
 
+  uint get_or_create_group_id(string auxGateways_id);
+
   int create_or_update_zeta_config(const alcor::schema::AuxGateway current_AuxGateway,
                                    const string vpc_id, uint32_t tunnel_id);
 
@@ -44,6 +49,14 @@ class ACA_Zeta_Programming {
   int _create_or_update_zeta_group_entry(zeta_config *zeta_config_in);
 
   int _delete_zeta_group_entry(zeta_config *zeta_config_in);
+
+  private:
+  // unordered_map<aux_gateway_id, group_id>
+  unordered_map<string, uint> _zeta_gateways_table;
+
+  mutex _zeta_gateways_table_mutex;
+
+  void create_entry_unsafe(string auxGateway_id);
 };
 } // namespace aca_zeta_programming
 #endif // #ifndef ACA_ZETA_PROGRAMMING_H

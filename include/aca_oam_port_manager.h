@@ -33,8 +33,8 @@ class Aca_Oam_Port_Manager {
   static Aca_Oam_Port_Manager &get_instance();
 
   void create_entry_unsafe(uint port_number);
-  void add_port_number(uint port_number);
-  int remove_port_number(uint port_number);
+  void add_oam_port_rule(uint port_number);
+  int remove_oam_port_rule(uint port_number);
 
   //Determine whether the port is an oam_server_port
   bool is_oam_server_port(uint port_number);

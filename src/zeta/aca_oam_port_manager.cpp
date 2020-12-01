@@ -106,9 +106,9 @@ void Aca_Oam_Port_Manager::create_entry_unsafe(uint port_number)
 }
 
 // update oam_ports_table and add the OAM punt rule also if this is the first port in the VPC
-void Aca_Oam_Port_Manager::add_port_number(uint port_number)
+void Aca_Oam_Port_Manager::add_oam_port_rule(uint port_number)
 {
-  ACA_LOG_DEBUG("%s", "Aca_Oam_Port_Manager::add_port_number ---> Entering\n");
+  ACA_LOG_DEBUG("%s", "Aca_Oam_Port_Manager::add_oam_port_rule ---> Entering\n");
   // -----critical section starts-----
   _oam_ports_cache_mutex.lock();
   if (_oam_ports_cache.find(port_number) == _oam_ports_cache.end()) {
@@ -118,13 +118,13 @@ void Aca_Oam_Port_Manager::add_port_number(uint port_number)
   _oam_ports_cache_mutex.unlock();
   // -----critical section ends-----
 
-  ACA_LOG_DEBUG("%s", "ACA_OVS_Programmer::add_port_number <--- Exiting\n");
+  ACA_LOG_DEBUG("%s", "ACA_OVS_Programmer::add_oam_port_rule <--- Exiting\n");
 }
 
 // update oam_ports_table and delete the OAM punt rule if the last port in the VPC has been deleted
-int Aca_Oam_Port_Manager::remove_port_number(uint port_number)
+int Aca_Oam_Port_Manager::remove_oam_port_rule(uint port_number)
 {
-  ACA_LOG_DEBUG("%s", "Aca_Oam_Port_Manager::remove_port_number ---> Entering\n");
+  ACA_LOG_DEBUG("%s", "Aca_Oam_Port_Manager::remove_oam_port_rule ---> Entering\n");
 
   int overall_rc;
 
@@ -147,7 +147,7 @@ int Aca_Oam_Port_Manager::remove_port_number(uint port_number)
   _oam_ports_cache_mutex.unlock();
   // -----critical section ends-----
 
-  ACA_LOG_DEBUG("Aca_Oam_Port_Manager::remove_port_number <--- Exiting, overall_rc = %d\n",
+  ACA_LOG_DEBUG("Aca_Oam_Port_Manager::remove_oam_port_rule <--- Exiting, overall_rc = %d\n",
                 overall_rc);
 
   return overall_rc;
@@ -163,7 +163,7 @@ bool Aca_Oam_Port_Manager::is_oam_server_port(uint port_number)
   // -----critical section starts-----
   _oam_ports_cache_mutex.lock();
   if (_oam_ports_cache.find(port_number) == _oam_ports_cache.end()) {
-    ACA_LOG_ERROR("port id %u not find in oam_ports_table\n", port_number);
+    ACA_LOG_ERROR("port_number %u not find in oam_ports_table\n", port_number);
     overall_rc = false;
   } else {
     overall_rc = true;
