@@ -57,7 +57,7 @@ int ACA_Zeta_Programming::create_or_update_zeta_config(const alcor::schema::AuxG
     ACA_Vlan_Manager::get_instance().set_oam_server_port(tunnel_id, oam_server_port);
 
     //update oam_ports_table and add the OAM punt rule also if this is the first port in the VPC
-    Aca_Oam_Port_Manager::get_instance().add_vpc(oam_server_port, tunnel_id);
+    Aca_Oam_Port_Manager::get_instance().add_port_number(oam_server_port);
   }
   // add the group bucket rule
   overall_rc = _create_or_update_zeta_group_entry(&stZetaCfg);
@@ -81,8 +81,10 @@ int ACA_Zeta_Programming::delete_zeta_config(const alcor::schema::AuxGateway cur
   ACA_Vlan_Manager::get_instance().set_oam_server_port(tunnel_id, 0);
 
   // update oam_ports_table and delete the OAM punt rule if the last port in the VPC has been deleted
-  Aca_Oam_Port_Manager::get_instance().remove_vpc(oam_server_port, tunnel_id);
 
+  if (!ACA_Vlan_Manager::get_instance().is_exist_oam_port(oam_server_port)) {
+    Aca_Oam_Port_Manager::get_instance().remove_port_number(oam_server_port);
+  }
   // delete the group bucket rule
   overall_rc = _delete_zeta_group_entry(&stZetaCfg);
 

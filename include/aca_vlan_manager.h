@@ -73,6 +73,8 @@ class ACA_Vlan_Manager {
 
   void set_oam_server_port(uint tunnel_id, uint port_number);
 
+  bool is_exist_oam_port(uint port_number);
+
   // compiler will flag error when below is called
   ACA_Vlan_Manager(ACA_Vlan_Manager const &) = delete;
   void operator=(ACA_Vlan_Manager const &) = delete;

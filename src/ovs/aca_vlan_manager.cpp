@@ -433,4 +433,22 @@ int ACA_Vlan_Manager::create_neighbor_outport(alcor::schema::NetworkType network
   return overall_rc;
 }
 
+bool ACA_Vlan_Manager::is_exist_oam_port(uint port_number)
+{
+  bool rc = false;
+
+  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::is_exist_oam_port ---> Entering\n");
+  _vpcs_table_mutex.lock();
+  for (auto entry : _vpcs_table) {
+    vpc_table_entry vpc_entry = entry.second;
+    if (vpc_entry.oam_server_port == port_number) {
+      rc = true;
+      break;
+    }
+  }
+  _vpcs_table_mutex.unlock();
+  ACA_LOG_DEBUG("ACA_Vlan_Manager::is_exist_oam_port <--- Exiting, rc = %d\n", rc);
+  return rc;
+}
+
 } // namespace aca_vlan_manager
