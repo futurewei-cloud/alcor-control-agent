@@ -84,7 +84,7 @@ void Aca_Oam_Port_Manager::_clear_all_data()
 
   // -----critical section starts-----
   _oam_ports_cache_mutex.lock();
-  // All the elements in the unordered_map container are dropped:
+  // All the elements in the unordered_set container are dropped:
   // their destructors are called, and they are removed from the container,
   // leaving _oam_ports_cache with a size of 0.
   _oam_ports_cache.clear();
@@ -134,7 +134,7 @@ int Aca_Oam_Port_Manager::remove_oam_port_rule(uint port_number)
     ACA_LOG_ERROR("port id %u not find in oam_ports_table\n", port_number);
     overall_rc = ENOENT;
   } else {
-    // clean up the oam_ports_table entry
+    // clean up the oam_ports_cache entry
     if (_oam_ports_cache.erase(port_number) == 1) {
       ACA_LOG_INFO("Successfuly cleaned up entry for port_number %u\n", port_number);
       overall_rc = EXIT_SUCCESS;
@@ -142,6 +142,8 @@ int Aca_Oam_Port_Manager::remove_oam_port_rule(uint port_number)
       ACA_LOG_ERROR("Failed to clean up entry for port_number %u\n", port_number);
       overall_rc = EXIT_FAILURE;
     }
+
+    // clean oam port rule
     overall_rc = _delete_oam_ofp(port_number);
   }
   _oam_ports_cache_mutex.unlock();
