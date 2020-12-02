@@ -36,6 +36,7 @@
 
 #define cast_to_nanoseconds(x) chrono::duration_cast<chrono::nanoseconds>(x)
 #define cast_to_microseconds(x) chrono::duration_cast<chrono::microseconds>(x)
+#define us_to_ms(x) x / 1000 // convert from microseconds to millseconds
 
 static inline const char *aca_get_operation_string(alcor::schema::OperationType operation)
 {

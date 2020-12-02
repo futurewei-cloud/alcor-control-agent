@@ -14,12 +14,11 @@
 
 #include "aca_log.h"
 #include "aca_util.h"
+#include "aca_config.h"
 #include "aca_net_config.h"
 #include <errno.h>
 
 using namespace std;
-
-static char DEFAULT_MTU[] = "9000";
 
 extern std::atomic_ulong g_total_execute_system_time;
 extern bool g_demo_mode;
@@ -97,7 +96,8 @@ int Aca_Net_Config::setup_peer_device(string peer_name, ulong &culminative_time)
     return rc;
   }
 
-  string cmd_string = "ip link set dev " + peer_name + " up mtu " + DEFAULT_MTU;
+  string cmd_string =
+          "ip link set dev " + peer_name + " up mtu " + std::to_string(DEFAULT_MTU);
 
   return execute_system_command(cmd_string, culminative_time);
 }
@@ -334,7 +334,7 @@ int Aca_Net_Config::execute_system_command(string cmd_string, ulong &culminative
   }
 
   ACA_LOG_DEBUG(" Elapsed time for system command took: %ld microseconds or %ld milliseconds.\n",
-                execute_system_elapse_time, execute_system_elapse_time / 1000);
+                execute_system_elapse_time, us_to_ms(execute_system_elapse_time));
 
   return rc;
 }

@@ -68,22 +68,22 @@ static void aca_cleanup()
 {
   ACA_LOG_DEBUG("g_total_execute_system_time = %lu microseconds or %lu milliseconds\n",
                 g_total_execute_system_time.load(),
-                g_total_execute_system_time.load() / 1000);
+                us_to_ms(g_total_execute_system_time.load()));
 
   ACA_LOG_DEBUG("g_total_execute_ovsdb_time = %lu microseconds or %lu milliseconds\n",
                 g_total_execute_ovsdb_time.load(),
-                g_total_execute_ovsdb_time.load() / 1000);
+                us_to_ms(g_total_execute_ovsdb_time.load()));
 
   ACA_LOG_DEBUG("g_total_execute_openflow_time = %lu microseconds or %lu milliseconds\n",
                 g_total_execute_openflow_time.load(),
-                g_total_execute_openflow_time.load() / 1000);
+                us_to_ms(g_total_execute_openflow_time.load()));
 
   ACA_LOG_DEBUG("g_total_vpcs_table_mutex_time = %lu microseconds or %lu milliseconds\n",
                 g_total_vpcs_table_mutex_time.load(),
-                g_total_vpcs_table_mutex_time.load() / 1000);
+                us_to_ms(g_total_vpcs_table_mutex_time.load()));
 
   ACA_LOG_DEBUG("g_total_update_GS_time = %lu microseconds or %lu milliseconds\n",
-                g_total_update_GS_time.load(), g_total_update_GS_time.load() / 1000);
+                g_total_update_GS_time.load(), us_to_ms(g_total_update_GS_time.load()));
 
   ACA_LOG_INFO("%s", "Program exiting, cleaning up...\n");
 
