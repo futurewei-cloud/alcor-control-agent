@@ -28,6 +28,8 @@ using namespace aca_vlan_manager;
 // mutex for reading and writing to ovs bridges (br-int and br-tun) setups
 mutex setup_ovs_bridges_mutex;
 
+extern std::atomic_ulong g_total_execute_ovsdb_time;
+extern std::atomic_ulong g_total_execute_openflow_time;
 extern bool g_demo_mode;
 
 namespace aca_ovs_l2_programmer
@@ -350,12 +352,14 @@ void ACA_OVS_L2_Programmer::execute_ovsdb_command(const std::string cmd_string,
   auto ovsdb_client_end = chrono::steady_clock::now();
 
   auto ovsdb_client_time_total_time =
-          cast_to_nanoseconds(ovsdb_client_end - ovsdb_client_start).count();
+          cast_to_microseconds(ovsdb_client_end - ovsdb_client_start).count();
 
   culminative_time += ovsdb_client_time_total_time;
 
-  ACA_LOG_INFO("Elapsed time for ovsdb client call took: %ld nanoseconds or %ld milliseconds. rc: %d\n",
-               ovsdb_client_time_total_time, ovsdb_client_time_total_time / 1000000, rc);
+  g_total_execute_ovsdb_time += ovsdb_client_time_total_time;
+
+  ACA_LOG_INFO("Elapsed time for ovsdb client call took: %ld microseconds or %ld milliseconds. rc: %d\n",
+               ovsdb_client_time_total_time, us_to_ms(ovsdb_client_time_total_time), rc);
 
   ACA_LOG_DEBUG("ACA_OVS_L2_Programmer::execute_ovsdb_command <--- Exiting, rc = %d\n", rc);
 }
@@ -377,13 +381,15 @@ void ACA_OVS_L2_Programmer::execute_openflow_command(const std::string cmd_strin
   auto openflow_client_end = chrono::steady_clock::now();
 
   auto openflow_client_time_total_time =
-          cast_to_nanoseconds(openflow_client_end - openflow_client_start).count();
+          cast_to_microseconds(openflow_client_end - openflow_client_start).count();
 
   culminative_time += openflow_client_time_total_time;
 
-  ACA_LOG_INFO("Elapsed time for openflow client call took: %ld nanoseconds or %ld milliseconds. rc: %d\n",
+  g_total_execute_openflow_time += openflow_client_time_total_time;
+
+  ACA_LOG_INFO("Elapsed time for openflow client call took: %ld microseconds or %ld milliseconds. rc: %d\n",
                openflow_client_time_total_time,
-               openflow_client_time_total_time / 1000000, rc);
+               us_to_ms(openflow_client_time_total_time), rc);
 
   ACA_LOG_DEBUG("ACA_OVS_L2_Programmer::execute_openflow_command <--- Exiting, rc = %d\n", rc);
 }

@@ -61,6 +61,7 @@ extern string subnet2_gw_ip;
 extern string subnet1_gw_mac;
 extern string subnet2_gw_mac;
 extern bool g_demo_mode;
+extern uint neighbors_to_create;
 
 extern void aca_test_create_default_port_state(PortState *new_port_states);
 extern void aca_test_create_default_subnet_state(SubnetState *new_subnet_states);
@@ -478,22 +479,22 @@ TEST(ovs_l2_test_cases, 10_ports_CREATE)
   ulong total_port_create_time = 0;
 
   for (int i = 0; i < PORTS_TO_CREATE; i++) {
-    ACA_LOG_DEBUG("Port State(%d) took: %u nanoseconds or %u milliseconds\n", i,
-                  gsOperationReply.operation_statuses(i).state_elapse_time(),
-                  gsOperationReply.operation_statuses(i).state_elapse_time() / 1000000);
+    ACA_LOG_DEBUG("Port State(%d) took: %u microseconds or %u milliseconds\n",
+                  i, gsOperationReply.operation_statuses(i).state_elapse_time(),
+                  us_to_ms(gsOperationReply.operation_statuses(i).state_elapse_time()));
 
     total_port_create_time += gsOperationReply.operation_statuses(i).state_elapse_time();
   }
 
   ulong average_port_create_time = total_port_create_time / PORTS_TO_CREATE;
 
-  ACA_LOG_INFO("Average Port Create of %d took: %lu nanoseconds or %lu milliseconds\n",
+  ACA_LOG_INFO("Average Port Create of %d took: %lu microseconds or %lu milliseconds\n",
                PORTS_TO_CREATE, average_port_create_time,
-               average_port_create_time / 1000000);
+               us_to_ms(average_port_create_time));
 
-  ACA_LOG_INFO("[TEST METRICS] Elapsed time for message total operation took: %u nanoseconds or %u milliseconds\n",
+  ACA_LOG_INFO("[TEST METRICS] Elapsed time for message total operation took: %u microseconds or %u milliseconds\n",
                gsOperationReply.message_total_operation_time(),
-               gsOperationReply.message_total_operation_time() / 1000000);
+               us_to_ms(gsOperationReply.message_total_operation_time()));
 }
 
 TEST(ovs_l2_test_cases, 1_l2_neighbor_CREATE_DELETE)
@@ -513,7 +514,7 @@ TEST(ovs_l2_test_cases, 10_l2_neighbor_CREATE)
 
 TEST(ovs_l2_test_cases, 1_port_CREATE_plus_10_l2_neighbor_CREATE)
 {
-  aca_test_1_port_CREATE_plus_X_neighbors_CREATE(NeighborType::L2, 10);
+  aca_test_1_port_CREATE_plus_X_neighbors_CREATE(NeighborType::L2, neighbors_to_create);
 }
 
 TEST(ovs_l2_test_cases, DISABLED_2_ports_CREATE_test_traffic_PARENT)
