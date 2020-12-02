@@ -25,4 +25,6 @@
 
 #define DHCP_MSG_OPTS_DNS_LENGTH (5) //max 5 dns address
 
+#define DEFAULT_MTU 9000
+
 #endif // #ifndef ACA_CONFIG_H
