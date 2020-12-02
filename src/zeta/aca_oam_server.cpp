@@ -22,6 +22,7 @@
 #include "aca_util.h"
 #include "aca_ovs_control.h"
 #include "aca_vlan_manager.h"
+#include "aca_zeta_programming.h"
 
 using namespace std;
 using namespace aca_ovs_control;
@@ -182,8 +183,10 @@ oam_action ACA_Oam_Server::_get_oam_action_field(oam_message *oammsg)
 //check whether the udp_dport is the oam server port of the vpc
 bool ACA_Oam_Server::_check_oam_server_port(uint udp_dport, oam_match match)
 {
-  uint32_t oam_port = aca_vlan_manager::ACA_Vlan_Manager::get_instance().get_oam_server_port(
+  string auxGateway_id = aca_vlan_manager::ACA_Vlan_Manager::get_instance().get_aux_gateway_id(
           std::stoul(match.vni));
+  uint32_t oam_port = aca_zeta_programming::ACA_Zeta_Programming::get_instance().get_oam_server_port(
+          auxGateway_id);
 
   if (udp_dport == oam_port) {
     ACA_LOG_INFO("%s", "oam port is correct!\n");
@@ -271,7 +274,8 @@ int ACA_Oam_Server::_add_direct_path(oam_match match, oam_action action)
                      ",tp_dst=" + match.dport + ",dl_vlan=" + vlan_id;
   string cmd_action = ",actions=\"strip_vlan,load:" + match.vni +
                       "->NXM_NX_TUN_ID[],mod_dl_dst=" + action.inst_dl_dst +
-                      ",mod_nw_dst=" + action.inst_nw_dst + ",output:" + outport_name +"\"";
+                      ",mod_nw_dst=" + action.inst_nw_dst +
+                      ",output:" + outport_name + "\"";
 
   // Adding unicast rules in table20
   string opt = "add-flow br-tun table=20,priority=50,idle_timeout=" + action.idle_timeout +

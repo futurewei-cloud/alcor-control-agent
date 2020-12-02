@@ -36,9 +36,12 @@ class Aca_Oam_Port_Manager {
   void add_oam_port_rule(uint port_number);
   int remove_oam_port_rule(uint port_number);
 
+
+
   //Determine whether the port is an oam_server_port
   bool is_oam_server_port(uint port_number);
 
+  bool is_exist_oam_port_rule(uint port_number);
   private:
   int _create_oam_ofp(uint port_number);
   int _delete_oam_ofp(uint port_number);

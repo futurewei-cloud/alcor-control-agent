@@ -53,7 +53,7 @@ add_executable(
 # Link test executable against gtest & gtest_main
 target_link_libraries(aca_tests gtest gtest_main)
 target_link_libraries(aca_tests pulsar)
-#target_link_libraries(aca_tests openvswitch)
+target_link_libraries(aca_tests openvswitch)
 target_link_libraries(aca_tests AlcorControlAgentLib)
 target_link_libraries(aca_tests proto)
 target_link_libraries(aca_tests ${PROTOBUF_LIBRARY})

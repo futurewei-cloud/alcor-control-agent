@@ -135,16 +135,20 @@ int Aca_Oam_Port_Manager::remove_oam_port_rule(uint port_number)
     overall_rc = ENOENT;
   } else {
     // clean up the oam_ports_cache entry
-    if (_oam_ports_cache.erase(port_number) == 1) {
+    int rc = _oam_ports_cache.erase(port_number);
+    if (rc == 1) {
       ACA_LOG_INFO("Successfuly cleaned up entry for port_number %u\n", port_number);
-      overall_rc = EXIT_SUCCESS;
+
     } else {
       ACA_LOG_ERROR("Failed to clean up entry for port_number %u\n", port_number);
-      overall_rc = EXIT_FAILURE;
     }
 
     // clean oam port rule
     overall_rc = _delete_oam_ofp(port_number);
+
+    if (rc != 1 || overall_rc != EXIT_SUCCESS) {
+      overall_rc = EXIT_FAILURE;
+    }
   }
   _oam_ports_cache_mutex.unlock();
   // -----critical section ends-----
@@ -176,6 +180,22 @@ bool Aca_Oam_Port_Manager::is_oam_server_port(uint port_number)
                 overall_rc);
 
   return overall_rc;
+}
+
+bool Aca_Oam_Port_Manager::is_exist_oam_port_rule(uint port_number)
+{
+  int overall_rc = EXIT_FAILURE;
+  
+  string opt = "table=0,udp,udp_dst=" + to_string(port_number);
+
+  // overall_rc = ACA_OVS_Control::get_instance().flow_exists("br_tun", opt.c_str());
+  if (overall_rc == EXIT_SUCCESS) {
+    ACA_LOG_INFO("%s", "Oam port rule is exist!\n");
+    return true;
+  } else {
+    ACA_LOG_INFO("%s", "Oam port rule is not exist!\n");
+    return false;
+  }
 }
 
 } // namespace aca_oam_port_manager

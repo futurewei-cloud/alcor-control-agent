@@ -358,48 +358,6 @@ int ACA_Vlan_Manager::get_outports_unsafe(uint tunnel_id, string &outports)
   return overall_rc;
 }
 
-// query oam_port with tunnel_id
-uint ACA_Vlan_Manager::get_oam_server_port(uint tunnel_id)
-{
-  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::get_oam_server_port ---> Entering\n");
-
-  uint port_number;
-
-  // -----critical section starts-----
-  _vpcs_table_mutex.lock();
-  if (_vpcs_table.find(tunnel_id) == _vpcs_table.end()) {
-    ACA_LOG_ERROR("tunnel_id %u not find in vpc_table\n", tunnel_id);
-    // If the tunnel_id cannot be found, set the port number to 0.
-    port_number = 0;
-  } else {
-    port_number = _vpcs_table[tunnel_id].oam_server_port;
-  }
-  _vpcs_table_mutex.unlock();
-  // -----critical section ends-----
-
-  ACA_LOG_DEBUG("ACA_Vlan_Manager::get_oam_server_port <--- Exiting, port_number=%u\n",
-                port_number);
-
-  return port_number;
-}
-
-// Bind oam_server_port to vpc
-void ACA_Vlan_Manager::set_oam_server_port(uint tunnel_id, uint port_number)
-{
-  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::set_oam_server_port ---> Entering\n");
-
-  // -----critical section starts-----
-  _vpcs_table_mutex.lock();
-  if (_vpcs_table.find(tunnel_id) == _vpcs_table.end()) {
-    create_entry_unsafe(tunnel_id);
-  }
-  _vpcs_table[tunnel_id].oam_server_port = port_number;
-  _vpcs_table_mutex.unlock();
-  // -----critical section ends-----
-
-  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::set_oam_server_port <--- Exiting\n");
-}
-
 // create a neighbor port without specifying vpc_id and neighbor ID
 int ACA_Vlan_Manager::create_neighbor_outport(alcor::schema::NetworkType network_type,
                                               string remote_host_ip, uint /*tunnel_id*/,
@@ -433,21 +391,61 @@ int ACA_Vlan_Manager::create_neighbor_outport(alcor::schema::NetworkType network
   return overall_rc;
 }
 
-bool ACA_Vlan_Manager::is_exist_oam_port(uint port_number)
+void ACA_Vlan_Manager::set_aux_gateway(uint tunnel_id, const string auxGateway_id)
 {
+  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::set_aux_gateway ---> Entering\n");
+
+  // -----critical section starts-----
+  _vpcs_table_mutex.lock();
+  if (_vpcs_table.find(tunnel_id) == _vpcs_table.end()) {
+    create_entry_unsafe(tunnel_id);
+  }
+  _vpcs_table[tunnel_id].auxGateway_id = auxGateway_id;
+  _vpcs_table_mutex.unlock();
+  // -----critical section ends-----
+
+  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::set_aux_gateway <--- Exiting\n");
+}
+
+string ACA_Vlan_Manager::get_aux_gateway_id(uint tunnel_id)
+{
+  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::get_aux_gateway_id ---> Entering\n");
+
+  string auxGateway_id;
+  // -----critical section starts-----
+  _vpcs_table_mutex.lock();
+  if (_vpcs_table.find(tunnel_id) == _vpcs_table.end()) {
+    ACA_LOG_ERROR("tunnel_id %u not find in vpc_table\n", tunnel_id);
+  } else {
+    auxGateway_id = _vpcs_table[tunnel_id].auxGateway_id;
+  }
+  _vpcs_table_mutex.unlock();
+  // -----critical section ends-----
+
+  ACA_LOG_DEBUG("ACA_Vlan_Manager::get_aux_gateway_id <--- Exiting, auxGateway_id =%s\n",
+                auxGateway_id.c_str());
+
+  return auxGateway_id;
+}
+
+bool ACA_Vlan_Manager::is_exist_aux_gateway(string auxGateway_id)
+{
+  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::get_aux_gateway_id ---> Entering\n");
   bool rc = false;
 
-  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::is_exist_oam_port ---> Entering\n");
+  // -----critical section starts-----
   _vpcs_table_mutex.lock();
   for (auto entry : _vpcs_table) {
     vpc_table_entry vpc_entry = entry.second;
-    if (vpc_entry.oam_server_port == port_number) {
+    if (vpc_entry.auxGateway_id == auxGateway_id) {
       rc = true;
       break;
     }
   }
   _vpcs_table_mutex.unlock();
-  ACA_LOG_DEBUG("ACA_Vlan_Manager::is_exist_oam_port <--- Exiting, rc = %d\n", rc);
+  // -----critical section ends-----
+  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::get_aux_gateway_id ---> Entering\n");
+
   return rc;
 }
 
