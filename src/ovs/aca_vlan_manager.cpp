@@ -432,6 +432,7 @@ void ACA_Vlan_Manager::set_aux_gateway(uint tunnel_id, const string auxGateway_i
 {
   ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::set_aux_gateway ---> Entering\n");
 
+  auto vpcs_table_mutex_start = chrono::steady_clock::now();
   // -----critical section starts-----
   _vpcs_table_mutex.lock();
   if (_vpcs_table.find(tunnel_id) == _vpcs_table.end()) {
@@ -440,27 +441,10 @@ void ACA_Vlan_Manager::set_aux_gateway(uint tunnel_id, const string auxGateway_i
   _vpcs_table[tunnel_id].auxGateway_id = auxGateway_id;
   _vpcs_table_mutex.unlock();
   // -----critical section ends-----
-  uint port_number;
-
-  auto vpcs_table_mutex_start = chrono::steady_clock::now();
-  // -----critical section starts-----
-  _vpcs_table_mutex.lock();
-  if (_vpcs_table.find(tunnel_id) == _vpcs_table.end()) {
-    ACA_LOG_ERROR("tunnel_id %u not find in vpc_table\n", tunnel_id);
-    // If the tunnel_id cannot be found, set the port number to 0.
-    port_number = 0;
-  } else {
-    port_number = _vpcs_table[tunnel_id].oam_server_port;
-  }
-  _vpcs_table_mutex.unlock();
-  // -----critical section ends-----
   auto vpcs_table_mutex_end = chrono::steady_clock::now();
 
   g_total_vpcs_table_mutex_time +=
           cast_to_microseconds(vpcs_table_mutex_end - vpcs_table_mutex_start).count();
-
-  ACA_LOG_DEBUG("ACA_Vlan_Manager::get_oam_server_port <--- Exiting, port_number=%u\n",
-                port_number);
 
   ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::set_aux_gateway <--- Exiting\n");
 }
