@@ -6,12 +6,11 @@ import paramiko
 # Transfer the file locally to aca nodes
 def upload_file_aca(host, user, password, server_path, local_path, timeout=10):
     """
-    上传配置文件
     :param host: 主机名
     :param user: 用户名
     :param password: 密码
-    :param server_path: 远程路径，比如：/root/alcor-control-agent/test/gtest
-    :param local_path: 本地路径，比如：./text.txt
+    :param server_path: /root/alcor-control-agent/test/gtest
+    :param local_path: ./text.txt
     :param timeout: 超时时间(默认)，int类型
     :return: bool
     """
@@ -32,7 +31,6 @@ def upload_file_aca(host, user, password, server_path, local_path, timeout=10):
 # Execute remote SSH commands
 def exec_sshCommand_aca(host, user, password, cmd, timeout=10):
     """
-    使用ssh连接远程服务器执行命令
     :param host: 主机名
     :param user: 用户名
     :param password: 密码
@@ -40,29 +38,31 @@ def exec_sshCommand_aca(host, user, password, cmd, timeout=10):
     :param seconds: 超时时间(默认)，int类型
     :return: dict
     """
-    result = {'status': [], 'data': []}  # 记录返回结果
+    result = {'status': [], 'data': []}  # Record return result
     try:
-        ssh = paramiko.SSHClient()  # 创建一个新的SSHClient实例
+        # Create a SSHClient instance
+        ssh = paramiko.SSHClient()
         ssh.banner_timeout = timeout
-        # 设置host key,如果在"known_hosts"中没有保存相关的信息, SSHClient 默认行为是拒绝连接, 会提示yes/no
+        # set host key
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        ssh.connect(host, 22, user, password, timeout=timeout)  # 连接远程服务器,超时时间1秒
+        # Connect to remote server
+        ssh.connect(host, 22, user, password, timeout=timeout)
         for command in cmd:
-            stdin, stdout, stderr = ssh.exec_command(command, get_pty=True, timeout=timeout)  # execute command
+            # execute command
+            stdin, stdout, stderr = ssh.exec_command(command, get_pty=True, timeout=timeout)
+            # If need password
             if 'sudo' in command:
                 stdin.write(password + '\n')
-            # 执行结果,readlines会返回列表
+            # result of execution,return a list
             # out1 = stdout.readlines()
             out2 = stdout.read()
-            # 执行状态status,0表示成功,1表示失败
+            # execution state:0 means success,1 means failure
             channel = stdout.channel
             status = channel.recv_exit_status()
-            # 记录每条命令的执行结果
             result['status'].append(status)
             # result['data'].append(out1)
             print(out2.decode())
-        ssh.close()  # 关闭ssh连接
-        # 修改返回结果
+        ssh.close()  # close ssh connection
         return result
     except Exception as e:
         print(e)
@@ -107,7 +107,7 @@ def run():
     else:
         print("upload file %s successfully" % local_path)
 
-    # 远程执行命令，利用传输的文件更改aca_test_ovs_util.cpp中的信息，然后重新编译make，执行aca_test
+    # Execute remote command, use the transferred file to change the information in aca_test_ovs_util.cpp,recompile using 'make',perform aca_test
     aca_nodes = ["172.16.62.249", "172.16.62.250"]
     cmd_list1 = ['cd alcor-control-agent;sudo make',
                  'cd alcor-control-agent;./build/tests/aca_tests --gtest_also_run_disabled_tests --gtest_filter=*DISABLED_2_ports_CREATE_test_traffic_CHILD -p 10.213.43.187']
