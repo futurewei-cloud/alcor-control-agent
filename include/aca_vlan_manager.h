@@ -41,7 +41,7 @@ struct vpc_table_entry {
   // hashtable <key: outports string, value: list of neighbor port IDs>
   unordered_map<string, list<string> > outports_neighbors_table;
 
-  uint oam_server_port;
+  string auxGateway_id;
 };
 
 class ACA_Vlan_Manager {
@@ -69,9 +69,11 @@ class ACA_Vlan_Manager {
 
   int get_outports_unsafe(uint tunnel_id, string &outports);
 
-  uint get_oam_server_port(uint tunnel_id);
+  void set_aux_gateway(uint tunnel_id, const string auxGateway_id);
 
-  void set_oam_server_port(uint tunnel_id, uint port_number);
+  string get_aux_gateway_id(uint tunnel_id);
+
+  bool is_exist_aux_gateway(const string auxGateway_id);
 
   // compiler will flag error when below is called
   ACA_Vlan_Manager(ACA_Vlan_Manager const &) = delete;
