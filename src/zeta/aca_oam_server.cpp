@@ -286,7 +286,6 @@ int ACA_Oam_Server::_add_direct_path(oam_match match, oam_action action)
   if (overall_rc == EXIT_SUCCESS) {
     ACA_LOG_INFO("%s", "Add direct path succeeded!\n");
   } else {
-    //ACA_LOG_INFO("%s\n", opt.c_str());
     ACA_LOG_ERROR("Add direct path failed!!! overrall_rc: %d\n", overall_rc);
   }
 
@@ -295,7 +294,7 @@ int ACA_Oam_Server::_add_direct_path(oam_match match, oam_action action)
 
 int ACA_Oam_Server::_del_direct_path(oam_match match)
 {
-  int overall_rc = EXIT_SUCCESS;
+  int overall_rc;
   string vlan_id = to_string(aca_vlan_manager::ACA_Vlan_Manager::get_instance().get_or_create_vlan_id(
           std::stoul(match.vni)));
 
