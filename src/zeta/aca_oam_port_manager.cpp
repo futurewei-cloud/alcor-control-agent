@@ -131,7 +131,7 @@ int Aca_Oam_Port_Manager::remove_oam_port_rule(uint port_number)
   // -----critical section starts-----
   _oam_ports_cache_mutex.lock();
   if (_oam_ports_cache.find(port_number) == _oam_ports_cache.end()) {
-    ACA_LOG_ERROR("port id %u not find in oam_ports_table\n", port_number);
+    ACA_LOG_ERROR("port_number %u not find in oam_ports_table\n", port_number);
     overall_rc = ENOENT;
   } else {
     // clean up the oam_ports_cache entry
@@ -185,7 +185,7 @@ bool Aca_Oam_Port_Manager::is_oam_server_port(uint port_number)
 bool Aca_Oam_Port_Manager::is_exist_oam_port_rule(uint port_number)
 {
   int overall_rc = EXIT_FAILURE;
-  
+
   string opt = "table=0,udp,udp_dst=" + to_string(port_number);
 
   // overall_rc = ACA_OVS_Control::get_instance().flow_exists("br_tun", opt.c_str());
