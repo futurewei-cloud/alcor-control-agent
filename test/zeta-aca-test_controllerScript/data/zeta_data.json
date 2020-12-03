@@ -1,0 +1,13 @@
+{
+  "ZGC_data": {
+    "name": "ZGC_test",
+    "description": "ZGC 1",
+    "overlay_type": "vxlan"
+  },
+  "VPC_data": {
+
+  },
+  "PORT_data": {
+
+  }
+}
