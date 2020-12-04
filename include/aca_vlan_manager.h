@@ -16,6 +16,7 @@
 #define ACA_VLAN_MANAGER_H
 
 #include "goalstateprovisioner.grpc.pb.h"
+#include "hashmap/HashMap.h"
 #include <string>
 #include <list>
 #include <unordered_map>
@@ -25,7 +26,6 @@
 using namespace std;
 
 // TODO: implement a better available internal vlan ids
-// when we have port delete implemented
 static atomic_uint current_available_vlan_id(1);
 
 // Vlan Manager class
@@ -37,9 +37,15 @@ struct vpc_table_entry {
   // list of ovs_ports names on this host in the same VPC to share the same internal vlan_id
   list<string> ovs_ports;
 
+  // mutex to protect ovs_ports
+  mutable std::shared_timed_mutex ovs_ports_mutex;
+
   // hashtable of output (e.g. vxlan) tunnel ports to the neighbor host communication
   // hashtable <key: outports string, value: list of neighbor port IDs>
   unordered_map<string, list<string> > outports_neighbors_table;
+
+  // mutex to protect outports_neighbors_table
+  mutable std::shared_timed_mutex outports_neighbors_table_mutex;
 
   string auxGateway_id;
 };
@@ -84,12 +90,12 @@ class ACA_Vlan_Manager {
   ~ACA_Vlan_Manager(){};
 
   // hashtable <key: tunnel ID, value: vpc_table_entry>
-  unordered_map<uint, vpc_table_entry> _vpcs_table;
+  CTSL::HashMap<uint, vpc_table_entry *> _vpcs_table;
 
   // mutex for reading and writing to _vpcs_table
-  mutex _vpcs_table_mutex;
+  // mutex _vpcs_table_mutex;
 
-  void create_entry_unsafe(uint tunnel_id);
+  void create_entry(uint tunnel_id);
 };
 } // namespace aca_vlan_manager
 #endif // #ifndef ACA_VLAN_MANAGER_H

@@ -31,7 +31,6 @@ include_directories(${RDKAFKA_INCLUDE_DIR} ${CPPKAFKA_INCLUDE_DIR} ${OPENVSWITCH
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../include)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/proto3)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/grpc)
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../mizar/src/include)
 include_directories(/usr/local/include/openvswitch)
 include_directories(/usr/local/include/openflow)
 
