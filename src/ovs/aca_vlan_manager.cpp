@@ -184,6 +184,7 @@ int ACA_Vlan_Manager::create_neighbor_outport(string neighbor_id, string /*vpc_i
 
   auto current_outports_neighbors_table = current_vpc_table_entry->outports_neighbors_table;
 
+  auto vpcs_table_mutex_start = chrono::steady_clock::now();
   //-----Start exclusive lock to enable single writer-----
   std::unique_lock<std::shared_timed_mutex> lock(
           current_vpc_table_entry->outports_neighbors_table_mutex);
@@ -231,6 +232,10 @@ int ACA_Vlan_Manager::create_neighbor_outport(string neighbor_id, string /*vpc_i
   }
   lock.unlock();
   //-----End exclusive lock to enable single writer-----
+  auto vpcs_table_mutex_end = chrono::steady_clock::now();
+
+  g_total_vpcs_table_mutex_time +=
+          cast_to_microseconds(vpcs_table_mutex_end - vpcs_table_mutex_start).count();
 
   ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::create_neighbor_outport <--- Exiting\n");
 
@@ -253,6 +258,7 @@ int ACA_Vlan_Manager::delete_neighbor_outport(string neighbor_id, uint tunnel_id
   } else {
     auto current_outports_neighbors_table = current_vpc_table_entry->outports_neighbors_table;
 
+    auto vpcs_table_mutex_start = chrono::steady_clock::now();
     //-----Start exclusive lock to enable single writer-----
     std::unique_lock<std::shared_timed_mutex> lock(
             current_vpc_table_entry->outports_neighbors_table_mutex);
@@ -338,6 +344,11 @@ int ACA_Vlan_Manager::delete_neighbor_outport(string neighbor_id, uint tunnel_id
 
       lock.unlock();
       //-----End exclusive lock to enable single writer-----
+      auto vpcs_table_mutex_end = chrono::steady_clock::now();
+
+      g_total_vpcs_table_mutex_time +=
+              cast_to_microseconds(vpcs_table_mutex_end - vpcs_table_mutex_start)
+                      .count();
     } else {
       ACA_LOG_ERROR("outport_name %s not found in outports_neighbors_table\n",
                     outport_name.c_str());
