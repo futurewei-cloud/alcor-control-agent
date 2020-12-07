@@ -27,10 +27,17 @@ using namespace std;
 // TODO: implement a better available internal vlan ids
 // when we have port delete implemented
 static atomic_uint current_available_vlan_id(1);
+static atomic_uint current_available_group_id(1);
 
 // Vlan Manager class
 namespace aca_vlan_manager
 {
+struct auxgateway_entry {
+  string auxGateway_id;
+  uint oam_port;
+  uint group_id;
+};
+
 struct vpc_table_entry {
   uint vlan_id;
 
@@ -41,7 +48,7 @@ struct vpc_table_entry {
   // hashtable <key: outports string, value: list of neighbor port IDs>
   unordered_map<string, list<string> > outports_neighbors_table;
 
-  string auxGateway_id;
+  auxgateway_entry auxGateway;
 };
 
 class ACA_Vlan_Manager {
@@ -60,20 +67,22 @@ class ACA_Vlan_Manager {
                               alcor::schema::NetworkType network_type, string remote_host_ip,
                               uint tunnel_id, ulong &culminative_time);
 
-  // create a neighbor port without specifying vpc_id and neighbor ID
-  int create_neighbor_outport(alcor::schema::NetworkType network_type, string remote_host_ip,
-                              uint tunnel_id, ulong &culminative_time);
-
   int delete_neighbor_outport(string neighbor_id, uint tunnel_id,
                               string outport_name, ulong &culminative_time);
 
   int get_outports_unsafe(uint tunnel_id, string &outports);
 
-  void set_aux_gateway(uint tunnel_id, const string auxGateway_id);
+  void set_auxgateway(uint tunnel_id, const string auxGateway_id, uint oam_port);
 
-  string get_aux_gateway_id(uint tunnel_id);
+  int remove_auxgateway(uint tunnel_id);
 
-  bool is_exist_aux_gateway(const string auxGateway_id);
+  auxgateway_entry get_auxgateway_unsafe(uint tunnel_id);
+
+  uint get_gateway_group_id(uint auxGateway_id);
+
+  bool is_exist_auxgateway(const string auxGateway_id);
+
+  bool is_exist_oam_port_rule(uint port_number);
 
   // compiler will flag error when below is called
   ACA_Vlan_Manager(ACA_Vlan_Manager const &) = delete;
@@ -90,6 +99,9 @@ class ACA_Vlan_Manager {
   mutex _vpcs_table_mutex;
 
   void create_entry_unsafe(uint tunnel_id);
+
+  int _create_oam_ofp(uint port_number);
+  int _delete_oam_ofp(uint port_number);
 };
 } // namespace aca_vlan_manager
 #endif // #ifndef ACA_VLAN_MANAGER_H

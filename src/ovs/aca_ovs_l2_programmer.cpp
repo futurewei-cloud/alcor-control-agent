@@ -145,6 +145,13 @@ int ACA_OVS_L2_Programmer::setup_ovs_bridges_if_need()
 
     execute_openflow_command("add-flow br-tun \"table=52,priority=1 actions=resubmit(,20)\"",
                              not_care_culminative_time, overall_rc);
+
+    execute_ovsdb_command("--may-exist add-port br-tun vxlan-generic -- set interface vxlan-generic type=vxlan options:df_default=true options:egress_pkt_mark=0 options:in_key=flow options:out_key=flow options:remote_ip=flow",
+                          not_care_culminative_time, overall_rc);
+
+    execute_openflow_command("add-flow br-tun \"table=0,priority=25,in_port=\"vxlan-generic\" actions=resubmit(,4)\"",
+                             not_care_culminative_time, overall_rc);
+
   } else {
     // case 3: only one of the br-int or br-tun is there,
     // Invalid environment so return an error

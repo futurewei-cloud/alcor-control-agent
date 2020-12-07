@@ -395,42 +395,38 @@ int ACA_Vlan_Manager::get_outports_unsafe(uint tunnel_id, string &outports)
   return overall_rc;
 }
 
-// create a neighbor port without specifying vpc_id and neighbor ID
-int ACA_Vlan_Manager::create_neighbor_outport(alcor::schema::NetworkType network_type,
-                                              string remote_host_ip, uint /*tunnel_id*/,
-                                              ulong &culminative_time)
+auxgateway_entry ACA_Vlan_Manager::get_auxgateway_unsafe(uint tunnel_id)
 {
-  int overall_rc = EXIT_SUCCESS;
+  auxgateway_entry auxgateway_rc;
+  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::get_outports_unsafe ---> Entering\n");
+  if (_vpcs_table.find(tunnel_id) == _vpcs_table.end()) {
+    ACA_LOG_ERROR("tunnel_id %u not found in vpc_table\n", tunnel_id);
+  } else {
+    auxgateway_rc = _vpcs_table[tunnel_id].auxGateway;
+  }
 
-  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::create_neighbor_outport ---> Entering\n");
-
-  string outport_name = aca_get_outport_name(network_type, remote_host_ip);
-
-  // since this is a new outport, configure OVS and openflow rule
-  string cmd_string =
-          "--may-exist add-port br-tun " + outport_name + " -- set interface " +
-          outport_name + " type=" + aca_get_network_type_string(network_type) +
-          " options:df_default=true options:egress_pkt_mark=0 options:in_key=flow options:out_key=flow options:remote_ip=" +
-          remote_host_ip;
-
-  ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
-          cmd_string, culminative_time, overall_rc);
-
-  // incoming from neighbor through vxlan port (based on remote IP)
-  cmd_string = "add-flow br-tun \"table=0,priority=25,in_port=\"" +
-               outport_name + "\" actions=resubmit(,4)\"";
-
-  ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
-          cmd_string, culminative_time, overall_rc);
-
-  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::create_neighbor_outport <--- Exiting\n");
-
-  return overall_rc;
+  return auxgateway_rc;
 }
 
-void ACA_Vlan_Manager::set_aux_gateway(uint tunnel_id, const string auxGateway_id)
+bool ACA_Vlan_Manager::is_exist_oam_port_rule(uint port_number)
 {
-  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::set_aux_gateway ---> Entering\n");
+  int overall_rc = EXIT_FAILURE;
+
+  string opt = "table=0,udp,udp_dst=" + to_string(port_number);
+
+  // overall_rc = ACA_OVS_Control::get_instance().flow_exists("br_tun", opt.c_str());
+  if (overall_rc == EXIT_SUCCESS) {
+    ACA_LOG_INFO("%s", "Oam port rule is exist!\n");
+    return true;
+  } else {
+    ACA_LOG_INFO("%s", "Oam port rule is not exist!\n");
+    return false;
+  }
+}
+
+void ACA_Vlan_Manager::set_auxgateway(uint tunnel_id, const string auxGateway_id, uint oam_port)
+{
+  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::set_auxgateway ---> Entering\n");
 
   auto vpcs_table_mutex_start = chrono::steady_clock::now();
   // -----critical section starts-----
@@ -438,7 +434,18 @@ void ACA_Vlan_Manager::set_aux_gateway(uint tunnel_id, const string auxGateway_i
   if (_vpcs_table.find(tunnel_id) == _vpcs_table.end()) {
     create_entry_unsafe(tunnel_id);
   }
-  _vpcs_table[tunnel_id].auxGateway_id = auxGateway_id;
+
+  if (_vpcs_table[tunnel_id].auxGateway.auxGateway_id.empty()) {
+    _vpcs_table[tunnel_id].auxGateway.auxGateway_id = auxGateway_id;
+    _vpcs_table[tunnel_id].auxGateway.group_id = current_available_group_id.load();
+    current_available_group_id++;
+    _vpcs_table[tunnel_id].auxGateway.oam_port = oam_port;
+  }
+
+  if (!is_exist_oam_port_rule(oam_port)) {
+    _create_oam_ofp(oam_port);
+  }
+
   _vpcs_table_mutex.unlock();
   // -----critical section ends-----
   auto vpcs_table_mutex_end = chrono::steady_clock::now();
@@ -446,54 +453,90 @@ void ACA_Vlan_Manager::set_aux_gateway(uint tunnel_id, const string auxGateway_i
   g_total_vpcs_table_mutex_time +=
           cast_to_microseconds(vpcs_table_mutex_end - vpcs_table_mutex_start).count();
 
-  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::set_aux_gateway <--- Exiting\n");
+  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::set_auxgateway <--- Exiting\n");
 }
 
-string ACA_Vlan_Manager::get_aux_gateway_id(uint tunnel_id)
+int ACA_Vlan_Manager::remove_auxgateway(uint tunnel_id)
 {
-  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::get_aux_gateway_id ---> Entering\n");
+  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::set_auxgateway ---> Entering\n");
+  int overall_rc = EXIT_SUCCESS;
 
-  auto vpcs_table_mutex_start = chrono::steady_clock::now();
-  string auxGateway_id;
+  string auxgateway_id;
+  uint oam_port;
+
   // -----critical section starts-----
   _vpcs_table_mutex.lock();
-  if (_vpcs_table.find(tunnel_id) == _vpcs_table.end()) {
-    ACA_LOG_ERROR("tunnel_id %u not find in vpc_table\n", tunnel_id);
-  } else {
-    auxGateway_id = _vpcs_table[tunnel_id].auxGateway_id;
+  if (_vpcs_table.find(tunnel_id) != _vpcs_table.end()) {
+    auxgateway_id = _vpcs_table[tunnel_id].auxGateway.auxGateway_id;
+    _vpcs_table[tunnel_id].auxGateway.auxGateway_id == "";
+    _vpcs_table[tunnel_id].auxGateway.group_id = 0;
+    oam_port = _vpcs_table[tunnel_id].auxGateway.oam_port;
+    _vpcs_table[tunnel_id].auxGateway.oam_port = 0;
   }
+
   _vpcs_table_mutex.unlock();
   // -----critical section ends-----
-  auto vpcs_table_mutex_end = chrono::steady_clock::now();
-
-  g_total_vpcs_table_mutex_time +=
-          cast_to_microseconds(vpcs_table_mutex_end - vpcs_table_mutex_start).count();
-
-  ACA_LOG_DEBUG("ACA_Vlan_Manager::get_aux_gateway_id <--- Exiting, auxGateway_id =%s\n",
-                auxGateway_id.c_str());
-
-  return auxGateway_id;
+  if (!is_exist_auxgateway(auxgateway_id)) {
+    overall_rc = _delete_oam_ofp(oam_port);
+  }
+  ACA_LOG_DEBUG("ACA_Vlan_Manager::get_outports_unsafe <--- Exiting, overall_rc = %d\n",
+                overall_rc);
+  return overall_rc;
 }
 
-bool ACA_Vlan_Manager::is_exist_aux_gateway(string auxGateway_id)
+bool ACA_Vlan_Manager::is_exist_auxgateway(string auxGateway_id)
 {
-  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::get_aux_gateway_id ---> Entering\n");
+  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::get_auxgateway_id ---> Entering\n");
   bool rc = false;
 
   // -----critical section starts-----
   _vpcs_table_mutex.lock();
   for (auto entry : _vpcs_table) {
-    vpc_table_entry vpc_entry = entry.second;
-    if (vpc_entry.auxGateway_id == auxGateway_id) {
+    auxgateway_entry auxgateway = entry.second.auxGateway;
+    if (auxgateway.auxGateway_id == auxGateway_id) {
       rc = true;
       break;
     }
   }
   _vpcs_table_mutex.unlock();
   // -----critical section ends-----
-  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::get_aux_gateway_id ---> Entering\n");
+  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::get_auxgateway_id ---> Entering\n");
 
   return rc;
+}
+
+// add the OAM punt rule
+int ACA_Vlan_Manager::_create_oam_ofp(uint port_number)
+{
+  int overall_rc;
+
+  string opt = "table=0,priority=25,udp,udp_dst=" + to_string(port_number) + ",actions=CONTROLLER";
+  overall_rc = ACA_OVS_Control::get_instance().add_flow("br-int", opt.c_str());
+
+  if (overall_rc == EXIT_SUCCESS) {
+    ACA_LOG_INFO("%s", "creat_oam_ofp succeeded!\n");
+  } else {
+    ACA_LOG_ERROR("creat_oam_ofp failed!!! overrall_rc: %d\n", overall_rc);
+  }
+
+  return overall_rc;
+}
+
+// delete the OAM punt rule
+int ACA_Vlan_Manager::_delete_oam_ofp(uint port_number)
+{
+  int overall_rc;
+
+  string opt = "udp,udp_dst=" + to_string(port_number);
+
+  overall_rc = ACA_OVS_Control::get_instance().del_flows("br-int", opt.c_str());
+
+  if (overall_rc == EXIT_SUCCESS) {
+    ACA_LOG_INFO("%s", "delete_oam_ofp succeeded!\n");
+  } else {
+    ACA_LOG_ERROR("delete_oam_ofp failed!!! overrall_rc: %d\n", overall_rc);
+  }
+  return overall_rc;
 }
 
 } // namespace aca_vlan_manager

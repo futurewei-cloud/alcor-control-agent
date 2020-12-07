@@ -243,7 +243,7 @@ int ACA_Dataplane_OVS::update_port_state_workitem(const PortState current_PortSt
       if (found_auxgateway.aux_gateway_type() == ZETA) {
         ACA_LOG_INFO("%s", "AuxGateway_type is zeta!\n");
         // Update the zeta settings of vpc
-        overall_rc = ACA_Zeta_Programming::get_instance().create_or_update_zeta_config(
+        overall_rc = ACA_Zeta_Programming::get_instance().create_zeta_config(
                 found_auxgateway, current_PortConfiguration.vpc_id(), found_tunnel_id);
       }
 

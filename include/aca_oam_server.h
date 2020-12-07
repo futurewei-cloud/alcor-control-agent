@@ -38,7 +38,7 @@ struct oam_match {
   string sport;
   string dport;
   string proto;
-  string vni;
+  uint vni;
 };
 
 struct oam_action {
@@ -88,6 +88,10 @@ class ACA_Oam_Server {
   static ACA_Oam_Server &get_instance();
   void oams_recv(uint32_t udp_dport, void *message);
 
+  bool lookup_oam_port_in_cache(uint port_number);
+
+  void add_oam_port_cache(uint port_number);
+
   private:
   uint8_t _get_message_type(oam_message *oammsg);
 
@@ -116,7 +120,15 @@ class ACA_Oam_Server {
 
   string _get_mac_addr(uint8_t *mac);
 
-  string _get_vpc_id(uint8_t *vni);
+  uint _get_tunnel_id(uint8_t *vni);
+
+  // void _clear_cache_all_data();
+
+  // unordered_set<oam_port_number>
+  unordered_set<uint> _oam_ports_cache;
+
+  // mutex for reading and writing to _oam_ports_cache
+  mutex _oam_ports_cache_mutex;
 };
 } // namespace aca_oam_server
 #endif // #ifndef ACA_OAM_SERVER_H

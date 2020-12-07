@@ -16,7 +16,6 @@
 #define private public
 #include "aca_oam_server.h"
 #include "aca_util.h"
-#include "goalstateprovisioner.grpc.pb.h"
 #include <string.h>
 #include "aca_ovs_control.h"
 #include "aca_vlan_manager.h"
@@ -33,10 +32,6 @@ extern string vip_address_3;
 extern string vip_address_4;
 extern string remote_ip_1;
 extern string remote_ip_2;
-
-alcor::schema::NetworkType network_type = alcor::schema::NetworkType::VXLAN;
-
-
 
 using namespace aca_ovs_control;
 
@@ -72,13 +67,12 @@ TEST(oam_message_test_cases, oams_recv_valid)
 
   retcode = ACA_Oam_Server::get_instance()._get_message_type(&stOamMsg);
   EXPECT_EQ(retcode, OAM_MSG_FLOW_INJECTION);
-
 }
 
 TEST(oam_message_test_cases, add_direct_path_valid)
 {
   int retcode = 0;
-  unsigned long not_care_culminative_time;
+
   oam_match match;
   oam_action action;
 
@@ -86,7 +80,7 @@ TEST(oam_message_test_cases, add_direct_path_valid)
   match.dip = vip_address_2;
   match.sport = "55";
   match.dport = "77";
-  match.vni = "300";
+  match.vni = 300;
   match.proto = "6";
 
   action.inst_nw_dst = vip_address_3;
@@ -95,15 +89,8 @@ TEST(oam_message_test_cases, add_direct_path_valid)
   action.node_dl_dst = vmac_address_2;
   action.idle_timeout = "120";
 
-  if (!aca_is_port_on_same_host(action.node_nw_dst)) {
-    ACA_LOG_INFO("%s", "port_neighbor not exist!\n");
-    //crate neighbor_port
-    aca_vlan_manager::ACA_Vlan_Manager::get_instance().create_neighbor_outport(
-            network_type, action.node_nw_dst, 300, not_care_culminative_time);
-  }
-
   string vlan_id = to_string(aca_vlan_manager::ACA_Vlan_Manager::get_instance().get_or_create_vlan_id(
-          strtoul(match.vni.c_str(), NULL, 10)));
+          match.vni));
 
   // add unicast rule
   aca_oam_server::ACA_Oam_Server::get_instance()._add_direct_path(match, action);
@@ -119,7 +106,6 @@ TEST(oam_message_test_cases, add_direct_path_valid)
 TEST(oam_message_test_cases, del_direct_path_valid)
 {
   int retcode = 0;
-  unsigned long not_care_culminative_time;
 
   oam_match match;
   oam_action action;
@@ -128,7 +114,7 @@ TEST(oam_message_test_cases, del_direct_path_valid)
   match.dip = vip_address_2;
   match.sport = "55";
   match.dport = "77";
-  match.vni = "400";
+  match.vni = 400;
   match.proto = "6";
 
   action.inst_nw_dst = vip_address_3;
@@ -137,15 +123,8 @@ TEST(oam_message_test_cases, del_direct_path_valid)
   action.node_dl_dst = vmac_address_2;
   action.idle_timeout = "120";
 
-  if (!aca_is_port_on_same_host(action.node_nw_dst)) {
-    ACA_LOG_INFO("%s", "port_neighbor not exist!\n");
-    //crate neighbor_port
-    aca_vlan_manager::ACA_Vlan_Manager::get_instance().create_neighbor_outport(
-            network_type, action.node_nw_dst, 300, not_care_culminative_time);
-  }
-
   string vlan_id = to_string(aca_vlan_manager::ACA_Vlan_Manager::get_instance().get_or_create_vlan_id(
-          strtoul(match.vni.c_str(), NULL, 10)));
+          match.vni));
 
   // add unicast rule
   aca_oam_server::ACA_Oam_Server::get_instance()._add_direct_path(match, action);
@@ -159,4 +138,3 @@ TEST(oam_message_test_cases, del_direct_path_valid)
   retcode = ACA_OVS_Control::get_instance().flow_exists("br-tun", cmd.c_str());
   EXPECT_EQ(retcode, EXIT_FAILURE);
 }
-

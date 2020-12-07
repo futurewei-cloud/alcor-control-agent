@@ -129,9 +129,9 @@ string ACA_Oam_Server::_get_mac_addr(uint8_t *mac)
   return mac_string;
 }
 
-string ACA_Oam_Server::_get_vpc_id(uint8_t *vni)
+uint ACA_Oam_Server::_get_tunnel_id(uint8_t *vni)
 {
-  string vpc_id;
+  string tunnel_id;
   stringstream ss;
 
   for (int i = 0; i < 3; i++) {
@@ -139,10 +139,10 @@ string ACA_Oam_Server::_get_vpc_id(uint8_t *vni)
        << static_cast<unsigned int>(vni[i]);
   }
 
-  ss >> vpc_id;
-  vpc_id.pop_back();
+  ss >> tunnel_id;
+  tunnel_id.pop_back();
 
-  return vpc_id;
+  return std::stoul(tunnel_id);
 }
 
 //extract data for flow table matching from the oam message
@@ -160,6 +160,7 @@ oam_match ACA_Oam_Server::_get_oam_match_field(oam_message *oammsg)
   // TODO: figure out the conversion from 4 bytes VNI to tunnel_id string
   // why don't we make match.vni as uint?
   // match.vni = _get_vpc_id(msg_data.vni);
+  match.vni = _get_tunnel_id(msg_data.vni);
 
   return match;
 }
@@ -183,10 +184,10 @@ oam_action ACA_Oam_Server::_get_oam_action_field(oam_message *oammsg)
 //check whether the udp_dport is the oam server port of the vpc
 bool ACA_Oam_Server::_check_oam_server_port(uint udp_dport, oam_match match)
 {
-  string auxGateway_id = aca_vlan_manager::ACA_Vlan_Manager::get_instance().get_aux_gateway_id(
-          std::stoul(match.vni));
-  uint32_t oam_port = aca_zeta_programming::ACA_Zeta_Programming::get_instance().get_oam_server_port(
-          auxGateway_id);
+  uint tunnel_id = match.vni;
+  uint oam_port = aca_vlan_manager::ACA_Vlan_Manager::get_instance()
+                          .get_auxgateway_unsafe(tunnel_id)
+                          .oam_port;
 
   if (udp_dport == oam_port) {
     ACA_LOG_INFO("%s", "oam port is correct!\n");
@@ -199,7 +200,6 @@ bool ACA_Oam_Server::_check_oam_server_port(uint udp_dport, oam_match match)
 
 void ACA_Oam_Server::_parse_oam_flow_injection(uint udp_dport, oam_message *oammsg)
 {
-  unsigned long not_care_culminative_time;
   int overall_rc;
 
   oam_match match = _get_oam_match_field(oammsg);
@@ -211,16 +211,6 @@ void ACA_Oam_Server::_parse_oam_flow_injection(uint udp_dport, oam_message *oamm
 
   oam_action action = _get_oam_action_field(oammsg);
 
-  string remote_host_ip = action.node_nw_dst;
-  uint tunnel_id = strtoul(match.vni.c_str(), NULL, 10);
-  alcor::schema::NetworkType network_type = alcor::schema::NetworkType::VXLAN;
-
-  if (!aca_is_port_on_same_host(remote_host_ip)) {
-    ACA_LOG_INFO("%s", "port_neighbor not exist!\n");
-    //crate neighbor_port
-    aca_vlan_manager::ACA_Vlan_Manager::get_instance().create_neighbor_outport(
-            network_type, remote_host_ip, tunnel_id, not_care_culminative_time);
-  }
   overall_rc = _add_direct_path(match, action);
 
   if (overall_rc == EXIT_SUCCESS) {
@@ -262,20 +252,17 @@ int ACA_Oam_Server::_add_direct_path(oam_match match, oam_action action)
 {
   unsigned long not_care_culminative_time;
   int overall_rc = EXIT_SUCCESS;
-  //
 
   string vlan_id = to_string(aca_vlan_manager::ACA_Vlan_Manager::get_instance().get_or_create_vlan_id(
-          std::stoul(match.vni)));
-  string outport_name =
-          aca_get_outport_name(alcor::schema::NetworkType::VXLAN, action.node_nw_dst);
+          match.vni));
 
   string cmd_match = "ip,nw_proto=" + match.proto + ",nw_src=" + match.sip +
                      ",nw_dst=" + match.dip + ",tp_src=" + match.sport +
                      ",tp_dst=" + match.dport + ",dl_vlan=" + vlan_id;
-  string cmd_action = ",actions=\"strip_vlan,load:" + match.vni +
-                      "->NXM_NX_TUN_ID[],mod_dl_dst=" + action.inst_dl_dst +
-                      ",mod_nw_dst=" + action.inst_nw_dst +
-                      ",output:" + outport_name + "\"";
+  string cmd_action = ",actions=\"strip_vlan,load:" + to_string(match.vni) +
+                      "->NXM_NX_TUN_ID[],set_field:" + action.node_nw_dst +
+                      "->tun_dst,mod_dl_dst=" + action.inst_dl_dst +
+                      ",mod_nw_dst=" + action.inst_nw_dst + ",output:vxlan-generic\"";
 
   // Adding unicast rules in table20
   string opt = "add-flow br-tun table=20,priority=50,idle_timeout=" + action.idle_timeout +
@@ -296,7 +283,7 @@ int ACA_Oam_Server::_del_direct_path(oam_match match)
 {
   int overall_rc;
   string vlan_id = to_string(aca_vlan_manager::ACA_Vlan_Manager::get_instance().get_or_create_vlan_id(
-          std::stoul(match.vni)));
+          match.vni));
 
   string opt = "table=20,priority=50,ip,nw_proto=" + match.proto +
                ",nw_src=" + match.sip + ",nw_dst=" + match.dip +
@@ -314,4 +301,44 @@ int ACA_Oam_Server::_del_direct_path(oam_match match)
   return overall_rc;
 }
 
+// add oam port number to cache
+void ACA_Oam_Server::add_oam_port_cache(uint port_number)
+{
+  // -----critical section ends-----
+  _oam_ports_cache_mutex.lock();
+  if (_oam_ports_cache.find(port_number) == _oam_ports_cache.end()) {
+    _oam_ports_cache.emplace(port_number);
+  }
+  _oam_ports_cache_mutex.unlock();
+  // -----critical section ends-----
+}
+
+// remove the oam port number from the cache
+// int ACA_Oam_Server::remove_oam_port_cache(uint port_number)
+// {
+//   int overall_rc = EXIT_FAILURE;
+//   // -----critical section starts-----
+//   _oam_ports_cache_mutex.lock();
+//   if (_oam_ports_cache.find(port_number) == _oam_ports_cache.end()) {
+//     overall_rc = EXIT_SUCCESS;
+//   } else {
+//     if (_oam_ports_cache.erase(port_number) == 1) {
+//       overall_rc = EXIT_SUCCESS;
+//     }
+//     overall_rc = EXIT_SUCCESS;
+//   }
+//   _oam_ports_cache_mutex.unlock();
+//   // -----critical section ends-----
+//   return overall_rc;
+// }
+
+// find the oam port number in the cache
+bool ACA_Oam_Server::lookup_oam_port_in_cache(uint port_number)
+{
+  if (_oam_ports_cache.find(port_number) != _oam_ports_cache.end()) {
+    return true;
+  } else {
+    return false;
+  }
+}
 } // namespace aca_oam_server

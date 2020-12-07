@@ -43,15 +43,15 @@ extern string node_mac_address_4;
 extern string vpc_id_1;
 extern string vpc_id_2;
 
-string auxGateway_id_1 = "11";
-string auxGateway_id_2 = "22";
+string auxGateway_id_1 = "00001111111111";
+string auxGateway_id_2 = "xxxxx--xxxxxxxx";
 
 uint tunnel_id_1 = 555;
 uint tunnel_id_2 = 666;
 uint oam_port_1 = 6799;
 uint oam_port_2 = 6800;
 
-TEST(zeta_programming_test_cases, create_or_update_zeta_config_valid)
+TEST(zeta_programming_test_cases, create_zeta_config_valid)
 {
   int retcode = 0;
 
@@ -70,7 +70,7 @@ TEST(zeta_programming_test_cases, create_or_update_zeta_config_valid)
   destinaton->set_ip_address(remote_ip_2);
   destinaton->set_mac_address(node_mac_address_4);
 
-  retcode = ACA_Zeta_Programming::get_instance().create_or_update_zeta_config(
+  retcode = ACA_Zeta_Programming::get_instance().create_zeta_config(
           new_auxGateway, vpc_id_2, tunnel_id_2);
 
   EXPECT_EQ(retcode, EXIT_SUCCESS);
