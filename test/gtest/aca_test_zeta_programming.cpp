@@ -19,7 +19,11 @@
 #include <string.h>
 #include "aca_comm_mgr.h"
 #include "aca_zeta_programming.h"
+#include <fstream>
+#include <jsoncpp/json/json.h>//parse json file
+#include<iostream>
 
+using namespace std;
 using namespace aca_comm_manager;
 using namespace alcor::schema;
 using namespace aca_zeta_programming;
@@ -50,6 +54,28 @@ uint tunnel_id_1 = 555;
 uint tunnel_id_2 = 666;
 uint oam_port_1 = 6799;
 uint oam_port_2 = 6800;
+
+void aca_test_zeta_setup(zeta_gateway_path_config_file)
+{
+    ifstream ifs(zeta_gateway_path_config_file);
+    if(!ifs)
+　　    cout<<zeta_gateway_path_config_file<<"open error"<<endl;
+    Value root;
+    Reader reader;
+    // TODO: Read the configuration file
+    if(reader.parse(ifs,root))
+    {
+        cout<<root.toStyledString()<<endl;
+        Value &arr = root[""][""];
+        //...
+    }
+    // TODO: construct GoalState,push to aca
+    GoalState GoalState_builder;
+    //...
+    overall_rc = Aca_Comm_Manager::get_instance().update_goal_state(
+          GoalState_builder, gsOperationalReply);
+    ASSERT_EQ(overall_rc, EXIT_SUCCESS);
+}
 
 TEST(zeta_programming_test_cases, create_or_update_zeta_config_valid)
 {
@@ -141,4 +167,18 @@ TEST(zeta_programming_test_cases, DISABLED_auxgateway_test)
           GoalState_builder, gsOperationalReply);
 
   EXPECT_EQ(retcode, EXIT_SUCCESS);
+}
+
+TEST(zeta_programming_test_cases, DISABLED_zeta_gateway_path_CHILD)
+{
+    // TODO: The relative path of the CHILD configuration file
+    string zeta_gateway_path_CHILD_config_file="./...";
+    aca_test_zeta_setup(zeta_gateway_path_CHILD_config_file);
+}
+
+TEST(zeta_programming_test_cases, DISABLED_zeta_gateway_path_PARENT)
+{
+    // TODO: The relative path of the PARENT configuration file
+    string zeta_gateway_path_CHILD_config_file="./...";
+    aca_test_zeta_setup(zeta_gateway_path_PARENT_config_file);
 }

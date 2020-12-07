@@ -87,7 +87,7 @@ def talk_to_zeta(file_path, zgc_nodes_url):
     PORT_data = json.dumps(zeta_data["PORT_data"])
     requests.post(zgc_nodes_url[0] + "/ports", PORT_data)
     requests.post(zgc_nodes_url[1] + "/ports", PORT_data)
-    pass
+    # TODO: 分别生成CHILD和PARENT的配置文件
 
 
 def run():
