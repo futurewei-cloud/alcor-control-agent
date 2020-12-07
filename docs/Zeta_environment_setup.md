@@ -203,3 +203,7 @@
 #### Test Case 5: Direct Path Connectivity
 
 TBD
+
+### Problems
+
+- In the REST API of "add compute instance ports", what do "ips_port", "mac_port", "ip_node" and "mac_node" mean, respectively?
