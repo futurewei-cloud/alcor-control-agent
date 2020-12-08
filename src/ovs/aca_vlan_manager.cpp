@@ -189,6 +189,11 @@ int ACA_Vlan_Manager::create_l2_neighbor(string virtual_ip, string virtual_mac,
           cmd_string, culminative_time, overall_rc);
 
   // add the static arp responder for this l2 neighbor
+  string current_virtual_mac = virtual_mac;
+  current_virtual_mac.erase(
+          remove(current_virtual_mac.begin(), current_virtual_mac.end(), ':'),
+          current_virtual_mac.end());
+
   int addr = inet_network(virtual_ip.c_str());
   snprintf(hex_ip_buffer, HEX_IP_BUFFER_SIZE, "0x%08x", addr);
 
@@ -196,7 +201,7 @@ int ACA_Vlan_Manager::create_l2_neighbor(string virtual_ip, string virtual_mac,
                to_string(internal_vlan_id) + ",nw_dst=" + virtual_ip +
                " actions=move:NXM_OF_ETH_SRC[]->NXM_OF_ETH_DST[],mod_dl_src:" + virtual_mac +
                ",load:0x2->NXM_OF_ARP_OP[],move:NXM_NX_ARP_SHA[]->NXM_NX_ARP_THA[],move:NXM_OF_ARP_SPA[]->NXM_OF_ARP_TPA[],load:0x" +
-               virtual_mac + "->NXM_NX_ARP_SHA[],load:" + string(hex_ip_buffer) +
+               current_virtual_mac + "->NXM_NX_ARP_SHA[],load:" + string(hex_ip_buffer) +
                "->NXM_OF_ARP_SPA[],in_port\"";
 
   ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
