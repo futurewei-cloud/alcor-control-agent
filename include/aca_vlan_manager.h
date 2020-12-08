@@ -62,6 +62,14 @@ class ACA_Vlan_Manager {
 
   int delete_ovs_port(string vpc_id, string ovs_port, uint tunnel_id, ulong &culminative_time);
 
+  int create_l2_neighbor(string virtual_ip, string virtual_mac, string remote_host_ip,
+                         uint tunnel_id, ulong &culminative_time);
+
+  int delete_l2_neighbor(string virtual_ip, string virtual_mac, uint tunnel_id,
+                         ulong &culminative_time);
+
+  // the below three "outport" functions are deprecated and not used
+  // keeping them below to avoid merge conflict with other ACA change in PR
   int create_neighbor_outport(string neighbor_id, string vpc_id,
                               alcor::schema::NetworkType network_type, string remote_host_ip,
                               uint tunnel_id, ulong &culminative_time);

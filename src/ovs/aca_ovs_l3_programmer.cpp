@@ -26,8 +26,6 @@
 #include <errno.h>
 #include <arpa/inet.h>
 
-#define HEX_IP_BUFFER_SIZE 12
-
 using namespace std;
 using namespace aca_vlan_manager;
 using namespace aca_ovs_l2_programmer;

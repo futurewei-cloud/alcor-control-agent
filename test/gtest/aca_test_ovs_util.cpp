@@ -15,6 +15,7 @@
 #include "aca_log.h"
 #include "aca_util.h"
 #include "aca_config.h"
+#include "aca_ovs_control.h"
 #include "aca_vlan_manager.h"
 #include "aca_ovs_l2_programmer.h"
 #include "aca_ovs_l3_programmer.h"
@@ -29,6 +30,7 @@ using namespace std;
 using namespace alcor::schema;
 using namespace aca_comm_manager;
 using namespace aca_net_config;
+using namespace aca_ovs_control;
 using namespace aca_vlan_manager;
 using namespace aca_ovs_l2_programmer;
 using namespace aca_ovs_l3_programmer;
@@ -199,7 +201,6 @@ void aca_test_create_default_router_goal_state(GoalState *goalState_builder)
 
 void aca_test_1_neighbor_CREATE_DELETE(NeighborType input_neighbor_type)
 {
-  ulong not_care_culminative_time = 0;
   string cmd_string;
   int overall_rc;
 
@@ -242,13 +243,15 @@ void aca_test_1_neighbor_CREATE_DELETE(NeighborType input_neighbor_type)
           GoalState_builder, gsOperationalReply);
   ASSERT_EQ(overall_rc, EXIT_SUCCESS);
 
-  string outport_name = aca_get_outport_name(vxlan_type, "172.17.111.222");
+  // check if the neighbor rules has been created on br-tun
+  string neighbor_opt = "table=20,dl_dst:" + vmac_address_3;
+  overall_rc = ACA_OVS_Control::get_instance().flow_exists(
+          "br-tun", neighbor_opt.c_str());
+  ASSERT_EQ(overall_rc, EXIT_SUCCESS);
 
-  // check if the outport has been created on br-tun
-  ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
-          " list-ports br-tun | grep " + outport_name, not_care_culminative_time, overall_rc);
-  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
-  overall_rc = EXIT_SUCCESS;
+  string arp_opt = "table=51,arp,nw_dst=" + vip_address_3;
+  overall_rc = ACA_OVS_Control::get_instance().flow_exists("br-tun", arp_opt.c_str());
+  ASSERT_EQ(overall_rc, EXIT_SUCCESS);
 
   // delete neighbor info
   new_neighbor_states->set_operation_type(OperationType::DELETE);
@@ -256,11 +259,13 @@ void aca_test_1_neighbor_CREATE_DELETE(NeighborType input_neighbor_type)
           GoalState_builder, gsOperationalReply);
   ASSERT_EQ(overall_rc, EXIT_SUCCESS);
 
-  // check if the outport has been deleted on br-tun
-  ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
-          " list-ports br-tun | grep " + outport_name, not_care_culminative_time, overall_rc);
+  // check if the neighbor rules has been deleted on br-tun
+  overall_rc = ACA_OVS_Control::get_instance().flow_exists(
+          "br-tun", neighbor_opt.c_str());
   EXPECT_NE(overall_rc, EXIT_SUCCESS);
-  overall_rc = EXIT_SUCCESS;
+
+  overall_rc = ACA_OVS_Control::get_instance().flow_exists("br-tun", arp_opt.c_str());
+  EXPECT_NE(overall_rc, EXIT_SUCCESS);
 
   // clean up
 
@@ -332,13 +337,15 @@ void aca_test_1_port_CREATE_plus_neighbor_CREATE(NeighborType input_neighbor_typ
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
 
-  string outport_name = aca_get_outport_name(vxlan_type, "172.17.111.222");
+  // check if the neighbor rules has been created on br-tun
+  string neighbor_opt = "table=20,dl_dst:" + vmac_address_3;
+  overall_rc = ACA_OVS_Control::get_instance().flow_exists(
+          "br-tun", neighbor_opt.c_str());
+  ASSERT_EQ(overall_rc, EXIT_SUCCESS);
 
-  // check if the outport has been created on br-tun
-  ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
-          " list-ports br-tun | grep " + outport_name, not_care_culminative_time, overall_rc);
-  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
-  overall_rc = EXIT_SUCCESS;
+  string arp_opt = "table=51,arp,nw_dst=" + vip_address_3;
+  overall_rc = ACA_OVS_Control::get_instance().flow_exists("br-tun", arp_opt.c_str());
+  ASSERT_EQ(overall_rc, EXIT_SUCCESS);
 
   // clean up
 

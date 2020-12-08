@@ -178,30 +178,16 @@ TEST(ovs_l2_test_cases, 2_ports_CREATE_test_traffic_plus_neighbor_internal)
   overall_rc = Aca_Net_Config::get_instance().execute_system_command(cmd_string);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
 
-  string outport_name = aca_get_outport_name(vxlan_type, remote_ip_1);
-
   // insert neighbor info
   overall_rc = ACA_OVS_L2_Programmer::get_instance().create_or_update_l2_neighbor(
-          port_id_4, vpc_id_1, vxlan_type, remote_ip_1, 20, not_care_culminative_time);
-  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
-  overall_rc = EXIT_SUCCESS;
-
-  // check if the outport has been created on br-tun
-  ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
-          " list-ports br-tun | grep " + outport_name, not_care_culminative_time, overall_rc);
+          vip_address_1, vmac_address_1, remote_ip_1, 20, not_care_culminative_time);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
 
   // delete neighbor info
   overall_rc = ACA_OVS_L2_Programmer::get_instance().delete_l2_neighbor(
-          port_id_4, 20, outport_name, not_care_culminative_time);
+          vip_address_1, vmac_address_1, 20, not_care_culminative_time);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
-  overall_rc = EXIT_SUCCESS;
-
-  // check if the outport has been deleted on br-tun
-  ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
-          " list-ports br-tun | grep " + outport_name, not_care_culminative_time, overall_rc);
-  EXPECT_NE(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
 
   // delete br-int and br-tun bridges

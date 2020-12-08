@@ -42,6 +42,7 @@ using namespace ovs_control;
 extern string g_ofctl_command;
 extern string g_ofctl_target;
 extern string g_ofctl_options;
+extern std::atomic_ulong g_total_execute_openflow_time;
 
 namespace aca_ovs_control
 {
@@ -106,8 +107,27 @@ int ACA_OVS_Control::dump_flows(const char *bridge, const char *opt)
 
 int ACA_OVS_Control::flow_exists(const char *bridge, const char *flow)
 {
-  int rc = -EINVAL;
-  rc = OVS_Control::get_instance().dump_flows(bridge, flow, false);
+  ACA_LOG_DEBUG("%s", "ACA_OVS_Control::flow_exists ---> Entering\n");
+
+  ACA_LOG_INFO("Executing flow_exists command: %s\n", flow);
+
+  auto openflow_client_start = chrono::steady_clock::now();
+
+  int rc = OVS_Control::get_instance().dump_flows(bridge, flow, false);
+
+  auto openflow_client_end = chrono::steady_clock::now();
+
+  auto openflow_client_time_total_time =
+          cast_to_microseconds(openflow_client_end - openflow_client_start).count();
+
+  g_total_execute_openflow_time += openflow_client_time_total_time;
+
+  ACA_LOG_INFO("Elapsed time for openflow client call took: %ld microseconds or %ld milliseconds. rc: %d\n",
+               openflow_client_time_total_time,
+               us_to_ms(openflow_client_time_total_time), rc);
+
+  ACA_LOG_DEBUG("ACA_OVS_Control::flow_exists <--- Exiting, rc = %d\n", rc);
+
   return rc;
 }
 

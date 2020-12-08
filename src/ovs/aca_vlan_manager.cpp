@@ -20,6 +20,7 @@
 #include <errno.h>
 #include <algorithm>
 #include <shared_mutex>
+#include <arpa/inet.h>
 
 using namespace aca_ovs_control;
 using namespace aca_ovs_l2_programmer;
@@ -164,6 +165,79 @@ int ACA_Vlan_Manager::delete_ovs_port(string /*vpc_id*/, string ovs_port,
   return overall_rc;
 }
 
+int ACA_Vlan_Manager::create_l2_neighbor(string virtual_ip, string virtual_mac,
+                                         string remote_host_ip, uint tunnel_id,
+                                         ulong &culminative_time)
+{
+  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::create_l2_neighbor ---> Entering\n");
+
+  char hex_ip_buffer[HEX_IP_BUFFER_SIZE];
+  int overall_rc = EXIT_SUCCESS;
+
+  int internal_vlan_id = get_or_create_vlan_id(tunnel_id);
+
+  // match internal vlan based on VPC and destination neighbor mac,
+  // strip the internal vlan, encap with tunnel id,
+  // output to the neighbor host through vxlan-generic ovs port
+  string cmd_string = "add-flow br-tun table=20,priority=50,dl_vlan=" +
+                      to_string(internal_vlan_id) + ",dl_dst:" + virtual_mac +
+                      ",\"actions=strip_vlan,load:" + to_string(tunnel_id) +
+                      "->NXM_NX_TUN_ID[],set_field:" + remote_host_ip +
+                      "->tun_dst,output:vxlan-generic\"";
+
+  ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
+          cmd_string, culminative_time, overall_rc);
+
+  // add the static arp responder for this l2 neighbor
+  int addr = inet_network(virtual_ip.c_str());
+  snprintf(hex_ip_buffer, HEX_IP_BUFFER_SIZE, "0x%08x", addr);
+
+  cmd_string = "add-flow br-tun \"table=51,priority=50,arp,dl_vlan=" +
+               to_string(internal_vlan_id) + ",nw_dst=" + virtual_ip +
+               " actions=move:NXM_OF_ETH_SRC[]->NXM_OF_ETH_DST[],mod_dl_src:" + virtual_mac +
+               ",load:0x2->NXM_OF_ARP_OP[],move:NXM_NX_ARP_SHA[]->NXM_NX_ARP_THA[],move:NXM_OF_ARP_SPA[]->NXM_OF_ARP_TPA[],load:0x" +
+               virtual_mac + "->NXM_NX_ARP_SHA[],load:" + string(hex_ip_buffer) +
+               "->NXM_OF_ARP_SPA[],in_port\"";
+
+  ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
+          cmd_string, culminative_time, overall_rc);
+
+  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::create_l2_neighbor <--- Exiting\n");
+
+  return overall_rc;
+}
+
+// called when a L2 neighbor is deleted
+int ACA_Vlan_Manager::delete_l2_neighbor(string virtual_ip, string virtual_mac,
+                                         uint tunnel_id, ulong &culminative_time)
+{
+  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::delete_l2_neighbor ---> Entering\n");
+
+  int overall_rc = EXIT_SUCCESS;
+
+  int internal_vlan_id = get_or_create_vlan_id(tunnel_id);
+
+  // delete the rule l2 neighbor rule
+  string cmd_string = "del-flows br-tun \"table=20,priority=50,dl_vlan=" +
+                      to_string(internal_vlan_id) + ",dl_dst:" + virtual_mac + "\" --strict";
+
+  ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
+          cmd_string, culminative_time, overall_rc);
+
+  // delete the static arp responder for this l2 neighbor
+  cmd_string = "del-flows br-tun \"table=51,arp,dl_vlan=" + to_string(internal_vlan_id) +
+               ",nw_dst=" + virtual_ip + "\"";
+
+  ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
+          cmd_string, culminative_time, overall_rc);
+
+  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::delete_l2_neighbor <--- Exiting\n");
+
+  return overall_rc;
+}
+
+// the below three "outport" functions are deprecated and not used
+// keeping them below to avoid merge conflict with other ACA change in PR
 int ACA_Vlan_Manager::create_neighbor_outport(string neighbor_id, string /*vpc_id*/,
                                               alcor::schema::NetworkType network_type,
                                               string remote_host_ip, uint tunnel_id,

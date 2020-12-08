@@ -549,7 +549,7 @@ TEST(ovs_l3_test_cases, DISABLED_2_ports_ROUTING_test_traffic_PARENT)
   // restore demo mode
   g_demo_mode = previous_demo_mode;
 
-  // should be able to ping itselves
+  // should be able to ping themselves
   overall_rc = Aca_Net_Config::get_instance().execute_system_command(
           "docker exec con1 ping -c1 " + vip_address_1);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
@@ -559,7 +559,7 @@ TEST(ovs_l3_test_cases, DISABLED_2_ports_ROUTING_test_traffic_PARENT)
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
 
   // test traffic between the ports without router on same subnet
-  // expect to fail before neighbor info is not programmed yet
+  // expect to fail because neighbor info is not programmed yet
   overall_rc = Aca_Net_Config::get_instance().execute_system_command(
           "docker exec con1 ping -c1 " + vip_address_3);
   EXPECT_NE(overall_rc, EXIT_SUCCESS);
