@@ -29,7 +29,7 @@ namespace aca_oam_server
 //OAM Message Type
 #define OAM_MSG_FLOW_INJECTION (0)
 #define OAM_MSG_FLOW_DELETION (1)
-#define OAM_MSG_NONE (3)
+#define OAM_MSG_NONE (2)
 #define OAM_MSG_MAX (3)
 
 struct oam_match {
