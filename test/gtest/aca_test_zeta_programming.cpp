@@ -20,7 +20,7 @@
 #include "aca_comm_mgr.h"
 #include "aca_zeta_programming.h"
 #include <fstream>
-#include <jsoncpp/json/json.h>//parse json file
+#include <nlohmann/json.hpp>//parse json file
 #include<iostream>
 
 using namespace std;
