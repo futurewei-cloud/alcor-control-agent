@@ -146,12 +146,14 @@ TEST(ovs_l2_test_cases, 2_ports_CREATE_test_traffic_plus_neighbor_internal)
 
   // create two ports (using demo mode) and configure them
   overall_rc = ACA_OVS_L2_Programmer::get_instance().create_port(
-          vpc_id_1, port_name_1, vip_address_1 + prefix_len, 20, not_care_culminative_time);
+          vpc_id_1, port_name_1, vip_address_1 + prefix_len, vmac_address_1, 20,
+          not_care_culminative_time);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
 
   overall_rc = ACA_OVS_L2_Programmer::get_instance().create_port(
-          vpc_id_1, port_name_2, vip_address_2 + prefix_len, 20, not_care_culminative_time);
+          vpc_id_1, port_name_2, vip_address_2 + prefix_len, vmac_address_2, 20,
+          not_care_culminative_time);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
 

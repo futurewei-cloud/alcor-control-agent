@@ -169,8 +169,8 @@ int ACA_OVS_L2_Programmer::setup_ovs_bridges_if_need()
 }
 
 int ACA_OVS_L2_Programmer::create_port(const string vpc_id, const string port_name,
-                                       const string virtual_ip, uint tunnel_id,
-                                       ulong &culminative_time)
+                                       const string virtual_ip, const string virtual_mac,
+                                       uint tunnel_id, ulong &culminative_time)
 {
   ACA_LOG_DEBUG("%s", "ACA_OVS_L2_Programmer::create_port ---> Entering\n");
 
@@ -186,6 +186,10 @@ int ACA_OVS_L2_Programmer::create_port(const string vpc_id, const string port_na
 
   if (virtual_ip.empty()) {
     throw std::invalid_argument("virtual_ip is empty");
+  }
+
+  if (virtual_mac.empty()) {
+    throw std::invalid_argument("virtual_mac is empty");
   }
 
   if (tunnel_id == 0) {
@@ -213,6 +217,12 @@ int ACA_OVS_L2_Programmer::create_port(const string vpc_id, const string port_na
 
     cmd_string = "ip addr add " + virtual_ip + " dev " + port_name;
     int command_rc = aca_net_config::Aca_Net_Config::get_instance().execute_system_command(
+            cmd_string, culminative_time);
+    if (command_rc != EXIT_SUCCESS)
+      overall_rc = command_rc;
+
+    cmd_string = "ip link set dev " + port_name + " address " + virtual_mac;
+    command_rc = aca_net_config::Aca_Net_Config::get_instance().execute_system_command(
             cmd_string, culminative_time);
     if (command_rc != EXIT_SUCCESS)
       overall_rc = command_rc;

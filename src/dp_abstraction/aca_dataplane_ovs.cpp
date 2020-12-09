@@ -238,7 +238,7 @@ int ACA_Dataplane_OVS::update_port_state_workitem(const PortState current_PortSt
 
       overall_rc = ACA_OVS_L2_Programmer::get_instance().create_port(
               current_PortConfiguration.vpc_id(), generated_port_name, port_cidr,
-              found_tunnel_id, culminative_dataplane_programming_time);
+              virtual_mac_address, found_tunnel_id, culminative_dataplane_programming_time);
 
       if (found_auxgateway.aux_gateway_type() == ZETA) {
         ACA_LOG_INFO("%s", "AuxGateway_type is zeta!\n");

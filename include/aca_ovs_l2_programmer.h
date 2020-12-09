@@ -32,7 +32,8 @@ class ACA_OVS_L2_Programmer {
   int setup_ovs_bridges_if_need();
 
   int create_port(const std::string vpc_id, const std::string port_name,
-                  const std::string virtual_ip, uint tunnel_id, ulong &culminative_time);
+                  const std::string virtual_ip, const std::string virtual_mac,
+                  uint tunnel_id, ulong &culminative_time);
 
   int delete_port(const std::string vpc_id, const std::string port_name,
                   uint tunnel_id, ulong &culminative_time);
