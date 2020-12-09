@@ -424,9 +424,9 @@ bool ACA_Vlan_Manager::is_exist_oam_port_rule(uint port_number)
   }
 }
 
-void ACA_Vlan_Manager::set_auxgateway(uint tunnel_id, const string auxGateway_id, uint oam_port)
+void ACA_Vlan_Manager::set_zeta_gateway(uint tunnel_id, const string auxGateway_id, uint oam_port)
 {
-  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::set_auxgateway ---> Entering\n");
+  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::set_zeta_gateway ---> Entering\n");
 
   auto vpcs_table_mutex_start = chrono::steady_clock::now();
   // -----critical section starts-----
@@ -435,7 +435,8 @@ void ACA_Vlan_Manager::set_auxgateway(uint tunnel_id, const string auxGateway_id
     create_entry_unsafe(tunnel_id);
   }
 
-  if (_vpcs_table[tunnel_id].auxGateway.auxGateway_id.empty()) {
+  if (_vpcs_table[tunnel_id].auxGateway.type == NONE) {
+    _vpcs_table[tunnel_id].auxGateway.type = ZETA;
     _vpcs_table[tunnel_id].auxGateway.auxGateway_id = auxGateway_id;
     _vpcs_table[tunnel_id].auxGateway.group_id = current_available_group_id.load();
     current_available_group_id++;
@@ -453,54 +454,57 @@ void ACA_Vlan_Manager::set_auxgateway(uint tunnel_id, const string auxGateway_id
   g_total_vpcs_table_mutex_time +=
           cast_to_microseconds(vpcs_table_mutex_end - vpcs_table_mutex_start).count();
 
-  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::set_auxgateway <--- Exiting\n");
+  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::set_zeta_gateway <--- Exiting\n");
 }
 
-int ACA_Vlan_Manager::remove_auxgateway(uint tunnel_id)
+int ACA_Vlan_Manager::remove_zeta_gateway(uint tunnel_id)
 {
-  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::set_auxgateway ---> Entering\n");
+  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::remove_zeta_gateway ---> Entering\n");
   int overall_rc = EXIT_SUCCESS;
 
-  string auxgateway_id;
+  string zeta_gateway_id;
   uint oam_port;
 
   // -----critical section starts-----
   _vpcs_table_mutex.lock();
   if (_vpcs_table.find(tunnel_id) != _vpcs_table.end()) {
-    auxgateway_id = _vpcs_table[tunnel_id].auxGateway.auxGateway_id;
-    _vpcs_table[tunnel_id].auxGateway.auxGateway_id == "";
-    _vpcs_table[tunnel_id].auxGateway.group_id = 0;
-    oam_port = _vpcs_table[tunnel_id].auxGateway.oam_port;
-    _vpcs_table[tunnel_id].auxGateway.oam_port = 0;
+    if (_vpcs_table[tunnel_id].auxGateway.type == ZETA) {
+      _vpcs_table[tunnel_id].auxGateway.type = NONE;
+      zeta_gateway_id = _vpcs_table[tunnel_id].auxGateway.auxGateway_id;
+      _vpcs_table[tunnel_id].auxGateway.auxGateway_id == "";
+      _vpcs_table[tunnel_id].auxGateway.group_id = 0;
+      oam_port = _vpcs_table[tunnel_id].auxGateway.oam_port;
+      _vpcs_table[tunnel_id].auxGateway.oam_port = 0;
+    }
   }
 
   _vpcs_table_mutex.unlock();
   // -----critical section ends-----
-  if (!is_exist_auxgateway(auxgateway_id)) {
+  if (!is_exist_zeta_gateway(zeta_gateway_id)) {
     overall_rc = _delete_oam_ofp(oam_port);
   }
-  ACA_LOG_DEBUG("ACA_Vlan_Manager::get_outports_unsafe <--- Exiting, overall_rc = %d\n",
+  ACA_LOG_DEBUG("ACA_Vlan_Manager::remove_zeta_gateway <--- Exiting, overall_rc = %d\n",
                 overall_rc);
   return overall_rc;
 }
 
-bool ACA_Vlan_Manager::is_exist_auxgateway(string auxGateway_id)
+bool ACA_Vlan_Manager::is_exist_zeta_gateway(string zeta_gateway_id)
 {
-  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::get_auxgateway_id ---> Entering\n");
+  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::is_exist_zeta_gateway ---> Entering\n");
   bool rc = false;
 
   // -----critical section starts-----
   _vpcs_table_mutex.lock();
   for (auto entry : _vpcs_table) {
     auxgateway_entry auxgateway = entry.second.auxGateway;
-    if (auxgateway.auxGateway_id == auxGateway_id) {
+    if (auxgateway.auxGateway_id == zeta_gateway_id) {
       rc = true;
       break;
     }
   }
   _vpcs_table_mutex.unlock();
   // -----critical section ends-----
-  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::get_auxgateway_id ---> Entering\n");
+  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::is_exist_zeta_gateway ---> Entering\n");
 
   return rc;
 }

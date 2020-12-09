@@ -44,7 +44,7 @@ int ACA_Zeta_Programming::create_zeta_config(const alcor::schema::AuxGateway cur
 
   uint oam_port = current_AuxGateway.zeta_info().port_inband_operation();
 
-  ACA_Vlan_Manager::get_instance().set_auxgateway(
+  ACA_Vlan_Manager::get_instance().set_zeta_gateway(
           tunnel_id, current_AuxGateway.id(), oam_port);
 
   // get the current auxgateway status of vpc
@@ -82,7 +82,7 @@ int ACA_Zeta_Programming::delete_zeta_config(const alcor::schema::AuxGateway cur
       ACA_LOG_ERROR("%s", "The auxgateway_id is inconsistent with the auxgateway_id currently set by the vpc!\n");
     } else {
       ACA_LOG_INFO("%s", "Reset auxGateway to empty!\n");
-      overall_rc = ACA_Vlan_Manager::get_instance().remove_auxgateway(tunnel_id);
+      overall_rc = ACA_Vlan_Manager::get_instance().remove_zeta_gateway(tunnel_id);
     }
   }
 

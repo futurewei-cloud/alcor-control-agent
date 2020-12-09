@@ -32,7 +32,9 @@ static atomic_uint current_available_group_id(1);
 // Vlan Manager class
 namespace aca_vlan_manager
 {
+enum auxgateway_type { NONE = 0, ZETA = 1 };
 struct auxgateway_entry {
+  auxgateway_type type;
   string auxGateway_id;
   uint oam_port;
   uint group_id;
@@ -72,15 +74,13 @@ class ACA_Vlan_Manager {
 
   int get_outports_unsafe(uint tunnel_id, string &outports);
 
-  void set_auxgateway(uint tunnel_id, const string auxGateway_id, uint oam_port);
+  void set_zeta_gateway(uint tunnel_id, const string auxGateway_id, uint oam_port);
 
-  int remove_auxgateway(uint tunnel_id);
+  int remove_zeta_gateway(uint tunnel_id);
 
   auxgateway_entry get_auxgateway_unsafe(uint tunnel_id);
 
-  uint get_gateway_group_id(uint auxGateway_id);
-
-  bool is_exist_auxgateway(const string auxGateway_id);
+  bool is_exist_zeta_gateway(const string auxGateway_id);
 
   bool is_exist_oam_port_rule(uint port_number);
 
