@@ -63,17 +63,15 @@ void aca_test_zeta_setup(string zeta_gateway_path_config_file)
   ifstream ifs(zeta_gateway_path_config_file);
   if (!ifs)
     cout << zeta_gateway_path_config_file << "open error" << endl;
-  Value root;
-  Reader reader;
-  // TODO: Read the configuration file
-  if (reader.parse(ifs, root)) {
-    cout << root.toStyledString() << endl;
-    Value &arr = root[""][""];
-    //...
-  }
+  
+  // use this json library instead
+  nlohmann::json jf = nlohmann::json::parse(ifs);
+
   // TODO: construct GoalState,push to aca
   GoalState GoalState_builder;
+  GoalStateOperationReply gsOperationalReply;
   //...
+  int overall_rc;
   overall_rc = Aca_Comm_Manager::get_instance().update_goal_state(
           GoalState_builder, gsOperationalReply);
   ASSERT_EQ(overall_rc, EXIT_SUCCESS);
@@ -185,7 +183,7 @@ TEST(zeta_programming_test_cases, DISABLED_zeta_gateway_path_CHILD)
 TEST(zeta_programming_test_cases, DISABLED_zeta_gateway_path_PARENT)
 {
   // TODO: The relative path of the PARENT configuration file
-  string zeta_gateway_path_CHILD_config_file = "./...";
+  string zeta_gateway_path_PARENT_config_file = "./...";
   aca_test_zeta_setup(zeta_gateway_path_PARENT_config_file);
 
   // do some validate
