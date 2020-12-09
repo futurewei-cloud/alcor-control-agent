@@ -1,9 +1,18 @@
 {
+  "zeta_api_ip": "10.1.49.121",
+  "aca_nodes": {
+    "ip": [
+      "10.213.43.92",
+      "10.213.43.93"
+    ],
+    "username": "***",
+    "password": "***"
+  },
   "ZGC_data": {
     "name": "ZGC_test",
     "description": "ZGC_test",
-    "ip_start": "192.168.0.1",
-    "ip_end": "192.168.0.11",
+    "ip_start": "192.168.20.100",
+    "ip_end": "192.168.20.115",
     "port_ibo": "8300",
     "overlay_type": "vxlan"
   },
@@ -11,68 +20,108 @@
     {
       "vpc_id": "3dda2801-d675-4688-a63f-dcda8d327f50",
       "vni": "123"
-    },
-    {
-      "vpc_id": "3ddffee1-cf55-7788-a63f-dcda8d582f45",
-      "vni": "456"
     }
   ],
   "PORT_data": [
     {
       "port_id": "333d4fae-7dec-11d0-a765-00a0c9342222",
       "vpc_id": "3dda2801-d675-4688-a63f-dcda8d327f50",
-      "ips_port":
-      [
+      "ips_port": [
         {
-          "ip": "10.10.0.3",
+          "ip": "10.10.0.92",
           "vip": ""
         }
       ],
       "mac_port": "cc:dd:ee:ff:11:22",
-      "ip_node": "172.16.62.249",
-      "mac_node": "ee:dd:ee:ff:22:11"
+      "ip_node": "192.168.20.92",
+      "mac_node": "e8:bd:d1:01:77:ec"
     },
     {
       "port_id": "99976feae-7dec-11d0-a765-00a0c9341111",
-      "vpc_id": "3dda2801-d675-4688-a63f-dcda8d327f55",
-      "ips_port":
-      [
+      "vpc_id": "3dda2801-d675-4688-a63f-dcda8d327f50",
+      "ips_port": [
         {
-          "ip": "10.10.0.4",
+          "ip": "10.10.0.93",
           "vip": ""
         }
       ],
       "mac_port": "6c:dd:ee:ff:11:32",
-      "ip_node": "172.16.62.250",
-      "mac_node": "ee:dd:ee:ff:33:11"
+      "ip_node": "192.168.20.93",
+      "mac_node": "e8:bd:d1:01:72:c8"
+    }
+  ],
+  "NODE_data": [
+    {
+      "zgc_id": "zgc_id",
+      "description": "znode0",
+      "name": "znode0",
+      "ip_control": "192.168.20.190",
+      "id_control": "ubuntu",
+      "pwd_control": "Lab12345",
+      "inf_tenant": "ens4",
+      "mac_tenant": "52:54:00:5e:99:ac",
+      "inf_zgc": "ens3",
+      "mac_zgc": "52:54:00:f5:aa:52"
     },
     {
-      "port_id": "446d4fae-d675-1a0c-a765-0063f93427f5",
-      "vpc_id": "3ddffee1-cf55-7788-a63f-dcda8d582f45",
-      "ips_port":
-      [
-        {
-          "ip": "10.10.1.3",
-          "vip": ""
-        }
-      ],
-      "mac_port": "ff:11:22:cc:dd:ee",
-      "ip_node": "172.16.62.249",
-      "mac_node": "ff:22:44:ee:dd:ee"
+      "zgc_id": "zgc_id",
+      "description": "znode1",
+      "name": "znode1",
+      "ip_control": "192.168.20.191",
+      "id_control": "ubuntu",
+      "pwd_control": "Lab12345",
+      "inf_tenant": "ens4",
+      "mac_tenant": "52:54:00:5a:2a:01",
+      "inf_zgc": "ens3",
+      "mac_zgc": "52:54:00:ed:60:ab"
     },
     {
-      "port_id": "5f74427f-56d4-faed-6751-7650063f9342",
-      "vpc_id": "3ddffee1-cf55-7788-a63f-dcda8d582f45",
-      "ips_port":
-      [
-        {
-          "ip": "10.10.1.4",
-          "vip": ""
-        }
-      ],
-      "mac_port": "dd:ee:ff:11:22:cc",
-      "ip_node": "172.16.62.250",
-      "mac_node": "11:ee:dd:ee:ff:77"
+      "zgc_id": "zgc_id",
+      "description": "znode2",
+      "name": "znode2",
+      "ip_control": "192.168.20.192",
+      "id_control": "ubuntu",
+      "pwd_control": "Lab12345",
+      "inf_tenant": "ens4",
+      "mac_tenant": "52:54:00:8b:04:15",
+      "inf_zgc": "ens3",
+      "mac_zgc": "52:54:00:0f:51:3a"
+    },
+    {
+      "zgc_id": "zgc_id",
+      "description": "znode3",
+      "name": "znode3",
+      "ip_control": "192.168.20.193",
+      "id_control": "ubuntu",
+      "pwd_control": "Lab12345",
+      "inf_tenant": "ens4",
+      "mac_tenant": "52:54:00:0a:2e:8b",
+      "inf_zgc": "ens3",
+      "mac_zgc": "52:54:00:42:b4:e6"
+    },
+    {
+      "zgc_id": "zgc_id",
+      "description": "znode4",
+      "name": "znode4",
+      "ip_control": "192.168.20.194",
+      "id_control": "ubuntu",
+      "pwd_control": "Lab12345",
+      "inf_tenant": "ens4",
+      "mac_tenant": "52:54:00:63:8f:4d",
+      "inf_zgc": "ens3",
+      "mac_zgc": "52:54:00:38:52:89"
+    },
+    {
+      "zgc_id": "zgc_id",
+      "description": "znode5",
+      "name": "znode5",
+      "ip_control": "192.168.20.195",
+      "id_control": "ubuntu",
+      "pwd_control": "Lab12345",
+      "inf_tenant": "ens4",
+      "mac_tenant": "52:54:00:99:03:ae",
+      "inf_zgc": "ens3",
+      "mac_zgc": "52:54:00:3e:6c:e8"
     }
   ]
 }

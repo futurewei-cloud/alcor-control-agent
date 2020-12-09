@@ -62,7 +62,7 @@ void aca_test_zeta_setup(string zeta_gateway_path_config_file)
 {
     ifstream ifs(zeta_gateway_path_config_file);
     if(!ifs)
-　　    cout<<zeta_gateway_path_config_file<<"open error"<<endl;
+        cout<<zeta_gateway_path_config_file<<"open error"<<endl;
 
     nlohmann::json jf = nlohmann::json::parse(ifs);
 
@@ -189,9 +189,4 @@ TEST(zeta_programming_test_cases, DISABLED_zeta_gateway_path_PARENT)
   aca_test_zeta_setup(zeta_gateway_path_PARENT_config_file);
 
   // do some validate
-}
-    // TODO: The relative path of the PARENT configuration file
-    string zeta_gateway_path_CHILD_config_file="./...";
-    aca_test_zeta_setup(zeta_gateway_path_PARENT_config_file);
-
 }

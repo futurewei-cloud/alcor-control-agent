@@ -6,6 +6,7 @@ import json
 
 video = defaultdict(list)
 
+zeta_data
 
 # Transfer the file locally to aca nodes
 def upload_file_aca(host, user, password, server_path, local_path, timeout=10):
@@ -73,42 +74,53 @@ def exec_sshCommand_aca(host, user, password, cmd, timeout=10):
         return False
 
 
-def talk_to_zeta(file_path, zgc_nodes_url):
-    with open(file_path, 'r', encoding='utf8')as fp:
-        zeta_data = json.load(fp)
-
+def talk_to_zeta(file_path, zgc_api_url):
     # create ZGC
     ZGC_data = json.dumps(zeta_data["ZGC_data"])
-    requests.post(zgc_nodes_url[0] + "/zgcs", ZGC_data)
-    requests.post(zgc_nodes_url[1] + "/zgcs", ZGC_data)
+    zgc_response = requests.post(zgc_api_url + "/zgcs", ZGC_data)
+    zgc_id = zgc_response.json()['id']
+
+
+    # add Nodes
+    for node in zeta_data["NODE_data"]:
+        node_data = json.dumps(node)
+        node_data['zgc_id'] = zgc_id
+        node_response_data = requests.post(zgc_api_url + "/nodes", node_data).json
+        print(f'Response for adding node: {node_response_data}')
+    
+    # first delay
 
     # add VPC
     for tem in zeta_data["VPC_data"]:
         VPC_data = json.dumps(tem)
-        vpc_response_data1 = requests.post(zgc_nodes_url[0] + "/vpcs", VPC_data).json()
-        vpc_response_data2 = requests.post(zgc_nodes_url[1] + "/vpcs", VPC_data).json()
-        video["zgc_id"] = vpc_response_data1["zgc_id"]
-        print(vpc_response_data1["zgc_id"])
+        vpc_response_data = requests.post(zgc_api_url + "/vpcs", VPC_data).json()
+        video["zgc_id"] = vpc_response_data["zgc_id"]
+        print(vpc_response_data["zgc_id"])
+
+    # second delay
 
     # notify ZGC the ports created on each ACA
     PORT_data = json.dumps(zeta_data["PORT_data"])
-    requests.post(zgc_nodes_url[0] + "/ports", PORT_data)
-    requests.post(zgc_nodes_url[1] + "/ports", PORT_data)
+    requests.post(zgc_api_url + "/ports", PORT_data)
     # TODO: 分别生成CHILD和PARENT的配置文件
 
 
 def run():
     # # Call zeta API to create ZGC,vpc etc.and generate the information ACA need, and save it in zetaToAca_data.json
     file_path = './data/zeta_data.json'
-    zgc1_nodes_url = ["http://172.16.62.247:8080", "http://172.16.62.248:8080"]
-    talk_to_zeta(file_path, zgc1_nodes_url)
+    with open(file_path, 'r', encoding='utf8')as fp:
+        zeta_data = json.load(fp)
+    
+    zgc_api_url = zeta_data["zeta_api_ip"]
+    talk_to_zeta(file_path, zgc_api_url)
 
-    aca_nodes = ['172.16.62.249', '172.16.62.250']
-    user = '***'
-    password = '***'
+    aca_nodes_data = zeta_data["aca_nodes"]
+    aca_nodes_ip = aca_nodes_data['ip']
+
+
     server_path = '/root/alcor-control-agent/test/gtest'
-    local_path = './zetaToAca_data.json'
-    res = upload_file_aca(aca_nodes, user, password, server_path, local_path)
+    local_path = './zeta_data.json'
+    res = upload_file_aca(aca_nodes_data['ip'], aca_nodes_data['username'], aca_nodes_data['password'], server_path, local_path)
     if not res:
         print("upload file %s failed" % local_path)
     else:
