@@ -20,8 +20,8 @@
 #include "aca_comm_mgr.h"
 #include "aca_zeta_programming.h"
 #include <fstream>
-#include <nlohmann/json.hpp>//parse json file
-#include<iostream>
+#include <nlohmann/json.hpp> //parse json file
+#include <iostream>
 
 using namespace std;
 using namespace aca_comm_manager;
@@ -47,6 +47,9 @@ extern string node_mac_address_4;
 extern string vpc_id_1;
 extern string vpc_id_2;
 
+extern void aca_test_create_default_port_state(PortState *new_port_states);
+extern void aca_test_create_default_subnet_state(SubnetState *new_subnet_states);
+
 string auxGateway_id_1 = "11";
 string auxGateway_id_2 = "22";
 
@@ -55,26 +58,25 @@ uint tunnel_id_2 = 666;
 uint oam_port_1 = 6799;
 uint oam_port_2 = 6800;
 
-void aca_test_zeta_setup(zeta_gateway_path_config_file)
+void aca_test_zeta_setup(string zeta_gateway_path_config_file)
 {
-    ifstream ifs(zeta_gateway_path_config_file);
-    if(!ifs)
-　　    cout<<zeta_gateway_path_config_file<<"open error"<<endl;
-    Value root;
-    Reader reader;
-    // TODO: Read the configuration file
-    if(reader.parse(ifs,root))
-    {
-        cout<<root.toStyledString()<<endl;
-        Value &arr = root[""][""];
-        //...
-    }
-    // TODO: construct GoalState,push to aca
-    GoalState GoalState_builder;
+  ifstream ifs(zeta_gateway_path_config_file);
+  if (!ifs)
+    cout << zeta_gateway_path_config_file << "open error" << endl;
+  Value root;
+  Reader reader;
+  // TODO: Read the configuration file
+  if (reader.parse(ifs, root)) {
+    cout << root.toStyledString() << endl;
+    Value &arr = root[""][""];
     //...
-    overall_rc = Aca_Comm_Manager::get_instance().update_goal_state(
+  }
+  // TODO: construct GoalState,push to aca
+  GoalState GoalState_builder;
+  //...
+  overall_rc = Aca_Comm_Manager::get_instance().update_goal_state(
           GoalState_builder, gsOperationalReply);
-    ASSERT_EQ(overall_rc, EXIT_SUCCESS);
+  ASSERT_EQ(overall_rc, EXIT_SUCCESS);
 }
 
 TEST(zeta_programming_test_cases, create_or_update_zeta_config_valid)
@@ -132,6 +134,7 @@ TEST(zeta_programming_test_cases, DISABLED_auxgateway_test)
   int retcode;
   GoalState GoalState_builder;
   VpcState *new_vpc_states = GoalState_builder.add_vpc_states();
+  SubnetState *new_subnet_states = GoalState_builder.add_subnet_states();
   PortState *new_port_states = GoalState_builder.add_port_states();
 
   // fill in vpc state structs
@@ -156,10 +159,11 @@ TEST(zeta_programming_test_cases, DISABLED_auxgateway_test)
   destinaton->set_ip_address(remote_ip_2);
   destinaton->set_mac_address(node_mac_address_2);
 
+  // fill in subnet state structs
+  aca_test_create_default_subnet_state(new_subnet_states);
+
   // fill in port state structs
-  PortConfiguration *PortConfiguration_builder = new_port_states->mutable_configuration();
-  PortConfiguration_builder->set_vpc_id(vpc_id_1);
-  new_port_states->set_operation_type(OperationType::CREATE);
+  aca_test_create_default_port_state(new_port_states);
 
   GoalStateOperationReply gsOperationalReply;
 
@@ -171,86 +175,18 @@ TEST(zeta_programming_test_cases, DISABLED_auxgateway_test)
 
 TEST(zeta_programming_test_cases, DISABLED_zeta_gateway_path_CHILD)
 {
-    // TODO: The relative path of the CHILD configuration file
-    string zeta_gateway_path_CHILD_config_file="./...";
-    aca_test_zeta_setup(zeta_gateway_path_CHILD_config_file);
+  // TODO: The relative path of the CHILD configuration file
+  string zeta_gateway_path_CHILD_config_file = "./...";
+  aca_test_zeta_setup(zeta_gateway_path_CHILD_config_file);
+
+  // do some validate
 }
 
 TEST(zeta_programming_test_cases, DISABLED_zeta_gateway_path_PARENT)
 {
-    // TODO: The relative path of the PARENT configuration file
-    string zeta_gateway_path_CHILD_config_file="./...";
-    aca_test_zeta_setup(zeta_gateway_path_PARENT_config_file);
-}
+  // TODO: The relative path of the PARENT configuration file
+  string zeta_gateway_path_CHILD_config_file = "./...";
+  aca_test_zeta_setup(zeta_gateway_path_PARENT_config_file);
 
-TEST(ovs_l2_test_cases, 1_port_CREATE_DELETE)
-{
-  ulong not_care_culminative_time = 0;
-  string cmd_string;
-  int overall_rc;
-
-  GoalState GoalState_builder;
-  PortState *new_port_states = GoalState_builder.add_port_states();
-  SubnetState *new_subnet_states = GoalState_builder.add_subnet_states();
-
-  // fill in port state structs
-  aca_test_create_default_port_state(new_port_states);
-
-  // fill in subnet state structs
-  aca_test_create_default_subnet_state(new_subnet_states);
-
-  // delete br-int and br-tun bridges
-  ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
-          "del-br br-int", not_care_culminative_time, overall_rc);
-
-  ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
-          "del-br br-tun", not_care_culminative_time, overall_rc);
-
-  // set demo mode
-  bool previous_demo_mode = g_demo_mode;
-  g_demo_mode = true;
-
-  // create a new port in demo mode
-  GoalStateOperationReply gsOperationalReply;
-
-  overall_rc = Aca_Comm_Manager::get_instance().update_goal_state(
-          GoalState_builder, gsOperationalReply);
-  ASSERT_EQ(overall_rc, EXIT_SUCCESS);
-
-  // check to ensure the demo port is created and setup correctly
-  ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
-          "get Interface " + port_name_1 + " ofport", not_care_culminative_time, overall_rc);
-  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
-  overall_rc = EXIT_SUCCESS;
-
-  new_port_states->set_operation_type(OperationType::DELETE);
-  overall_rc = Aca_Comm_Manager::get_instance().update_goal_state(
-          GoalState_builder, gsOperationalReply);
-  ASSERT_EQ(overall_rc, EXIT_SUCCESS);
-
-  // restore demo mode
-  g_demo_mode = previous_demo_mode;
-
-  // check to ensure the demo port is deleted
-  ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
-          "get Interface " + port_name_1 + " ofport", not_care_culminative_time, overall_rc);
-  EXPECT_NE(overall_rc, EXIT_SUCCESS);
-  overall_rc = EXIT_SUCCESS;
-
-  // clean up
-
-  // free the allocated configurations since we are done with it now
-  new_port_states->clear_configuration();
-  new_subnet_states->clear_configuration();
-
-  // delete br-int and br-tun bridges
-  ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
-          "del-br br-int", not_care_culminative_time, overall_rc);
-  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
-  overall_rc = EXIT_SUCCESS;
-
-  ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
-          "del-br br-tun", not_care_culminative_time, overall_rc);
-  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
-  overall_rc = EXIT_SUCCESS;
+  // do some validate
 }
