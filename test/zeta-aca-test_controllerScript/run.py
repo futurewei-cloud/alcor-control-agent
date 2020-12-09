@@ -1,17 +1,21 @@
 import requests
 import json
 import paramiko
+from collections import defaultdict, OrderedDict
+import json
+
+video = defaultdict(list)
 
 
 # Transfer the file locally to aca nodes
 def upload_file_aca(host, user, password, server_path, local_path, timeout=10):
     """
-    :param host: 主机名
-    :param user: 用户名
-    :param password: 密码
+    :param host
+    :param user
+    :param password
     :param server_path: /root/alcor-control-agent/test/gtest
     :param local_path: ./text.txt
-    :param timeout: 超时时间(默认)，int类型
+    :param timeout
     :return: bool
     """
     try:
@@ -31,11 +35,11 @@ def upload_file_aca(host, user, password, server_path, local_path, timeout=10):
 # Execute remote SSH commands
 def exec_sshCommand_aca(host, user, password, cmd, timeout=10):
     """
-    :param host: 主机名
-    :param user: 用户名
-    :param password: 密码
-    :param cmd: 执行的命令
-    :param seconds: 超时时间(默认)，int类型
+    :param host
+    :param user
+    :param password
+    :param cmd
+    :param seconds
     :return: dict
     """
     result = {'status': [], 'data': []}  # Record return result
@@ -79,9 +83,12 @@ def talk_to_zeta(file_path, zgc_nodes_url):
     requests.post(zgc_nodes_url[1] + "/zgcs", ZGC_data)
 
     # add VPC
-    VPC_data = json.dumps(zeta_data["VPC_data"])
-    response_data = requests.post(zgc_nodes_url[0] + "/vpcs", VPC_data).json()
-    response_data = requests.post(zgc_nodes_url[1] + "/vpcs", VPC_data).json()
+    for tem in zeta_data["VPC_data"]:
+        VPC_data = json.dumps(tem)
+        vpc_response_data1 = requests.post(zgc_nodes_url[0] + "/vpcs", VPC_data).json()
+        vpc_response_data2 = requests.post(zgc_nodes_url[1] + "/vpcs", VPC_data).json()
+        video["zgc_id"] = vpc_response_data1["zgc_id"]
+        print(vpc_response_data1["zgc_id"])
 
     # notify ZGC the ports created on each ACA
     PORT_data = json.dumps(zeta_data["PORT_data"])

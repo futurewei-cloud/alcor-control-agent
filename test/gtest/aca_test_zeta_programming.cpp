@@ -20,7 +20,7 @@
 #include "aca_comm_mgr.h"
 #include "aca_zeta_programming.h"
 #include <fstream>
-#include <jsoncpp/json/json.h>//parse json file
+#include <nlohmann/json.hpp>
 #include<iostream>
 
 using namespace std;
@@ -47,6 +47,9 @@ extern string node_mac_address_4;
 extern string vpc_id_1;
 extern string vpc_id_2;
 
+extern void aca_test_create_default_port_state(PortState *new_port_states);
+extern void aca_test_create_default_subnet_state(SubnetState *new_subnet_states);
+
 string auxGateway_id_1 = "11";
 string auxGateway_id_2 = "22";
 
@@ -60,18 +63,14 @@ void aca_test_zeta_setup(zeta_gateway_path_config_file)
     ifstream ifs(zeta_gateway_path_config_file);
     if(!ifs)
 　　    cout<<zeta_gateway_path_config_file<<"open error"<<endl;
-    Value root;
-    Reader reader;
-    // TODO: Read the configuration file
-    if(reader.parse(ifs,root))
-    {
-        cout<<root.toStyledString()<<endl;
-        Value &arr = root[""][""];
-        //...
-    }
+
+    nlohmann::json jf = nlohmann::json::parse(ifs);
+
     // TODO: construct GoalState,push to aca
     GoalState GoalState_builder;
     //...
+    int overall_rc;
+    GoalStateOperationReply gsOperationalReply;
     overall_rc = Aca_Comm_Manager::get_instance().update_goal_state(
           GoalState_builder, gsOperationalReply);
     ASSERT_EQ(overall_rc, EXIT_SUCCESS);
@@ -132,7 +131,10 @@ TEST(zeta_programming_test_cases, DISABLED_auxgateway_test)
   int retcode;
   GoalState GoalState_builder;
   VpcState *new_vpc_states = GoalState_builder.add_vpc_states();
+  SubnetState *new_subnet_states = GoalState_builder.add_subnet_states();
   PortState *new_port_states = GoalState_builder.add_port_states();
+
+  new_vpc_states->set_operation_type(OperationType::INFO);
 
   // fill in vpc state structs
   VpcConfiguration *VpcConfiguration_builder = new_vpc_states->mutable_configuration();
@@ -141,6 +143,7 @@ TEST(zeta_programming_test_cases, DISABLED_auxgateway_test)
 
   // fill in auxgateway state structs
   AuxGateway *auxGateway = VpcConfiguration_builder->mutable_auxiliary_gateway();
+  auxGateway->set_aux_gateway_type(AuxGatewayType::ZETA);
   auxGateway->set_id(auxGateway_id_2);
 
   AuxGateway_zeta *zeta_info = auxGateway->mutable_zeta_info();
@@ -156,10 +159,11 @@ TEST(zeta_programming_test_cases, DISABLED_auxgateway_test)
   destinaton->set_ip_address(remote_ip_2);
   destinaton->set_mac_address(node_mac_address_2);
 
+  // fill in subnet state structs
+  aca_test_create_default_subnet_state(new_subnet_states);
+
   // fill in port state structs
-  PortConfiguration *PortConfiguration_builder = new_port_states->mutable_configuration();
-  PortConfiguration_builder->set_vpc_id(vpc_id_1);
-  new_port_states->set_operation_type(OperationType::CREATE);
+  aca_test_create_default_port_state(new_port_states);
 
   GoalStateOperationReply gsOperationalReply;
 
@@ -174,6 +178,7 @@ TEST(zeta_programming_test_cases, DISABLED_zeta_gateway_path_CHILD)
     // TODO: The relative path of the CHILD configuration file
     string zeta_gateway_path_CHILD_config_file="./...";
     aca_test_zeta_setup(zeta_gateway_path_CHILD_config_file);
+
 }
 
 TEST(zeta_programming_test_cases, DISABLED_zeta_gateway_path_PARENT)
@@ -181,4 +186,5 @@ TEST(zeta_programming_test_cases, DISABLED_zeta_gateway_path_PARENT)
     // TODO: The relative path of the PARENT configuration file
     string zeta_gateway_path_CHILD_config_file="./...";
     aca_test_zeta_setup(zeta_gateway_path_PARENT_config_file);
+
 }
