@@ -20,8 +20,8 @@
 #include "aca_comm_mgr.h"
 #include "aca_zeta_programming.h"
 #include <fstream>
-#include <nlohmann/json.hpp> //parse json file
-#include <iostream>
+#include <nlohmann/json.hpp>
+#include<iostream>
 
 using namespace std;
 using namespace aca_comm_manager;
@@ -60,19 +60,18 @@ uint oam_port_2 = 6800;
 
 void aca_test_zeta_setup(string zeta_gateway_path_config_file)
 {
-  ifstream ifs(zeta_gateway_path_config_file);
-  if (!ifs)
-    cout << zeta_gateway_path_config_file << "open error" << endl;
-  
-  // use this json library instead
-  nlohmann::json jf = nlohmann::json::parse(ifs);
+    ifstream ifs(zeta_gateway_path_config_file);
+    if(!ifs)
+　　    cout<<zeta_gateway_path_config_file<<"open error"<<endl;
 
-  // TODO: construct GoalState,push to aca
-  GoalState GoalState_builder;
-  GoalStateOperationReply gsOperationalReply;
-  //...
-  int overall_rc;
-  overall_rc = Aca_Comm_Manager::get_instance().update_goal_state(
+    nlohmann::json jf = nlohmann::json::parse(ifs);
+
+    // TODO: construct GoalState,push to aca
+    GoalState GoalState_builder;
+    //...
+    int overall_rc;
+    GoalStateOperationReply gsOperationalReply;
+    overall_rc = Aca_Comm_Manager::get_instance().update_goal_state(
           GoalState_builder, gsOperationalReply);
   ASSERT_EQ(overall_rc, EXIT_SUCCESS);
 }
@@ -135,6 +134,8 @@ TEST(zeta_programming_test_cases, DISABLED_auxgateway_test)
   SubnetState *new_subnet_states = GoalState_builder.add_subnet_states();
   PortState *new_port_states = GoalState_builder.add_port_states();
 
+  new_vpc_states->set_operation_type(OperationType::INFO);
+
   // fill in vpc state structs
   VpcConfiguration *VpcConfiguration_builder = new_vpc_states->mutable_configuration();
   VpcConfiguration_builder->set_tunnel_id(tunnel_id_1);
@@ -142,6 +143,7 @@ TEST(zeta_programming_test_cases, DISABLED_auxgateway_test)
 
   // fill in auxgateway state structs
   AuxGateway *auxGateway = VpcConfiguration_builder->mutable_auxiliary_gateway();
+  auxGateway->set_aux_gateway_type(AuxGatewayType::ZETA);
   auxGateway->set_id(auxGateway_id_2);
 
   AuxGateway_zeta *zeta_info = auxGateway->mutable_zeta_info();
@@ -187,4 +189,9 @@ TEST(zeta_programming_test_cases, DISABLED_zeta_gateway_path_PARENT)
   aca_test_zeta_setup(zeta_gateway_path_PARENT_config_file);
 
   // do some validate
+}
+    // TODO: The relative path of the PARENT configuration file
+    string zeta_gateway_path_CHILD_config_file="./...";
+    aca_test_zeta_setup(zeta_gateway_path_PARENT_config_file);
+
 }
