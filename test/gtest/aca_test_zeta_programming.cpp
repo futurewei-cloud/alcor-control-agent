@@ -63,7 +63,7 @@ void aca_test_zeta_setup(string zeta_gateway_path_config_file)
   ifstream ifs(zeta_gateway_path_config_file);
   if (!ifs)
     cout << zeta_gateway_path_config_file << "open error" << endl;
-  
+
   // use this json library instead
   nlohmann::json jf = nlohmann::json::parse(ifs);
 
@@ -135,6 +135,8 @@ TEST(zeta_programming_test_cases, DISABLED_auxgateway_test)
   SubnetState *new_subnet_states = GoalState_builder.add_subnet_states();
   PortState *new_port_states = GoalState_builder.add_port_states();
 
+  new_vpc_states->set_operation_type(OperationType::INFO);
+
   // fill in vpc state structs
   VpcConfiguration *VpcConfiguration_builder = new_vpc_states->mutable_configuration();
   VpcConfiguration_builder->set_tunnel_id(tunnel_id_1);
@@ -142,6 +144,7 @@ TEST(zeta_programming_test_cases, DISABLED_auxgateway_test)
 
   // fill in auxgateway state structs
   AuxGateway *auxGateway = VpcConfiguration_builder->mutable_auxiliary_gateway();
+  auxGateway->set_aux_gateway_type(AuxGatewayType::ZETA);
   auxGateway->set_id(auxGateway_id_2);
 
   AuxGateway_zeta *zeta_info = auxGateway->mutable_zeta_info();
