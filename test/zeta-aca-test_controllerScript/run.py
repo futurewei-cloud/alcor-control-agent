@@ -3,10 +3,14 @@ import json
 import paramiko
 from collections import defaultdict, OrderedDict
 import json
+import time
 
 video = defaultdict(list)
 
 zeta_data
+
+server_path = '/home/user/src/Github.com/zzxgzgz/alcor-control-agent/test/gtest'
+local_path = './aca_data.json'
 
 # Transfer the file locally to aca nodes
 def upload_file_aca(host, user, password, server_path, local_path, timeout=10):
@@ -85,24 +89,37 @@ def talk_to_zeta(file_path, zgc_api_url):
     for node in zeta_data["NODE_data"]:
         node_data = json.dumps(node)
         node_data['zgc_id'] = zgc_id
-        node_response_data = requests.post(zgc_api_url + "/nodes", node_data).json
+        node_response_data = requests.post(zgc_api_url + "/nodes", node_data).json()
         print(f'Response for adding node: {node_response_data}')
     
+    json_content_for_aca = dict()
+    json_content_for_aca['vpc_response'] = []
+    json_content_for_aca['port_response'] = []
+
     # first delay
+     print('Sleep 60 seconds after the Nodes call')
+    time.sleep(60)   
 
     # add VPC
     for tem in zeta_data["VPC_data"]:
         VPC_data = json.dumps(tem)
         vpc_response_data = requests.post(zgc_api_url + "/vpcs", VPC_data).json()
+        json_content_for_aca['vpc_response'].append(vpc_response_data)
         video["zgc_id"] = vpc_response_data["zgc_id"]
         print(vpc_response_data["zgc_id"])
 
     # second delay
+    print('Sleep 60 seconds after the VPC call')
+    time.sleep(60)   
 
     # notify ZGC the ports created on each ACA
     PORT_data = json.dumps(zeta_data["PORT_data"])
-    requests.post(zgc_api_url + "/ports", PORT_data)
+    port_response_data = requests.post(zgc_api_url + "/ports", PORT_data).json()
+    json_content_for_aca['port_response'].append(port_response_data)
     # TODO: 分别生成CHILD和PARENT的配置文件
+    with open('aca_data.txt', 'w') as outfile:
+        json.dump(json_content_for_aca, outfile)
+        print(f'The aca data is exported to {local_path}')
 
 
 def run():
@@ -118,8 +135,7 @@ def run():
     aca_nodes_ip = aca_nodes_data['ip']
 
 
-    server_path = '/root/alcor-control-agent/test/gtest'
-    local_path = './zeta_data.json'
+
     res = upload_file_aca(aca_nodes_data['ip'], aca_nodes_data['username'], aca_nodes_data['password'], server_path, local_path)
     if not res:
         print("upload file %s failed" % local_path)
