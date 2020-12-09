@@ -186,7 +186,7 @@ bool ACA_Oam_Server::_check_oam_server_port(uint udp_dport, oam_match match)
 {
   uint tunnel_id = match.vni;
   uint oam_port = aca_vlan_manager::ACA_Vlan_Manager::get_instance()
-                          .get_auxgateway_unsafe(tunnel_id)
+                          .get_auxgateway(tunnel_id)
                           .oam_port;
 
   if (udp_dport == oam_port) {

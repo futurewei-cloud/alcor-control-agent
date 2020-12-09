@@ -44,17 +44,14 @@ int ACA_Zeta_Programming::create_zeta_config(const alcor::schema::AuxGateway cur
 
   uint oam_port = current_AuxGateway.zeta_info().port_inband_operation();
 
-  ACA_Vlan_Manager::get_instance().set_zeta_gateway(
-          tunnel_id, current_AuxGateway.id(), oam_port);
-
   // get the current auxgateway status of vpc
   auxgateway_entry auxgateway =
-          ACA_Vlan_Manager::get_instance().get_auxgateway_unsafe(tunnel_id);
+          ACA_Vlan_Manager::get_instance().get_auxgateway(tunnel_id);
 
-  if (auxgateway.auxGateway_id.empty()) {
-    aca_oam_server::ACA_Oam_Server::get_instance().add_oam_port_cache(oam_port);
-
-    stZetaCfg.group_id = auxgateway.group_id;
+  if (auxgateway.type == aca_vlan_manager::NONE) {
+    ACA_Vlan_Manager::get_instance().set_zeta_gateway(
+            tunnel_id, current_AuxGateway.id(), oam_port);
+    stZetaCfg.group_id = ACA_Vlan_Manager::get_instance().get_auxgateway(tunnel_id).group_id;
     // add oam port number to cache
     aca_oam_server::ACA_Oam_Server::get_instance().add_oam_port_cache(oam_port);
 
@@ -72,7 +69,7 @@ int ACA_Zeta_Programming::delete_zeta_config(const alcor::schema::AuxGateway cur
   int overall_rc = EXIT_SUCCESS;
 
   auxgateway_entry auxGateway =
-          ACA_Vlan_Manager::get_instance().get_auxgateway_unsafe(tunnel_id);
+          ACA_Vlan_Manager::get_instance().get_auxgateway(tunnel_id);
   stZetaCfg.group_id = auxGateway.group_id;
 
   if (auxGateway.auxGateway_id.empty()) {
@@ -96,7 +93,7 @@ int ACA_Zeta_Programming::_create_zeta_group_entry(zeta_config *zeta_cfg)
   if (is_exist_group_rule(zeta_cfg->group_id)) {
     return overall_rc;
   }
-  //adding group table rule
+  // adding group table rule
   string cmd = "-O OpenFlow13 add-group br-tun group_id=" + to_string(zeta_cfg->group_id) +
                ",type=select";
   list<string>::iterator it;
@@ -105,7 +102,7 @@ int ACA_Zeta_Programming::_create_zeta_group_entry(zeta_config *zeta_cfg)
     cmd += ",bucket=\"set_field:" + *it + "->tun_dst,output:vxlan-generic\"";
   }
 
-  //add group table rule
+  // add group table rule
   aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
           cmd, not_care_culminative_time, overall_rc);
 
@@ -123,7 +120,7 @@ int ACA_Zeta_Programming::_delete_zeta_group_entry(zeta_config *zeta_cfg)
   unsigned long not_care_culminative_time;
   int overall_rc = EXIT_SUCCESS;
 
-  //delete group table rule
+  // delete group table rule
   string cmd = "-O OpenFlow13 del-groups br-tun group_id=" + to_string(zeta_cfg->group_id);
   aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
           cmd, not_care_culminative_time, overall_rc);
@@ -150,8 +147,10 @@ bool ACA_Zeta_Programming::is_exist_group_rule(uint group_id)
   overall_rc = aca_net_config::Aca_Net_Config::get_instance().execute_system_command(cmd_string);
 
   if (overall_rc == EXIT_SUCCESS) {
+    ACA_LOG_INFO("%s", "group rule is exist!\n");
     return true;
   } else {
+    ACA_LOG_INFO("%s", "group rule is not exist!\n");
     return false;
   }
 }

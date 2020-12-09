@@ -127,7 +127,7 @@ TEST(zeta_programming_test_cases, delete_zeta_config_valid)
   EXPECT_EQ(retcode, EXIT_SUCCESS);
 }
 
-TEST(zeta_programming_test_cases, auxgateway_test)
+TEST(zeta_programming_test_cases, create_auxgateway_test)
 {
   int retcode;
   GoalState GoalState_builder;

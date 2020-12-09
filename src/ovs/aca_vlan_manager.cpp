@@ -70,7 +70,6 @@ void ACA_Vlan_Manager::create_entry_unsafe(uint tunnel_id)
   vpc_table_entry new_table_entry;
   new_table_entry.vlan_id = current_available_vlan_id.load();
   current_available_vlan_id++;
-
   _vpcs_table.emplace(tunnel_id, new_table_entry);
 
   ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::create_entry_unsafe <--- Exiting\n");
@@ -395,16 +394,27 @@ int ACA_Vlan_Manager::get_outports_unsafe(uint tunnel_id, string &outports)
   return overall_rc;
 }
 
-auxgateway_entry ACA_Vlan_Manager::get_auxgateway_unsafe(uint tunnel_id)
+auxgateway_entry ACA_Vlan_Manager::get_auxgateway(uint tunnel_id)
 {
+  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::get_auxgateway ---> Entering\n");
   auxgateway_entry auxgateway_rc;
-  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::get_outports_unsafe ---> Entering\n");
+
+  auto vpcs_table_mutex_start = chrono::steady_clock::now();
+  // -----critical section starts-----
+  _vpcs_table_mutex.lock();
   if (_vpcs_table.find(tunnel_id) == _vpcs_table.end()) {
     ACA_LOG_ERROR("tunnel_id %u not found in vpc_table\n", tunnel_id);
-  } else {
-    auxgateway_rc = _vpcs_table[tunnel_id].auxGateway;
+    create_entry_unsafe(tunnel_id);
   }
+  auxgateway_rc = _vpcs_table[tunnel_id].auxGateway;
+  _vpcs_table_mutex.unlock();
+  // -----critical section ends-----
+  auto vpcs_table_mutex_end = chrono::steady_clock::now();
 
+  g_total_vpcs_table_mutex_time +=
+          cast_to_microseconds(vpcs_table_mutex_end - vpcs_table_mutex_start).count();
+
+  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::get_auxgateway ---> Entering\n");
   return auxgateway_rc;
 }
 
@@ -465,6 +475,7 @@ int ACA_Vlan_Manager::remove_zeta_gateway(uint tunnel_id)
   string zeta_gateway_id;
   uint oam_port;
 
+  auto vpcs_table_mutex_start = chrono::steady_clock::now();
   // -----critical section starts-----
   _vpcs_table_mutex.lock();
   if (_vpcs_table.find(tunnel_id) != _vpcs_table.end()) {
@@ -480,7 +491,12 @@ int ACA_Vlan_Manager::remove_zeta_gateway(uint tunnel_id)
 
   _vpcs_table_mutex.unlock();
   // -----critical section ends-----
-  if (!is_exist_zeta_gateway(zeta_gateway_id)) {
+  auto vpcs_table_mutex_end = chrono::steady_clock::now();
+
+  g_total_vpcs_table_mutex_time +=
+          cast_to_microseconds(vpcs_table_mutex_end - vpcs_table_mutex_start).count();
+
+  if (!zeta_gateway_id.empty() && !is_exist_zeta_gateway(zeta_gateway_id)) {
     overall_rc = _delete_oam_ofp(oam_port);
   }
   ACA_LOG_DEBUG("ACA_Vlan_Manager::remove_zeta_gateway <--- Exiting, overall_rc = %d\n",
@@ -493,6 +509,7 @@ bool ACA_Vlan_Manager::is_exist_zeta_gateway(string zeta_gateway_id)
   ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::is_exist_zeta_gateway ---> Entering\n");
   bool rc = false;
 
+  auto vpcs_table_mutex_start = chrono::steady_clock::now();
   // -----critical section starts-----
   _vpcs_table_mutex.lock();
   for (auto entry : _vpcs_table) {
@@ -504,6 +521,11 @@ bool ACA_Vlan_Manager::is_exist_zeta_gateway(string zeta_gateway_id)
   }
   _vpcs_table_mutex.unlock();
   // -----critical section ends-----
+  auto vpcs_table_mutex_end = chrono::steady_clock::now();
+
+  g_total_vpcs_table_mutex_time +=
+          cast_to_microseconds(vpcs_table_mutex_end - vpcs_table_mutex_start).count();
+
   ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::is_exist_zeta_gateway ---> Entering\n");
 
   return rc;

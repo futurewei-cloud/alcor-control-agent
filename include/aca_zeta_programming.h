@@ -26,7 +26,7 @@ namespace aca_zeta_programming
 {
 struct zeta_config {
   uint group_id;
-  //
+  // list<gateway_node_ip_address>
   list<string> zeta_buckets;
   uint port_inband_operation;
 };
