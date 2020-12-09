@@ -59,7 +59,7 @@
         data:
         {
             "name": "ZGC_test",
-            "description": "ZGC 1",
+            "description": "ZGC_test",
             "cidr": "192.168.0.0/28",
             "port_ibo": "8300",
             "overlay_type": "vxlan"
@@ -69,7 +69,7 @@
 
         data:
         {
-            "id": "zgc1zgc1-xxxx-xxxx-xxxx-xxxx",
+            "id": "f81d4fae-7dec-11d0-a765-00a0c91e6bf6",
             "name": "ZGC_test",
             "description": "ZGC 1",
             "ip_start": "192.168.0.2",
@@ -81,17 +81,16 @@
 
 - The controller receives the response from Zeta management and determine whether the response code is 200. Then the controller gets information about the ZGC just created by zgc id to determine whether the ZGC is created successfully.
   
-    Request: http://172.16.62.247/zgcs/zgc1zgc1-xxxx-xxxx-xxxx-xxxx
-
+    Request: http://172.16.62.247/zgcs/f81d4fae-7dec-11d0-a765-00a0c91e6bf6
     Response:
 
         data:
         {
-            "zgc_id": "zgc1zgc1-xxxx-xxxx-xxxx-xxxx",
+            "zgc_id": "f81d4fae-7dec-11d0-a765-00a0c91e6bf6",
             "name": "ZGC_test1",
             "description": "ZGC 1",
             "ip_start": "192.168.0.2",
-            "ip_end": "192.168.0.4",
+            "ip_end": "192.168.0.11",
             "port_ibo": "8300",
             "overlay_type": "vxlan",
             "nodes": [
@@ -114,7 +113,7 @@
 
         data:
         {
-            "vpc_id": "vpc1vpc1-xxxx-xxxx-xxxx-xxxx",
+            "vpc_id": "3dda2801-d675-4688-a63f-dcda8d327f50",
             "vni": "1"
         }
 
@@ -122,9 +121,9 @@
 
         data:
         {
-            "vpc_id": "vpc1vpc1-xxxx-xxxx-xxxx-xxxx",
+            "vpc_id": "3dda2801-d675-4688-a63f-dcda8d327f50",
             "vni": "1",
-            "zgc_id": "zgc1zgc1-xxxx-xxxx-xxxx-xxxx",
+            "zgc_id": "f81d4fae-7dec-11d0-a765-00a0c91e6bf6",
             "name": "ZGC_test",
             "gws": 
             [
@@ -153,31 +152,31 @@
         [
             {
                 "port_id": "333d4fae-7dec-11d0-a765-00a0c9342222",
-                "vpc_id": "vpc1vpc1-xxxx-xxxx-xxxx-xxxx",
-                "ips_port": 
-                [
-                    {
-                        "ip": "172.16.62.247",
-                        "vip": "192.168.1.2"
-                    }
-                ],
-                "mac_port": "cc:dd:ee:ff:11:22",
-                "ip_node": "192.168.10.27",
-                "mac_node": "ee:dd:ee:ff:22:11",
-            },
-            {
-                "port_id": "99976feae-7dec-11d0-a765-00a0c9341111",
-                "vpc_id": vpc1vpc1-xxxx-xxxx-xxxx-xxxx",
+                "vpc_id": "3dda2801-d675-4688-a63f-dcda8d327f50",
                 "ips_port": 
                 [
                     {
                         "ip": "10.10.0.3",
-                        "vip": "192.168.1.3"
+                        "vip": ""
+                    }
+                ],
+                "mac_port": "cc:dd:ee:ff:11:22",
+                "ip_node": "172.16.62.249",
+                "mac_node": "00:1b:21:26:0a:37",
+            },
+            {
+                "port_id": "99976feae-7dec-11d0-a765-00a0c9341111",
+                "vpc_id": "3dda2801-d675-4688-a63f-dcda8d327f50",
+                "ips_port": 
+                [
+                    {
+                        "ip": "10.10.0.4",
+                        "vip": ""
                     }
                 ],
                 "mac_port": "6c:dd:ee:ff:11:32",
-                "ip_node": "192.168.10.33",
-                "mac_node": "ee:dd:ee:ff:33:11",
+                "ip_node": "172.16.62.250",
+                "mac_node": "36:31:03:3f:62:74",
             }
         ]
 
@@ -206,4 +205,5 @@ TBD
 
 ### Problems
 
-- In the REST API of "add compute instance ports", what do "ips_port", "mac_port", "ip_node" and "mac_node" mean, respectively?
+- I checked DISABLED_2_ports_CREATE_test_traffic_PARENT in /test/gtest/aca_test_ovs_l2.cpp. There is a step to construct a neighbor port. Does our test also need to add a neighbor port?
+- In addition to issuing the goal state that created the port, do we also need to issue the goal state of the zeta information about this port?
