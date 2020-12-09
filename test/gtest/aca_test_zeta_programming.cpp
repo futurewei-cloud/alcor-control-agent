@@ -77,7 +77,7 @@ void aca_test_zeta_setup(string zeta_gateway_path_config_file)
   ASSERT_EQ(overall_rc, EXIT_SUCCESS);
 }
 
-TEST(zeta_programming_test_cases, create_or_update_zeta_config_valid)
+TEST(zeta_programming_test_cases, create_zeta_config_valid)
 {
   int retcode = 0;
 
@@ -96,7 +96,7 @@ TEST(zeta_programming_test_cases, create_or_update_zeta_config_valid)
   destinaton->set_ip_address(remote_ip_2);
   destinaton->set_mac_address(node_mac_address_4);
 
-  retcode = ACA_Zeta_Programming::get_instance().create_or_update_zeta_config(
+  retcode = ACA_Zeta_Programming::get_instance().create_zeta_config(
           new_auxGateway, vpc_id_2, tunnel_id_2);
 
   EXPECT_EQ(retcode, EXIT_SUCCESS);
@@ -127,7 +127,7 @@ TEST(zeta_programming_test_cases, delete_zeta_config_valid)
   EXPECT_EQ(retcode, EXIT_SUCCESS);
 }
 
-TEST(zeta_programming_test_cases, DISABLED_auxgateway_test)
+TEST(zeta_programming_test_cases, auxgateway_test)
 {
   int retcode;
   GoalState GoalState_builder;
