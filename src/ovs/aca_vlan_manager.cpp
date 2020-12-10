@@ -91,32 +91,39 @@ int ACA_Vlan_Manager::create_ovs_port(string /*vpc_id*/, string ovs_port,
   ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::create_ovs_port ---> Entering\n");
 
   vpc_table_entry *current_vpc_table_entry;
-  int overall_rc = EXIT_SUCCESS;
+  int overall_rc = EXIT_FAILURE;
 
-  if (!_vpcs_table.find(tunnel_id, current_vpc_table_entry)) {
+  bool vpc_table_entry_found = _vpcs_table.find(tunnel_id, current_vpc_table_entry);
+
+  if (!vpc_table_entry_found) {
     create_entry(tunnel_id);
 
-    _vpcs_table.find(tunnel_id, current_vpc_table_entry);
+    // vpc_table_entry_found use here just in case if
+    // vpc_table_entry is deleted by another thread between
+    // create_entry above and the _vpcs_table.find below
+    vpc_table_entry_found = _vpcs_table.find(tunnel_id, current_vpc_table_entry);
   }
 
-  // first port in the VPC will add the below rule:
-  // table 4 = incoming vxlan, allow incoming vxlan traffic matching tunnel_id
-  // to stamp with internal vlan and deliver to br-int
-  if (current_vpc_table_entry->ovs_ports.empty()) {
-    int internal_vlan_id = current_vpc_table_entry->vlan_id;
+  if (vpc_table_entry_found) {
+    // first port in the VPC will add the below rule:
+    // table 4 = incoming vxlan, allow incoming vxlan traffic matching tunnel_id
+    // to stamp with internal vlan and deliver to br-int
+    if (current_vpc_table_entry->ovs_ports.empty()) {
+      int internal_vlan_id = current_vpc_table_entry->vlan_id;
 
-    string cmd_string =
-            "add-flow br-tun \"table=4, priority=1,tun_id=" + to_string(tunnel_id) +
-            " actions=mod_vlan_vid:" + to_string(internal_vlan_id) + ",output:\"patch-int\"\"";
+      string cmd_string =
+              "add-flow br-tun \"table=4, priority=1,tun_id=" + to_string(tunnel_id) +
+              " actions=mod_vlan_vid:" + to_string(internal_vlan_id) + ",output:\"patch-int\"\"";
 
-    ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
-            cmd_string, culminative_time, overall_rc);
+      ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
+              cmd_string, culminative_time, overall_rc);
+    }
+    //-----Start exclusive lock to enable single write-----
+    std::unique_lock<std::shared_timed_mutex> lock(current_vpc_table_entry->ovs_ports_mutex);
+    current_vpc_table_entry->ovs_ports.push_back(ovs_port);
+    lock.unlock();
+    //-----End exclusive lock to enable single write-----
   }
-  //-----Start exclusive lock to enable single write-----
-  std::unique_lock<std::shared_timed_mutex> lock(current_vpc_table_entry->ovs_ports_mutex);
-  current_vpc_table_entry->ovs_ports.push_back(ovs_port);
-  lock.unlock();
-  //-----End exclusive lock to enable single write-----
 
   ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::create_ovs_port <--- Exiting\n");
 
