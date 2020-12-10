@@ -6,7 +6,7 @@ import time
 
 video = defaultdict(list)
 
-zeta_data = None
+# zeta_data = None
 
 server_path = '/home/user/src/Github.com/zzxgzgz/alcor-control-agent/test/gtest'
 local_path = './aca_data.json'
@@ -77,7 +77,7 @@ def exec_sshCommand_aca(host, user, password, cmd, timeout=10):
         return False
 
 
-def talk_to_zeta(file_path, zgc_api_url):
+def talk_to_zeta(file_path, zgc_api_url, zeta_data):
     # create ZGC
     ZGC_data = zeta_data["ZGC_data"]
     zgc_response = requests.post(zgc_api_url + "/zgcs", ZGC_data)
@@ -124,12 +124,14 @@ def talk_to_zeta(file_path, zgc_api_url):
 def run():
     # # Call zeta API to create ZGC,vpc etc.and generate the information ACA need, and save it in zetaToAca_data.json
     file_path = './data/zeta_data.json'
+    zeta_data = {}
     with open(file_path, 'r', encoding='utf8')as fp:
         zeta_data = json.loads(fp.read())
         print(f'zeta_data: {zeta_data}')
+        print(f'zeta_data type: {type(zeta_data)}')
     
     zgc_api_url = zeta_data["zeta_api_ip"]
-    talk_to_zeta(file_path, zgc_api_url)
+    talk_to_zeta(file_path, zgc_api_url, zeta_data)
 
     aca_nodes_data = zeta_data["aca_nodes"]
     aca_nodes_ip = aca_nodes_data['ip']
