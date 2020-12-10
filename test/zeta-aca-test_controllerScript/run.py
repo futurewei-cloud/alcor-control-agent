@@ -79,14 +79,14 @@ def exec_sshCommand_aca(host, user, password, cmd, timeout=10):
 
 def talk_to_zeta(file_path, zgc_api_url):
     # create ZGC
-    ZGC_data = json.dumps(zeta_data["ZGC_data"])
+    ZGC_data = zeta_data["ZGC_data"]
     zgc_response = requests.post(zgc_api_url + "/zgcs", ZGC_data)
     zgc_id = zgc_response.json()['id']
 
 
     # add Nodes
     for node in zeta_data["NODE_data"]:
-        node_data = json.dumps(node)
+        node_data = node
         node_data['zgc_id'] = zgc_id
         node_response_data = requests.post(zgc_api_url + "/nodes", node_data).json()
         print(f'Response for adding node: {node_response_data}')
@@ -101,7 +101,7 @@ def talk_to_zeta(file_path, zgc_api_url):
 
     # add VPC
     for tem in zeta_data["VPC_data"]:
-        VPC_data = json.dumps(tem)
+        VPC_data = tem
         vpc_response_data = requests.post(zgc_api_url + "/vpcs", VPC_data).json()
         json_content_for_aca['vpc_response'].append(vpc_response_data)
         video["zgc_id"] = vpc_response_data["zgc_id"]
