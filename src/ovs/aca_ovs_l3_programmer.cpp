@@ -513,6 +513,7 @@ int ACA_OVS_L3_Programmer::create_or_update_l3_neighbor(
     } else {
       // destination subnet found!
       found_subnet_in_router = true;
+      string destination_gw_mac = found_subnet->second.gateway_mac;
 
       // for each other subnet connected to this router, create the routing rule
       for (auto subnet_it = router_it->second.begin();
@@ -548,6 +549,7 @@ int ACA_OVS_L3_Programmer::create_or_update_l3_neighbor(
                        to_string(source_vlan_id) + ",nw_dst=" + virtual_ip +
                        ",dl_dst=" + subnet_it->second.gateway_mac +
                        " actions=mod_vlan_vid:" + to_string(destination_vlan_id) +
+                       ",mod_dl_src:" + destination_gw_mac +
                        ",mod_dl_dst:" + virtual_mac + ",output:IN_PORT\"";
         } else {
           cmd_string = "add-flow br-tun \"table=0,priority=50,ip,dl_vlan=" +
