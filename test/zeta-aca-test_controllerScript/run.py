@@ -37,7 +37,7 @@ def upload_file_aca(host, user, password, server_path, local_path, timeout=10):
 
 
 # Execute remote SSH commands
-def exec_sshCommand_aca(host, user, password, cmd, timeout=10):
+def exec_sshCommand_aca(host, user, password, cmd, timeout=60):
     """
     :param host
     :param user

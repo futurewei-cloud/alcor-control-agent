@@ -9,8 +9,8 @@
     "password": "***"
   },
   "ZGC_data": {
-    "name": "ZGC_test103",
-    "description": "ZGC_test103",
+    "name": "ZGC_test104",
+    "description": "ZGC_test104",
     "ip_start": "192.168.20.100",
     "ip_end": "192.168.20.115",
     "port_ibo": "8300",
@@ -18,14 +18,14 @@
   },
   "VPC_data": [
     {
-      "vpc_id": "3dda2801-d675-4688-a63f-dcda8d327f58",
-      "vni": "369"
+      "vpc_id": "3dda2801-d675-4688-a63f-dcda8d327f59",
+      "vni": "666"
     }
   ],
   "PORT_data": [
     {
-      "port_id": "333d4fae-7dec-11d0-a765-00a0c9341117",
-      "vpc_id": "3dda2801-d675-4688-a63f-dcda8d327f58",
+      "port_id": "333d4fae-7dec-11d0-a765-00a0c9341118",
+      "vpc_id": "3dda2801-d675-4688-a63f-dcda8d327f59",
       "ips_port": [
         {
           "ip": "10.10.0.92",
@@ -37,8 +37,8 @@
       "mac_node": "e8:bd:d1:01:77:ec"
     },
     {
-      "port_id": "99976feae-7dec-11d0-a765-00a0c9342227",
-      "vpc_id": "3dda2801-d675-4688-a63f-dcda8d327f58",
+      "port_id": "99976feae-7dec-11d0-a765-00a0c9342228",
+      "vpc_id": "3dda2801-d675-4688-a63f-dcda8d327f59",
       "ips_port": [
         {
           "ip": "10.10.0.93",
@@ -53,8 +53,8 @@
   "NODE_data": [
     {
       "zgc_id": "zgc_id",
-      "description": "znode60",
-      "name": "znode60",
+      "description": "znode70",
+      "name": "znode70",
       "ip_control": "192.168.20.190",
       "id_control": "ubuntu",
       "pwd_control": "Lab12345",
@@ -65,8 +65,8 @@
     },
     {
       "zgc_id": "zgc_id",
-      "description": "znode61",
-      "name": "znode61",
+      "description": "znode71",
+      "name": "znode71",
       "ip_control": "192.168.20.191",
       "id_control": "ubuntu",
       "pwd_control": "Lab12345",
@@ -77,8 +77,8 @@
     },
     {
       "zgc_id": "zgc_id",
-      "description": "znode62",
-      "name": "znode62",
+      "description": "znode72",
+      "name": "znode72",
       "ip_control": "192.168.20.192",
       "id_control": "ubuntu",
       "pwd_control": "Lab12345",
@@ -89,8 +89,8 @@
     },
     {
       "zgc_id": "zgc_id",
-      "description": "znode63",
-      "name": "znode63",
+      "description": "znode73",
+      "name": "znode73",
       "ip_control": "192.168.20.193",
       "id_control": "ubuntu",
       "pwd_control": "Lab12345",
@@ -101,8 +101,8 @@
     },
     {
       "zgc_id": "zgc_id",
-      "description": "znode64",
-      "name": "znode64",
+      "description": "znode74",
+      "name": "znode74",
       "ip_control": "192.168.20.194",
       "id_control": "ubuntu",
       "pwd_control": "Lab12345",
@@ -113,8 +113,8 @@
     },
     {
       "zgc_id": "zgc_id",
-      "description": "znode65",
-      "name": "znode65",
+      "description": "znode75",
+      "name": "znode75",
       "ip_control": "192.168.20.195",
       "id_control": "ubuntu",
       "pwd_control": "Lab12345",
