@@ -84,7 +84,7 @@ def talk_to_zeta(file_path, zgc_api_url, zeta_data):
     print(f'ZGC_data: \n{ZGC_data}')
     zgc_response = requests.post(zgc_api_url + "/zgcs", data=json.dumps(ZGC_data), headers=headers)
     print(f'zgc creation response: \n{zgc_response}')
-    zgc_id = zgc_response.json()['id']
+    zgc_id = zgc_response.json()['zgc_id']
 
 
     # add Nodes
