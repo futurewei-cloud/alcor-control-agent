@@ -80,13 +80,16 @@ def exec_sshCommand_aca(host, user, password, cmd, timeout=10):
 def talk_to_zeta(file_path, zgc_api_url, zeta_data):
     # create ZGC
     ZGC_data = zeta_data["ZGC_data"]
+    print(f'ZGC_data: \n{ZGC_data}')
     zgc_response = requests.post(zgc_api_url + "/zgcs", ZGC_data)
     zgc_id = zgc_response.json()['id']
+    print(f'zgc creation response: \n{zgc_response.json()}')
 
 
     # add Nodes
     for node in zeta_data["NODE_data"]:
         node_data = node
+        print(f'node_data: \n{node_data}')
         node_data['zgc_id'] = zgc_id
         node_response_data = requests.post(zgc_api_url + "/nodes", node_data).json()
         print(f'Response for adding node: {node_response_data}')
@@ -102,10 +105,11 @@ def talk_to_zeta(file_path, zgc_api_url, zeta_data):
     # add VPC
     for tem in zeta_data["VPC_data"]:
         VPC_data = tem
+        print(f'VPC_data: \n{VPC_data}')
         vpc_response_data = requests.post(zgc_api_url + "/vpcs", VPC_data).json()
+        print(f'Response for adding VPC: {vpc_response_data}')
         json_content_for_aca['vpc_response'].append(vpc_response_data)
         video["zgc_id"] = vpc_response_data["zgc_id"]
-        print(vpc_response_data["zgc_id"])
 
     # second delay
     print('Sleep 60 seconds after the VPC call')
@@ -113,7 +117,9 @@ def talk_to_zeta(file_path, zgc_api_url, zeta_data):
 
     # notify ZGC the ports created on each ACA
     PORT_data = json.dumps(zeta_data["PORT_data"])
+    print(f'Port_data: \n{PORT_data}')
     port_response_data = requests.post(zgc_api_url + "/ports", PORT_data).json()
+    print(f'Response for adding port: {port_response_data}')
     json_content_for_aca['port_response'].append(port_response_data)
     # TODO: 分别生成CHILD和PARENT的配置文件
     with open('aca_data.txt', 'w') as outfile:
