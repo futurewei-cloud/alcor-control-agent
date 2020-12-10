@@ -8,7 +8,7 @@ video = defaultdict(list)
 
 # zeta_data = None
 
-server_path = '/home/user/src/Github.com/zzxgzgz/alcor-control-agent/test/gtest'
+server_path = '/home/user/src/Github.com/zzxgzgz/alcor-control-agent/test/gtest/aca_data.json'
 local_path = './aca_data.json'
 
 # Transfer the file locally to aca nodes
