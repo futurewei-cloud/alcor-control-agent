@@ -125,7 +125,7 @@ def run():
     # # Call zeta API to create ZGC,vpc etc.and generate the information ACA need, and save it in zetaToAca_data.json
     file_path = './data/zeta_data.json'
     with open(file_path, 'r', encoding='utf8')as fp:
-        zeta_data = json.load(fp)
+        zeta_data = json.loads(fp.read())
     
     zgc_api_url = zeta_data["zeta_api_ip"]
     talk_to_zeta(file_path, zgc_api_url)
