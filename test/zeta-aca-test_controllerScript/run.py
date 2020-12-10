@@ -7,9 +7,9 @@ import time
 video = defaultdict(list)
 
 # zeta_data = None
-
-server_path = '/home/user/src/Github.com/zzxgzgz/alcor-control-agent/test/gtest/aca_data.json'
-local_path = './aca_data.json'
+server_aca_repo_path = ''
+aca_data_destination_path = '/test/gtest/aca_data.json'
+aca_data_local_path = './aca_data.json'
 
 # Transfer the file locally to aca nodes
 def upload_file_aca(host, user, password, server_path, local_path, timeout=10):
@@ -127,7 +127,7 @@ def talk_to_zeta(file_path, zgc_api_url, zeta_data):
     # TODO: 分别生成CHILD和PARENT的配置文件
     with open('aca_data.json', 'w') as outfile:
         json.dump(json_content_for_aca, outfile)
-        print(f'The aca data is exported to {local_path}')
+        print(f'The aca data is exported to {aca_data_local_path}')
 
 
 def run():
@@ -139,17 +139,19 @@ def run():
         print(f'zeta_data: {zeta_data}')
         print(f'zeta_data type: {type(zeta_data)}')
     
+    server_aca_repo_path = zeta_data['server_aca_repo_path']
+    print(f'Server aca repo path: {server_aca_repo_path}')
     zgc_api_url = zeta_data["zeta_api_ip"]
     talk_to_zeta(file_path, zgc_api_url, zeta_data)
 
     aca_nodes_data = zeta_data["aca_nodes"]
     aca_nodes_ip = aca_nodes_data['ip']
 
-    res = upload_file_aca(aca_nodes_data['ip'], aca_nodes_data['username'], aca_nodes_data['password'], server_path, local_path)
+    res = upload_file_aca(aca_nodes_data['ip'], aca_nodes_data['username'], aca_nodes_data['password'], server_aca_repo_path + aca_data_destination_path, aca_data_local_path)
     if not res:
-        print("upload file %s failed" % local_path)
+        print("upload file %s failed" % aca_data_local_path)
     else:
-        print("upload file %s successfully" % local_path)
+        print("upload file %s successfully" % aca_data_local_path)
 
     # Execute remote command, use the transferred file to change the information in aca_test_ovs_util.cpp,recompile using 'make',perform aca_test
     aca_nodes = aca_nodes_ip
