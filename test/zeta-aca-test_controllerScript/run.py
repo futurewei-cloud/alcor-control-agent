@@ -46,7 +46,7 @@ def exec_sshCommand_aca(host, user, password, cmd, timeout=60):
     :param seconds
     :return: dict
     """
-    result = {'status': [], 'data': []}  # Record return result
+    result = {'status': [], 'data': [], 'error':False}  # Record return result
     try:
         # Create a SSHClient instance
         ssh = paramiko.SSHClient()
@@ -74,8 +74,9 @@ def exec_sshCommand_aca(host, user, password, cmd, timeout=60):
         ssh.close()  # close ssh connection
         return result
     except Exception as e:
-        print(e)
-        return False
+        print(f'Exception when executing command:{e}')
+        result['error'] = True
+        return result
 
 
 def talk_to_zeta(file_path, zgc_api_url, zeta_data):
@@ -155,15 +156,18 @@ def run():
     cmd_list1 = ['cd ~/src/Github.com/zzxgzgz/alcor-control-agent;sudo cmake .',
                  'cd ~/src/Github.com/zzxgzgz/alcor-control-agent;sudo make',
                  'cd ~/src/Github.com/zzxgzgz/alcor-control-agent;sudo ./build/tests/aca_tests --gtest_also_run_disabled_tests --gtest_filter=*DISABLED_2_ports_CREATE_test_traffic_PARENT -c 10.213.43.93']
-    result1 = exec_sshCommand_aca(host=aca_nodes[0], user=aca_nodes_data['username'], password=aca_nodes_data['password'], cmd=cmd_list1, timeout=10)
+    result1 = exec_sshCommand_aca(host=aca_nodes[0], user=aca_nodes_data['username'], password=aca_nodes_data['password'], cmd=cmd_list1, timeout=60)
     cmd_list2 = ['cd ~/src/Github.com/zzxgzgz/alcor-control-agent;sudo cmake .',
                  'cd ~/src/Github.com/zzxgzgz/alcor-control-agent;sudo make',
                  'cd ~/src/Github.com/zzxgzgz/alcor-control-agent;sudo ./build/tests/aca_tests --gtest_also_run_disabled_tests --gtest_filter=*DISABLED_2_ports_CREATE_test_traffic_CHILD -p 10.213.43.92']
-    result2 = exec_sshCommand_aca(host=aca_nodes[1], user=aca_nodes_data['username'], password=aca_nodes_data['password'], cmd=cmd_list2, timeout=10)
-    print(result1["status"])
-    print(result1["data"])
-    print(result2["status"])
-    print(result2["data"])
+    result2 = exec_sshCommand_aca(host=aca_nodes[1], user=aca_nodes_data['username'], password=aca_nodes_data['password'], cmd=cmd_list2, timeout=60)
+    print(f'Status from node [{aca_nodes[0]}]: {result1["status"]}')
+    print(f'Data from node [{aca_nodes[0]}]: {result1["data"]}')
+    print(f'Error from node [{aca_nodes[0]}]: {result1["error"]}')
+    print(f'Status from node [{aca_nodes[1]}]: {result2["status"]}')
+    print(f'Data from node [{aca_nodes[1]}]: {result2["data"]}')
+    print(f'Error from node [{aca_nodes[1]}]: {result2["error"]}')
+
 
 
 if __name__ == '__main__':
