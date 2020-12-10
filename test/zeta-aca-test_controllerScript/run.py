@@ -126,14 +126,13 @@ def run():
     file_path = './data/zeta_data.json'
     with open(file_path, 'r', encoding='utf8')as fp:
         zeta_data = json.loads(fp.read())
+        print(f'zeta_data: {zeta_data}')
     
     zgc_api_url = zeta_data["zeta_api_ip"]
     talk_to_zeta(file_path, zgc_api_url)
 
     aca_nodes_data = zeta_data["aca_nodes"]
     aca_nodes_ip = aca_nodes_data['ip']
-
-
 
     res = upload_file_aca(aca_nodes_data['ip'], aca_nodes_data['username'], aca_nodes_data['password'], server_path, local_path)
     if not res:
