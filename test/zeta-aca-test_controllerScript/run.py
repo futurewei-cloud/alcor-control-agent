@@ -2,12 +2,11 @@ import requests
 import json
 import paramiko
 from collections import defaultdict, OrderedDict
-import json
 import time
 
 video = defaultdict(list)
 
-zeta_data
+zeta_data = None
 
 server_path = '/home/user/src/Github.com/zzxgzgz/alcor-control-agent/test/gtest'
 local_path = './aca_data.json'
@@ -97,7 +96,7 @@ def talk_to_zeta(file_path, zgc_api_url):
     json_content_for_aca['port_response'] = []
 
     # first delay
-     print('Sleep 60 seconds after the Nodes call')
+    print('Sleep 60 seconds after the Nodes call')
     time.sleep(60)   
 
     # add VPC
@@ -146,10 +145,10 @@ def run():
     aca_nodes = ["172.16.62.249", "172.16.62.250"]
     cmd_list1 = ['cd alcor-control-agent;sudo make',
                  'cd alcor-control-agent;./build/tests/aca_tests --gtest_also_run_disabled_tests --gtest_filter=*DISABLED_2_ports_CREATE_test_traffic_CHILD -p 10.213.43.187']
-    result1 = exec_sshCommand_aca(host=aca_nodes[0], user=user, password=password, cmd=cmd_list1, timeout=10)
+    result1 = exec_sshCommand_aca(host=aca_nodes[0], user=aca_nodes_data['username'], password=aca_nodes_data['password'], cmd=cmd_list1, timeout=10)
     cmd_list2 = ['cd alcor-control-agent;sudo make',
                  'cd alcor-control-agent;./build/tests/aca_tests --gtest_also_run_disabled_tests --gtest_filter=*DISABLED_2_ports_CREATE_test_traffic_PARENT -c 10.213.43.188']
-    result2 = exec_sshCommand_aca(host=aca_nodes[1], user=user, password=password, cmd=cmd_list2, timeout=10)
+    result2 = exec_sshCommand_aca(host=aca_nodes[1], user=aca_nodes_data['username'], password=aca_nodes_data['password'], cmd=cmd_list2, timeout=10)
     print(result1["status"])
     print(result1["data"])
     print(result2["status"])
