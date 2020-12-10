@@ -388,6 +388,13 @@ TEST(dhcp_request_test_case, DISABLED_l3_dhcp_test)
 
   Aca_Net_Config::get_instance().execute_system_command("docker rm -f con2");
 
+  // delete br-int and br-tun bridges
+  ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
+          "del-br br-int", not_care_culminative_time, overall_rc);
+
+  ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
+          "del-br br-tun", not_care_culminative_time, overall_rc);
+
   // create and setup br-int and br-tun bridges, and their patch ports
   overall_rc = ACA_OVS_L2_Programmer::get_instance().setup_ovs_bridges_if_need();
   ASSERT_EQ(overall_rc, EXIT_SUCCESS);

@@ -40,13 +40,6 @@ struct vpc_table_entry {
   // mutex to protect ovs_ports
   mutable std::shared_timed_mutex ovs_ports_mutex;
 
-  // hashtable of output (e.g. vxlan) tunnel ports to the neighbor host communication
-  // hashtable <key: outports string, value: list of neighbor port IDs>
-  unordered_map<string, list<string> > outports_neighbors_table;
-
-  // mutex to protect outports_neighbors_table
-  mutable std::shared_timed_mutex outports_neighbors_table_mutex;
-
   string auxGateway_id;
 };
 
@@ -68,20 +61,9 @@ class ACA_Vlan_Manager {
   int delete_l2_neighbor(string virtual_ip, string virtual_mac, uint tunnel_id,
                          ulong &culminative_time);
 
-  // the below three "outport" functions are deprecated and not used
-  // keeping them below to avoid merge conflict with other ACA change in PR
-  int create_neighbor_outport(string neighbor_id, string vpc_id,
-                              alcor::schema::NetworkType network_type, string remote_host_ip,
-                              uint tunnel_id, ulong &culminative_time);
-
   // create a neighbor port without specifying vpc_id and neighbor ID
   int create_neighbor_outport(alcor::schema::NetworkType network_type, string remote_host_ip,
                               uint tunnel_id, ulong &culminative_time);
-
-  int delete_neighbor_outport(string neighbor_id, uint tunnel_id,
-                              string outport_name, ulong &culminative_time);
-
-  int get_outports_unsafe(uint tunnel_id, string &outports);
 
   void set_aux_gateway(uint tunnel_id, const string auxGateway_id);
 
@@ -99,9 +81,6 @@ class ACA_Vlan_Manager {
 
   // hashtable <key: tunnel ID, value: vpc_table_entry>
   CTSL::HashMap<uint, vpc_table_entry *> _vpcs_table;
-
-  // mutex for reading and writing to _vpcs_table
-  // mutex _vpcs_table_mutex;
 
   void create_entry(uint tunnel_id);
 };
