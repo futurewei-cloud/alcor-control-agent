@@ -150,7 +150,7 @@ def run():
         print("upload file %s successfully" % local_path)
 
     # Execute remote command, use the transferred file to change the information in aca_test_ovs_util.cpp,recompile using 'make',perform aca_test
-    aca_nodes = ["172.16.62.249", "172.16.62.250"]
+    aca_nodes = aca_nodes_ip
     cmd_list1 = ['cd alcor-control-agent;sudo make',
                  'cd alcor-control-agent;./build/tests/aca_tests --gtest_also_run_disabled_tests --gtest_filter=*DISABLED_2_ports_CREATE_test_traffic_CHILD -p 10.213.43.187']
     result1 = exec_sshCommand_aca(host=aca_nodes[0], user=aca_nodes_data['username'], password=aca_nodes_data['password'], cmd=cmd_list1, timeout=10)
