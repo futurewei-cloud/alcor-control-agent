@@ -82,8 +82,8 @@ def talk_to_zeta(file_path, zgc_api_url, zeta_data):
     # create ZGC
     ZGC_data = zeta_data["ZGC_data"]
     print(f'ZGC_data: \n{ZGC_data}')
-    zgc_response = requests.post(zgc_api_url + "/zgcs", data=ZGC_data, headers=headers)
-    print(f'zgc creation response: \n{zgc_response.json()}')
+    zgc_response = requests.post(zgc_api_url + "/zgcs", data=json.dumps(ZGC_data), headers=headers)
+    print(f'zgc creation response: \n{zgc_response}')
     zgc_id = zgc_response.json()['id']
 
 
@@ -92,7 +92,7 @@ def talk_to_zeta(file_path, zgc_api_url, zeta_data):
         node_data = node
         print(f'node_data: \n{node_data}')
         node_data['zgc_id'] = zgc_id
-        node_response_data = requests.post(zgc_api_url + "/nodes", data=node_data, headers=headers).json()
+        node_response_data = requests.post(zgc_api_url + "/nodes", data=json.dumps(node_data), headers=headers).json()
         print(f'Response for adding node: {node_response_data}')
     
     json_content_for_aca = dict()
@@ -107,7 +107,7 @@ def talk_to_zeta(file_path, zgc_api_url, zeta_data):
     for tem in zeta_data["VPC_data"]:
         VPC_data = tem
         print(f'VPC_data: \n{VPC_data}')
-        vpc_response_data = requests.post(zgc_api_url + "/vpcs", data=VPC_data, headers=headers).json()
+        vpc_response_data = requests.post(zgc_api_url + "/vpcs", data=json.dumps(VPC_data), headers=headers).json()
         print(f'Response for adding VPC: {vpc_response_data}')
         json_content_for_aca['vpc_response'].append(vpc_response_data)
         video["zgc_id"] = vpc_response_data["zgc_id"]
@@ -119,7 +119,7 @@ def talk_to_zeta(file_path, zgc_api_url, zeta_data):
     # notify ZGC the ports created on each ACA
     PORT_data = json.dumps(zeta_data["PORT_data"])
     print(f'Port_data: \n{PORT_data}')
-    port_response_data = requests.post(zgc_api_url + "/ports", data=PORT_data, headers=headers).json()
+    port_response_data = requests.post(zgc_api_url + "/ports", data=json.dumps(PORT_data), headers=headers).json()
     print(f'Response for adding port: {port_response_data}')
     json_content_for_aca['port_response'].append(port_response_data)
     # TODO: 分别生成CHILD和PARENT的配置文件
