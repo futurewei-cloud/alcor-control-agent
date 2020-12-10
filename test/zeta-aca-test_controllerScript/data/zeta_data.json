@@ -9,8 +9,8 @@
     "password": "***"
   },
   "ZGC_data": {
-    "name": "ZGC_test100",
-    "description": "ZGC_test100",
+    "name": "ZGC_test101",
+    "description": "ZGC_test101",
     "ip_start": "192.168.20.100",
     "ip_end": "192.168.20.115",
     "port_ibo": "8300",
