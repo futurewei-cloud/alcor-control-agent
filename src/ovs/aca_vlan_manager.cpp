@@ -98,9 +98,9 @@ int ACA_Vlan_Manager::create_ovs_port(string /*vpc_id*/, string ovs_port,
   if (!vpc_table_entry_found) {
     create_entry(tunnel_id);
 
-    // vpc_table_entry_found use here just in case if
+    // vpc_table_entry_found used here just in case if
     // vpc_table_entry is deleted by another thread between
-    // create_entry above and the _vpcs_table.find below
+    // create_entry(tunnel_id) above and the _vpcs_table.find below
     vpc_table_entry_found = _vpcs_table.find(tunnel_id, current_vpc_table_entry);
   }
 

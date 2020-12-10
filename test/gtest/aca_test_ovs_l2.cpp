@@ -68,7 +68,7 @@ extern void aca_test_create_default_subnet_state(SubnetState *new_subnet_states)
 extern void aca_test_1_neighbor_CREATE_DELETE(NeighborType input_neighbor_type);
 extern void aca_test_1_port_CREATE_plus_neighbor_CREATE(NeighborType input_neighbor_type);
 extern void aca_test_10_neighbor_CREATE(NeighborType input_neighbor_type);
-extern void aca_test_1_port_CREATE_plus_X_neighbors_CREATE(NeighborType input_neighbor_type,
+extern void aca_test_1_port_CREATE_plus_N_neighbors_CREATE(NeighborType input_neighbor_type,
                                                            uint neighbors_to_create);
 
 // TODO: setup bridge when br-int is up and br-tun is gone
@@ -502,7 +502,7 @@ TEST(ovs_l2_test_cases, 10_l2_neighbor_CREATE)
 
 TEST(ovs_l2_test_cases, 1_port_CREATE_plus_10_l2_neighbor_CREATE)
 {
-  aca_test_1_port_CREATE_plus_X_neighbors_CREATE(NeighborType::L2, neighbors_to_create);
+  aca_test_1_port_CREATE_plus_N_neighbors_CREATE(NeighborType::L2, neighbors_to_create);
 }
 
 TEST(ovs_l2_test_cases, DISABLED_2_ports_CREATE_test_traffic_PARENT)

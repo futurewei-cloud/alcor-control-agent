@@ -436,7 +436,7 @@ void aca_test_10_neighbor_CREATE(NeighborType input_neighbor_type)
                gsOperationReply.us_to_ms(message_total_operation_time()));
 }
 
-void aca_test_1_port_CREATE_plus_X_neighbors_CREATE(NeighborType input_neighbor_type,
+void aca_test_1_port_CREATE_plus_N_neighbors_CREATE(NeighborType input_neighbor_type,
                                                     uint neighbors_to_create)
 {
   string port_name_postfix = "-2222-3333-4444-555555555555";
