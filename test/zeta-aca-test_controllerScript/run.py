@@ -98,8 +98,8 @@ def talk_to_zeta(file_path, zgc_api_url, zeta_data):
         print(f'Response for adding node: {node_response_data.text}')
     
     json_content_for_aca = dict()
-    json_content_for_aca['vpc_response'] = []
-    json_content_for_aca['port_response'] = []
+    json_content_for_aca['vpc_response'] = {}
+    json_content_for_aca['port_response'] = {}
 
     # first delay
     print('Sleep 10 seconds after the Nodes call')
@@ -111,7 +111,7 @@ def talk_to_zeta(file_path, zgc_api_url, zeta_data):
         print(f'VPC_data: \n{VPC_data}')
         vpc_response_data = requests.post(zgc_api_url + "/vpcs", data=json.dumps(VPC_data), headers=headers).json()
         print(f'Response for adding VPC: {vpc_response_data}')
-        json_content_for_aca['vpc_response'].append(vpc_response_data)
+        json_content_for_aca['vpc_response']=(vpc_response_data)
         video["zgc_id"] = vpc_response_data["zgc_id"]
 
     # second delay
@@ -123,7 +123,7 @@ def talk_to_zeta(file_path, zgc_api_url, zeta_data):
     print(f'Port_data: \n{PORT_data}')
     port_response_data = requests.post(zgc_api_url + "/ports", data=json.dumps(PORT_data), headers=headers).json()
     print(f'Response for adding port: {port_response_data}')
-    json_content_for_aca['port_response'].append(port_response_data)
+    json_content_for_aca['port_response']=(port_response_data)
     # TODO: 分别生成CHILD和PARENT的配置文件
     with open('aca_data.json', 'w') as outfile:
         json.dump(json_content_for_aca, outfile)
