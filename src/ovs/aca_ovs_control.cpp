@@ -161,17 +161,16 @@ void ACA_OVS_Control::parse_packet(uint32_t in_port, void *packet)
     ACA_LOG_INFO("%s", "Ethernet Type: 802.1Q VLAN tagging (0x8100) \n");
     ether_type = ntohs(*(uint16_t *)(base + 16));
     vlan_len = 4;
-    vlan_hdr = (unsigned char*)(base + SIZE_ETHERNET);
+    vlan_hdr = (unsigned char *)(base + SIZE_ETHERNET);
   }
 
   if (ether_type == ETHERTYPE_ARP) {
     ACA_LOG_INFO("%s", "Ethernet Type: ARP (0x0806) \n");
     ACA_LOG_INFO("   From: %s\n", inet_ntoa(*(in_addr *)(base + 14 + vlan_len + 14)));
     ACA_LOG_INFO("     to: %s\n", inet_ntoa(*(in_addr *)(base + 14 + vlan_len + 14 + 10)));
-    unsigned char *arph= (unsigned char *)(base + SIZE_ETHERNET + vlan_len);
-
-    if(ntohs(*(uint16_t *)(base + 14 + vlan_len + 6)) == 0x0001){
-      aca_arp_responder::ACA_ARP_Responder::get_instance().arp_recv(in_port,vlan_hdr,arph);
+    unsigned char *arp_hdr= (unsigned char *)(base + SIZE_ETHERNET + vlan_len);
+    if(ntohs(*(uint16_t *)(arp_hdr + 6)) == 0x0001){
+      aca_arp_responder::ACA_ARP_Responder::get_instance().arp_recv(in_port,vlan_hdr,arp_hdr);
     }
   } else if (ether_type == ETHERTYPE_IP) {
     ACA_LOG_INFO("%s", "Ethernet Type: IP (0x0800) \n");

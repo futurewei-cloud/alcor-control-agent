@@ -64,12 +64,22 @@ struct arp_message{
   uint32_t spa;
   uint8_t tha[6];
   uint32_t tpa;
-};
+} __attribute__ ((__packed__));
 
 struct vlan_message{
   uint16_t vlan_proto; //should always be 0x8100
   uint16_t vlan_tci;
 };
+
+//ARP Message Type
+#define ARP_MSG_ARPREQUEST (0x1)
+#define ARP_MSG_ARPREPLY (0x2)
+
+//ARP Message Fields
+#define ARP_MSG_HRD_TYPE (0x1)
+#define ARP_MSG_PRO_TYPE (0x0800)
+#define ARP_MSG_HRD_LEN (0x6)
+#define ARP_MSG_PRO_LEN (0x4)
 
 class ACA_ARP_Responder{
   public:  
