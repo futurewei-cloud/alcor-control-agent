@@ -253,17 +253,7 @@ TEST(arp_request_test_cases, DISABLED_l2_arp_test)
   overall_rc = Aca_Comm_Manager::get_instance().update_goal_state(
           GoalState_builder, gsOperationalReply);
   ASSERT_EQ(overall_rc, EXIT_SUCCESS);
-  // stArpCfgIn.ipv4_address = vip_address_1;
-  // stArpCfgIn.mac_address = vmac_address_1;
-  // stArpCfgIn.vlan_id = 0;
 
-  // (void)ACA_ARP_Responder::get_instance().add_arp_entry(&stArpCfgIn);
-
-  // stArpCfgIn.ipv4_address = vip_address_3;
-  // stArpCfgIn.mac_address = vmac_address_3;
-  // stArpCfgIn.vlan_id = 0;
-
-  // (void)ACA_ARP_Responder::get_instance().add_arp_entry(&stArpCfgIn);
 
   // create docker instances for test
   // con1
