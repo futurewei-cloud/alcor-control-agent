@@ -29,11 +29,8 @@ using namespace std;
 using namespace alcor::schema;
 using namespace aca_ovs_l2_programmer;
 using namespace aca_ovs_l3_programmer;
-<<<<<<< HEAD
 using namespace aca_zeta_programming;
-=======
 using namespace aca_arp_responder;
->>>>>>> add test for L2 neighbor
 
 namespace aca_dataplane_ovs
 {

@@ -11,10 +11,6 @@ namespace aca_arp_responder
 ACA_ARP_Responder::ACA_ARP_Responder(){
   _init_arp_db();
   _init_arp_ofp();
-<<<<<<< HEAD
-
-=======
->>>>>>> 870527a11902b85a1f993bbf6af113f4e3d6bcba
 }
 
 ACA_ARP_Responder::~ACA_ARP_Responder(){
@@ -40,11 +36,7 @@ void ACA_ARP_Responder::_init_arp_ofp(){
   unsigned long not_care_culminative_time;
 
   aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
-<<<<<<< HEAD
     "add-flow br-tun \"table=0,priority=25,arp,arp_op=1, actions=CONTROLLER\"",
-=======
-    "add-flow br-tun \"table=0,priority=25,arp,arp_op=1,in_port=\"patch_int\" actions=CONTROLLER\"",
->>>>>>> 870527a11902b85a1f993bbf6af113f4e3d6bcba
     not_care_culminative_time, overall_rc);
 
   return;
@@ -79,11 +71,7 @@ int ACA_ARP_Responder::add_arp_entry(arp_config *arp_cfg_in){
 
   _standardize_mac_address(arp_cfg_in->mac_address);
 
-<<<<<<< HEAD
   if (!_search_arp_entry(stData).empty()) {
-=======
-  if (_search_arp_entry(stData).empty()) {
->>>>>>> 870527a11902b85a1f993bbf6af113f4e3d6bcba
     ACA_LOG_ERROR("Entry already existed! (ip = %s)\n",
                   arp_cfg_in->ipv4_address.c_str());
     return EXIT_FAILURE;
@@ -242,23 +230,15 @@ void ACA_ARP_Responder::_standardize_mac_address(string &mac_string)
 void ACA_ARP_Responder::arp_recv(uint32_t in_port, void *vlan_hdr, void *message){
   arp_message *arpmsg = nullptr;
   vlan_message *vlanmsg = nullptr;
-<<<<<<< HEAD
 
   printf("============== receive packet ==============\n");
-=======
->>>>>>> 870527a11902b85a1f993bbf6af113f4e3d6bcba
   if (!message) {
     ACA_LOG_ERROR("%s", "ARP message is null!\n");
     return;
   }
-<<<<<<< HEAD
 
   vlanmsg = (vlan_message *)vlan_hdr; 
   arpmsg = (arp_message *)message;
-=======
-  vlanmsg = (vlan_message*)vlan_hdr; 
-  arpmsg = (arp_message*)message;
->>>>>>> 870527a11902b85a1f993bbf6af113f4e3d6bcba
 
   if(_validate_arp_message(arpmsg)){
     ACA_LOG_ERROR("%s", "Invalid APR message!\n");
@@ -272,11 +252,7 @@ void ACA_ARP_Responder::arp_recv(uint32_t in_port, void *vlan_hdr, void *message
 }
 void ACA_ARP_Responder::arp_xmit(uint32_t in_port, void  *vlanmsg, void *message){
   arp_message *arpmsg = nullptr;
-<<<<<<< HEAD
   string bridge = "br-tun";
-=======
-  string bridge = "br-int";
->>>>>>> 870527a11902b85a1f993bbf6af113f4e3d6bcba
   string inport = "in_port=controller";
   string whitespace = " ";
   string action = "actions=output:" + to_string(in_port);
@@ -284,11 +260,7 @@ void ACA_ARP_Responder::arp_xmit(uint32_t in_port, void  *vlanmsg, void *message
   string packet;
   string options;
 
-<<<<<<< HEAD
   arpmsg = (arp_message *)message;
-=======
-  arpmsg = (arp_message*)message;
->>>>>>> 870527a11902b85a1f993bbf6af113f4e3d6bcba
   if(!arpmsg){
     return;
   }
@@ -313,42 +285,25 @@ void ACA_ARP_Responder::_parse_arp_request(uint32_t in_port, vlan_message *vlanm
   stData.ipv4_address = _get_requested_ip(arpmsg);
   if(vlanmsg){
     stData.vlan_id = ntohs(vlanmsg->vlan_tci) & 0x0111;
-<<<<<<< HEAD
     
-=======
->>>>>>> 870527a11902b85a1f993bbf6af113f4e3d6bcba
   }
   else{
     stData.vlan_id = 0;
   }
   mac_address = _search_arp_entry(stData);
   if(mac_address.empty()){
-<<<<<<< HEAD
     ACA_LOG_DEBUG("ARP entry does not exist! (ip = %s and vlan id = %u)\n",
                   stData.ipv4_address.c_str(),stData.vlan_id);
-    // arp_xmit(in_port,vlanmsg,arpmsg);
-    //TO BROADCAST
+    //TO DO
   }
   else{
     arpreply = _pack_arp_reply(arpmsg,mac_address);
   }
-=======
-    ACA_LOG_ERROR("ARP entry does not exist! (ip = %s and vlan id = %u)",
-                  stData.ipv4_address.c_str(),stData.vlan_id);
-    return;
-  }
-
-  arpreply = _pack_arp_reply(arpmsg,mac_address);
->>>>>>> 870527a11902b85a1f993bbf6af113f4e3d6bcba
   if(!arpreply){
     return;
   }
 
-<<<<<<< HEAD
   arp_xmit(in_port, vlanmsg, arpreply);
-=======
-  arp_xmit(in_port,vlanmsg,arpreply);
->>>>>>> 870527a11902b85a1f993bbf6af113f4e3d6bcba
 }
 
 arp_message *ACA_ARP_Responder::_pack_arp_reply(arp_message *arpreq, string mac_address){
@@ -361,11 +316,7 @@ arp_message *ACA_ARP_Responder::_pack_arp_reply(arp_message *arpreq, string mac_
   arpreply->hln = arpreq->hln;
   arpreply->pln = arpreq->pln;
   arpreply->op = htons(2);
-<<<<<<< HEAD
   memcpy(arpreply->tha,arpreq->sha,6);
-=======
-  memcpy(arpreply->sha,arpreq->tha,6);
->>>>>>> 870527a11902b85a1f993bbf6af113f4e3d6bcba
   arpreply->spa = arpreq->tpa;
   sscanf(mac_address.c_str(),"%02x:%02x:%02x:%02x:%02x:%02x",
         tmp_mac,tmp_mac+1,tmp_mac+2,tmp_mac+3,tmp_mac+4,tmp_mac+5);
