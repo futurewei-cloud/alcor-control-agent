@@ -157,11 +157,11 @@ def run():
     aca_nodes = aca_nodes_ip
     cmd_list1 = ['cd ~/src/Github.com/zzxgzgz/alcor-control-agent;sudo cmake .',
                  'cd ~/src/Github.com/zzxgzgz/alcor-control-agent;sudo make',
-                 'cd ~/src/Github.com/zzxgzgz/alcor-control-agent;sudo ./build/tests/aca_tests --gtest_also_run_disabled_tests --gtest_filter=*DISABLED_2_ports_CREATE_test_traffic_PARENT -c 10.213.43.93']
+                 'cd ~/src/Github.com/zzxgzgz/alcor-control-agent;sudo ./build/tests/aca_tests --gtest_also_run_disabled_tests --gtest_filter=*DISABLED_zeta_gateway_path_PARENT']
     result1 = exec_sshCommand_aca(host=aca_nodes[0], user=aca_nodes_data['username'], password=aca_nodes_data['password'], cmd=cmd_list1, timeout=60)
     cmd_list2 = ['cd ~/src/Github.com/zzxgzgz/alcor-control-agent;sudo cmake .',
                  'cd ~/src/Github.com/zzxgzgz/alcor-control-agent;sudo make',
-                 'cd ~/src/Github.com/zzxgzgz/alcor-control-agent;sudo ./build/tests/aca_tests --gtest_also_run_disabled_tests --gtest_filter=*DISABLED_2_ports_CREATE_test_traffic_CHILD -p 10.213.43.92']
+                 'cd ~/src/Github.com/zzxgzgz/alcor-control-agent;sudo ./build/tests/aca_tests --gtest_also_run_disabled_tests --gtest_filter=*DISABLED_zeta_gateway_path_CHILD']
     result2 = exec_sshCommand_aca(host=aca_nodes[1], user=aca_nodes_data['username'], password=aca_nodes_data['password'], cmd=cmd_list2, timeout=60)
     print(f'Status from node [{aca_nodes[0]}]: {result1["status"]}')
     print(f'Data from node [{aca_nodes[0]}]: {result1["data"]}')
