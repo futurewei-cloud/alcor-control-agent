@@ -122,7 +122,6 @@ def talk_to_zeta(file_path, zgc_api_url, zeta_data):
             zgc_api_url + "/vpcs", data=json.dumps(VPC_data), headers=headers).json()
         print(f'Response for adding VPC: {vpc_response_data}')
         json_content_for_aca['vpc_response'] = (vpc_response_data)
-        video["zgc_id"] = vpc_response_data["zgc_id"]
 
     # second delay
     print('Sleep 60 seconds after the VPC call')
