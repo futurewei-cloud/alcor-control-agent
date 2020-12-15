@@ -160,28 +160,35 @@ def talk_to_zeta(file_path, zgc_api_url, zeta_data):
     # notify ZGC the ports created on each ACA
     PORT_data = zeta_data["PORT_data"]
     print(f'Port_data length: \n{len(PORT_data)}')
+    for port in PORT_data:
+        print(f'Port data: \n{port}')
     start_time = time.time()
     port_response = requests.post(
         zgc_api_url + "/ports", data=json.dumps(PORT_data), headers=headers)
     end_time = time.time()
-    print(f'PORT post call ended, for {len(PORT_data)} ports creation it took: {end_time - start_time} seconds')
+    print(
+        f'PORT post call ended, for {len(PORT_data)} ports creation it took: {end_time - start_time} seconds')
     print(f'Response status code for adding port: {port_response.status_code}')
     if port_response.status_code < 300:
         port_response_data = port_response.json()
         json_content_for_aca['port_response'] = (port_response_data)
-    # TODO: 分别生成CHILD和PARENT的配置文件
-    with open('aca_data.json', 'w') as outfile:
-        json.dump(json_content_for_aca, outfile)
-        print(f'The aca data is exported to {aca_data_local_path}')
+
+        with open('aca_data.json', 'w') as outfile:
+            json.dump(json_content_for_aca, outfile)
+            print(f'The aca data is exported to {aca_data_local_path}')
 
 
 def generate_ports(ports_to_create):
     print(f'Need to generate {ports_to_create} ports')
     node_data = {}
     all_ports_generated = []
+    unique_ips = set()
+    unique_macs = set()
+    unique_port_ids = set()
     for i in range(ports_to_create):
-        port_template_to_use = sample_port_data[i%2]
+        port_template_to_use = sample_port_data[i % 2]
         port_id = '99976feae-7dec-11d0-a765-00a0c{0:07d}'.format(i)
+        unique_port_ids.add(port_id)
         print(f'port_id: {port_id}')
         ip_2nd_octet = '{0:02d}'.format((i // 10000))
         ip_3rd_octet = '{0:02d}'.format((i % 10000 // 100))
@@ -189,13 +196,16 @@ def generate_ports(ports_to_create):
         ip = ips_ports_ip_prefix + ip_2nd_octet + \
             "." + ip_3rd_octet + "." + ip_4th_octet
         # print(f'Generated IP: {ip}')
+        unique_ips.add(ip)
         mac = mac_port_prefix + ip_2nd_octet + ":" + ip_3rd_octet + ":" + ip_4th_octet
         # print(f'Generated MAC: {mac}')
+        unique_macs.add(mac)
         port_template_to_use['port_id'] = port_id
         port_template_to_use['ips_port'][0]['ip'] = ip
         port_template_to_use['mac_port'] = mac
         # print(f'Generated Port info: {port_template_to_use}')
         all_ports_generated.append(port_template_to_use)
+    print(f'Ports generated: {ports_to_create}, \nunique port_id: {len(unique_port_ids)}, \nunique IPs: {len(unique_ips)},\nunique MACs: {len(unique_macs)}')
     return all_ports_generated
 
 
@@ -220,6 +230,7 @@ def run():
             return
         print("Has arguments, need to generate some ports!")
         zeta_data['PORT_data'] = generate_ports(ports_to_create)
+        print(f'After generating ports, we now have {len(zeta_data["PORT_data"])} entries in the PORT_data')
 
     talk_to_zeta(file_path, zgc_api_url, zeta_data)
 
@@ -229,7 +240,7 @@ def run():
         aca_nodes_ip = aca_nodes_data['ip']
 
         res = upload_file_aca(aca_nodes_data['ip'], aca_nodes_data['username'], aca_nodes_data['password'],
-                                server_aca_repo_path + aca_data_destination_path, aca_data_local_path)
+                              server_aca_repo_path + aca_data_destination_path, aca_data_local_path)
         if not res:
             print("upload file %s failed" % aca_data_local_path)
         else:
