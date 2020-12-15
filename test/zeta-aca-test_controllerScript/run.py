@@ -16,34 +16,34 @@ ips_ports_ip_prefix = "10."
 mac_port_prefix = "6c:dd:ee:"
 
 # unique fields: port_id, ips_ports.ip, mac_port
-sample_port_data = [
-    {
-        "port_id": "333d4fae-7dec-11d0-a765-00a0c9341120",
-        "vpc_id": "3dda2801-d675-4688-a63f-dcda8d327f61",
-        "ips_port": [
-            {
-                "ip": "10.10.0.92",
-                "vip": ""
-            }
-        ],
-        "mac_port": "cc:dd:ee:ff:11:22",
-        "ip_node": "192.168.20.92",
-        "mac_node": "e8:bd:d1:01:77:ec"
-    },
-    {
-        "port_id": "99976feae-7dec-11d0-a765-00a0c9342230",
-        "vpc_id": "3dda2801-d675-4688-a63f-dcda8d327f61",
-        "ips_port": [
-            {
-                "ip": "10.10.0.93",
-                "vip": ""
-            }
-        ],
-        "mac_port": "6c:dd:ee:ff:11:32",
-        "ip_node": "192.168.20.93",
-        "mac_node": "e8:bd:d1:01:72:c8"
-    }
-]
+# sample_port_data = [
+#     {
+#         "port_id": "333d4fae-7dec-11d0-a765-00a0c9341120",
+#         "vpc_id": "3dda2801-d675-4688-a63f-dcda8d327f61",
+#         "ips_port": [
+#             {
+#                 "ip": "10.10.0.92",
+#                 "vip": ""
+#             }
+#         ],
+#         "mac_port": "cc:dd:ee:ff:11:22",
+#         "ip_node": "192.168.20.92",
+#         "mac_node": "e8:bd:d1:01:77:ec"
+#     },
+#     {
+#         "port_id": "99976feae-7dec-11d0-a765-00a0c9342230",
+#         "vpc_id": "3dda2801-d675-4688-a63f-dcda8d327f61",
+#         "ips_port": [
+#             {
+#                 "ip": "10.10.0.93",
+#                 "vip": ""
+#             }
+#         ],
+#         "mac_port": "6c:dd:ee:ff:11:32",
+#         "ip_node": "192.168.20.93",
+#         "mac_node": "e8:bd:d1:01:72:c8"
+#     }
+# ]
 
 # Transfer the file locally to aca nodes
 
@@ -177,6 +177,35 @@ def talk_to_zeta(file_path, zgc_api_url, zeta_data):
             json.dump(json_content_for_aca, outfile)
             print(f'The aca data is exported to {aca_data_local_path}')
 
+def get_port_template(i):
+    if i %2 == 0:
+        return {
+        "port_id": "333d4fae-7dec-11d0-a765-00a0c9341120",
+        "vpc_id": "3dda2801-d675-4688-a63f-dcda8d327f61",
+        "ips_port": [
+            {
+                "ip": "10.10.0.92",
+                "vip": ""
+            }
+        ],
+        "mac_port": "cc:dd:ee:ff:11:22",
+        "ip_node": "192.168.20.92",
+        "mac_node": "e8:bd:d1:01:77:ec"
+    }
+    return     {
+        "port_id": "99976feae-7dec-11d0-a765-00a0c9342230",
+        "vpc_id": "3dda2801-d675-4688-a63f-dcda8d327f61",
+        "ips_port": [
+            {
+                "ip": "10.10.0.93",
+                "vip": ""
+            }
+        ],
+        "mac_port": "6c:dd:ee:ff:11:32",
+        "ip_node": "192.168.20.93",
+        "mac_node": "e8:bd:d1:01:72:c8"
+    }
+
 
 def generate_ports(ports_to_create):
     print(f'Need to generate {ports_to_create} ports')
@@ -186,10 +215,10 @@ def generate_ports(ports_to_create):
     unique_macs = set()
     unique_port_ids = set()
     for i in range(ports_to_create):
-        port_template_to_use = sample_port_data[i % 2]
+        port_template_to_use = get_port_template(i)
         port_id = '99976feae-7dec-11d0-a765-00a0c{0:07d}'.format(i)
         unique_port_ids.add(port_id)
-        print(f'port_id: {port_id}')
+        # print(f'port_id: {port_id}')
         ip_2nd_octet = '{0:02d}'.format((i // 10000))
         ip_3rd_octet = '{0:02d}'.format((i % 10000 // 100))
         ip_4th_octet = '{0:02d}'.format((i % 100))
@@ -205,7 +234,7 @@ def generate_ports(ports_to_create):
         port_template_to_use['mac_port'] = mac
         # print(f'Generated Port info: {port_template_to_use}')
         all_ports_generated.append(port_template_to_use)
-    print(f'Ports generated: {ports_to_create}, \nunique port_id: {len(unique_port_ids)}, \nunique IPs: {len(unique_ips)},\nunique MACs: {len(unique_macs)}')
+    # print(f'Ports generated: {ports_to_create}, \nunique port_id: {len(unique_port_ids)}, \nunique IPs: {len(unique_ips)},\nunique MACs: {len(unique_macs)}')
     return all_ports_generated
 
 
