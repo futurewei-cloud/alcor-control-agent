@@ -141,7 +141,7 @@ def talk_to_zeta(file_path, zgc_api_url, zeta_data):
         start_idx = i * port_api_upper_limit
         end_idx = start_idx
         if end_idx + port_api_upper_limit >= amount_of_ports:
-            end_idx = amount_of_ports - 1
+            end_idx = amount_of_ports
         else:
             end_idx = end_idx + port_api_upper_limit
 
