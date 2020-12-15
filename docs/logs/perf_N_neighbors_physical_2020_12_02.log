@@ -1,3 +1,5 @@
+./build/tests/aca_tests --gtest_filter=*1_port_CREATE_plus_10_l2_neighbor_CREATE* -n [number of L2 neighbors to create]
+
 [***1 port + 1 neighbor***]
 [METRICS] Elapsed time for message total operation took: 49630 microseconds or 49 milliseconds
 Number: 0 Resource Type: 2 with id: 01111111-b718-11ea-b3de-111111111111 took: 16511 microseconds or 16 milliseconds

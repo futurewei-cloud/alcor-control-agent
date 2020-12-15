@@ -216,13 +216,10 @@ TEST(ovs_l3_test_cases, DISABLED_2_ports_ROUTING_test_traffic_one_machine)
   aca_test_reset_environment();
 
   // kill the docker instances just in case
-  Aca_Net_Config::get_instance().execute_system_command("docker kill con3");
 
-  Aca_Net_Config::get_instance().execute_system_command("docker rm con3");
+  Aca_Net_Config::get_instance().execute_system_command("docker rm -f con3");
 
-  Aca_Net_Config::get_instance().execute_system_command("docker kill con4");
-
-  Aca_Net_Config::get_instance().execute_system_command("docker rm con4");
+  Aca_Net_Config::get_instance().execute_system_command("docker rm -f con4");
 
   GoalState GoalState_builder;
   PortState *new_port_states = GoalState_builder.add_port_states();
@@ -422,17 +419,10 @@ TEST(ovs_l3_test_cases, DISABLED_2_ports_ROUTING_test_traffic_one_machine)
   new_neighbor_states4->clear_configuration();
 
   // cleanup
-
-  overall_rc = Aca_Net_Config::get_instance().execute_system_command("docker kill con3");
+  overall_rc = Aca_Net_Config::get_instance().execute_system_command("docker rm -f con3");
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
 
-  overall_rc = Aca_Net_Config::get_instance().execute_system_command("docker rm con3");
-  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
-
-  overall_rc = Aca_Net_Config::get_instance().execute_system_command("docker kill con4");
-  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
-
-  overall_rc = Aca_Net_Config::get_instance().execute_system_command("docker rm con4");
+  overall_rc = Aca_Net_Config::get_instance().execute_system_command("docker rm -f con4");
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
 }
 
@@ -444,13 +434,9 @@ TEST(ovs_l3_test_cases, DISABLED_2_ports_ROUTING_test_traffic_PARENT)
   aca_test_reset_environment();
 
   // kill the docker instances just in case
-  Aca_Net_Config::get_instance().execute_system_command("docker kill con1");
+  Aca_Net_Config::get_instance().execute_system_command("docker rm -f con1");
 
-  Aca_Net_Config::get_instance().execute_system_command("docker rm con1");
-
-  Aca_Net_Config::get_instance().execute_system_command("docker kill con2");
-
-  Aca_Net_Config::get_instance().execute_system_command("docker rm con2");
+  Aca_Net_Config::get_instance().execute_system_command("docker rm -f con2");
 
   GoalState GoalState_builder;
   PortState *new_port_states = GoalState_builder.add_port_states();
@@ -549,7 +535,7 @@ TEST(ovs_l3_test_cases, DISABLED_2_ports_ROUTING_test_traffic_PARENT)
   // restore demo mode
   g_demo_mode = previous_demo_mode;
 
-  // should be able to ping itselves
+  // should be able to ping themselves
   overall_rc = Aca_Net_Config::get_instance().execute_system_command(
           "docker exec con1 ping -c1 " + vip_address_1);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
@@ -559,7 +545,7 @@ TEST(ovs_l3_test_cases, DISABLED_2_ports_ROUTING_test_traffic_PARENT)
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
 
   // test traffic between the ports without router on same subnet
-  // expect to fail before neighbor info is not programmed yet
+  // expect to fail because neighbor info is not programmed yet
   overall_rc = Aca_Net_Config::get_instance().execute_system_command(
           "docker exec con1 ping -c1 " + vip_address_3);
   EXPECT_NE(overall_rc, EXIT_SUCCESS);
@@ -732,16 +718,10 @@ TEST(ovs_l3_test_cases, DISABLED_2_ports_ROUTING_test_traffic_PARENT)
   new_neighbor_states3->clear_configuration();
   new_neighbor_states4->clear_configuration();
 
-  overall_rc = Aca_Net_Config::get_instance().execute_system_command("docker kill con1");
+  overall_rc = Aca_Net_Config::get_instance().execute_system_command("docker rm -f con1");
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
 
-  overall_rc = Aca_Net_Config::get_instance().execute_system_command("docker rm con1");
-  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
-
-  overall_rc = Aca_Net_Config::get_instance().execute_system_command("docker kill con2");
-  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
-
-  overall_rc = Aca_Net_Config::get_instance().execute_system_command("docker rm con2");
+  overall_rc = Aca_Net_Config::get_instance().execute_system_command("docker rm -f con2");
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
 }
 
@@ -753,13 +733,9 @@ TEST(ovs_l3_test_cases, DISABLED_2_ports_ROUTING_test_traffic_CHILD)
   aca_test_reset_environment();
 
   // kill the docker instances just in case
-  Aca_Net_Config::get_instance().execute_system_command("docker kill con3");
+  Aca_Net_Config::get_instance().execute_system_command("docker rm -f con3");
 
-  Aca_Net_Config::get_instance().execute_system_command("docker rm con3");
-
-  Aca_Net_Config::get_instance().execute_system_command("docker kill con4");
-
-  Aca_Net_Config::get_instance().execute_system_command("docker rm con4");
+  Aca_Net_Config::get_instance().execute_system_command("docker rm -f con4");
 
   GoalState GoalState_builder;
   PortState *new_port_states = GoalState_builder.add_port_states();
