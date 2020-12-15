@@ -150,7 +150,7 @@ def talk_to_zeta(file_path, zgc_api_url, zeta_data):
         print(f'In this /ports POST call, we are calling with port from {start_idx} to {end_idx}')
         one_call_start_time = time.time()
         port_response = requests.post(
-        zgc_api_url + "/ports", data=json.dumps(PORT_data[start_idx, end_idx]), headers=headers)
+        zgc_api_url + "/ports", data=json.dumps(PORT_data[start_idx: end_idx]), headers=headers)
         if port_response.status_code >= 300:
             print(f'Call failed for index {start_idx} to {end_idx}, \nstatus code: {port_response.status_code}, \ncontent: {port_response.content}\nExiting')
             return
