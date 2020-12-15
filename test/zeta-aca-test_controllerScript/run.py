@@ -4,8 +4,8 @@ import paramiko
 from collections import defaultdict, OrderedDict
 import time
 import sys
-
-video = defaultdict(list)
+import itertools
+from math import ceil
 
 # zeta_data = None
 server_aca_repo_path = ''
@@ -14,36 +14,7 @@ aca_data_local_path = './aca_data.json'
 
 ips_ports_ip_prefix = "10."
 mac_port_prefix = "6c:dd:ee:"
-
-# unique fields: port_id, ips_ports.ip, mac_port
-# sample_port_data = [
-#     {
-#         "port_id": "333d4fae-7dec-11d0-a765-00a0c9341120",
-#         "vpc_id": "3dda2801-d675-4688-a63f-dcda8d327f61",
-#         "ips_port": [
-#             {
-#                 "ip": "10.10.0.92",
-#                 "vip": ""
-#             }
-#         ],
-#         "mac_port": "cc:dd:ee:ff:11:22",
-#         "ip_node": "192.168.20.92",
-#         "mac_node": "e8:bd:d1:01:77:ec"
-#     },
-#     {
-#         "port_id": "99976feae-7dec-11d0-a765-00a0c9342230",
-#         "vpc_id": "3dda2801-d675-4688-a63f-dcda8d327f61",
-#         "ips_port": [
-#             {
-#                 "ip": "10.10.0.93",
-#                 "vip": ""
-#             }
-#         ],
-#         "mac_port": "6c:dd:ee:ff:11:32",
-#         "ip_node": "192.168.20.93",
-#         "mac_node": "e8:bd:d1:01:72:c8"
-#     }
-# ]
+port_api_upper_limit = 4000
 
 # Transfer the file locally to aca nodes
 
@@ -157,25 +128,44 @@ def talk_to_zeta(file_path, zgc_api_url, zeta_data):
     print('Sleep 60 seconds after the VPC call')
     time.sleep(60)
     print('Start calling /ports API')
+
     # notify ZGC the ports created on each ACA
     PORT_data = zeta_data["PORT_data"]
-    print(f'Port_data length: \n{len(PORT_data)}')
-    for port in PORT_data:
-        print(f'Port data: \n{port}')
-    start_time = time.time()
-    port_response = requests.post(
-        zgc_api_url + "/ports", data=json.dumps(PORT_data), headers=headers)
-    end_time = time.time()
-    print(
-        f'PORT post call ended, for {len(PORT_data)} ports creation it took: {end_time - start_time} seconds')
-    print(f'Response status code for adding port: {port_response.status_code}')
-    if port_response.status_code < 300:
-        port_response_data = port_response.json()
-        json_content_for_aca['port_response'] = (port_response_data)
+    # for port in PORT_data:
+    #     print(f'Port data: \n{port}')
+    amount_of_ports = len(PORT_data)
+    all_post_responses = []
+    all_ports_start_time = time.time()
+    print(f'Port_data length: \n{amount_of_ports}')
+    for i in range(ceil(len(PORT_data) / port_api_upper_limit)):
+        # print("Hello")
+        start_idx = i * port_api_upper_limit
+        end_idx = start_idx
+        if end_idx + port_api_upper_limit >= amount_of_ports:
+            end_idx = amount_of_ports - 1
+        else:
+            end_idx = end_idx + port_api_upper_limit
 
-        with open('aca_data.json', 'w') as outfile:
-            json.dump(json_content_for_aca, outfile)
-            print(f'The aca data is exported to {aca_data_local_path}')
+        if start_idx == end_idx:
+            end_idx = end_idx + 1
+        print(f'In this /ports POST call, we are calling with port from {start_idx} to {end_idx}')
+        one_call_start_time = time.time()
+        port_response = requests.post(
+        zgc_api_url + "/ports", data=json.dumps(PORT_data[start_idx, end_idx]), headers=headers)
+        if port_response.status_code >= 300:
+            print(f'Call failed for index {start_idx} to {end_idx}, \nstatus code: {port_response.status_code}, \ncontent: {port_response.content}\nExiting')
+            return
+        one_call_end_time = time.time()
+        print(f'ONE PORT post call ended, for {end_idx - start_idx} ports creation it took: {one_call_end_time - one_call_start_time} seconds')
+        all_post_responses.append(port_response.json())
+    all_ports_end_time = time.time()
+    print(
+        f'ALL PORT post call ended, for {amount_of_ports} ports creation it took: {all_ports_end_time - all_ports_start_time} seconds')
+    json_content_for_aca['port_response'] = list(itertools.chain.from_iterable(all_post_responses))
+    print(f'Length of all ports response: {len(json_content_for_aca["port_response"])}')
+    with open('aca_data.json', 'w') as outfile:
+        json.dump(json_content_for_aca, outfile)
+        print(f'The aca data is exported to {aca_data_local_path}')
 
 def get_port_template(i):
     if i %2 == 0:
