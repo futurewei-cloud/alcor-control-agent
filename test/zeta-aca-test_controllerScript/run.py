@@ -3,6 +3,7 @@ import json
 import paramiko
 from collections import defaultdict, OrderedDict
 import time
+import sys
 
 video = defaultdict(list)
 
@@ -11,7 +12,42 @@ server_aca_repo_path = ''
 aca_data_destination_path = '/test/gtest/aca_data.json'
 aca_data_local_path = './aca_data.json'
 
+ips_ports_ip_prefix = "10."
+mac_port_prefix = "6c:dd:ee:"
+
+# unique fields: port_id, ips_ports.ip, mac_port
+sample_port_data = [
+    {
+        "port_id": "333d4fae-7dec-11d0-a765-00a0c9341120",
+        "vpc_id": "3dda2801-d675-4688-a63f-dcda8d327f61",
+        "ips_port": [
+            {
+                "ip": "10.10.0.92",
+                "vip": ""
+            }
+        ],
+        "mac_port": "cc:dd:ee:ff:11:22",
+        "ip_node": "192.168.20.92",
+        "mac_node": "e8:bd:d1:01:77:ec"
+    },
+    {
+        "port_id": "99976feae-7dec-11d0-a765-00a0c9342230",
+        "vpc_id": "3dda2801-d675-4688-a63f-dcda8d327f61",
+        "ips_port": [
+            {
+                "ip": "10.10.0.93",
+                "vip": ""
+            }
+        ],
+        "mac_port": "6c:dd:ee:ff:11:32",
+        "ip_node": "192.168.20.93",
+        "mac_node": "e8:bd:d1:01:72:c8"
+    }
+]
+
 # Transfer the file locally to aca nodes
+
+
 def upload_file_aca(host, user, password, server_path, local_path, timeout=10):
     """
     :param host
@@ -46,7 +82,7 @@ def exec_sshCommand_aca(host, user, password, cmd, timeout=60):
     :param seconds
     :return: dict
     """
-    result = {'status': [], 'data': [], 'error':False}  # Record return result
+    result = {'status': [], 'data': [], 'error': False}  # Record return result
     try:
         # Create a SSHClient instance
         ssh = paramiko.SSHClient()
@@ -58,7 +94,8 @@ def exec_sshCommand_aca(host, user, password, cmd, timeout=60):
         for command in cmd:
             # execute command
             print(f'executing command: {command}')
-            stdin, stdout, stderr = ssh.exec_command(command, get_pty=True, timeout=timeout)
+            stdin, stdout, stderr = ssh.exec_command(
+                command, get_pty=True, timeout=timeout)
             # If need password
             if 'sudo' in command:
                 stdin.write(password + '\n')
@@ -84,89 +121,137 @@ def talk_to_zeta(file_path, zgc_api_url, zeta_data):
     # create ZGC
     ZGC_data = zeta_data["ZGC_data"]
     print(f'ZGC_data: \n{ZGC_data}')
-    zgc_response = requests.post(zgc_api_url + "/zgcs", data=json.dumps(ZGC_data), headers=headers)
+    zgc_response = requests.post(
+        zgc_api_url + "/zgcs", data=json.dumps(ZGC_data), headers=headers)
     print(f'zgc creation response: \n{zgc_response}')
     zgc_id = zgc_response.json()['zgc_id']
-
 
     # add Nodes
     for node in zeta_data["NODE_data"]:
         node_data = node
         node_data['zgc_id'] = zgc_id
         print(f'node_data: \n{node_data}')
-        node_response_data = requests.post(zgc_api_url + "/nodes", data=json.dumps(node_data), headers=headers)
+        node_response_data = requests.post(
+            zgc_api_url + "/nodes", data=json.dumps(node_data), headers=headers)
         print(f'Response for adding node: {node_response_data.text}')
-    
+
     json_content_for_aca = dict()
     json_content_for_aca['vpc_response'] = {}
     json_content_for_aca['port_response'] = {}
 
     # first delay
     print('Sleep 10 seconds after the Nodes call')
-    time.sleep(10)   
+    time.sleep(10)
 
     # add VPC
-    for tem in zeta_data["VPC_data"]:
-        VPC_data = tem
+    for item in zeta_data["VPC_data"]:
+        VPC_data = item
         print(f'VPC_data: \n{VPC_data}')
-        vpc_response_data = requests.post(zgc_api_url + "/vpcs", data=json.dumps(VPC_data), headers=headers).json()
+        vpc_response_data = requests.post(
+            zgc_api_url + "/vpcs", data=json.dumps(VPC_data), headers=headers).json()
         print(f'Response for adding VPC: {vpc_response_data}')
-        json_content_for_aca['vpc_response']=(vpc_response_data)
+        json_content_for_aca['vpc_response'] = (vpc_response_data)
         video["zgc_id"] = vpc_response_data["zgc_id"]
 
     # second delay
     print('Sleep 60 seconds after the VPC call')
-    time.sleep(60)   
-
+    time.sleep(60)
+    print('Start calling /ports API')
     # notify ZGC the ports created on each ACA
     PORT_data = zeta_data["PORT_data"]
-    print(f'Port_data: \n{PORT_data}')
-    port_response_data = requests.post(zgc_api_url + "/ports", data=json.dumps(PORT_data), headers=headers).json()
-    print(f'Response for adding port: {port_response_data}')
-    json_content_for_aca['port_response']=(port_response_data)
+    print(f'Port_data length: \n{len(PORT_data)}')
+    start_time = time.time()
+    port_response = requests.post(
+        zgc_api_url + "/ports", data=json.dumps(PORT_data), headers=headers)
+    end_time = time.time()
+    print(f'PORT post call ended, for {len(PORT_data)} ports creation it took: {end_time - start_time} seconds')
+    print(f'Response status code for adding port: {port_response.status_code}')
+    if port_response.status_code < 300:
+        port_response_data = port_response.json()
+        json_content_for_aca['port_response'] = (port_response_data)
     # TODO: 分别生成CHILD和PARENT的配置文件
     with open('aca_data.json', 'w') as outfile:
         json.dump(json_content_for_aca, outfile)
         print(f'The aca data is exported to {aca_data_local_path}')
 
 
+def generate_ports(ports_to_create):
+    print(f'Need to generate {ports_to_create} ports')
+    node_data = {}
+    all_ports_generated = []
+    for i in range(ports_to_create):
+        port_template_to_use = sample_port_data[i%2]
+        port_id = '99976feae-7dec-11d0-a765-00a0c{0:07d}'.format(i)
+        print(f'port_id: {port_id}')
+        ip_2nd_octet = '{0:02d}'.format((i // 10000))
+        ip_3rd_octet = '{0:02d}'.format((i % 10000 // 100))
+        ip_4th_octet = '{0:02d}'.format((i % 100))
+        ip = ips_ports_ip_prefix + ip_2nd_octet + \
+            "." + ip_3rd_octet + "." + ip_4th_octet
+        # print(f'Generated IP: {ip}')
+        mac = mac_port_prefix + ip_2nd_octet + ":" + ip_3rd_octet + ":" + ip_4th_octet
+        # print(f'Generated MAC: {mac}')
+        port_template_to_use['port_id'] = port_id
+        port_template_to_use['ips_port'][0]['ip'] = ip
+        port_template_to_use['mac_port'] = mac
+        # print(f'Generated Port info: {port_template_to_use}')
+        all_ports_generated.append(port_template_to_use)
+    return all_ports_generated
+
+
 def run():
-    # # Call zeta API to create ZGC,vpc etc.and generate the information ACA need, and save it in zetaToAca_data.json
+    # right now the only argument should be how many ports to be generated.
+    arguments = sys.argv
+    print(f'Arguments: {arguments}')
     file_path = './data/zeta_data.json'
     zeta_data = {}
     with open(file_path, 'r', encoding='utf8')as fp:
         zeta_data = json.loads(fp.read())
-        print(f'zeta_data: {zeta_data}')
-        print(f'zeta_data type: {type(zeta_data)}')
-    
+
     server_aca_repo_path = zeta_data['server_aca_repo_path']
     print(f'Server aca repo path: {server_aca_repo_path}')
     zgc_api_url = zeta_data["zeta_api_ip"]
+    # second argument should be amount of ports to be generated
+    if len(arguments) > 1:
+        ports_to_create = int(arguments[1])
+        if ports_to_create > 1000000:
+            print(
+                f'You tried to create {ports_to_create} ports, but the pseudo controller only supports up to 1,000,000 ports, sorry.')
+            return
+        print("Has arguments, need to generate some ports!")
+        zeta_data['PORT_data'] = generate_ports(ports_to_create)
+
     talk_to_zeta(file_path, zgc_api_url, zeta_data)
 
-    aca_nodes_data = zeta_data["aca_nodes"]
-    aca_nodes_ip = aca_nodes_data['ip']
+    if len(arguments) == 1:
+        print("Doesn't have arguments, just run the two node test.")
+        aca_nodes_data = zeta_data["aca_nodes"]
+        aca_nodes_ip = aca_nodes_data['ip']
 
-    res = upload_file_aca(aca_nodes_data['ip'], aca_nodes_data['username'], aca_nodes_data['password'], server_aca_repo_path + aca_data_destination_path, aca_data_local_path)
-    if not res:
-        print("upload file %s failed" % aca_data_local_path)
-    else:
-        print("upload file %s successfully" % aca_data_local_path)
+        res = upload_file_aca(aca_nodes_data['ip'], aca_nodes_data['username'], aca_nodes_data['password'],
+                                server_aca_repo_path + aca_data_destination_path, aca_data_local_path)
+        if not res:
+            print("upload file %s failed" % aca_data_local_path)
+        else:
+            print("upload file %s successfully" % aca_data_local_path)
 
-    # Execute remote command, use the transferred file to change the information in aca_test_ovs_util.cpp,recompile using 'make',perform aca_test
-    aca_nodes = aca_nodes_ip
-    cmd_list2 = [f'cd {server_aca_repo_path};sudo ./build/tests/aca_tests --gtest_also_run_disabled_tests --gtest_filter=*DISABLED_zeta_gateway_path_CHILD']
-    result2 = exec_sshCommand_aca(host=aca_nodes[1], user=aca_nodes_data['username'], password=aca_nodes_data['password'], cmd=cmd_list2, timeout=60)
-    
-    cmd_list1 = [f'cd {server_aca_repo_path};sudo ./build/tests/aca_tests --gtest_also_run_disabled_tests --gtest_filter=*DISABLED_zeta_gateway_path_PARENT']
-    result1 = exec_sshCommand_aca(host=aca_nodes[0], user=aca_nodes_data['username'], password=aca_nodes_data['password'], cmd=cmd_list1, timeout=60)
-    print(f'Status from node [{aca_nodes[0]}]: {result1["status"]}')
-    print(f'Data from node [{aca_nodes[0]}]: {result1["data"]}')
-    print(f'Error from node [{aca_nodes[0]}]: {result1["error"]}')
-    print(f'Status from node [{aca_nodes[1]}]: {result2["status"]}')
-    print(f'Data from node [{aca_nodes[1]}]: {result2["data"]}')
-    print(f'Error from node [{aca_nodes[1]}]: {result2["error"]}')
+        # Execute remote command, use the transferred file to change the information in aca_test_ovs_util.cpp,recompile using 'make',perform aca_test
+        aca_nodes = aca_nodes_ip
+        cmd_list2 = [
+            f'cd {server_aca_repo_path};sudo ./build/tests/aca_tests --gtest_also_run_disabled_tests --gtest_filter=*DISABLED_zeta_gateway_path_CHILD']
+        result2 = exec_sshCommand_aca(
+            host=aca_nodes[1], user=aca_nodes_data['username'], password=aca_nodes_data['password'], cmd=cmd_list2, timeout=60)
 
+        cmd_list1 = [
+            f'cd {server_aca_repo_path};sudo ./build/tests/aca_tests --gtest_also_run_disabled_tests --gtest_filter=*DISABLED_zeta_gateway_path_PARENT']
+        result1 = exec_sshCommand_aca(
+            host=aca_nodes[0], user=aca_nodes_data['username'], password=aca_nodes_data['password'], cmd=cmd_list1, timeout=60)
+        print(f'Status from node [{aca_nodes[0]}]: {result1["status"]}')
+        print(f'Data from node [{aca_nodes[0]}]: {result1["data"]}')
+        print(f'Error from node [{aca_nodes[0]}]: {result1["error"]}')
+        print(f'Status from node [{aca_nodes[1]}]: {result2["status"]}')
+        print(f'Data from node [{aca_nodes[1]}]: {result2["data"]}')
+        print(f'Error from node [{aca_nodes[1]}]: {result2["error"]}')
 
 
 if __name__ == '__main__':
