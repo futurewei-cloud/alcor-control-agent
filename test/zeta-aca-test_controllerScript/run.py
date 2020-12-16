@@ -18,7 +18,7 @@ port_api_upper_limit = 4000
 # Transfer the file locally to aca nodes
 
 
-def upload_file_aca(host, user, password, server_path, local_path, timeout=10):
+def upload_file_aca(host, user, password, server_path, local_path, timeout=600):
     """
     :param host
     :param user
@@ -266,14 +266,14 @@ def run():
     # Execute remote command, use the transferred file to change the information in aca_test_ovs_util.cpp,recompile using 'make',perform aca_test
     aca_nodes = aca_nodes_ip
     cmd_list2 = [
-        f'cd {server_aca_repo_path};sudo ./build/tests/aca_tests --gtest_also_run_disabled_tests --gtest_filter=*DISABLED_zeta_gateway_path_CHILD']
+        f'cd {server_aca_repo_path};sudo ./build/tests/aca_tests --gtest_also_run_disabled_tests --gtest_filter=*DISABLED_zeta_scale_CHILD']
     result2 = exec_sshCommand_aca(
-        host=aca_nodes[1], user=aca_nodes_data['username'], password=aca_nodes_data['password'], cmd=cmd_list2, timeout=60)
+        host=aca_nodes[1], user=aca_nodes_data['username'], password=aca_nodes_data['password'], cmd=cmd_list2, timeout=1500)
 
     cmd_list1 = [
-        f'cd {server_aca_repo_path};sudo ./build/tests/aca_tests --gtest_also_run_disabled_tests --gtest_filter=*DISABLED_zeta_gateway_path_PARENT']
+        f'cd {server_aca_repo_path};sudo ./build/tests/aca_tests --gtest_also_run_disabled_tests --gtest_filter=*DISABLED_zeta_scale_PARENT']
     result1 = exec_sshCommand_aca(
-        host=aca_nodes[0], user=aca_nodes_data['username'], password=aca_nodes_data['password'], cmd=cmd_list1, timeout=60)
+        host=aca_nodes[0], user=aca_nodes_data['username'], password=aca_nodes_data['password'], cmd=cmd_list1, timeout=1500)
     print(f'Status from node [{aca_nodes[0]}]: {result1["status"]}')
     print(f'Data from node [{aca_nodes[0]}]: {result1["data"]}')
     print(f'Error from node [{aca_nodes[0]}]: {result1["error"]}')
