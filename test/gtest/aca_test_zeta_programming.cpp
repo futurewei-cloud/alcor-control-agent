@@ -52,6 +52,8 @@ extern string port_name_1;
 extern string subnet_id_1;
 extern string subnet1_gw_mac;
 
+extern bool g_demo_mode;
+
 extern void aca_test_create_default_port_state(PortState *new_port_states);
 extern void aca_test_create_default_subnet_state(SubnetState *new_subnet_states);
 
@@ -311,4 +313,27 @@ TEST(zeta_programming_test_cases, DISABLED_zeta_gateway_path_PARENT)
   aca_test_zeta_setup(zeta_gateway_path_PARENT_config_file);
 
   // do some validate
+}
+
+
+TEST(zeta_programming_test_cases, DISABLED_zeta_scale_CHILD){
+  // set demo mode
+  bool previous_demo_mode = g_demo_mode;
+  g_demo_mode = true;
+  // construct the GoalState from the json file
+  string zeta_gateway_path_CHILD_config_file = "./test/gtest/aca_data.json";
+  aca_test_zeta_setup(zeta_gateway_path_CHILD_config_file);
+  // restore demo mode
+  g_demo_mode = previous_demo_mode;
+}
+
+TEST(zeta_programming_test_cases, DISABLED_zeta_scale_PARENT){
+  // set demo mode
+  bool previous_demo_mode = g_demo_mode;
+  g_demo_mode = true;
+  // construct the GoalState from the json file
+  string zeta_gateway_path_CHILD_config_file = "./test/gtest/aca_data.json";
+  aca_test_zeta_setup(zeta_gateway_path_CHILD_config_file);
+  // restore demo mode
+  g_demo_mode = previous_demo_mode;
 }
