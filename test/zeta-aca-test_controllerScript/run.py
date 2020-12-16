@@ -7,7 +7,6 @@ import sys
 import itertools
 from math import ceil
 
-# zeta_data = None
 server_aca_repo_path = ''
 aca_data_destination_path = '/test/gtest/aca_data.json'
 aca_data_local_path = './aca_data.json'
@@ -252,35 +251,35 @@ def run():
 
     talk_to_zeta(file_path, zgc_api_url, zeta_data)
 
-    if len(arguments) == 1:
-        print("Doesn't have arguments, just run the two node test.")
-        aca_nodes_data = zeta_data["aca_nodes"]
-        aca_nodes_ip = aca_nodes_data['ip']
+    # if len(arguments) == 1:
+        # print("Doesn't have arguments, just run the two node test.")
+    aca_nodes_data = zeta_data["aca_nodes"]
+    aca_nodes_ip = aca_nodes_data['ip']
 
-        res = upload_file_aca(aca_nodes_data['ip'], aca_nodes_data['username'], aca_nodes_data['password'],
-                              server_aca_repo_path + aca_data_destination_path, aca_data_local_path)
-        if not res:
-            print("upload file %s failed" % aca_data_local_path)
-        else:
-            print("upload file %s successfully" % aca_data_local_path)
+    res = upload_file_aca(aca_nodes_data['ip'], aca_nodes_data['username'], aca_nodes_data['password'],
+                            server_aca_repo_path + aca_data_destination_path, aca_data_local_path)
+    if not res:
+        print("upload file %s failed" % aca_data_local_path)
+    else:
+        print("upload file %s successfully" % aca_data_local_path)
 
-        # Execute remote command, use the transferred file to change the information in aca_test_ovs_util.cpp,recompile using 'make',perform aca_test
-        aca_nodes = aca_nodes_ip
-        cmd_list2 = [
-            f'cd {server_aca_repo_path};sudo ./build/tests/aca_tests --gtest_also_run_disabled_tests --gtest_filter=*DISABLED_zeta_gateway_path_CHILD']
-        result2 = exec_sshCommand_aca(
-            host=aca_nodes[1], user=aca_nodes_data['username'], password=aca_nodes_data['password'], cmd=cmd_list2, timeout=60)
+    # Execute remote command, use the transferred file to change the information in aca_test_ovs_util.cpp,recompile using 'make',perform aca_test
+    aca_nodes = aca_nodes_ip
+    cmd_list2 = [
+        f'cd {server_aca_repo_path};sudo ./build/tests/aca_tests --gtest_also_run_disabled_tests --gtest_filter=*DISABLED_zeta_gateway_path_CHILD']
+    result2 = exec_sshCommand_aca(
+        host=aca_nodes[1], user=aca_nodes_data['username'], password=aca_nodes_data['password'], cmd=cmd_list2, timeout=60)
 
-        cmd_list1 = [
-            f'cd {server_aca_repo_path};sudo ./build/tests/aca_tests --gtest_also_run_disabled_tests --gtest_filter=*DISABLED_zeta_gateway_path_PARENT']
-        result1 = exec_sshCommand_aca(
-            host=aca_nodes[0], user=aca_nodes_data['username'], password=aca_nodes_data['password'], cmd=cmd_list1, timeout=60)
-        print(f'Status from node [{aca_nodes[0]}]: {result1["status"]}')
-        print(f'Data from node [{aca_nodes[0]}]: {result1["data"]}')
-        print(f'Error from node [{aca_nodes[0]}]: {result1["error"]}')
-        print(f'Status from node [{aca_nodes[1]}]: {result2["status"]}')
-        print(f'Data from node [{aca_nodes[1]}]: {result2["data"]}')
-        print(f'Error from node [{aca_nodes[1]}]: {result2["error"]}')
+    cmd_list1 = [
+        f'cd {server_aca_repo_path};sudo ./build/tests/aca_tests --gtest_also_run_disabled_tests --gtest_filter=*DISABLED_zeta_gateway_path_PARENT']
+    result1 = exec_sshCommand_aca(
+        host=aca_nodes[0], user=aca_nodes_data['username'], password=aca_nodes_data['password'], cmd=cmd_list1, timeout=60)
+    print(f'Status from node [{aca_nodes[0]}]: {result1["status"]}')
+    print(f'Data from node [{aca_nodes[0]}]: {result1["data"]}')
+    print(f'Error from node [{aca_nodes[0]}]: {result1["error"]}')
+    print(f'Status from node [{aca_nodes[1]}]: {result2["status"]}')
+    print(f'Data from node [{aca_nodes[1]}]: {result2["data"]}')
+    print(f'Error from node [{aca_nodes[1]}]: {result2["error"]}')
 
 
 if __name__ == '__main__':
