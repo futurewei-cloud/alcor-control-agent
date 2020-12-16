@@ -129,14 +129,12 @@ def talk_to_zeta(file_path, zgc_api_url, zeta_data):
 
     # notify ZGC the ports created on each ACA
     PORT_data = zeta_data["PORT_data"]
-    # for port in PORT_data:
-    #     print(f'Port data: \n{port}')
+
     amount_of_ports = len(PORT_data)
     all_post_responses = []
     all_ports_start_time = time.time()
     print(f'Port_data length: \n{amount_of_ports}')
     for i in range(ceil(len(PORT_data) / port_api_upper_limit)):
-        # print("Hello")
         start_idx = i * port_api_upper_limit
         end_idx = start_idx
         if end_idx + port_api_upper_limit >= amount_of_ports:
@@ -146,41 +144,49 @@ def talk_to_zeta(file_path, zgc_api_url, zeta_data):
 
         if start_idx == end_idx:
             end_idx = end_idx + 1
-        print(f'In this /ports POST call, we are calling with port from {start_idx} to {end_idx}')
+        print(
+            f'In this /ports POST call, we are calling with port from {start_idx} to {end_idx}')
         one_call_start_time = time.time()
         port_response = requests.post(
-        zgc_api_url + "/ports", data=json.dumps(PORT_data[start_idx: end_idx]), headers=headers)
+            zgc_api_url + "/ports", data=json.dumps(PORT_data[start_idx: end_idx]), headers=headers)
         if port_response.status_code >= 300:
-            print(f'Call failed for index {start_idx} to {end_idx}, \nstatus code: {port_response.status_code}, \ncontent: {port_response.content}\nExiting')
+            print(
+                f'Call failed for index {start_idx} to {end_idx}, \nstatus code: {port_response.status_code}, \ncontent: {port_response.content}\nExiting')
             return
         one_call_end_time = time.time()
-        print(f'ONE PORT post call ended, for {end_idx - start_idx} ports creation it took: {one_call_end_time - one_call_start_time} seconds')
+        print(
+            f'ONE PORT post call ended, for {end_idx - start_idx} ports creation it took: {one_call_end_time - one_call_start_time} seconds')
         all_post_responses.append(port_response.json())
     all_ports_end_time = time.time()
     print(
         f'ALL PORT post call ended, for {amount_of_ports} ports creation it took: {all_ports_end_time - all_ports_start_time} seconds')
-    json_content_for_aca['port_response'] = list(itertools.chain.from_iterable(all_post_responses))
-    print(f'Length of all ports response: {len(json_content_for_aca["port_response"])}')
+    json_content_for_aca['port_response'] = list(
+        itertools.chain.from_iterable(all_post_responses))
+    print(
+        f'Length of all ports response: {len(json_content_for_aca["port_response"])}')
     with open('aca_data.json', 'w') as outfile:
         json.dump(json_content_for_aca, outfile)
         print(f'The aca data is exported to {aca_data_local_path}')
 
+# the ports' info inside are based on the PORT_data in zeta_data.json, please modify it accordingly to suit your needs
+
+
 def get_port_template(i):
-    if i %2 == 0:
+    if i % 2 == 0:
         return {
-        "port_id": "333d4fae-7dec-11d0-a765-00a0c9341120",
-        "vpc_id": "3dda2801-d675-4688-a63f-dcda8d327f61",
-        "ips_port": [
-            {
-                "ip": "10.10.0.92",
-                "vip": ""
-            }
-        ],
-        "mac_port": "cc:dd:ee:ff:11:22",
-        "ip_node": "192.168.20.92",
-        "mac_node": "e8:bd:d1:01:77:ec"
-    }
-    return     {
+            "port_id": "333d4fae-7dec-11d0-a765-00a0c9341120",
+            "vpc_id": "3dda2801-d675-4688-a63f-dcda8d327f61",
+            "ips_port": [
+                {
+                    "ip": "10.10.0.92",
+                    "vip": ""
+                }
+            ],
+            "mac_port": "cc:dd:ee:ff:11:22",
+            "ip_node": "192.168.20.92",
+            "mac_node": "e8:bd:d1:01:77:ec"
+        }
+    return {
         "port_id": "99976feae-7dec-11d0-a765-00a0c9342230",
         "vpc_id": "3dda2801-d675-4688-a63f-dcda8d327f61",
         "ips_port": [
@@ -206,24 +212,22 @@ def generate_ports(ports_to_create):
         port_template_to_use = get_port_template(i)
         port_id = '99976feae-7dec-11d0-a765-00a0c{0:07d}'.format(i)
         unique_port_ids.add(port_id)
-        # print(f'port_id: {port_id}')
         ip_2nd_octet = str((i // 10000))
         ip_3rd_octet = str((i % 10000 // 100))
         ip_4th_octet = str((i % 100))
         ip = ips_ports_ip_prefix + ip_2nd_octet + \
             "." + ip_3rd_octet + "." + ip_4th_octet
-        # print(f'Generated IP: {ip}')
         unique_ips.add(ip)
         mac = mac_port_prefix + ip_2nd_octet + ":" + ip_3rd_octet + ":" + ip_4th_octet
-        # print(f'Generated MAC: {mac}')
         unique_macs.add(mac)
         port_template_to_use['port_id'] = port_id
         port_template_to_use['ips_port'][0]['ip'] = ip
         port_template_to_use['mac_port'] = mac
-        # print(f'Generated Port info: {port_template_to_use}')
         all_ports_generated.append(port_template_to_use)
-    # print(f'Ports generated: {ports_to_create}, \nunique port_id: {len(unique_port_ids)}, \nunique IPs: {len(unique_ips)},\nunique MACs: {len(unique_macs)}')
     return all_ports_generated
+
+# To run the pseudo controller, the user either runs it without specifying how many ports to create, which leads to creating 2 ports and running the
+# DISABLED_zeta_gateway_path_CHILD and DISABLED_zeta_gateway_path_PARENT; if you specify the amount of ports to create (up to one milliion ports), using the command 'python3 run.py amount_of_ports_to_create', the controller will that many ports, and then run DISABLED_zeta_scale_CHILD and DISABLED_zeta_scale_PARENT
 
 
 def run():
@@ -238,6 +242,9 @@ def run():
     server_aca_repo_path = zeta_data['server_aca_repo_path']
     print(f'Server aca repo path: {server_aca_repo_path}')
     zgc_api_url = zeta_data["zeta_api_ip"]
+
+    testcases_to_run = ['DISABLED_zeta_gateway_path_CHILD',
+                        'DISABLED_zeta_gateway_path_PARENT']
     # second argument should be amount of ports to be generated
     if len(arguments) > 1:
         ports_to_create = int(arguments[1])
@@ -246,18 +253,19 @@ def run():
                 f'You tried to create {ports_to_create} ports, but the pseudo controller only supports up to 1,000,000 ports, sorry.')
             return
         print("Has arguments, need to generate some ports!")
+        testcases_to_run = ['DISABLED_zeta_scale_CHILD',
+                            'DISABLED_zeta_scale_PARENT']
         zeta_data['PORT_data'] = generate_ports(ports_to_create)
-        print(f'After generating ports, we now have {len(zeta_data["PORT_data"])} entries in the PORT_data')
+        print(
+            f'After generating ports, we now have {len(zeta_data["PORT_data"])} entries in the PORT_data')
 
     talk_to_zeta(file_path, zgc_api_url, zeta_data)
 
-    # if len(arguments) == 1:
-        # print("Doesn't have arguments, just run the two node test.")
     aca_nodes_data = zeta_data["aca_nodes"]
     aca_nodes_ip = aca_nodes_data['ip']
 
     res = upload_file_aca(aca_nodes_data['ip'], aca_nodes_data['username'], aca_nodes_data['password'],
-                            server_aca_repo_path + aca_data_destination_path, aca_data_local_path)
+                          server_aca_repo_path + aca_data_destination_path, aca_data_local_path)
     if not res:
         print("upload file %s failed" % aca_data_local_path)
     else:
@@ -266,12 +274,12 @@ def run():
     # Execute remote command, use the transferred file to change the information in aca_test_ovs_util.cpp,recompile using 'make',perform aca_test
     aca_nodes = aca_nodes_ip
     cmd_list2 = [
-        f'cd {server_aca_repo_path};sudo ./build/tests/aca_tests --gtest_also_run_disabled_tests --gtest_filter=*DISABLED_zeta_scale_CHILD']
+        f'cd {server_aca_repo_path};sudo ./build/tests/aca_tests --gtest_also_run_disabled_tests --gtest_filter=*{testcases_to_run[0]}']
     result2 = exec_sshCommand_aca(
         host=aca_nodes[1], user=aca_nodes_data['username'], password=aca_nodes_data['password'], cmd=cmd_list2, timeout=1500)
 
     cmd_list1 = [
-        f'cd {server_aca_repo_path};sudo ./build/tests/aca_tests --gtest_also_run_disabled_tests --gtest_filter=*DISABLED_zeta_scale_PARENT']
+        f'cd {server_aca_repo_path};sudo ./build/tests/aca_tests --gtest_also_run_disabled_tests --gtest_filter=*{testcases_to_run[1]}']
     result1 = exec_sshCommand_aca(
         host=aca_nodes[0], user=aca_nodes_data['username'], password=aca_nodes_data['password'], cmd=cmd_list1, timeout=1500)
     print(f'Status from node [{aca_nodes[0]}]: {result1["status"]}')
