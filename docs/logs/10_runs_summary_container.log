@@ -1,0 +1,64 @@
+10 goalstate message making GRPC sync call one by one (containers run):
+
+[***METRICS***] Grand ACA message_total_operation_time: 287736732 nanoseconds or 287 milliseconds
+[***METRICS***] GRPC E2E send_goalstate_sync call took: 309260017 nanoseconds or 309 milliseconds
+
+[***METRICS***] Grand ACA message_total_operation_time: 285838421 nanoseconds or 285 milliseconds
+[***METRICS***] GRPC E2E send_goalstate_sync call took: 302548620 nanoseconds or 302 milliseconds
+
+[***METRICS***] Grand ACA message_total_operation_time: 305146998 nanoseconds or 305 milliseconds
+[***METRICS***] GRPC E2E send_goalstate_sync call took: 331036486 nanoseconds or 331 milliseconds
+
+[***METRICS***] Grand ACA message_total_operation_time: 297145722 nanoseconds or 297 milliseconds
+[***METRICS***] GRPC E2E send_goalstate_sync call took: 320532589 nanoseconds or 320 milliseconds
+
+[***METRICS***] Grand ACA message_total_operation_time: 335791963 nanoseconds or 335 milliseconds
+[***METRICS***] GRPC E2E send_goalstate_sync call took: 359490913 nanoseconds or 359 milliseconds
+
+[***METRICS***] Grand ACA message_total_operation_time: 315427563 nanoseconds or 315 milliseconds
+[***METRICS***] GRPC E2E send_goalstate_sync call took: 333704573 nanoseconds or 333 milliseconds
+
+[***METRICS***] Grand ACA message_total_operation_time: 292985320 nanoseconds or 292 milliseconds
+[***METRICS***] GRPC E2E send_goalstate_sync call took: 315479531 nanoseconds or 315 milliseconds
+
+[***METRICS***] Grand ACA message_total_operation_time: 296757779 nanoseconds or 296 milliseconds
+[***METRICS***] GRPC E2E send_goalstate_sync call took: 319079605 nanoseconds or 319 milliseconds
+
+[***METRICS***] Grand ACA message_total_operation_time: 302073981 nanoseconds or 302 milliseconds
+[***METRICS***] GRPC E2E send_goalstate_sync call took: 341244002 nanoseconds or 341 milliseconds
+
+[***METRICS***] Grand ACA message_total_operation_time: 313873332 nanoseconds or 313 milliseconds
+[***METRICS***] GRPC E2E send_goalstate_sync call took: 334800676 nanoseconds or 334 milliseconds
+
+
+10 goalstate message using one GRPC streaming channel (containers run):
+
+[***METRICS***] Grand ACA message_total_operation_time: 297429190 nanoseconds or 297 milliseconds
+[***METRICS***] Grand send_goalstate_sync call took: 304332299 nanoseconds or 304 milliseconds
+
+[***METRICS***] Grand ACA message_total_operation_time: 306296174 nanoseconds or 306 milliseconds
+[***METRICS***] Grand send_goalstate_sync call took: 314512298 nanoseconds or 314 milliseconds
+
+[***METRICS***] Grand ACA message_total_operation_time: 294239598 nanoseconds or 294 milliseconds
+[***METRICS***] Grand send_goalstate_sync call took: 304991126 nanoseconds or 304 milliseconds
+
+[***METRICS***] Grand ACA message_total_operation_time: 302513023 nanoseconds or 302 milliseconds
+[***METRICS***] Grand send_goalstate_sync call took: 309381901 nanoseconds or 309 milliseconds
+
+[***METRICS***] Grand ACA message_total_operation_time: 301059778 nanoseconds or 301 milliseconds
+[***METRICS***] Grand send_goalstate_sync call took: 308335725 nanoseconds or 308 milliseconds
+
+[***METRICS***] Grand ACA message_total_operation_time: 309987145 nanoseconds or 309 milliseconds
+[***METRICS***] Grand send_goalstate_sync call took: 317679109 nanoseconds or 317 milliseconds
+
+[***METRICS***] Grand ACA message_total_operation_time: 292076701 nanoseconds or 292 milliseconds
+[***METRICS***] Grand send_goalstate_sync call took: 298405058 nanoseconds or 298 milliseconds
+
+[***METRICS***] Grand ACA message_total_operation_time: 317321501 nanoseconds or 317 milliseconds
+[***METRICS***] Grand send_goalstate_sync call took: 326716910 nanoseconds or 326 milliseconds
+
+[***METRICS***] Grand ACA message_total_operation_time: 329574278 nanoseconds or 329 milliseconds
+[***METRICS***] Grand send_goalstate_sync call took: 338692747 nanoseconds or 338 milliseconds
+
+[***METRICS***] Grand ACA message_total_operation_time: 310421129 nanoseconds or 310 milliseconds
+[***METRICS***] Grand send_goalstate_sync call took: 316471534 nanoseconds or 316 milliseconds

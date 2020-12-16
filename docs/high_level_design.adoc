@@ -1,0 +1,111 @@
+= Cloud Fabric Alcor Control Agent
+Eric Li <sze.li@futurewei.com>
+v0.2, 2020-03-01
+:toc: right
+
+[width="100%",options="header"]
+|====================
+|Title|Authors|Version
+|Cloud Fabric Alcor Control Agent|@erictheone|0.2
+|====================
+
+== Summary
+
+The Cloud Fabric Alcor Control Agent (ACA) runs on each host machine. It serves as a stateless proxy between Alcor controller and host machine networking components for control plane operations.
+
+image::images/Agent_components.jpg["Component diagram", width=800, link="images/Agent_components.jpg"]
+
+== Requirements
+
+. ACA will reside on each host machine to interface between network controller and host networking components. The main responsibility is to configure compute and transit hosts based on message from Alcor Controllers. Which will enable connectivity (VPC IP < - > Physical IP mapping) between VMs/Containers within the datacenter and outside world through EIP for the new Cloud Fabric networking control/data plane.
+
+. It will update networking configuration on the host (to be updated with latest design):
+	.. Create vPort for VM/Container (unless this is done by Compute agent)
+	.. Configure vNIC and vPort, connect them for the VM/Container
+	.. Attach Security group to a vNIC TODO: add more detail after dataplane performance analysis without it
+	.. Attached transit agent to the corresponding vNIC(veth) and transit switch/router on the physical NIC
+
+. It will also update VPC Configuration (VPC, Subnet, Security Group, Routing) including CRUD (Create/Read/Update/Delete) VPC/Subnet/Endpoint.
+
+== Interface with Alcor VPC Controller
+. Goal State object: +
+Alcor VPC Controller sends down goal state object to ACA in the format of protobuf 3 messages to support cross language and cross machine model. The goal state object contains 0 to n vpc_states/subnet_states/port_state/security_group_states configurations. When ACA receives the goal state object, it will loop through each configuration to determine the intent update by looking at the OperationType. ACA will then parse the configuration and execute the needed change on the host machine, including XDP programming using transit daemon. Below is the highlevel GoalState definition:
+
+*alcor/src/schema/proto3/goalstate.proto*
+
+[source,java]
+------------------------------------------------------------
+syntax = "proto3";
+
+package alcorcontroller;
+
+option java_package = "com.futurewei.alcor.controller.schema";
+
+import "vpc.proto";
+import "subnet.proto";
+import "port.proto";
+import "securitygroup.proto";
+
+message GoalState {
+   repeated VpcState vpc_states = 1;
+   repeated SubnetState subnet_states = 2;
+   repeated PortState port_states = 3;
+   repeated SecurityGroupState security_group_states = 4;
+}
+------------------------------------------------------------
+
+. Kafka messaging path: +
+In order to have a scalable, high performance and highly reliable communication channel between Alcor VPC Controller and 100s of thousands of compute hosts, Kafka was used because of its features and proven performance. For most of host network configurations, Alcor VPC Controller will publish the goal state object as a Kafka message in proto3 format into a Kafka topic specific to a compute/transit host. The ACA running on the targetted host will consume that message and apply network configuration accordingly.
+
+. gRPC fast path: +
+We need an ultra low latency Alcor control path to support customer scenarios like serverless where it has very low latency budget (<100ms) for end to end. An gRPC server was implemented in ACA in conjunction with the Kakfa cosumer to process goal state updates faster. See the "Thread modeling" session below for more information the threading implementation. To further improve the performance of gRPC fast path communication, gRPC streaming communication will be used because data showed that streaming down 10 goal state messages has ~3x lower latency vs sending it one by one using two physical machines setup. See the logs directory for detail data.
+
+. Security Group API: +
+We plan to provide OpenStack-compatible security group feature<<securitygroups>> either through linux bridge and iptable, or our new unified flow manager so that it can be offloaded to hardware.
+
+. Authentication and Authorization: +
+TBD. For reference, Openstack common configuration uses authentication token<<auth>>. +
+
+== Thread modeling
+There will be one thread for Kafka consumer to receive Alcor VPC controller goal state update. Another thread should be used to post the respond on the goal state update result to Kakfa so that the controller can process it.
+
+There will be another thread for async gRPC server to handle goal state update request for control fast path (currently targetting serverless scenario for fast provisioning). The gRPC async library will handle the client call from Alcor VPC controller, put the work item into its own completion queue, and reponds to the client call quickly. It will transparently create new threads to process the work items in its completion queue. Once a work item is completed, it will create a gRPC response to the original client call with the goal state update result.
+
+== API Versioning of Alcor Control Agent and Alcor VPC Controller
+
+==== Motivation
+When making major changes to code, the components need to be versioned in such a way so that old clients have time to upgrade, and new clients can use the new features without issues. <<api1>> <<api2>>
+
+==== Strategy
+The strategy is to have the two components, agent and controller, explicitly state the API version in their messages.
+Thus, every message/call between the Controller and the ACA will have an API version tagged. +
+
+The components will support a range of different API versions by defining the max API version and min API version supported. +
+These fields will then be incremented respectively as features are +
+upgraded, and deprecated.
+
+For major version upgrades, the strategy will be to
+
+. Deploy changes to all ACA first
+. Deploy changes to Alcor Controller once all Agents have been upgraded
+
+==== Example
+For example, say there is a new update to support SR-IOV.
+
+[width="100%",options="header"]
+|====================
+|Case|Controller Action|Agent Action
+|V1 Agent and V2 Controller|Controller sends a new V2 config to enable SR-IOV.|Agent sees unknown version in message and fails
+|V2 Agent and V1 Controller|Controller sends a V1 Config|Agent sees V1 version in message and executes V1 calls
+|====================
+
+== Testing strategy
+Gtest framework is used for unit testing and some functional testing. Completed end to end and functional testing will be developed by plugging in controller, agent and Mizar together under Jenkins CI/CD framework. We are planning to leverage gcov+lcov for code coverage analysis.
+
+[bibliography]
+== References
+
+- [[[api1,1]]] https://dzone.com/articles/backward-compatibility-check-for-rest-apis
+- [[[api2,2]]] https://stackoverflow.com/questions/29871744/how-do-you-manage-the-underlying-codebase-for-a-versioned-api
+- [[[securitygroups,3]]] https://github.com/openstack/neutron/blob/master/neutron/agent/securitygroups_rpc.py
+- [[[auth,4]]] https://docs.openstack.org/ocata/config-reference/common-configurations/auth.html
