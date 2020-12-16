@@ -207,9 +207,9 @@ def generate_ports(ports_to_create):
         port_id = '99976feae-7dec-11d0-a765-00a0c{0:07d}'.format(i)
         unique_port_ids.add(port_id)
         # print(f'port_id: {port_id}')
-        ip_2nd_octet = '{0:02d}'.format((i // 10000))
-        ip_3rd_octet = '{0:02d}'.format((i % 10000 // 100))
-        ip_4th_octet = '{0:02d}'.format((i % 100))
+        ip_2nd_octet = str((i // 10000))
+        ip_3rd_octet = str((i % 10000 // 100))
+        ip_4th_octet = str((i % 100))
         ip = ips_ports_ip_prefix + ip_2nd_octet + \
             "." + ip_3rd_octet + "." + ip_4th_octet
         # print(f'Generated IP: {ip}')
