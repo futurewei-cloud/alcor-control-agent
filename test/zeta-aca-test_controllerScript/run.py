@@ -11,7 +11,7 @@ server_aca_repo_path = ''
 aca_data_destination_path = '/test/gtest/aca_data.json'
 aca_data_local_path = './aca_data.json'
 
-ips_ports_ip_prefix = "10."
+ips_ports_ip_prefix = "123."
 mac_port_prefix = "6c:dd:ee:"
 port_api_upper_limit = 4000
 
