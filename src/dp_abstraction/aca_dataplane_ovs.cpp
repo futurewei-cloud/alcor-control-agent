@@ -240,7 +240,7 @@ int ACA_Dataplane_OVS::update_port_state_workitem(const PortState current_PortSt
 
       overall_rc = ACA_OVS_L2_Programmer::get_instance().create_port(
               current_PortConfiguration.vpc_id(), generated_port_name, port_cidr,
-              found_tunnel_id, culminative_dataplane_programming_time);
+              virtual_mac_address, found_tunnel_id, culminative_dataplane_programming_time);
 
       if (found_auxgateway.aux_gateway_type() == ZETA) {
         ACA_LOG_INFO("%s", "AuxGateway_type is zeta!\n");
@@ -442,8 +442,7 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
                 (current_NeighborState.operation_type() == OperationType::UPDATE) ||
                 (current_NeighborState.operation_type() == OperationType::INFO)) {
               overall_rc = ACA_OVS_L2_Programmer::get_instance().create_or_update_l2_neighbor(
-                      current_NeighborConfiguration.id(),
-                      current_NeighborConfiguration.vpc_id(), found_network_type, host_ip_address,
+                      virtual_ip_address, virtual_mac_address, host_ip_address,
                       found_tunnel_id, culminative_dataplane_programming_time);
               // we can consider doing this L2 neighbor creation as an on demand rule to support scale
               // when we are ready to put the DVR rule as on demand, we should put the L2 neighbor rule
@@ -457,14 +456,10 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
               }
 
             } else if (current_NeighborState.operation_type() == OperationType::DELETE) {
-              string outport_name =
-                      aca_get_outport_name(found_network_type, host_ip_address);
-
               overall_rc = ACA_OVS_L2_Programmer::get_instance().delete_l2_neighbor(
-                      current_NeighborConfiguration.id(), found_tunnel_id,
-                      outport_name, culminative_dataplane_programming_time);
+                      virtual_ip_address, virtual_mac_address, found_tunnel_id,
+                      culminative_dataplane_programming_time);
               rc = ACA_ARP_Responder::get_instance().delete_arp_entry(&stArpCfg);
-
             } else {
               ACA_LOG_ERROR("Invalid neighbor state operation type %d\n",
                             current_NeighborState.operation_type());

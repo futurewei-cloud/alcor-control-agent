@@ -10,7 +10,6 @@ FIND_LIBRARY(PULSAR pulsar /usr/lib NO_DEFAULT_PATH)
 FIND_LIBRARY(MESSAGEMANAGER messagemanager ${CMAKE_CURRENT_SOURCE_DIR}/../include NO_DEFAULT_PATH)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../include)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../src/proto3)
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../mizar/src/include)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../src/grpc)
 link_libraries(${PULSAR})
 

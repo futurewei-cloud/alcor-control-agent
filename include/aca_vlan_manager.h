@@ -16,6 +16,7 @@
 #define ACA_VLAN_MANAGER_H
 
 #include "goalstateprovisioner.grpc.pb.h"
+#include "hashmap/HashMap.h"
 #include <string>
 #include <list>
 #include <unordered_map>
@@ -25,7 +26,6 @@
 using namespace std;
 
 // TODO: implement a better available internal vlan ids
-// when we have port delete implemented
 static atomic_uint current_available_vlan_id(1);
 
 // Vlan Manager class
@@ -37,9 +37,8 @@ struct vpc_table_entry {
   // list of ovs_ports names on this host in the same VPC to share the same internal vlan_id
   list<string> ovs_ports;
 
-  // hashtable of output (e.g. vxlan) tunnel ports to the neighbor host communication
-  // hashtable <key: outports string, value: list of neighbor port IDs>
-  unordered_map<string, list<string> > outports_neighbors_table;
+  // mutex to protect ovs_ports
+  mutable std::shared_timed_mutex ovs_ports_mutex;
 
   string auxGateway_id;
 };
@@ -56,18 +55,15 @@ class ACA_Vlan_Manager {
 
   int delete_ovs_port(string vpc_id, string ovs_port, uint tunnel_id, ulong &culminative_time);
 
-  int create_neighbor_outport(string neighbor_id, string vpc_id,
-                              alcor::schema::NetworkType network_type, string remote_host_ip,
-                              uint tunnel_id, ulong &culminative_time);
+  int create_l2_neighbor(string virtual_ip, string virtual_mac, string remote_host_ip,
+                         uint tunnel_id, ulong &culminative_time);
+
+  int delete_l2_neighbor(string virtual_ip, string virtual_mac, uint tunnel_id,
+                         ulong &culminative_time);
 
   // create a neighbor port without specifying vpc_id and neighbor ID
   int create_neighbor_outport(alcor::schema::NetworkType network_type, string remote_host_ip,
                               uint tunnel_id, ulong &culminative_time);
-
-  int delete_neighbor_outport(string neighbor_id, uint tunnel_id,
-                              string outport_name, ulong &culminative_time);
-
-  int get_outports_unsafe(uint tunnel_id, string &outports);
 
   void set_aux_gateway(uint tunnel_id, const string auxGateway_id);
 
@@ -84,12 +80,9 @@ class ACA_Vlan_Manager {
   ~ACA_Vlan_Manager(){};
 
   // hashtable <key: tunnel ID, value: vpc_table_entry>
-  unordered_map<uint, vpc_table_entry> _vpcs_table;
+  CTSL::HashMap<uint, vpc_table_entry *> _vpcs_table;
 
-  // mutex for reading and writing to _vpcs_table
-  mutex _vpcs_table_mutex;
-
-  void create_entry_unsafe(uint tunnel_id);
+  void create_entry(uint tunnel_id);
 };
 } // namespace aca_vlan_manager
 #endif // #ifndef ACA_VLAN_MANAGER_H
