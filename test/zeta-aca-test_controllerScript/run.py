@@ -335,7 +335,20 @@ def run():
     test_end_time = time.time()
     print(
         f'Time took for the tests of ACA nodes are {test_end_time - test_start_time} seconds.')
+    print('Time for the Ping test')
+    
 
+    parent_ports = [port for port in zeta_data['PORT_data'] if port['ip_node'].split('.')[3] == zeta_data['aca_nodes'][0].split()[3]]
+    child_ports = [port for port in zeta_data['PORT_data'] if port['ip_node'].split('.')[3] == zeta_data['aca_nodes'][1].split()[3]]
+    print(f'Parent ports: {parent_ports}')
+    print(f'Child ports: {child_ports}')
+
+    if len(parent_ports) > 0 and len(child_ports) > 0:
+        ping_cmd = [f'ping -I {parent_ports[0]["ips_port"][0]["ip"]} -c1 {child_ports[0]["ips_port"][0]["ip"]}']
+        print(f'Command for ping: {ping_cmd[0]}')
+        exec_sshCommand_aca(host=aca_nodes[0], user=aca_nodes_data['username'], password=aca_nodes_data['password'], cmd=ping_cmd, timeout=20)
+    else:
+        print(f'Either parent or child does not have any ports, somethings wrong.')
 
 if __name__ == '__main__':
     run()
