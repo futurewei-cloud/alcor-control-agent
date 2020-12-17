@@ -321,9 +321,9 @@ def run():
                           server_aca_repo_path + aca_data_destination_path, aca_data_local_path)
     if not res:
         print("upload file %s failed" % aca_data_local_path)
+        return
     else:
         print("upload file %s successfully" % aca_data_local_path)
-        return
 
     test_start_time = time.time()
     # Execute remote command, use the transferred file to change the information in aca_test_ovs_util.cpp,recompile using 'make',perform aca_test
