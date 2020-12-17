@@ -6,6 +6,7 @@ import time
 import sys
 import itertools
 from math import ceil
+import threading
 
 server_aca_repo_path = ''
 aca_data_destination_path = '/test/gtest/aca_data.json'
@@ -13,7 +14,7 @@ aca_data_local_path = './aca_data.json'
 
 ips_ports_ip_prefix = "123."
 mac_port_prefix = "6c:dd:ee:"
-port_api_upper_limit = 1000
+
 
 # Transfer the file locally to aca nodes
 
@@ -86,7 +87,7 @@ def exec_sshCommand_aca(host, user, password, cmd, timeout=60):
         return result
 
 
-def talk_to_zeta(file_path, zgc_api_url, zeta_data):
+def talk_to_zeta(file_path, zgc_api_url, zeta_data, port_api_upper_limit, time_interval_between_calls_in_seconds):
     headers = {'Content-type': 'application/json'}
     # create ZGC
     ZGC_data = zeta_data["ZGC_data"]
@@ -136,6 +137,7 @@ def talk_to_zeta(file_path, zgc_api_url, zeta_data):
     all_post_responses = []
     all_ports_start_time = time.time()
     print(f'Port_data length: \n{amount_of_ports}')
+    should_sleep = True
     for i in range(ceil(len(PORT_data) / port_api_upper_limit)):
         start_idx = i * port_api_upper_limit
         end_idx = start_idx
@@ -146,6 +148,9 @@ def talk_to_zeta(file_path, zgc_api_url, zeta_data):
 
         if start_idx == end_idx:
             end_idx = end_idx + 1
+
+        if end_idx == amount_of_ports:
+            should_sleep = False
         print(
             f'In this /ports POST call, we are calling with port from {start_idx} to {end_idx}')
         one_call_start_time = time.time()
@@ -156,9 +161,14 @@ def talk_to_zeta(file_path, zgc_api_url, zeta_data):
                 f'Call failed for index {start_idx} to {end_idx}, \nstatus code: {port_response.status_code}, \ncontent: {port_response.content}\nExiting')
             return
         one_call_end_time = time.time()
+
         print(
             f'ONE PORT post call ended, for {end_idx - start_idx} ports creation it took: {one_call_end_time - one_call_start_time} seconds')
         all_post_responses.append(port_response.json())
+
+        if should_sleep:
+            time.sleep(time_interval_between_calls_in_seconds)
+
     all_ports_end_time = time.time()
     print(
         f'ALL PORT post call ended, for {amount_of_ports} ports creation it took: {all_ports_end_time - all_ports_start_time} seconds')
@@ -231,8 +241,18 @@ def generate_ports(ports_to_create):
 # To run the pseudo controller, the user either runs it without specifying how many ports to create, which leads to creating 2 ports and running the
 # DISABLED_zeta_gateway_path_CHILD and DISABLED_zeta_gateway_path_PARENT; if you specify the amount of ports to create (up to one milliion ports), using the command 'python3 run.py amount_of_ports_to_create', the controller will that many ports, and then run DISABLED_zeta_scale_CHILD and DISABLED_zeta_scale_PARENT
 
+# Also, two more params are added.
+# First is port_api_upper_limit, which should not exceed 4000, it is the batch number for each /ports POST call.
+# Second is time_interval_between_calls_in_seconds, it is the time the pseudo controller sleeps after each /port POST call, except for the last call.
+
+# So if you only want to run the two nodes test, you can simply run 'python3 run.py'
+# If you want to try to scale test, you can run 'python3 run.py total_amount_of_ports how_many_ports_each_batch, how_many_seconds_controller_sleeps_after_each_call.'
+
 
 def run():
+    port_api_upper_limit = 1000
+    time_interval_between_calls_in_seconds = 10
+    ports_to_create = 2
     # right now the only argument should be how many ports to be generated.
     arguments = sys.argv
     print(f'Arguments: {arguments}')
@@ -255,13 +275,33 @@ def run():
                 f'You tried to create {ports_to_create} ports, but the pseudo controller only supports up to 1,000,000 ports, sorry.')
             return
         print("Has arguments, need to generate some ports!")
-        testcases_to_run = ['DISABLED_zeta_scale_CHILD',
-                            'DISABLED_zeta_scale_PARENT']
-        zeta_data['PORT_data'] = generate_ports(ports_to_create)
-        print(
-            f'After generating ports, we now have {len(zeta_data["PORT_data"])} entries in the PORT_data')
+        if ports_to_create > 2:
+            print(f'Trying to create {ports_to_create} ports.')
+            testcases_to_run = ['DISABLED_zeta_scale_CHILD',
+                                'DISABLED_zeta_scale_PARENT']
+            zeta_data['PORT_data'] = generate_ports(ports_to_create)
+            print(
+                f'After generating ports, we now have {len(zeta_data["PORT_data"])} entries in the PORT_data')
+        elif ports_to_create < 2:
+            print('Too little ports to create, please enter a bigger number')
 
-    talk_to_zeta(file_path, zgc_api_url, zeta_data)
+    if len(arguments) > 2:
+        arg2 = int(arguments[2])
+        if arg2 <= 4000:
+            port_api_upper_limit = arg2
+            print(f'Set the amount of ports in each port call to be {arg2}')
+        else:
+            print(
+                f'You are trying to call the /nodes api with more than {arg2} entries per time, which is too much. Please enter a number no more than 4000.')
+            return
+    if len(arguments) > 3:
+        arg3 = int(arguments[3])
+        time_interval_between_calls_in_seconds = arg3
+        print(
+            f'Set time interval between /nodes POST calls to be {arg3} seconds.')
+
+    talk_to_zeta(file_path, zgc_api_url, zeta_data,
+                 port_api_upper_limit, time_interval_between_calls_in_seconds)
 
     aca_nodes_data = zeta_data["aca_nodes"]
     aca_nodes_ip = aca_nodes_data['ip']
@@ -273,23 +313,28 @@ def run():
     else:
         print("upload file %s successfully" % aca_data_local_path)
 
+    test_start_time = time.time()
     # Execute remote command, use the transferred file to change the information in aca_test_ovs_util.cpp,recompile using 'make',perform aca_test
     aca_nodes = aca_nodes_ip
     cmd_list2 = [
         f'cd {server_aca_repo_path};sudo ./build/tests/aca_tests --gtest_also_run_disabled_tests --gtest_filter=*{testcases_to_run[0]}']
-    result2 = exec_sshCommand_aca(
-        host=aca_nodes[1], user=aca_nodes_data['username'], password=aca_nodes_data['password'], cmd=cmd_list2, timeout=1500)
+    t1 = threading.Thread(target=exec_sshCommand_aca, args=(
+        aca_nodes[1], aca_nodes_data['username'], aca_nodes_data['password'], cmd_list2, 1500))
 
     cmd_list1 = [
         f'cd {server_aca_repo_path};sudo ./build/tests/aca_tests --gtest_also_run_disabled_tests --gtest_filter=*{testcases_to_run[1]}']
-    result1 = exec_sshCommand_aca(
-        host=aca_nodes[0], user=aca_nodes_data['username'], password=aca_nodes_data['password'], cmd=cmd_list1, timeout=1500)
-    print(f'Status from node [{aca_nodes[0]}]: {result1["status"]}')
-    print(f'Data from node [{aca_nodes[0]}]: {result1["data"]}')
-    print(f'Error from node [{aca_nodes[0]}]: {result1["error"]}')
-    print(f'Status from node [{aca_nodes[1]}]: {result2["status"]}')
-    print(f'Data from node [{aca_nodes[1]}]: {result2["data"]}')
-    print(f'Error from node [{aca_nodes[1]}]: {result2["error"]}')
+
+    t2 = threading.Thread(target=exec_sshCommand_aca, args=(
+        aca_nodes[0], aca_nodes_data['username'], aca_nodes_data['password'], cmd_list1, 1500))
+
+    t1.start()
+    t2.start()
+
+    t1.join()
+    t2.join()
+    test_end_time = time.time()
+    print(
+        f'Time took for the tests of ACA nodes are {test_end_time - test_start_time} seconds.')
 
 
 if __name__ == '__main__':
