@@ -203,7 +203,3 @@
 
 TBD
 
-### Problems
-
-- I checked DISABLED_2_ports_CREATE_test_traffic_PARENT in /test/gtest/aca_test_ovs_l2.cpp. There is a step to construct a neighbor port. Does our test also need to add a neighbor port?
-- In addition to issuing the goal state that created the port, do we also need to issue the goal state of the zeta information about this port?
