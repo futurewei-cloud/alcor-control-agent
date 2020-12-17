@@ -96,7 +96,10 @@ def talk_to_zeta(file_path, zgc_api_url, zeta_data, port_api_upper_limit, time_i
     print(f'ZGC_data: \n{ZGC_data}')
     zgc_response = requests.post(
         zgc_api_url + "/zgcs", data=json.dumps(ZGC_data), headers=headers)
-    print(f'zgc creation response: \n{zgc_response}')
+    print(f'zgc creation response: \n{zgc_response.text}')
+    if zgc_response.status_code >= 300:
+            print('Failed to create zgc, pseudo controller will stop now.')
+            return False
     zgc_id = zgc_response.json()['zgc_id']
 
     # add Nodes
@@ -107,6 +110,9 @@ def talk_to_zeta(file_path, zgc_api_url, zeta_data, port_api_upper_limit, time_i
         node_response_data = requests.post(
             zgc_api_url + "/nodes", data=json.dumps(node_data), headers=headers)
         print(f'Response for adding node: {node_response_data.text}')
+        if node_response_data.status_code >= 300:
+            print('Failed to create nodes, pseudo controller will stop now.')
+            return False
 
     json_content_for_aca = dict()
     json_content_for_aca['vpc_response'] = {}
@@ -121,10 +127,13 @@ def talk_to_zeta(file_path, zgc_api_url, zeta_data, port_api_upper_limit, time_i
     for item in zeta_data["VPC_data"]:
         VPC_data = item
         print(f'VPC_data: \n{VPC_data}')
-        vpc_response_data = requests.post(
-            zgc_api_url + "/vpcs", data=json.dumps(VPC_data), headers=headers).json()
-        print(f'Response for adding VPC: {vpc_response_data}')
-        json_content_for_aca['vpc_response'] = (vpc_response_data)
+        vpc_response = requests.post(
+            zgc_api_url + "/vpcs", data=json.dumps(VPC_data), headers=headers)
+        print(f'Response for adding VPC: {vpc_response.text}')
+        if vpc_response.status_code >= 300:
+            print('Failed to create vpc, pseudo controller will stop now.')
+            return False
+        json_content_for_aca['vpc_response'] = (vpc_response.json())
 
     # second delay
     # TODO: Check if this can be removed.
@@ -161,7 +170,7 @@ def talk_to_zeta(file_path, zgc_api_url, zeta_data, port_api_upper_limit, time_i
         if port_response.status_code >= 300:
             print(
                 f'Call failed for index {start_idx} to {end_idx}, \nstatus code: {port_response.status_code}, \ncontent: {port_response.content}\nExiting')
-            return
+            return False
         one_call_end_time = time.time()
 
         print(
@@ -264,6 +273,7 @@ def run():
 
     testcases_to_run = ['DISABLED_zeta_gateway_path_CHILD',
                         'DISABLED_zeta_gateway_path_PARENT']
+    execute_ping = False
     # second argument should be amount of ports to be generated
     if len(arguments) > 1:
         ports_to_create = int(arguments[1])
@@ -277,6 +287,7 @@ def run():
             testcases_to_run = ['DISABLED_zeta_scale_CHILD',
                                 'DISABLED_zeta_scale_PARENT']
             zeta_data['PORT_data'] = generate_ports(ports_to_create)
+            execute_ping = True
             print(
                 f'After generating ports, we now have {len(zeta_data["PORT_data"])} entries in the PORT_data')
         elif ports_to_create < 2:
@@ -300,6 +311,9 @@ def run():
     json_content_for_aca = talk_to_zeta(file_path, zgc_api_url, zeta_data,
                  port_api_upper_limit, time_interval_between_calls_in_seconds)
 
+    if json_content_for_aca is False:
+        print('Failed to talk to Zeta, pseudo controller will exit now.')
+
     aca_nodes_data = zeta_data["aca_nodes"]
     aca_nodes_ip = aca_nodes_data['ip']
 
@@ -309,6 +323,7 @@ def run():
         print("upload file %s failed" % aca_data_local_path)
     else:
         print("upload file %s successfully" % aca_data_local_path)
+        return
 
     test_start_time = time.time()
     # Execute remote command, use the transferred file to change the information in aca_test_ovs_util.cpp,recompile using 'make',perform aca_test
@@ -336,19 +351,19 @@ def run():
     test_end_time = time.time()
     print(
         f'Time took for the tests of ACA nodes are {test_end_time - test_start_time} seconds.')
-    print('Time for the Ping test')
-    
-
-    parent_ports = [port for port in json_content_for_aca['port_response'] if (port['ip_node'].split('.'))[3] == (zeta_data['aca_nodes']['ip'][0].split('.'))[3]]
-    child_ports = [port for port in json_content_for_aca['port_response'] if (port['ip_node'].split('.'))[3] == (zeta_data['aca_nodes']['ip'][1].split('.'))[3]]
-    ping_result = {}
-    if len(parent_ports) > 0 and len(child_ports) > 0:
-        ping_cmd = [f'ping -I {parent_ports[0]["ips_port"][0]["ip"]} -c1 {child_ports[0]["ips_port"][0]["ip"]}']
-        print(f'Command for ping: {ping_cmd[0]}')
-        ping_result = exec_sshCommand_aca(host=aca_nodes[0], user=aca_nodes_data['username'], password=aca_nodes_data['password'], cmd=ping_cmd, timeout=20)
-    else:
-        print(f'Either parent or child does not have any ports, somethings wrong.')
-    print(f'Ping succeeded: {ping_result["status"][0] == 0}')
+    if execute_ping:
+        print('Time for the Ping test')
+        parent_ports = [port for port in json_content_for_aca['port_response'] if (port['ip_node'].split('.'))[3] == (zeta_data['aca_nodes']['ip'][0].split('.'))[3]]
+        child_ports = [port for port in json_content_for_aca['port_response'] if (port['ip_node'].split('.'))[3] == (zeta_data['aca_nodes']['ip'][1].split('.'))[3]]
+        ping_result = {}
+        if len(parent_ports) > 0 and len(child_ports) > 0:
+            ping_cmd = [f'ping -I {parent_ports[0]["ips_port"][0]["ip"]} -c1 {child_ports[0]["ips_port"][0]["ip"]}']
+            print(f'Command for ping: {ping_cmd[0]}')
+            ping_result = exec_sshCommand_aca(host=aca_nodes[0], user=aca_nodes_data['username'], password=aca_nodes_data['password'], cmd=ping_cmd, timeout=20)
+        else:
+            print(f'Either parent or child does not have any ports, somethings wrong.')
+        print(f'Ping succeeded: {ping_result["status"][0] == 0}')
+    print('This is the end of the pseudo controller, goodbye.')
 
 if __name__ == '__main__':
     run()
