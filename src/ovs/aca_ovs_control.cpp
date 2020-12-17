@@ -33,6 +33,8 @@
 #include <netinet/ip.h>
 #include <arpa/inet.h>
 #include "aca_dhcp_server.h"
+#include "aca_oam_server.h"
+#include "aca_oam_port_manager.h"
 
 using namespace std;
 using namespace ovs_control;
@@ -40,6 +42,7 @@ using namespace ovs_control;
 extern string g_ofctl_command;
 extern string g_ofctl_target;
 extern string g_ofctl_options;
+extern std::atomic_ulong g_total_execute_openflow_time;
 
 namespace aca_ovs_control
 {
@@ -82,7 +85,8 @@ int ACA_OVS_Control::control()
     packet_out(target, options);
   } else {
     cout << "Usage: -c <command> -t <target> -o <options>" << endl;
-    cout << "   commands: monitor, dump-flows, add-flow, mod-flows, del-flows, packet-out..." << endl;
+    cout << "   commands: monitor, dump-flows, add-flow, mod-flows, del-flows, packet-out..."
+         << endl;
     cout << "   target: swtich name, such as br-int, br-tun, ..." << endl;
     cout << "   options: " << endl;
     cout << "      moinor: \"[miss-len] [invalid-ttl] [resume] [watch:format]\"" << endl;
@@ -103,8 +107,27 @@ int ACA_OVS_Control::dump_flows(const char *bridge, const char *opt)
 
 int ACA_OVS_Control::flow_exists(const char *bridge, const char *flow)
 {
-  int rc = -EINVAL;  
-  rc = OVS_Control::get_instance().dump_flows(bridge, flow, false);
+  ACA_LOG_DEBUG("%s", "ACA_OVS_Control::flow_exists ---> Entering\n");
+
+  ACA_LOG_INFO("Executing flow_exists command: %s\n", flow);
+
+  auto openflow_client_start = chrono::steady_clock::now();
+
+  int rc = OVS_Control::get_instance().dump_flows(bridge, flow, false);
+
+  auto openflow_client_end = chrono::steady_clock::now();
+
+  auto openflow_client_time_total_time =
+          cast_to_microseconds(openflow_client_end - openflow_client_start).count();
+
+  g_total_execute_openflow_time += openflow_client_time_total_time;
+
+  ACA_LOG_INFO("Elapsed time for openflow client call took: %ld microseconds or %ld milliseconds. rc: %d\n",
+               openflow_client_time_total_time,
+               us_to_ms(openflow_client_time_total_time), rc);
+
+  ACA_LOG_DEBUG("ACA_OVS_Control::flow_exists <--- Exiting, rc = %d\n", rc);
+
   return rc;
 }
 
@@ -228,8 +251,8 @@ void ACA_OVS_Control::parse_packet(uint32_t in_port, void *packet)
         ACA_LOG_INFO("   Payload (%d bytes):\n", size_payload);
         // print_payload(payload, size_payload);
       }
-    } 
-  } else if (ip->ip_p == IPPROTO_UDP) {  
+    }
+  } else if (ip->ip_p == IPPROTO_UDP) {
     /* define/compute udp header offset */
     const struct sniff_udp *udp =
             (struct sniff_udp *)(base + SIZE_ETHERNET + vlan_len + size_ip);
@@ -263,6 +286,14 @@ void ACA_OVS_Control::parse_packet(uint32_t in_port, void *packet)
         ACA_LOG_INFO("%s", "   Message Type: DHCP\n");
         aca_dhcp_server::ACA_Dhcp_Server::get_instance().dhcps_recv(
                 in_port, const_cast<unsigned char *>(payload));
+      }
+
+      /* oam message procedure */
+      if (aca_oam_port_manager::Aca_Oam_Port_Manager::get_instance().is_oam_server_port(
+                  (uint32_t)udp_dport)) {
+        ACA_LOG_INFO("%s", "   Message Type: OAM\n");
+        aca_oam_server::ACA_Oam_Server::get_instance().oams_recv(
+                (uint32_t)udp_dport, const_cast<unsigned char *>(payload));
       }
     }
   }

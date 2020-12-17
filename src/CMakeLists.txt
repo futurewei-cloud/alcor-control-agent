@@ -16,7 +16,10 @@ set(SOURCES
     ./ovs/ovs_control.cpp
     ./ovs/aca_ovs_control.cpp
     ./dhcp/aca_dhcp_state_handler.cpp
-    ./dhcp/aca_dhcp_server.cpp    
+    ./dhcp/aca_dhcp_server.cpp
+    ./zeta/aca_oam_server.cpp
+    ./zeta/aca_zeta_programming.cpp  
+    ./zeta/aca_oam_port_manager.cpp
 )
 FIND_LIBRARY(RDKAFKA rdkafka /usr/lib/x86_64-linux-gnu NO_DEFAULT_PATH)
 FIND_LIBRARY(CPPKAFKA cppkafka /usr/local/lib NO_DEFAULT_PATH)
@@ -28,7 +31,6 @@ include_directories(${RDKAFKA_INCLUDE_DIR} ${CPPKAFKA_INCLUDE_DIR} ${OPENVSWITCH
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../include)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/proto3)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/grpc)
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../mizar/src/include)
 include_directories(/usr/local/include/openvswitch)
 include_directories(/usr/local/include/openflow)
 

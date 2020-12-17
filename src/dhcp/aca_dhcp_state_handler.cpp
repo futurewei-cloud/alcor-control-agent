@@ -99,7 +99,7 @@ int Aca_Dhcp_State_Handler::update_dhcp_state_workitem(const DHCPState current_D
   auto operation_end = chrono::steady_clock::now();
 
   auto operation_total_time =
-          cast_to_nanoseconds(operation_end - operation_start).count();
+          cast_to_microseconds(operation_end - operation_start).count();
 
   aca_goal_state_handler::Aca_Goal_State_Handler::get_instance().add_goal_state_operation_status(
           gsOperationReply, "NA_ID", DHCP, current_DhcpState.operation_type(),

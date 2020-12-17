@@ -15,6 +15,7 @@
 #include "aca_log.h"
 #include "aca_util.h"
 #include "aca_config.h"
+#include "aca_ovs_control.h"
 #include "aca_vlan_manager.h"
 #include "aca_ovs_l2_programmer.h"
 #include "aca_ovs_l3_programmer.h"
@@ -29,6 +30,7 @@ using namespace std;
 using namespace alcor::schema;
 using namespace aca_comm_manager;
 using namespace aca_net_config;
+using namespace aca_ovs_control;
 using namespace aca_vlan_manager;
 using namespace aca_ovs_l2_programmer;
 using namespace aca_ovs_l3_programmer;
@@ -50,6 +52,10 @@ string vmac_address_1 = "fa:16:3e:d7:f2:6c";
 string vmac_address_2 = "fa:16:3e:d7:f2:6d";
 string vmac_address_3 = "fa:16:3e:d7:f2:6e";
 string vmac_address_4 = "fa:16:3e:d7:f2:6f";
+string node_mac_address_1 = "fa:17:3e:d7:f2:6c";
+string node_mac_address_2 = "fa:17:3e:d7:f2:6d";
+string node_mac_address_3 = "fa:17:3e:d7:f2:6e";
+string node_mac_address_4 = "fa:17:3e:d7:f2:6f";
 string vip_address_1 = "10.10.0.101";
 string vip_address_2 = "10.10.1.102";
 string vip_address_3 = "10.10.0.103";
@@ -195,7 +201,6 @@ void aca_test_create_default_router_goal_state(GoalState *goalState_builder)
 
 void aca_test_1_neighbor_CREATE_DELETE(NeighborType input_neighbor_type)
 {
-  ulong not_care_culminative_time = 0;
   string cmd_string;
   int overall_rc;
 
@@ -238,13 +243,15 @@ void aca_test_1_neighbor_CREATE_DELETE(NeighborType input_neighbor_type)
           GoalState_builder, gsOperationalReply);
   ASSERT_EQ(overall_rc, EXIT_SUCCESS);
 
-  string outport_name = aca_get_outport_name(vxlan_type, "172.17.111.222");
+  // check if the neighbor rules has been created on br-tun
+  string neighbor_opt = "table=20,dl_dst:" + vmac_address_3;
+  overall_rc = ACA_OVS_Control::get_instance().flow_exists(
+          "br-tun", neighbor_opt.c_str());
+  ASSERT_EQ(overall_rc, EXIT_SUCCESS);
 
-  // check if the outport has been created on br-tun
-  ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
-          " list-ports br-tun | grep " + outport_name, not_care_culminative_time, overall_rc);
-  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
-  overall_rc = EXIT_SUCCESS;
+  string arp_opt = "table=51,arp,nw_dst=" + vip_address_3;
+  overall_rc = ACA_OVS_Control::get_instance().flow_exists("br-tun", arp_opt.c_str());
+  ASSERT_EQ(overall_rc, EXIT_SUCCESS);
 
   // delete neighbor info
   new_neighbor_states->set_operation_type(OperationType::DELETE);
@@ -252,11 +259,13 @@ void aca_test_1_neighbor_CREATE_DELETE(NeighborType input_neighbor_type)
           GoalState_builder, gsOperationalReply);
   ASSERT_EQ(overall_rc, EXIT_SUCCESS);
 
-  // check if the outport has been deleted on br-tun
-  ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
-          " list-ports br-tun | grep " + outport_name, not_care_culminative_time, overall_rc);
+  // check if the neighbor rules has been deleted on br-tun
+  overall_rc = ACA_OVS_Control::get_instance().flow_exists(
+          "br-tun", neighbor_opt.c_str());
   EXPECT_NE(overall_rc, EXIT_SUCCESS);
-  overall_rc = EXIT_SUCCESS;
+
+  overall_rc = ACA_OVS_Control::get_instance().flow_exists("br-tun", arp_opt.c_str());
+  EXPECT_NE(overall_rc, EXIT_SUCCESS);
 
   // clean up
 
@@ -328,13 +337,15 @@ void aca_test_1_port_CREATE_plus_neighbor_CREATE(NeighborType input_neighbor_typ
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
 
-  string outport_name = aca_get_outport_name(vxlan_type, "172.17.111.222");
+  // check if the neighbor rules has been created on br-tun
+  string neighbor_opt = "table=20,dl_dst:" + vmac_address_3;
+  overall_rc = ACA_OVS_Control::get_instance().flow_exists(
+          "br-tun", neighbor_opt.c_str());
+  ASSERT_EQ(overall_rc, EXIT_SUCCESS);
 
-  // check if the outport has been created on br-tun
-  ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
-          " list-ports br-tun | grep " + outport_name, not_care_culminative_time, overall_rc);
-  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
-  overall_rc = EXIT_SUCCESS;
+  string arp_opt = "table=51,arp,nw_dst=" + vip_address_3;
+  overall_rc = ACA_OVS_Control::get_instance().flow_exists("br-tun", arp_opt.c_str());
+  ASSERT_EQ(overall_rc, EXIT_SUCCESS);
 
   // clean up
 
@@ -406,9 +417,9 @@ void aca_test_10_neighbor_CREATE(NeighborType input_neighbor_type)
   ulong total_neighbor_create_time = 0;
 
   for (int i = 0; i < NEIGHBORS_TO_CREATE; i++) {
-    ACA_LOG_DEBUG("Neighbor State(%d) took: %u nanoseconds or %u milliseconds\n",
+    ACA_LOG_DEBUG("Neighbor State(%d) took: %u microseconds or %u milliseconds\n",
                   i, gsOperationReply.operation_statuses(i).state_elapse_time(),
-                  gsOperationReply.operation_statuses(i).state_elapse_time() / 1000000);
+                  us_to_ms(gsOperationReply.operation_statuses(i).state_elapse_time()));
 
     total_neighbor_create_time +=
             gsOperationReply.operation_statuses(i).state_elapse_time();
@@ -416,11 +427,114 @@ void aca_test_10_neighbor_CREATE(NeighborType input_neighbor_type)
 
   ulong average_neighbor_create_time = total_neighbor_create_time / NEIGHBORS_TO_CREATE;
 
-  ACA_LOG_INFO("Average NeighborType: %d Create of %d took: %lu nanoseconds or %lu milliseconds\n",
+  ACA_LOG_INFO("Average NeighborType: %d Create of %d took: %lu microseconds or %lu milliseconds\n",
                input_neighbor_type, NEIGHBORS_TO_CREATE, average_neighbor_create_time,
-               average_neighbor_create_time / 1000000);
+               us_to_ms(average_neighbor_create_time));
 
-  ACA_LOG_INFO("[TEST METRICS] Elapsed time for message total operation took: %u nanoseconds or %u milliseconds\n",
+  ACA_LOG_INFO("[TEST METRICS] Elapsed time for message total operation took: %u microseconds or %u milliseconds\n",
                gsOperationReply.message_total_operation_time(),
-               gsOperationReply.message_total_operation_time() / 1000000);
+               gsOperationReply.us_to_ms(message_total_operation_time()));
+}
+
+void aca_test_1_port_CREATE_plus_N_neighbors_CREATE(NeighborType input_neighbor_type,
+                                                    uint neighbors_to_create)
+{
+  string port_name_postfix = "-2222-3333-4444-555555555555";
+  string neighbor_id_postfix = "-baad-f00d-4444-555555555555";
+  string ip_address_prefix = "10.";
+  string remote_ip_address_prefix = "123.";
+  int overall_rc;
+
+  // current algorithm only supports up to 1,000,000 neighbors
+  if (neighbors_to_create > 1000000) {
+    ACA_LOG_DEBUG("Number of Neighbors is too large: %u\n", neighbors_to_create);
+    ASSERT_FALSE(true);
+  }
+
+  aca_test_reset_environment();
+
+  GoalState GoalState_builder;
+  NeighborState *new_neighbor_states;
+
+  if (input_neighbor_type == NeighborType::L3) {
+    aca_test_create_default_router_goal_state(&GoalState_builder);
+  } else {
+    // fill in subnet state structs for L2 path only
+    // because the L3 path above already added it
+    SubnetState *new_subnet_states = GoalState_builder.add_subnet_states();
+    aca_test_create_default_subnet_state(new_subnet_states);
+  }
+
+  PortState *new_port_states = GoalState_builder.add_port_states();
+
+  // fill in port state structs
+  aca_test_create_default_port_state(new_port_states);
+
+  for (uint i = 0; i < neighbors_to_create; i++) {
+    string i_string = std::to_string(i);
+    string neighbor_id = i_string + neighbor_id_postfix;
+    string port_name = i_string + port_name_postfix;
+
+    string ip_2nd_octet = std::to_string(i / 10000);
+    string ip_3rd_octet = std::to_string(i % 10000 / 100);
+    string ip_4th_octet = std::to_string(i % 100);
+
+    string ip_postfix = ip_2nd_octet + "." + ip_3rd_octet + "." + ip_4th_octet;
+    string remote_ip = remote_ip_address_prefix + ip_postfix;
+    string virtual_ip = ip_address_prefix + ip_postfix;
+
+    new_neighbor_states = GoalState_builder.add_neighbor_states();
+    new_neighbor_states->set_operation_type(OperationType::CREATE);
+
+    NeighborConfiguration *NeighborConfiguration_builder =
+            new_neighbor_states->mutable_configuration();
+    NeighborConfiguration_builder->set_revision_number(1);
+
+    NeighborConfiguration_builder->set_vpc_id("1b08a5bc-b718-11ea-b3de-111122223333");
+    NeighborConfiguration_builder->set_id(neighbor_id);
+    NeighborConfiguration_builder->set_name(port_name);
+    NeighborConfiguration_builder->set_mac_address(vmac_address_1);
+    NeighborConfiguration_builder->set_host_ip_address(remote_ip);
+
+    NeighborConfiguration_FixedIp *FixedIp_builder =
+            NeighborConfiguration_builder->add_fixed_ips();
+    FixedIp_builder->set_neighbor_type(input_neighbor_type);
+    FixedIp_builder->set_subnet_id(subnet_id_1);
+    FixedIp_builder->set_ip_address(virtual_ip);
+  }
+
+  bool previous_demo_mode = g_demo_mode;
+  g_demo_mode = true;
+
+  GoalStateOperationReply gsOperationReply;
+  overall_rc = Aca_Comm_Manager::get_instance().update_goal_state(
+          GoalState_builder, gsOperationReply);
+  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
+
+  g_demo_mode = previous_demo_mode;
+
+  // calculate the average latency
+  ulong total_neighbor_create_time = 0;
+
+  // we have neighbors_to_create + 1 port state created
+  for (uint i = 0; i < neighbors_to_create + 1; i++) {
+    ACA_LOG_DEBUG("Number: %d Resource Type: %d with id: %s took: %u microseconds or %u milliseconds\n",
+                  i, gsOperationReply.operation_statuses(i).resource_type(),
+                  gsOperationReply.operation_statuses(i).resource_id().c_str(),
+                  gsOperationReply.operation_statuses(i).state_elapse_time(),
+                  us_to_ms(gsOperationReply.operation_statuses(i).state_elapse_time()));
+
+    total_neighbor_create_time +=
+            gsOperationReply.operation_statuses(i).state_elapse_time();
+  }
+
+  ulong average_neighbor_create_time = total_neighbor_create_time / neighbors_to_create;
+
+  ACA_LOG_INFO("Average port + neighbor states with NeighborType: %d Create of %d took: %lu microseconds or %lu milliseconds\n",
+               input_neighbor_type, neighbors_to_create, average_neighbor_create_time,
+               us_to_ms(average_neighbor_create_time));
+
+  ACA_LOG_INFO("[TEST METRICS] Elapsed time for message total operation took: %u microseconds or %u milliseconds\n",
+               gsOperationReply.message_total_operation_time(),
+               us_to_ms(gsOperationReply.message_total_operation_time()));
 }

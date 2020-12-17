@@ -76,3 +76,4 @@ gs_tests
 aca_tests
 *.pb.h
 *.pb.cc
+*aca_data.json

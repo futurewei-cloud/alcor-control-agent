@@ -10,7 +10,6 @@ FIND_LIBRARY(PULSAR pulsar /usr/lib NO_DEFAULT_PATH)
 FIND_LIBRARY(MESSAGEMANAGER messagemanager ${CMAKE_CURRENT_SOURCE_DIR}/../include NO_DEFAULT_PATH)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../include)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../src/proto3)
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../mizar/src/include)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../src/grpc)
 link_libraries(${PULSAR})
 
@@ -46,6 +45,8 @@ add_executable(
     gtest/aca_test_ovs_l2.cpp
     gtest/aca_test_ovs_l3.cpp
     gtest/aca_test_ovs_util.cpp
+    gtest/aca_test_oam.cpp
+    gtest/aca_test_zeta_programming.cpp
 )
 
 # Link test executable against gtest & gtest_main

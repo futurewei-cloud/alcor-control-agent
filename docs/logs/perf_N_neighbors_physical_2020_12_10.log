@@ -1,0 +1,97 @@
+./build/tests/aca_tests --gtest_filter=*1_port_CREATE_plus_10_l2_neighbor_CREATE* -n [number of L2 neighbors to create]
+
+[***1 port + 1 neighbor***]
+[METRICS] Elapsed time for message total operation took: 42863 microseconds or 42 milliseconds
+Number: 0 Resource Type: 2 with id: 01111111-b718-11ea-b3de-111111111111 took: 18703 microseconds or 18 milliseconds
+Number: 1 Resource Type: 3 with id: 0-baad-f00d-4444-555555555555 took: 10696 microseconds or 10 milliseconds
+Average port + neighbor states with NeighborType: 0 Create of 1 took: 29399 microseconds or 29 milliseconds
+[TEST METRICS] Elapsed time for message total operation took: 42863 microseconds or 42 milliseconds
+
+g_total_execute_system_time = 1669582 microseconds or 1669 milliseconds
+g_total_execute_ovsdb_time = 1616127 microseconds or 1616 milliseconds
+g_total_execute_openflow_time = 46593 microseconds or 46 milliseconds
+g_total_vpcs_table_mutex_time = 0 microseconds or 0 milliseconds
+g_total_update_GS_time = 42863 microseconds or 42 milliseconds
+
+[***1 port + 10 neighbor***]
+[METRICS] Elapsed time for message total operation took: 54474 microseconds or 54 milliseconds
+Number: 0 Resource Type: 2 with id: 01111111-b718-11ea-b3de-111111111111 took: 18841 microseconds or 18 milliseconds
+Number: 1 Resource Type: 3 with id: 1-baad-f00d-4444-555555555555 took: 16044 microseconds or 16 milliseconds
+Number: 2 Resource Type: 3 with id: 0-baad-f00d-4444-555555555555 took: 17269 microseconds or 17 milliseconds
+Number: 3 Resource Type: 3 with id: 2-baad-f00d-4444-555555555555 took: 16984 microseconds or 16 milliseconds
+Number: 4 Resource Type: 3 with id: 3-baad-f00d-4444-555555555555 took: 17205 microseconds or 17 milliseconds
+Number: 5 Resource Type: 3 with id: 4-baad-f00d-4444-555555555555 took: 17173 microseconds or 17 milliseconds
+Number: 6 Resource Type: 3 with id: 5-baad-f00d-4444-555555555555 took: 17475 microseconds or 17 milliseconds
+Number: 7 Resource Type: 3 with id: 6-baad-f00d-4444-555555555555 took: 17876 microseconds or 17 milliseconds
+Number: 8 Resource Type: 3 with id: 7-baad-f00d-4444-555555555555 took: 18085 microseconds or 18 milliseconds
+Number: 9 Resource Type: 3 with id: 9-baad-f00d-4444-555555555555 took: 17955 microseconds or 17 milliseconds
+Number: 10 Resource Type: 3 with id: 8-baad-f00d-4444-555555555555 took: 18345 microseconds or 18 milliseconds
+Average port + neighbor states with NeighborType: 0 Create of 10 took: 19325 microseconds or 19 milliseconds
+[TEST METRICS] Elapsed time for message total operation took: 54474 microseconds or 54 milliseconds
+
+g_total_execute_system_time = 1824132 microseconds or 1824 milliseconds
+g_total_execute_ovsdb_time = 1609007 microseconds or 1609 milliseconds
+g_total_execute_openflow_time = 178157 microseconds or 178 milliseconds
+g_total_vpcs_table_mutex_time = 0 microseconds or 0 milliseconds
+g_total_update_GS_time = 54474 microseconds or 54 milliseconds
+
+[***1 port + 100 neighbor***]
+Number: 91 Resource Type: 3 with id: 90-baad-f00d-4444-555555555555 took: 42057 microseconds or 42 milliseconds
+Number: 92 Resource Type: 3 with id: 91-baad-f00d-4444-555555555555 took: 43772 microseconds or 43 milliseconds
+Number: 93 Resource Type: 3 with id: 93-baad-f00d-4444-555555555555 took: 30666 microseconds or 30 milliseconds
+Number: 94 Resource Type: 3 with id: 94-baad-f00d-4444-555555555555 took: 29816 microseconds or 29 milliseconds
+Number: 95 Resource Type: 3 with id: 92-baad-f00d-4444-555555555555 took: 37323 microseconds or 37 milliseconds
+Number: 96 Resource Type: 3 with id: 96-baad-f00d-4444-555555555555 took: 21952 microseconds or 21 milliseconds
+Number: 97 Resource Type: 3 with id: 95-baad-f00d-4444-555555555555 took: 30628 microseconds or 30 milliseconds
+Number: 98 Resource Type: 3 with id: 99-baad-f00d-4444-555555555555 took: 19801 microseconds or 19 milliseconds
+Number: 99 Resource Type: 3 with id: 98-baad-f00d-4444-555555555555 took: 21117 microseconds or 21 milliseconds
+Number: 100 Resource Type: 3 with id: 97-baad-f00d-4444-555555555555 took: 24923 microseconds or 24 milliseconds
+Average port + neighbor states with NeighborType: 0 Create of 100 took: 40295 microseconds or 40 milliseconds
+[TEST METRICS] Elapsed time for message total operation took: 244189 microseconds or 244 milliseconds
+
+g_total_execute_system_time = 3482327 microseconds or 3482 milliseconds
+g_total_execute_ovsdb_time = 1593966 microseconds or 1593 milliseconds
+g_total_execute_openflow_time = 2034118 microseconds or 2034 milliseconds
+g_total_vpcs_table_mutex_time = 0 microseconds or 0 milliseconds
+g_total_update_GS_time = 244189 microseconds or 244 milliseconds
+
+[***1 port + 1000 neighbor***]
+Number: 991 Resource Type: 3 with id: 987-baad-f00d-4444-555555555555 took: 184892 microseconds or 184 milliseconds
+Number: 992 Resource Type: 3 with id: 989-baad-f00d-4444-555555555555 took: 148205 microseconds or 148 milliseconds
+Number: 993 Resource Type: 3 with id: 994-baad-f00d-4444-555555555555 took: 143575 microseconds or 143 milliseconds
+Number: 994 Resource Type: 3 with id: 985-baad-f00d-4444-555555555555 took: 189367 microseconds or 189 milliseconds
+Number: 995 Resource Type: 3 with id: 996-baad-f00d-4444-555555555555 took: 114374 microseconds or 114 milliseconds
+Number: 996 Resource Type: 3 with id: 995-baad-f00d-4444-555555555555 took: 127072 microseconds or 127 milliseconds
+Number: 997 Resource Type: 3 with id: 993-baad-f00d-4444-555555555555 took: 155519 microseconds or 155 milliseconds
+Number: 998 Resource Type: 3 with id: 998-baad-f00d-4444-555555555555 took: 55364 microseconds or 55 milliseconds
+Number: 999 Resource Type: 3 with id: 997-baad-f00d-4444-555555555555 took: 92841 microseconds or 92 milliseconds
+Number: 1000 Resource Type: 3 with id: 999-baad-f00d-4444-555555555555 took: 45760 microseconds or 45 milliseconds
+Average port + neighbor states with NeighborType: 0 Create of 1000 took: 111029 microseconds or 111 milliseconds
+[TEST METRICS] Elapsed time for message total operation took: 7653970 microseconds or 7653 milliseconds
+
+g_total_execute_system_time = 31192086 microseconds or 31192 milliseconds
+g_total_execute_ovsdb_time = 1602459 microseconds or 1602 milliseconds
+g_total_execute_openflow_time = 43628031 microseconds or 43628 milliseconds
+g_total_vpcs_table_mutex_time = 0 microseconds or 0 milliseconds
+g_total_update_GS_time = 7653970 microseconds or 7653 milliseconds
+
+[***1 port + 10000 neighbor***]
+Number: 9990 Resource Type: 3 with id: 9988-baad-f00d-4444-555555555555 took: 685578 microseconds or 685 milliseconds
+Number: 9991 Resource Type: 3 with id: 9990-baad-f00d-4444-555555555555 took: 592729 microseconds or 592 milliseconds
+Number: 9992 Resource Type: 3 with id: 9991-baad-f00d-4444-555555555555 took: 736748 microseconds or 736 milliseconds
+Number: 9993 Resource Type: 3 with id: 9992-baad-f00d-4444-555555555555 took: 691719 microseconds or 691 milliseconds
+Number: 9994 Resource Type: 3 with id: 9993-baad-f00d-4444-555555555555 took: 782481 microseconds or 782 milliseconds
+Number: 9995 Resource Type: 3 with id: 9995-baad-f00d-4444-555555555555 took: 646321 microseconds or 646 milliseconds
+Number: 9996 Resource Type: 3 with id: 9994-baad-f00d-4444-555555555555 took: 737812 microseconds or 737 milliseconds
+Number: 9997 Resource Type: 3 with id: 9996-baad-f00d-4444-555555555555 took: 634848 microseconds or 634 milliseconds
+Number: 9998 Resource Type: 3 with id: 9997-baad-f00d-4444-555555555555 took: 492905 microseconds or 492 milliseconds
+Number: 9999 Resource Type: 3 with id: 9998-baad-f00d-4444-555555555555 took: 444955 microseconds or 444 milliseconds
+Number: 10000 Resource Type: 3 with id: 9999-baad-f00d-4444-555555555555 took: 340641 microseconds or 340 milliseconds
+Average port + neighbor states with NeighborType: 0 Create of 10000 took: 411513 microseconds or 411 milliseconds
+[TEST METRICS] Elapsed time for message total operation took: 685349398 microseconds or 685349 milliseconds
+
+g_total_execute_system_time = 2508904179 microseconds or 2508904 milliseconds
+g_total_execute_ovsdb_time = 1653045 microseconds or 1653 milliseconds
+g_total_execute_openflow_time = 1993501503 microseconds or 1993501 milliseconds
+g_total_vpcs_table_mutex_time = 0 microseconds or 0 milliseconds
+g_total_update_GS_time = 685349398 microseconds or 685349 milliseconds

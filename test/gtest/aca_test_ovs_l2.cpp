@@ -61,12 +61,15 @@ extern string subnet2_gw_ip;
 extern string subnet1_gw_mac;
 extern string subnet2_gw_mac;
 extern bool g_demo_mode;
+extern uint neighbors_to_create;
 
 extern void aca_test_create_default_port_state(PortState *new_port_states);
 extern void aca_test_create_default_subnet_state(SubnetState *new_subnet_states);
 extern void aca_test_1_neighbor_CREATE_DELETE(NeighborType input_neighbor_type);
 extern void aca_test_1_port_CREATE_plus_neighbor_CREATE(NeighborType input_neighbor_type);
 extern void aca_test_10_neighbor_CREATE(NeighborType input_neighbor_type);
+extern void aca_test_1_port_CREATE_plus_N_neighbors_CREATE(NeighborType input_neighbor_type,
+                                                           uint neighbors_to_create);
 
 // TODO: setup bridge when br-int is up and br-tun is gone
 
@@ -143,12 +146,14 @@ TEST(ovs_l2_test_cases, 2_ports_CREATE_test_traffic_plus_neighbor_internal)
 
   // create two ports (using demo mode) and configure them
   overall_rc = ACA_OVS_L2_Programmer::get_instance().create_port(
-          vpc_id_1, port_name_1, vip_address_1 + prefix_len, 20, not_care_culminative_time);
+          vpc_id_1, port_name_1, vip_address_1 + prefix_len, vmac_address_1, 20,
+          not_care_culminative_time);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
 
   overall_rc = ACA_OVS_L2_Programmer::get_instance().create_port(
-          vpc_id_1, port_name_2, vip_address_2 + prefix_len, 20, not_care_culminative_time);
+          vpc_id_1, port_name_2, vip_address_2 + prefix_len, vmac_address_2, 20,
+          not_care_culminative_time);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
 
@@ -175,30 +180,16 @@ TEST(ovs_l2_test_cases, 2_ports_CREATE_test_traffic_plus_neighbor_internal)
   overall_rc = Aca_Net_Config::get_instance().execute_system_command(cmd_string);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
 
-  string outport_name = aca_get_outport_name(vxlan_type, remote_ip_1);
-
   // insert neighbor info
   overall_rc = ACA_OVS_L2_Programmer::get_instance().create_or_update_l2_neighbor(
-          port_id_4, vpc_id_1, vxlan_type, remote_ip_1, 20, not_care_culminative_time);
-  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
-  overall_rc = EXIT_SUCCESS;
-
-  // check if the outport has been created on br-tun
-  ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
-          " list-ports br-tun | grep " + outport_name, not_care_culminative_time, overall_rc);
+          vip_address_1, vmac_address_1, remote_ip_1, 20, not_care_culminative_time);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
 
   // delete neighbor info
   overall_rc = ACA_OVS_L2_Programmer::get_instance().delete_l2_neighbor(
-          port_id_4, vpc_id_1, outport_name, not_care_culminative_time);
+          vip_address_1, vmac_address_1, 20, not_care_culminative_time);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
-  overall_rc = EXIT_SUCCESS;
-
-  // check if the outport has been deleted on br-tun
-  ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
-          " list-ports br-tun | grep " + outport_name, not_care_culminative_time, overall_rc);
-  EXPECT_NE(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
 
   // delete br-int and br-tun bridges
@@ -476,22 +467,22 @@ TEST(ovs_l2_test_cases, 10_ports_CREATE)
   ulong total_port_create_time = 0;
 
   for (int i = 0; i < PORTS_TO_CREATE; i++) {
-    ACA_LOG_DEBUG("Port State(%d) took: %u nanoseconds or %u milliseconds\n", i,
-                  gsOperationReply.operation_statuses(i).state_elapse_time(),
-                  gsOperationReply.operation_statuses(i).state_elapse_time() / 1000000);
+    ACA_LOG_DEBUG("Port State(%d) took: %u microseconds or %u milliseconds\n",
+                  i, gsOperationReply.operation_statuses(i).state_elapse_time(),
+                  us_to_ms(gsOperationReply.operation_statuses(i).state_elapse_time()));
 
     total_port_create_time += gsOperationReply.operation_statuses(i).state_elapse_time();
   }
 
   ulong average_port_create_time = total_port_create_time / PORTS_TO_CREATE;
 
-  ACA_LOG_INFO("Average Port Create of %d took: %lu nanoseconds or %lu milliseconds\n",
+  ACA_LOG_INFO("Average Port Create of %d took: %lu microseconds or %lu milliseconds\n",
                PORTS_TO_CREATE, average_port_create_time,
-               average_port_create_time / 1000000);
+               us_to_ms(average_port_create_time));
 
-  ACA_LOG_INFO("[TEST METRICS] Elapsed time for message total operation took: %u nanoseconds or %u milliseconds\n",
+  ACA_LOG_INFO("[TEST METRICS] Elapsed time for message total operation took: %u microseconds or %u milliseconds\n",
                gsOperationReply.message_total_operation_time(),
-               gsOperationReply.message_total_operation_time() / 1000000);
+               us_to_ms(gsOperationReply.message_total_operation_time()));
 }
 
 TEST(ovs_l2_test_cases, 1_l2_neighbor_CREATE_DELETE)
@@ -507,6 +498,11 @@ TEST(ovs_l2_test_cases, 1_port_CREATE_plus_l2_neighbor_CREATE)
 TEST(ovs_l2_test_cases, 10_l2_neighbor_CREATE)
 {
   aca_test_10_neighbor_CREATE(NeighborType::L2);
+}
+
+TEST(ovs_l2_test_cases, 1_port_CREATE_plus_10_l2_neighbor_CREATE)
+{
+  aca_test_1_port_CREATE_plus_N_neighbors_CREATE(NeighborType::L2, neighbors_to_create);
 }
 
 TEST(ovs_l2_test_cases, DISABLED_2_ports_CREATE_test_traffic_PARENT)

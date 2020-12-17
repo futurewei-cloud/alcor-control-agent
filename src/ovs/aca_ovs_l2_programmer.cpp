@@ -28,6 +28,8 @@ using namespace aca_vlan_manager;
 // mutex for reading and writing to ovs bridges (br-int and br-tun) setups
 mutex setup_ovs_bridges_mutex;
 
+extern std::atomic_ulong g_total_execute_ovsdb_time;
+extern std::atomic_ulong g_total_execute_openflow_time;
 extern bool g_demo_mode;
 
 namespace aca_ovs_l2_programmer
@@ -123,19 +125,31 @@ int ACA_OVS_L2_Programmer::setup_ovs_bridges_if_need()
     execute_openflow_command("add-flow br-tun \"table=0,priority=1,in_port=\"patch-int\" actions=resubmit(,2)\"",
                              not_care_culminative_time, overall_rc);
 
-    execute_openflow_command("add-flow br-tun \"table=2,priority=1 actions=resubmit(,22)\"",
+    execute_openflow_command("add-flow br-tun \"table=2,priority=1,dl_dst=00:00:00:00:00:00/01:00:00:00:00:00 actions=resubmit(,20)\"",
                              not_care_culminative_time, overall_rc);
 
-    execute_openflow_command("add-flow br-tun \"table=0,priority=25,arp,arp_op=1,in_port=\"patch-int\" actions=resubmit(,51)\"",
+    execute_openflow_command("add-flow br-tun \"table=2,priority=1,dl_dst=01:00:00:00:00:00/01:00:00:00:00:00 actions=resubmit(,22)\"",
+                             not_care_culminative_time, overall_rc);
+
+    execute_openflow_command("add-flow br-tun \"table=20,priority=1 actions=resubmit(,22)\"",
+                             not_care_culminative_time, overall_rc);
+
+    execute_openflow_command("add-flow br-tun \"table=2,priority=25,arp,arp_op=1,in_port=\"patch-int\" actions=resubmit(,51)\"",
                              not_care_culminative_time, overall_rc);
 
     execute_openflow_command("add-flow br-tun \"table=51,priority=1 actions=resubmit(,22)\"",
                              not_care_culminative_time, overall_rc);
 
-    execute_openflow_command("add-flow br-tun \"table=0,priority=25,icmp,icmp_type=8,in_port=\"patch-int\" actions=resubmit(,52)\"",
+    execute_openflow_command("add-flow br-tun \"table=2,priority=25,icmp,icmp_type=8,in_port=\"patch-int\" actions=resubmit(,52)\"",
                              not_care_culminative_time, overall_rc);
 
-    execute_openflow_command("add-flow br-tun \"table=52,priority=1 actions=resubmit(,22)\"",
+    execute_openflow_command("add-flow br-tun \"table=52,priority=1 actions=resubmit(,20)\"",
+                             not_care_culminative_time, overall_rc);
+
+    execute_ovsdb_command("--may-exist add-port br-tun vxlan-generic -- set interface vxlan-generic type=vxlan options:df_default=true options:egress_pkt_mark=0 options:in_key=flow options:out_key=flow options:remote_ip=flow",
+                          not_care_culminative_time, overall_rc);
+
+    execute_openflow_command("add-flow br-tun \"table=0,priority=25,in_port=\"vxlan-generic\" actions=resubmit(,4)\"",
                              not_care_culminative_time, overall_rc);
   } else {
     // case 3: only one of the br-int or br-tun is there,
@@ -155,8 +169,8 @@ int ACA_OVS_L2_Programmer::setup_ovs_bridges_if_need()
 }
 
 int ACA_OVS_L2_Programmer::create_port(const string vpc_id, const string port_name,
-                                       const string virtual_ip, uint tunnel_id,
-                                       ulong &culminative_time)
+                                       const string virtual_ip, const string virtual_mac,
+                                       uint tunnel_id, ulong &culminative_time)
 {
   ACA_LOG_DEBUG("%s", "ACA_OVS_L2_Programmer::create_port ---> Entering\n");
 
@@ -174,6 +188,10 @@ int ACA_OVS_L2_Programmer::create_port(const string vpc_id, const string port_na
     throw std::invalid_argument("virtual_ip is empty");
   }
 
+  if (virtual_mac.empty()) {
+    throw std::invalid_argument("virtual_mac is empty");
+  }
+
   if (tunnel_id == 0) {
     throw std::invalid_argument("tunnel_id is 0");
   }
@@ -186,7 +204,7 @@ int ACA_OVS_L2_Programmer::create_port(const string vpc_id, const string port_na
 
   // use vpc_id to query vlan_manager to lookup an existing vpc_id entry to get its
   // internal vlan id or to create a new vpc_id entry to get a new internal vlan id
-  int internal_vlan_id = ACA_Vlan_Manager::get_instance().get_or_create_vlan_id(vpc_id);
+  int internal_vlan_id = ACA_Vlan_Manager::get_instance().get_or_create_vlan_id(tunnel_id);
 
   ACA_Vlan_Manager::get_instance().create_ovs_port(vpc_id, port_name, tunnel_id, culminative_time);
 
@@ -199,6 +217,12 @@ int ACA_OVS_L2_Programmer::create_port(const string vpc_id, const string port_na
 
     cmd_string = "ip addr add " + virtual_ip + " dev " + port_name;
     int command_rc = aca_net_config::Aca_Net_Config::get_instance().execute_system_command(
+            cmd_string, culminative_time);
+    if (command_rc != EXIT_SUCCESS)
+      overall_rc = command_rc;
+
+    cmd_string = "ip link set dev " + port_name + " address " + virtual_mac;
+    command_rc = aca_net_config::Aca_Net_Config::get_instance().execute_system_command(
             cmd_string, culminative_time);
     if (command_rc != EXIT_SUCCESS)
       overall_rc = command_rc;
@@ -268,18 +292,19 @@ int ACA_OVS_L2_Programmer::delete_port(const string vpc_id, const string port_na
   return overall_rc;
 }
 
-int ACA_OVS_L2_Programmer::create_or_update_l2_neighbor(
-        const string neighbor_id, const string vpc_id, alcor::schema::NetworkType network_type,
-        const string remote_host_ip, uint tunnel_id, ulong &culminative_time)
+int ACA_OVS_L2_Programmer::create_or_update_l2_neighbor(const string virtual_ip,
+                                                        const string virtual_mac,
+                                                        const string remote_host_ip,
+                                                        uint tunnel_id, ulong &culminative_time)
 {
   ACA_LOG_DEBUG("%s", "ACA_OVS_L2_Programmer::create_or_update_l2_neighbor ---> Entering\n");
 
-  if (neighbor_id.empty()) {
-    throw std::invalid_argument("neighbor_id is empty");
+  if (virtual_ip.empty()) {
+    throw std::invalid_argument("virtual_ip is empty");
   }
 
-  if (vpc_id.empty()) {
-    throw std::invalid_argument("vpc_id is empty");
+  if (virtual_mac.empty()) {
+    throw std::invalid_argument("virtual_mac is empty");
   }
 
   if (remote_host_ip.empty()) {
@@ -290,10 +315,8 @@ int ACA_OVS_L2_Programmer::create_or_update_l2_neighbor(
     throw std::invalid_argument("tunnel_id is 0");
   }
 
-  string outport_name = aca_get_outport_name(network_type, remote_host_ip);
-
-  int overall_rc = ACA_Vlan_Manager::get_instance().create_neighbor_outport(
-          neighbor_id, vpc_id, network_type, remote_host_ip, tunnel_id, culminative_time);
+  int overall_rc = ACA_Vlan_Manager::get_instance().create_l2_neighbor(
+          virtual_ip, virtual_mac, remote_host_ip, tunnel_id, culminative_time);
 
   ACA_LOG_DEBUG("ACA_OVS_L2_Programmer::create_or_update_l2_neighbor <--- Exiting, overall_rc = %d\n",
                 overall_rc);
@@ -301,25 +324,25 @@ int ACA_OVS_L2_Programmer::create_or_update_l2_neighbor(
   return overall_rc;
 }
 
-int ACA_OVS_L2_Programmer::delete_l2_neighbor(const string neighbor_id, const string vpc_id,
-                                              const string outport_name, ulong &culminative_time)
+int ACA_OVS_L2_Programmer::delete_l2_neighbor(const string virtual_ip, const string virtual_mac,
+                                              uint tunnel_id, ulong &culminative_time)
 {
   ACA_LOG_DEBUG("%s", "ACA_OVS_L2_Programmer::delete_l2_neighbor ---> Entering\n");
 
-  if (neighbor_id.empty()) {
-    throw std::invalid_argument("neighbor_id is empty");
+  if (virtual_ip.empty()) {
+    throw std::invalid_argument("virtual_ip is empty");
   }
 
-  if (vpc_id.empty()) {
-    throw std::invalid_argument("vpc_id is empty");
+  if (virtual_mac.empty()) {
+    throw std::invalid_argument("virtual_mac is empty");
   }
 
-  if (outport_name.empty()) {
-    throw std::invalid_argument("outport_name is empty");
+  if (tunnel_id == 0) {
+    throw std::invalid_argument("tunnel_id is 0");
   }
 
-  int overall_rc = ACA_Vlan_Manager::get_instance().delete_neighbor_outport(
-          neighbor_id, vpc_id, outport_name, culminative_time);
+  int overall_rc = ACA_Vlan_Manager::get_instance().delete_l2_neighbor(
+          virtual_ip, virtual_mac, tunnel_id, culminative_time);
 
   ACA_LOG_DEBUG("ACA_OVS_L2_Programmer::delete_l2_neighbor <--- Exiting, overall_rc = %d\n",
                 overall_rc);
@@ -344,12 +367,14 @@ void ACA_OVS_L2_Programmer::execute_ovsdb_command(const std::string cmd_string,
   auto ovsdb_client_end = chrono::steady_clock::now();
 
   auto ovsdb_client_time_total_time =
-          cast_to_nanoseconds(ovsdb_client_end - ovsdb_client_start).count();
+          cast_to_microseconds(ovsdb_client_end - ovsdb_client_start).count();
 
   culminative_time += ovsdb_client_time_total_time;
 
-  ACA_LOG_INFO("Elapsed time for ovsdb client call took: %ld nanoseconds or %ld milliseconds. rc: %d\n",
-               ovsdb_client_time_total_time, ovsdb_client_time_total_time / 1000000, rc);
+  g_total_execute_ovsdb_time += ovsdb_client_time_total_time;
+
+  ACA_LOG_INFO("Elapsed time for ovsdb client call took: %ld microseconds or %ld milliseconds. rc: %d\n",
+               ovsdb_client_time_total_time, us_to_ms(ovsdb_client_time_total_time), rc);
 
   ACA_LOG_DEBUG("ACA_OVS_L2_Programmer::execute_ovsdb_command <--- Exiting, rc = %d\n", rc);
 }
@@ -371,13 +396,15 @@ void ACA_OVS_L2_Programmer::execute_openflow_command(const std::string cmd_strin
   auto openflow_client_end = chrono::steady_clock::now();
 
   auto openflow_client_time_total_time =
-          cast_to_nanoseconds(openflow_client_end - openflow_client_start).count();
+          cast_to_microseconds(openflow_client_end - openflow_client_start).count();
 
   culminative_time += openflow_client_time_total_time;
 
-  ACA_LOG_INFO("Elapsed time for openflow client call took: %ld nanoseconds or %ld milliseconds. rc: %d\n",
+  g_total_execute_openflow_time += openflow_client_time_total_time;
+
+  ACA_LOG_INFO("Elapsed time for openflow client call took: %ld microseconds or %ld milliseconds. rc: %d\n",
                openflow_client_time_total_time,
-               openflow_client_time_total_time / 1000000, rc);
+               us_to_ms(openflow_client_time_total_time), rc);
 
   ACA_LOG_DEBUG("ACA_OVS_L2_Programmer::execute_openflow_command <--- Exiting, rc = %d\n", rc);
 }

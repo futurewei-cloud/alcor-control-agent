@@ -19,9 +19,13 @@
 #include "aca_ovs_l2_programmer.h"
 #include <errno.h>
 #include <algorithm>
+#include <shared_mutex>
+#include <arpa/inet.h>
 
 using namespace aca_ovs_control;
 using namespace aca_ovs_l2_programmer;
+
+extern std::atomic_ulong g_total_vpcs_table_mutex_time;
 
 namespace aca_vlan_manager
 {
@@ -37,81 +41,89 @@ void ACA_Vlan_Manager::clear_all_data()
 {
   ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::clear_all_data ---> Entering\n");
 
-  // -----critical section starts-----
-  _vpcs_table_mutex.lock();
-  // All the elements in the unordered_map container are dropped:
+  // All the elements in the container are deleted:
   // their destructors are called, and they are removed from the container,
-  // leaving _vpcs_table with a size of 0.
+  // leaving an empty _vpcs_table.
   _vpcs_table.clear();
-  _vpcs_table_mutex.unlock();
-  // -----critical section ends-----
 
   ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::clear_all_data <--- Exiting\n");
 }
 
-// unsafe function, needs to be called inside vpc_table_mutex lock
 // this function assumes there is no existing entry for vpc_id
-void ACA_Vlan_Manager::create_entry_unsafe(string vpc_id)
+void ACA_Vlan_Manager::create_entry(uint tunnel_id)
 {
-  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::create_entry_unsafe ---> Entering\n");
+  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::create_entry ---> Entering\n");
 
-  vpc_table_entry new_table_entry;
-  new_table_entry.vlan_id = current_available_vlan_id.load();
-  current_available_vlan_id++;
+  vpc_table_entry *new_vpc_table_entry = new vpc_table_entry;
+  // fetch the value first to used for new_vpc_table_entry->vlan_id
+  // then add 1 after, doing both atomically
+  // std::memory_order_relaxed option won't help much for x86 but other
+  // CPU architecture can take advantage of it
+  new_vpc_table_entry->vlan_id =
+          current_available_vlan_id.fetch_add(1, std::memory_order_relaxed);
 
-  _vpcs_table.emplace(vpc_id, new_table_entry);
+  _vpcs_table.insert(tunnel_id, new_vpc_table_entry);
 
-  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::create_entry_unsafe <--- Exiting\n");
+  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::create_entry <--- Exiting\n");
 }
 
-uint ACA_Vlan_Manager::get_or_create_vlan_id(string vpc_id)
+uint ACA_Vlan_Manager::get_or_create_vlan_id(uint tunnel_id)
 {
   ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::get_or_create_vlan_id ---> Entering\n");
 
-  // -----critical section starts-----
-  _vpcs_table_mutex.lock();
-  if (_vpcs_table.find(vpc_id) == _vpcs_table.end()) {
-    create_entry_unsafe(vpc_id);
+  vpc_table_entry *new_vpc_table_entry;
+
+  if (!_vpcs_table.find(tunnel_id, new_vpc_table_entry)) {
+    create_entry(tunnel_id);
+
+    _vpcs_table.find(tunnel_id, new_vpc_table_entry);
   }
-  uint acquired_vlan_id = _vpcs_table[vpc_id].vlan_id;
-  _vpcs_table_mutex.unlock();
-  // -----critical section ends-----
+  uint acquired_vlan_id = new_vpc_table_entry->vlan_id;
 
   ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::get_or_create_vlan_id <--- Exiting\n");
 
   return acquired_vlan_id;
 }
 
-int ACA_Vlan_Manager::create_ovs_port(string vpc_id, string ovs_port,
+int ACA_Vlan_Manager::create_ovs_port(string /*vpc_id*/, string ovs_port,
                                       uint tunnel_id, ulong &culminative_time)
 {
-  int overall_rc = EXIT_SUCCESS;
-
   ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::create_ovs_port ---> Entering\n");
 
-  // use vpc_id to query vlan_manager to lookup an existing vpc_id entry to get its
-  // internal vlan id
-  int internal_vlan_id = this->get_or_create_vlan_id(vpc_id);
+  vpc_table_entry *current_vpc_table_entry;
+  int overall_rc = EXIT_FAILURE;
 
-  string cmd_string =
-          "add-flow br-tun \"table=4, priority=1,tun_id=" + to_string(tunnel_id) +
-          " actions=mod_vlan_vid:" + to_string(internal_vlan_id) + ",output:\"patch-int\"\"";
+  bool vpc_table_entry_found = _vpcs_table.find(tunnel_id, current_vpc_table_entry);
 
-  // -----critical section starts-----
-  _vpcs_table_mutex.lock();
-  if (_vpcs_table.find(vpc_id) == _vpcs_table.end()) {
-    create_entry_unsafe(vpc_id);
+  if (!vpc_table_entry_found) {
+    create_entry(tunnel_id);
+
+    // vpc_table_entry_found used here just in case if
+    // vpc_table_entry is deleted by another thread between
+    // create_entry(tunnel_id) above and the _vpcs_table.find below
+    vpc_table_entry_found = _vpcs_table.find(tunnel_id, current_vpc_table_entry);
   }
-  // first port in the VPC will add the below rule:
-  // table 4 = incoming vxlan, allow incoming vxlan traffic matching tunnel_id
-  // to stamp with internal vlan and deliver to br-int
-  if (_vpcs_table[vpc_id].ovs_ports.empty()) {
-    ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
-            cmd_string, culminative_time, overall_rc);
+
+  if (vpc_table_entry_found) {
+    // first port in the VPC will add the below rule:
+    // table 4 = incoming vxlan, allow incoming vxlan traffic matching tunnel_id
+    // to stamp with internal vlan and deliver to br-int
+    if (current_vpc_table_entry->ovs_ports.empty()) {
+      int internal_vlan_id = current_vpc_table_entry->vlan_id;
+
+      string cmd_string =
+              "add-flow br-tun \"table=4, priority=1,tun_id=" + to_string(tunnel_id) +
+              " actions=mod_vlan_vid:" + to_string(internal_vlan_id) + ",output:\"patch-int\"\"";
+
+      ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
+              cmd_string, culminative_time, overall_rc);
+    }
+    //-----Start exclusive lock to enable single write-----
+    std::unique_lock<std::shared_timed_mutex> lock(current_vpc_table_entry->ovs_ports_mutex);
+    current_vpc_table_entry->ovs_ports.push_back(ovs_port);
+    lock.unlock();
+    //-----End exclusive lock to enable single write-----
   }
-  _vpcs_table[vpc_id].ovs_ports.push_back(ovs_port);
-  _vpcs_table_mutex.unlock();
-  // -----critical section ends-----
 
   ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::create_ovs_port <--- Exiting\n");
 
@@ -119,55 +131,126 @@ int ACA_Vlan_Manager::create_ovs_port(string vpc_id, string ovs_port,
 }
 
 // called when a port associated with a vpc on this host is deleted
-int ACA_Vlan_Manager::delete_ovs_port(string vpc_id, string ovs_port,
+int ACA_Vlan_Manager::delete_ovs_port(string /*vpc_id*/, string ovs_port,
                                       uint tunnel_id, ulong &culminative_time)
 {
-  int overall_rc = EXIT_SUCCESS;
-
   ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::delete_ovs_port ---> Entering\n");
 
-  // use vpc_id to query vlan_manager to lookup an existing vpc_id entry to get its
-  // internal vlan id
-  int internal_vlan_id = ACA_Vlan_Manager::get_instance().get_or_create_vlan_id(vpc_id);
+  vpc_table_entry *current_vpc_table_entry;
+  int overall_rc = EXIT_SUCCESS;
 
-  // -----critical section starts-----
-  _vpcs_table_mutex.lock();
-  if (_vpcs_table.find(vpc_id) == _vpcs_table.end()) {
-    ACA_LOG_ERROR("vpc_id %s not found in vpc_table\n", vpc_id.c_str());
+  if (!_vpcs_table.find(tunnel_id, current_vpc_table_entry)) {
+    ACA_LOG_ERROR("tunnel_id %u not found in vpc_table\n", tunnel_id);
     overall_rc = ENOENT;
   } else {
-    _vpcs_table[vpc_id].ovs_ports.remove(ovs_port);
+    //-----Start exclusive lock to enable single writer-----
+    std::unique_lock<std::shared_timed_mutex> lock(current_vpc_table_entry->ovs_ports_mutex);
+    current_vpc_table_entry->ovs_ports.remove(ovs_port);
+
     // clean up the vpc_table entry if there is no port assoicated
-    if (_vpcs_table[vpc_id].ovs_ports.empty()) {
-      if (_vpcs_table.erase(vpc_id) == 1) {
-        ACA_LOG_INFO("Successfuly cleaned up entry for vpc_id %s\n", vpc_id.c_str());
+    if (current_vpc_table_entry->ovs_ports.empty()) {
+      _vpcs_table.erase(tunnel_id);
 
-        // also delete the rule assoicated with the VPC:
-        // table 4 = incoming vxlan, allow incoming vxlan traffic matching tunnel_id
-        // to stamp with internal vlan and deliver to br-int
-        string cmd_string =
-                "del-flows br-tun \"table=4, priority=1,tun_id=" + to_string(tunnel_id) +
-                " actions=mod_vlan_vid:" + to_string(internal_vlan_id) + "\" --strict";
+      int internal_vlan_id = current_vpc_table_entry->vlan_id;
 
-        ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
-                cmd_string, culminative_time, overall_rc);
-      } else {
-        ACA_LOG_ERROR("Failed to clean up entry for vpc_id %s\n", vpc_id.c_str());
-        overall_rc = EXIT_FAILURE;
-      }
+      // also delete the rule assoicated with the VPC:
+      // table 4 = incoming vxlan, allow incoming vxlan traffic matching tunnel_id
+      // to stamp with internal vlan and deliver to br-int
+      string cmd_string =
+              "del-flows br-tun \"table=4, priority=1,tun_id=" + to_string(tunnel_id) +
+              " actions=mod_vlan_vid:" + to_string(internal_vlan_id) + "\" --strict";
+
+      ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
+              cmd_string, culminative_time, overall_rc);
     }
+    lock.unlock();
+    //-----End exclusive lock to enable single writer-----
   }
-  _vpcs_table_mutex.unlock();
-  // -----critical section ends-----
 
   ACA_LOG_DEBUG("ACA_Vlan_Manager::delete_ovs_port <--- Exiting, overall_rc = %d\n", overall_rc);
 
   return overall_rc;
 }
 
-int ACA_Vlan_Manager::create_neighbor_outport(string neighbor_id, string vpc_id,
-                                              alcor::schema::NetworkType network_type,
-                                              string remote_host_ip, uint tunnel_id,
+int ACA_Vlan_Manager::create_l2_neighbor(string virtual_ip, string virtual_mac,
+                                         string remote_host_ip, uint tunnel_id,
+                                         ulong &culminative_time)
+{
+  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::create_l2_neighbor ---> Entering\n");
+
+  char hex_ip_buffer[HEX_IP_BUFFER_SIZE];
+  int overall_rc = EXIT_SUCCESS;
+
+  int internal_vlan_id = get_or_create_vlan_id(tunnel_id);
+
+  // match internal vlan based on VPC and destination neighbor mac,
+  // strip the internal vlan, encap with tunnel id,
+  // output to the neighbor host through vxlan-generic ovs port
+  string cmd_string = "add-flow br-tun table=20,priority=50,dl_vlan=" +
+                      to_string(internal_vlan_id) + ",dl_dst:" + virtual_mac +
+                      ",\"actions=strip_vlan,load:" + to_string(tunnel_id) +
+                      "->NXM_NX_TUN_ID[],set_field:" + remote_host_ip +
+                      "->tun_dst,output:vxlan-generic\"";
+
+  ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
+          cmd_string, culminative_time, overall_rc);
+
+  // add the static arp responder for this l2 neighbor
+  string current_virtual_mac = virtual_mac;
+  current_virtual_mac.erase(
+          remove(current_virtual_mac.begin(), current_virtual_mac.end(), ':'),
+          current_virtual_mac.end());
+
+  int addr = inet_network(virtual_ip.c_str());
+  snprintf(hex_ip_buffer, HEX_IP_BUFFER_SIZE, "0x%08x", addr);
+
+  cmd_string = "add-flow br-tun \"table=51,priority=50,arp,dl_vlan=" +
+               to_string(internal_vlan_id) + ",nw_dst=" + virtual_ip +
+               " actions=move:NXM_OF_ETH_SRC[]->NXM_OF_ETH_DST[],mod_dl_src:" + virtual_mac +
+               ",load:0x2->NXM_OF_ARP_OP[],move:NXM_NX_ARP_SHA[]->NXM_NX_ARP_THA[],move:NXM_OF_ARP_SPA[]->NXM_OF_ARP_TPA[],load:0x" +
+               current_virtual_mac + "->NXM_NX_ARP_SHA[],load:" + string(hex_ip_buffer) +
+               "->NXM_OF_ARP_SPA[],in_port\"";
+
+  ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
+          cmd_string, culminative_time, overall_rc);
+
+  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::create_l2_neighbor <--- Exiting\n");
+
+  return overall_rc;
+}
+
+// called when a L2 neighbor is deleted
+int ACA_Vlan_Manager::delete_l2_neighbor(string virtual_ip, string virtual_mac,
+                                         uint tunnel_id, ulong &culminative_time)
+{
+  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::delete_l2_neighbor ---> Entering\n");
+
+  int overall_rc = EXIT_SUCCESS;
+
+  int internal_vlan_id = get_or_create_vlan_id(tunnel_id);
+
+  // delete the rule l2 neighbor rule
+  string cmd_string = "del-flows br-tun \"table=20,priority=50,dl_vlan=" +
+                      to_string(internal_vlan_id) + ",dl_dst:" + virtual_mac + "\" --strict";
+
+  ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
+          cmd_string, culminative_time, overall_rc);
+
+  // delete the static arp responder for this l2 neighbor
+  cmd_string = "del-flows br-tun \"table=51,arp,dl_vlan=" + to_string(internal_vlan_id) +
+               ",nw_dst=" + virtual_ip + "\"";
+
+  ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
+          cmd_string, culminative_time, overall_rc);
+
+  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::delete_l2_neighbor <--- Exiting\n");
+
+  return overall_rc;
+}
+
+// create a neighbor port without specifying vpc_id and neighbor ID
+int ACA_Vlan_Manager::create_neighbor_outport(alcor::schema::NetworkType network_type,
+                                              string remote_host_ip, uint /*tunnel_id*/,
                                               ulong &culminative_time)
 {
   int overall_rc = EXIT_SUCCESS;
@@ -176,185 +259,101 @@ int ACA_Vlan_Manager::create_neighbor_outport(string neighbor_id, string vpc_id,
 
   string outport_name = aca_get_outport_name(network_type, remote_host_ip);
 
-  // use vpc_id to query vlan_manager to lookup an existing vpc_id entry to get its
-  // internal vlan id or to create a new vpc_id entry to get a new internal vlan id
-  int internal_vlan_id = this->get_or_create_vlan_id(vpc_id);
+  // since this is a new outport, configure OVS and openflow rule
+  string cmd_string =
+          "--may-exist add-port br-tun " + outport_name + " -- set interface " +
+          outport_name + " type=" + aca_get_network_type_string(network_type) +
+          " options:df_default=true options:egress_pkt_mark=0 options:in_key=flow options:out_key=flow options:remote_ip=" +
+          remote_host_ip;
 
-  // -----critical section starts-----
-  _vpcs_table_mutex.lock();
+  ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
+          cmd_string, culminative_time, overall_rc);
 
-  // if the vpc entry is not there, create it first
-  if (_vpcs_table.find(vpc_id) == _vpcs_table.end()) {
-    create_entry_unsafe(vpc_id);
-  }
+  // incoming from neighbor through vxlan port (based on remote IP)
+  cmd_string = "add-flow br-tun \"table=0,priority=25,in_port=\"" +
+               outport_name + "\" actions=resubmit(,4)\"";
 
-  auto current_outports_neighbors_table = _vpcs_table[vpc_id].outports_neighbors_table;
-
-  if (current_outports_neighbors_table.find(outport_name) ==
-      current_outports_neighbors_table.end()) {
-    // outport is not there yet, need to create a new entry
-    std::list<string> neighbors(1, neighbor_id);
-    _vpcs_table[vpc_id].outports_neighbors_table.emplace(outport_name, neighbors);
-
-    // since this is a new outport, configure OVS and openflow rule
-    string cmd_string =
-            "--may-exist add-port br-tun " + outport_name + " -- set interface " +
-            outport_name + " type=" + aca_get_network_type_string(network_type) +
-            " options:df_default=true options:egress_pkt_mark=0 options:in_key=flow options:out_key=flow options:remote_ip=" +
-            remote_host_ip;
-
-    ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
-            cmd_string, culminative_time, overall_rc);
-
-    // incoming from neighbor through vxlan port (based on remote IP)
-    cmd_string = "add-flow br-tun \"table=0,priority=25,in_port=\"" +
-                 outport_name + "\" actions=resubmit(,4)\"";
-
-    ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
-            cmd_string, culminative_time, overall_rc);
-
-    if (overall_rc == EXIT_SUCCESS) {
-      string full_outport_list;
-      this->get_outports_unsafe(vpc_id, full_outport_list);
-
-      // match internal vlan based on VPC, output for all outports based on the same
-      // tunnel ID (multicast traffic)
-      cmd_string = "add-flow br-tun \"table=22,priority=1,dl_vlan=" + to_string(internal_vlan_id) +
-                   " actions=strip_vlan,load:" + to_string(tunnel_id) +
-                   "->NXM_NX_TUN_ID[]," + full_outport_list + "\"";
-
-      ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
-              cmd_string, culminative_time, overall_rc);
-    }
-  } else {
-    // else outport is already there, simply insert the neighbor id into outports_neighbors_table
-    _vpcs_table[vpc_id].outports_neighbors_table[outport_name].push_back(neighbor_id);
-  }
-
-  _vpcs_table_mutex.unlock();
-  // -----critical section ends-----
+  ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
+          cmd_string, culminative_time, overall_rc);
 
   ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::create_neighbor_outport <--- Exiting\n");
 
   return overall_rc;
 }
 
-// called when a L2 neighbor info is deleted
-int ACA_Vlan_Manager::delete_neighbor_outport(string neighbor_id, string vpc_id,
-                                              string outport_name, ulong &culminative_time)
+void ACA_Vlan_Manager::set_aux_gateway(uint tunnel_id, const string auxGateway_id)
 {
-  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::delete_neighbor_outport ---> Entering\n");
+  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::set_aux_gateway ---> Entering\n");
 
-  int overall_rc = EXIT_SUCCESS;
-  string cmd_string;
+  vpc_table_entry *new_vpc_table_entry;
 
-  int internal_vlan_id = this->get_or_create_vlan_id(vpc_id);
+  if (!_vpcs_table.find(tunnel_id, new_vpc_table_entry)) {
+    create_entry(tunnel_id);
 
-  // -----critical section starts-----
-  _vpcs_table_mutex.lock();
-  if (_vpcs_table.find(vpc_id) == _vpcs_table.end()) {
-    ACA_LOG_ERROR("vpc_id %s not found in vpc_table\n", vpc_id.c_str());
-    overall_rc = ENOENT;
-  } else {
-    auto current_outports_neighbors_table = _vpcs_table[vpc_id].outports_neighbors_table;
-
-    if (current_outports_neighbors_table.find(outport_name) !=
-        current_outports_neighbors_table.end()) {
-      current_outports_neighbors_table[outport_name].remove(neighbor_id);
-
-      // if the particular outport has no more neighbor assoicated with it
-      // clean up the ovs port and openflow rules
-      if (current_outports_neighbors_table[outport_name].empty()) {
-        // remove the rule that match internal vlan based on VPC, output for all outports
-        // based on the same tunnel ID (multicast traffic)
-        cmd_string = "del-flows br-tun \"table=22,priority=1,dl_vlan=" +
-                     to_string(internal_vlan_id) + "\" --strict";
-
-        ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
-                cmd_string, culminative_time, overall_rc);
-
-        // delete the outports_neighbors_table[outport_name] entry
-        if (_vpcs_table[vpc_id].outports_neighbors_table.erase(outport_name) != 1) {
-          ACA_LOG_ERROR("Failed to clean up entry for outport_name: %s\n",
-                        outport_name.c_str());
-          overall_rc = EXIT_FAILURE;
-        }
-      }
-
-      // see if there is still *any* other vpc still using this outport
-      bool outports_found = false;
-      for (auto it : _vpcs_table) {
-        auto current_outports_neighbors_table = it.second.outports_neighbors_table;
-        if (current_outports_neighbors_table.find(outport_name) !=
-            current_outports_neighbors_table.end()) {
-          ACA_LOG_ERROR("outports_found! outport_name: %s\n", outport_name.c_str());
-          outports_found = true;
-          break;
-        } else {
-          continue;
-        }
-      }
-
-      if (!outports_found) {
-        // there is no one else using the outport for *all* vpcs,
-        // go head to clean up the openflow rule then outport
-
-        // remove the rule for incoming from neighbor through vxlan port
-        cmd_string = "del-flows br-tun \"table=0,priority=1,in_port=\"" +
-                     outport_name + "\"\" --strict";
-
-        ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
-                cmd_string, culminative_time, overall_rc);
-
-        cmd_string = "del-port br-tun " + outport_name;
-
-        ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
-                cmd_string, culminative_time, overall_rc);
-      }
-
-    } else {
-      ACA_LOG_ERROR("outport_name %s not found in outports_neighbors_table\n",
-                    outport_name.c_str());
-      overall_rc = ENOENT;
-    }
+    _vpcs_table.find(tunnel_id, new_vpc_table_entry);
   }
-  _vpcs_table_mutex.unlock();
-  // -----critical section ends-----
+  new_vpc_table_entry->auxGateway_id = auxGateway_id;
 
-  ACA_LOG_DEBUG("ACA_Vlan_Manager::delete_neighbor_outport <--- Exiting, overall_rc = %d\n",
-                overall_rc);
-
-  return overall_rc;
+  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::set_aux_gateway <--- Exiting\n");
 }
 
-// unsafe function, needs to be called under vpc_table_mutex lock
-int ACA_Vlan_Manager::get_outports_unsafe(string vpc_id, string &outports)
+string ACA_Vlan_Manager::get_aux_gateway_id(uint tunnel_id)
 {
-  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::get_outports ---> Entering\n");
+  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::get_aux_gateway_id ---> Entering\n");
 
-  int overall_rc;
-  static string OUTPUT = "output:\"";
+  vpc_table_entry *current_vpc_table_entry;
+  string auxGateway_id;
 
-  if (_vpcs_table.find(vpc_id) == _vpcs_table.end()) {
-    ACA_LOG_ERROR("vpc_id %s not found in vpc_table\n", vpc_id.c_str());
-    overall_rc = ENOENT;
+  if (!_vpcs_table.find(tunnel_id, current_vpc_table_entry)) {
+    ACA_LOG_ERROR("tunnel_id %u not found in vpc_table\n", tunnel_id);
   } else {
-    outports.clear();
-    auto current_outports_neighbors_table = _vpcs_table[vpc_id].outports_neighbors_table;
-
-    for (auto it : current_outports_neighbors_table) {
-      if (outports.empty()) {
-        outports = OUTPUT + it.first + "\"";
-      } else {
-        outports += ',' + OUTPUT + it.first + "\"";
-      }
-    }
-    overall_rc = EXIT_SUCCESS;
+    auxGateway_id = current_vpc_table_entry->auxGateway_id;
   }
 
-  ACA_LOG_DEBUG("ACA_Vlan_Manager::get_outports <--- Exiting, overall_rc = %d\n", overall_rc);
+  ACA_LOG_DEBUG("ACA_Vlan_Manager::get_aux_gateway_id <--- Exiting, auxGateway_id =%s\n",
+                auxGateway_id.c_str());
 
-  return overall_rc;
+  return auxGateway_id;
+}
+
+bool ACA_Vlan_Manager::is_exist_aux_gateway(string auxGateway_id)
+{
+  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::get_aux_gateway_id ---> Entering\n");
+  bool auxGateway_id_found = false;
+
+  for (size_t i = 0; i < _vpcs_table.hashSize; i++) {
+    auto hash_node = (_vpcs_table.hashTable[i]).head;
+    if (hash_node == nullptr) {
+      // no entry for this hashtable bucket, go look at the next bucket
+      continue;
+    } else {
+      // found entry in this hashtable bucket, need to look into the list of hash_nodes
+      //-----Start share lock to enable mutiple concurrent reads-----
+      std::shared_lock<std::shared_timed_mutex> hash_bucket_lock(
+              (_vpcs_table.hashTable[i]).mutex_);
+
+      while (hash_node != nullptr) {
+        if (hash_node->getValue()->auxGateway_id == auxGateway_id) {
+          auxGateway_id_found = true;
+          break;
+        }
+
+        if (auxGateway_id_found) {
+          break; // break out of for loop on _vpcs_table
+        } else {
+          // aux_Gateway_id not found yet, look at the next hash_node
+          hash_node = hash_node->next;
+        }
+      }
+
+      hash_bucket_lock.unlock();
+      //-----End share lock to enable mutiple concurrent reads-----
+    }
+  }
+
+  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::get_aux_gateway_id ---> Entering\n");
+
+  return auxGateway_id_found;
 }
 
 } // namespace aca_vlan_manager
