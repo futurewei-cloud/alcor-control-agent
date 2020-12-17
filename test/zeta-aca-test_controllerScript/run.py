@@ -339,8 +339,8 @@ def run():
     print('Time for the Ping test')
     
 
-    parent_ports = [port for port in json_content_for_aca['port_response'] if port['ip_node'].split('.')[3] == zeta_data['aca_nodes'][0].split()[3]]
-    child_ports = [port for port in json_content_for_aca['port_response'] if port['ip_node'].split('.')[3] == zeta_data['aca_nodes'][1].split()[3]]
+    parent_ports = [port for port in json_content_for_aca['port_response'] if port['ip_node'].split('.')[3] == zeta_data['aca_nodes']['ip'][0].split()[3]]
+    child_ports = [port for port in json_content_for_aca['port_response'] if port['ip_node'].split('.')[3] == zeta_data['aca_nodes']['ip'][1].split()[3]]
     print(f'Parent ports: {parent_ports}')
     print(f'Child ports: {child_ports}')
 
