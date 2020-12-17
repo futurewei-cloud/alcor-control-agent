@@ -313,36 +313,25 @@ def run():
     test_start_time = time.time()
     # Execute remote command, use the transferred file to change the information in aca_test_ovs_util.cpp,recompile using 'make',perform aca_test
     aca_nodes = aca_nodes_ip
-    cmd_list2 = [
+    cmd_child = [
         f'cd {server_aca_repo_path};sudo ./build/tests/aca_tests --gtest_also_run_disabled_tests --gtest_filter=*{testcases_to_run[0]}']
-    # t1 = threading.Thread(target=exec_sshCommand_aca, args=(
-    #     aca_nodes[1], aca_nodes_data['username'], aca_nodes_data['password'], cmd_list2, 1500))
 
-    cmd_list1 = [
+    cmd_parent = [
         f'cd {server_aca_repo_path};sudo ./build/tests/aca_tests --gtest_also_run_disabled_tests --gtest_filter=*{testcases_to_run[1]}']
 
-    # t2 = threading.Thread(target=exec_sshCommand_aca, args=(
-    #     aca_nodes[0], aca_nodes_data['username'], aca_nodes_data['password'], cmd_list1, 1500))
-
-    # t1.start()
-    # t2.start()
-
-    # t1.join()
-    # t2.join()
-    # param_list = [
-    #                 f'cd {server_aca_repo_path};sudo ./build/tests/aca_tests --gtest_also_run_disabled_tests --gtest_filter=*{testcases_to_run[0]}',
-    #                 f'cd {server_aca_repo_path};sudo ./build/tests/aca_tests --gtest_also_run_disabled_tests --gtest_filter=*{testcases_to_run[1]}'
-    #             ]
-    results = []
     with concurrent.futures.ThreadPoolExecutor() as executor:
-        # future = [executor.submit(exec_sshCommand_aca, param) for param in param_list]
-        # results = [f.results() for f in futures]
-        future_child = executor.submit(exec_sshCommand_aca, aca_nodes[1], aca_nodes_data['username'], aca_nodes_data['password'], cmd_list2, 1500)
-        future_parent = executor.submit(exec_sshCommand_aca, aca_nodes[0], aca_nodes_data['username'], aca_nodes_data['password'], cmd_list1, 1500)
-        results.append(future_child.result())
-        results.append(future_parent.result())
-    for result in results:
-        print(f'Status: {result["status"]}, data: {result["data"]}, error: {result["error"]}')
+        future_child = executor.submit(exec_sshCommand_aca, aca_nodes[1], aca_nodes_data['username'], aca_nodes_data['password'], cmd_child, 1500)
+        future_parent = executor.submit(exec_sshCommand_aca, aca_nodes[0], aca_nodes_data['username'], aca_nodes_data['password'], cmd_parent, 1500)
+        result_child = future_child.result()
+        result_parent = future_parent.result()
+        for status_code in result_child["status"]:
+            if status_code != 0:
+                print(f'Child command: [{cmd_child}] failed, pseudo controller will stop now.')
+                return
+        for status_code in result_parent["status"]:
+            if status_code != 0:
+                print(f'Parent command: [{cmd_parent}] failed, pseudo controller will stop now.')
+                return
     
     test_end_time = time.time()
     print(
@@ -359,7 +348,7 @@ def run():
         ping_result = exec_sshCommand_aca(host=aca_nodes[0], user=aca_nodes_data['username'], password=aca_nodes_data['password'], cmd=ping_cmd, timeout=20)
     else:
         print(f'Either parent or child does not have any ports, somethings wrong.')
-    print(f'Ping result: {ping_result}')
+    print(f'Ping succeeded: {ping_result["status"][0] == 0}')
 
 if __name__ == '__main__':
     run()
