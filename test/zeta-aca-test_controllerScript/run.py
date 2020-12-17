@@ -218,21 +218,15 @@ def generate_ports(ports_to_create):
     print(f'Need to generate {ports_to_create} ports')
     node_data = {}
     all_ports_generated = []
-    unique_ips = set()
-    unique_macs = set()
-    unique_port_ids = set()
     for i in range(ports_to_create):
         port_template_to_use = get_port_template(i)
-        port_id = '99976feae-7dec-11d0-a765-00a0c{0:07d}'.format(i)
-        unique_port_ids.add(port_id)
+        port_id = '{0:07d}ae-7dec-11d0-a765-00a0c9341120'.format(i)
         ip_2nd_octet = str((i // 10000))
         ip_3rd_octet = str((i % 10000 // 100))
         ip_4th_octet = str((i % 100))
         ip = ips_ports_ip_prefix + ip_2nd_octet + \
             "." + ip_3rd_octet + "." + ip_4th_octet
-        unique_ips.add(ip)
         mac = mac_port_prefix + ip_2nd_octet + ":" + ip_3rd_octet + ":" + ip_4th_octet
-        unique_macs.add(mac)
         port_template_to_use['port_id'] = port_id
         port_template_to_use['ips_port'][0]['ip'] = ip
         port_template_to_use['mac_port'] = mac
@@ -341,8 +335,6 @@ def run():
 
     parent_ports = [port for port in json_content_for_aca['port_response'] if (port['ip_node'].split('.'))[3] == (zeta_data['aca_nodes']['ip'][0].split('.'))[3]]
     child_ports = [port for port in json_content_for_aca['port_response'] if (port['ip_node'].split('.'))[3] == (zeta_data['aca_nodes']['ip'][1].split('.'))[3]]
-    print(f'Parent ports: {parent_ports}')
-    print(f'Child ports: {child_ports}')
 
     if len(parent_ports) > 0 and len(child_ports) > 0:
         ping_cmd = [f'ping -I {parent_ports[0]["ips_port"][0]["ip"]} -c1 {child_ports[0]["ips_port"][0]["ip"]}']

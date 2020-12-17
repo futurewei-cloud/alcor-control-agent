@@ -17,6 +17,7 @@
 #include "aca_util.h"
 #include "goalstateprovisioner.grpc.pb.h"
 #include <string.h>
+#include "aca_ovs_l2_programmer.h"
 #include "aca_comm_mgr.h"
 #include "aca_zeta_programming.h"
 #include "aca_util.h"
@@ -28,6 +29,7 @@
 using namespace aca_comm_manager;
 using namespace alcor::schema;
 using namespace aca_zeta_programming;
+using namespace aca_ovs_l2_programmer;
 
 extern string vmac_address_1;
 extern string vmac_address_2;
@@ -317,6 +319,20 @@ TEST(zeta_programming_test_cases, DISABLED_zeta_gateway_path_PARENT)
 
 
 TEST(zeta_programming_test_cases, DISABLED_zeta_scale_CHILD){
+    // ulong culminative_network_configuration_time = 0;
+  ulong not_care_culminative_time = 0;
+  int overall_rc = EXIT_SUCCESS;
+  // delete br-int and br-tun bridges
+  ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
+          "del-br br-int", not_care_culminative_time, overall_rc);
+
+  ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
+          "del-br br-tun", not_care_culminative_time, overall_rc);
+
+  // create and setup br-int and br-tun bridges, and their patch ports
+  overall_rc = ACA_OVS_L2_Programmer::get_instance().setup_ovs_bridges_if_need();
+  ASSERT_EQ(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
   // set demo mode
   bool previous_demo_mode = g_demo_mode;
   g_demo_mode = true;
@@ -328,6 +344,20 @@ TEST(zeta_programming_test_cases, DISABLED_zeta_scale_CHILD){
 }
 
 TEST(zeta_programming_test_cases, DISABLED_zeta_scale_PARENT){
+  // ulong culminative_network_configuration_time = 0;
+  ulong not_care_culminative_time = 0;
+  int overall_rc = EXIT_SUCCESS;
+  // delete br-int and br-tun bridges
+  ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
+          "del-br br-int", not_care_culminative_time, overall_rc);
+
+  ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
+          "del-br br-tun", not_care_culminative_time, overall_rc);
+
+  // create and setup br-int and br-tun bridges, and their patch ports
+  overall_rc = ACA_OVS_L2_Programmer::get_instance().setup_ovs_bridges_if_need();
+  ASSERT_EQ(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
   // set demo mode
   bool previous_demo_mode = g_demo_mode;
   g_demo_mode = true;
