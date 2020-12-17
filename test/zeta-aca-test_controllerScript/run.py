@@ -179,6 +179,7 @@ def talk_to_zeta(file_path, zgc_api_url, zeta_data, port_api_upper_limit, time_i
     with open('aca_data.json', 'w') as outfile:
         json.dump(json_content_for_aca, outfile)
         print(f'The aca data is exported to {aca_data_local_path}')
+    return json_content_for_aca
 
 # the ports' info inside are based on the PORT_data in zeta_data.json, please modify it accordingly to suit your needs
 
@@ -300,7 +301,7 @@ def run():
         print(
             f'Set time interval between /nodes POST calls to be {arg3} seconds.')
 
-    talk_to_zeta(file_path, zgc_api_url, zeta_data,
+    json_content_for_aca = talk_to_zeta(file_path, zgc_api_url, zeta_data,
                  port_api_upper_limit, time_interval_between_calls_in_seconds)
 
     aca_nodes_data = zeta_data["aca_nodes"]
@@ -338,8 +339,8 @@ def run():
     print('Time for the Ping test')
     
 
-    parent_ports = [port for port in zeta_data['PORT_data'] if port['ip_node'].split('.')[3] == zeta_data['aca_nodes'][0].split()[3]]
-    child_ports = [port for port in zeta_data['PORT_data'] if port['ip_node'].split('.')[3] == zeta_data['aca_nodes'][1].split()[3]]
+    parent_ports = [port for port in json_content_for_aca['port_response'] if port['ip_node'].split('.')[3] == zeta_data['aca_nodes'][0].split()[3]]
+    child_ports = [port for port in json_content_for_aca['port_response'] if port['ip_node'].split('.')[3] == zeta_data['aca_nodes'][1].split()[3]]
     print(f'Parent ports: {parent_ports}')
     print(f'Child ports: {child_ports}')
 
