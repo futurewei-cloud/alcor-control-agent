@@ -174,45 +174,52 @@ int ACA_Vlan_Manager::delete_ovs_port(string /*vpc_id*/, string ovs_port,
 
 int ACA_Vlan_Manager::create_l2_neighbor(string virtual_ip, string virtual_mac,
                                          string remote_host_ip, uint tunnel_id,
-                                         ulong &culminative_time)
+                                         ulong & /*culminative_time*/)
 {
   ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::create_l2_neighbor ---> Entering\n");
 
   char hex_ip_buffer[HEX_IP_BUFFER_SIZE];
-  int overall_rc = EXIT_SUCCESS;
+  int overall_rc;
 
   int internal_vlan_id = get_or_create_vlan_id(tunnel_id);
 
   // match internal vlan based on VPC and destination neighbor mac,
   // strip the internal vlan, encap with tunnel id,
   // output to the neighbor host through vxlan-generic ovs port
-  string cmd_string = "add-flow br-tun table=20,priority=50,dl_vlan=" +
-                      to_string(internal_vlan_id) + ",dl_dst:" + virtual_mac +
-                      ",\"actions=strip_vlan,load:" + to_string(tunnel_id) +
-                      "->NXM_NX_TUN_ID[],set_field:" + remote_host_ip +
-                      "->tun_dst,output:vxlan-generic\"";
+  string match_string = "table=20,priority=50,dl_vlan=" + to_string(internal_vlan_id) +
+                        ",dl_dst:" + virtual_mac;
 
-  ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
-          cmd_string, culminative_time, overall_rc);
+  string action_string = ",actions=strip_vlan,load:" + to_string(tunnel_id) +
+                         "->NXM_NX_TUN_ID[],set_field:" + remote_host_ip +
+                         "->tun_dst,output:" + VXLAN_GENERIC_OUTPORT_NUMBER;
 
-  // add the static arp responder for this l2 neighbor
-  string current_virtual_mac = virtual_mac;
-  current_virtual_mac.erase(
-          remove(current_virtual_mac.begin(), current_virtual_mac.end(), ':'),
-          current_virtual_mac.end());
+  overall_rc = ACA_OVS_Control::get_instance().add_flow(
+          "br-tun", (match_string + action_string).c_str());
 
-  int addr = inet_network(virtual_ip.c_str());
-  snprintf(hex_ip_buffer, HEX_IP_BUFFER_SIZE, "0x%08x", addr);
+  if (overall_rc != EXIT_SUCCESS) {
+    ACA_LOG_ERROR("%s", "Failed to add L2 neighbor rule\n");
+  } else {
+    // add the static arp responder for this l2 neighbor
+    string current_virtual_mac = virtual_mac;
+    current_virtual_mac.erase(
+            remove(current_virtual_mac.begin(), current_virtual_mac.end(), ':'),
+            current_virtual_mac.end());
 
-  cmd_string = "add-flow br-tun \"table=51,priority=50,arp,dl_vlan=" +
-               to_string(internal_vlan_id) + ",nw_dst=" + virtual_ip +
-               " actions=move:NXM_OF_ETH_SRC[]->NXM_OF_ETH_DST[],mod_dl_src:" + virtual_mac +
-               ",load:0x2->NXM_OF_ARP_OP[],move:NXM_NX_ARP_SHA[]->NXM_NX_ARP_THA[],move:NXM_OF_ARP_SPA[]->NXM_OF_ARP_TPA[],load:0x" +
-               current_virtual_mac + "->NXM_NX_ARP_SHA[],load:" + string(hex_ip_buffer) +
-               "->NXM_OF_ARP_SPA[],in_port\"";
+    int addr = inet_network(virtual_ip.c_str());
+    snprintf(hex_ip_buffer, HEX_IP_BUFFER_SIZE, "0x%08x", addr);
 
-  ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
-          cmd_string, culminative_time, overall_rc);
+    match_string = "table=51,priority=50,arp,dl_vlan=" + to_string(internal_vlan_id) +
+                   ",nw_dst=" + virtual_ip;
+
+    action_string =
+            " actions=move:NXM_OF_ETH_SRC[]->NXM_OF_ETH_DST[],mod_dl_src:" + virtual_mac +
+            ",load:0x2->NXM_OF_ARP_OP[],move:NXM_NX_ARP_SHA[]->NXM_NX_ARP_THA[],move:NXM_OF_ARP_SPA[]->NXM_OF_ARP_TPA[],load:0x" +
+            current_virtual_mac + "->NXM_NX_ARP_SHA[],load:" + string(hex_ip_buffer) +
+            "->NXM_OF_ARP_SPA[],in_port";
+
+    overall_rc = ACA_OVS_Control::get_instance().add_flow(
+            "br-tun", (match_string + action_string).c_str());
+  }
 
   ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::create_l2_neighbor <--- Exiting\n");
 
@@ -221,27 +228,36 @@ int ACA_Vlan_Manager::create_l2_neighbor(string virtual_ip, string virtual_mac,
 
 // called when a L2 neighbor is deleted
 int ACA_Vlan_Manager::delete_l2_neighbor(string virtual_ip, string virtual_mac,
-                                         uint tunnel_id, ulong &culminative_time)
+                                         uint tunnel_id, ulong & /*culminative_time*/)
 {
   ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::delete_l2_neighbor ---> Entering\n");
 
+  int rc;
   int overall_rc = EXIT_SUCCESS;
 
   int internal_vlan_id = get_or_create_vlan_id(tunnel_id);
 
   // delete the rule l2 neighbor rule
-  string cmd_string = "del-flows br-tun \"table=20,priority=50,dl_vlan=" +
-                      to_string(internal_vlan_id) + ",dl_dst:" + virtual_mac + "\" --strict";
+  string match_string = "table=20,priority=50,dl_vlan=" + to_string(internal_vlan_id) +
+                        ",dl_dst:" + virtual_mac;
 
-  ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
-          cmd_string, culminative_time, overall_rc);
+  rc = ACA_OVS_Control::get_instance().del_flows("br-tun", match_string.c_str());
+
+  if (rc != EXIT_SUCCESS) {
+    ACA_LOG_ERROR("Failed to delete L2 neighbor rule, rc: %d\n", rc);
+    overall_rc = EXIT_FAILURE;
+  }
 
   // delete the static arp responder for this l2 neighbor
-  cmd_string = "del-flows br-tun \"table=51,arp,dl_vlan=" + to_string(internal_vlan_id) +
-               ",nw_dst=" + virtual_ip + "\"";
+  match_string = "table=51,priority=50,arp,dl_vlan=" + to_string(internal_vlan_id) +
+                 ",nw_dst=" + virtual_ip;
 
-  ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
-          cmd_string, culminative_time, overall_rc);
+  overall_rc = ACA_OVS_Control::get_instance().del_flows("br-tun", match_string.c_str());
+
+  if (rc != EXIT_SUCCESS) {
+    ACA_LOG_ERROR("Failed to delete L2 ARP rule, rc: %d\n", rc);
+    overall_rc = EXIT_FAILURE;
+  }
 
   ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::delete_l2_neighbor <--- Exiting\n");
 
