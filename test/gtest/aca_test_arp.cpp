@@ -132,7 +132,7 @@ TEST(arp_config_test_cases, update_arp_entry_valid)
   (void)ACA_ARP_Responder::get_instance().add_arp_entry(&stArpCfgIn);
 
   stArpCfgIn.mac_address= "AA:BB:CC:DD:EE:EF";
-  retcode = ACA_ARP_Responder::get_instance().update_arp_entry(&stArpCfgIn);
+  retcode = ACA_ARP_Responder::get_instance().create_or_update_arp_entry(&stArpCfgIn);
   EXPECT_EQ(retcode, EXIT_SUCCESS);
 }
 
@@ -146,8 +146,8 @@ TEST(arp_config_test_cases, update_arp_entry_invalid)
   stArpCfgIn.vlan_id = 1201;
 
   (void)ACA_ARP_Responder::get_instance().delete_arp_entry(&stArpCfgIn);
-  retcode = ACA_ARP_Responder::get_instance().update_arp_entry(&stArpCfgIn);
-  EXPECT_EQ(retcode, EXIT_FAILURE);
+  retcode = ACA_ARP_Responder::get_instance().create_or_update_arp_entry(&stArpCfgIn);
+  EXPECT_EQ(retcode, EXIT_SUCCESS);
 }
 
 
@@ -183,7 +183,7 @@ TEST(arp_request_test_cases, arps_recv_valid)
 
 TEST(arp_request_test_cases, DISABLED_l2_arp_test)
 {
-  ulong not_care_culminative_time = 0;
+  // ulong not_care_culminative_time = 0;
   string cmd_string;
   arp_config stArpCfgIn;
   int overall_rc;
@@ -193,10 +193,10 @@ TEST(arp_request_test_cases, DISABLED_l2_arp_test)
   ASSERT_EQ(overall_rc, EXIT_SUCCESS);
 
   // re adding arp default flows
-  ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
-          "add-flow br-tun \"table=0,priority=25,arp,arp_op=1, actions=CONTROLLER\"",
-          not_care_culminative_time, overall_rc);
-  ASSERT_EQ(overall_rc, EXIT_SUCCESS);
+  // ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
+  //         "add-flow br-int \"table=0,priority=25,arp,arp_op=1, actions=OUTPUT:\"patch-tun\"\"",
+  //         not_care_culminative_time, overall_rc);
+  // ASSERT_EQ(overall_rc, EXIT_SUCCESS);
 
   // monitor br-tun for arp request message
   ovs_monitor_thread = 
@@ -210,7 +210,6 @@ TEST(arp_request_test_cases, DISABLED_l2_arp_test)
   SubnetConfiguration *SubnetConiguration_builder =
           new_subnet_states->mutable_configuration();
   SubnetConiguration_builder->set_revision_number(1);
-  SubnetConiguration_builder->set_project_id(project_id);
   SubnetConiguration_builder->set_vpc_id(vpc_id_1);
   SubnetConiguration_builder->set_id(subnet_id_1);
   SubnetConiguration_builder->set_cidr(subnet1_cidr);
@@ -230,7 +229,6 @@ TEST(arp_request_test_cases, DISABLED_l2_arp_test)
           new_neighbor_states->mutable_configuration();
   NeighborConfiguration_builder->set_revision_number(1);
 
-  NeighborConfiguration_builder->set_project_id(project_id);
   NeighborConfiguration_builder->set_vpc_id(vpc_id_1);
   NeighborConfiguration_builder->set_id(port_id_3);
   NeighborConfiguration_builder->set_mac_address(vmac_address_3);
@@ -300,18 +298,18 @@ TEST(arp_request_test_cases, DISABLED_l2_arp_test)
   overall_rc = EXIT_SUCCESS;
 
   //clean up
-  overall_rc = Aca_Net_Config::get_instance().execute_system_command(
-              "ovs-docker del-ports br-int con1");
-  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
+  // overall_rc = Aca_Net_Config::get_instance().execute_system_command(
+  //             "ovs-docker del-ports br-int con1");
+  // EXPECT_EQ(overall_rc, EXIT_SUCCESS);
 
-  overall_rc = Aca_Net_Config::get_instance().execute_system_command(
-              "ovs-docker del-ports br-int con2");
-  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
+  // overall_rc = Aca_Net_Config::get_instance().execute_system_command(
+  //             "ovs-docker del-ports br-int con2");
+  // EXPECT_EQ(overall_rc, EXIT_SUCCESS);
 
-  overall_rc = Aca_Net_Config::get_instance().execute_system_command("docker rm con1 -f");
-  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
+  // overall_rc = Aca_Net_Config::get_instance().execute_system_command("docker rm con1 -f");
+  // EXPECT_EQ(overall_rc, EXIT_SUCCESS);
 
-  overall_rc = Aca_Net_Config::get_instance().execute_system_command("docker rm con2 -f");
-  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
+  // overall_rc = Aca_Net_Config::get_instance().execute_system_command("docker rm con2 -f");
+  // EXPECT_EQ(overall_rc, EXIT_SUCCESS);
 }
 

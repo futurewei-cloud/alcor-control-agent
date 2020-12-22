@@ -17,6 +17,7 @@
 
 #include <string>
 #include <unordered_map>
+#include "hashmap/HashMap.h"
 #include <mutex>
 
 using namespace std;
@@ -29,6 +30,12 @@ namespace aca_arp_responder
     (pData)->ipv4_address = (pConfig)->ipv4_address;                \
     (pData)->vlan_id = (pConfig)->vlan_id;                          \
   } while (0)                                                       
+
+#define ARP_TABLE_DATA_SET(pData,pConfig)                           \
+  do {                                                              \
+    (pData)->mac_address = (pConfig)->mac_address;                  \
+  } while (0)  
+
 
 struct arp_config{
   string mac_address;
@@ -45,6 +52,10 @@ struct arp_entry_data{
   bool operator==(const arp_entry_data &p) const{
     return ipv4_address==p.ipv4_address && vlan_id==p.vlan_id;
   }
+
+  bool operator!=(const arp_entry_data &p) const{
+    return ipv4_address!=p.ipv4_address || vlan_id!=p.vlan_id;
+  }
 };
 
 
@@ -52,6 +63,11 @@ struct arp_hash{
   size_t operator() (const arp_entry_data &p) const{
     return hash<string>()(p.ipv4_address) ^ (hash<uint16_t>()(p.vlan_id) << 1);
   }
+};
+
+struct arp_table_data{
+  string mac_address;
+  mutable std::shared_timed_mutex arp_mutex;
 };
 
 struct arp_message{
@@ -87,7 +103,7 @@ class ACA_ARP_Responder{
 
     /* Managemet Plane Ops*/
     int add_arp_entry(arp_config *arp_config_in);
-    int update_arp_entry(arp_config *arp_config_in);
+    int create_or_update_arp_entry(arp_config *arp_config_in);
     int delete_arp_entry(arp_config *arp_config_in);
 
     /* Data plane Ops */
@@ -98,8 +114,9 @@ class ACA_ARP_Responder{
   private:
     ACA_ARP_Responder();
     ~ACA_ARP_Responder();
-    std::unordered_map<arp_entry_data,string,arp_hash> *_arp_db;
-    mutex _arp_db_mutex;
+    // std::unordered_map<arp_entry_data,string,arp_hash> *_arp_db;
+    CTSL::HashMap<arp_entry_data,arp_table_data *,arp_hash> _arp_db;
+    
 
 
 
@@ -110,13 +127,11 @@ class ACA_ARP_Responder{
     void _deinit_arp_ofp();
 
     /*************** Management plane operations ***********************/
-    string _search_arp_entry(arp_entry_data stData);
     void _validate_mac_address(const char *mac_string);
     void _validate_ipv4_address(const char *ip_address);
     void _validate_ipv6_address(const char *ip_address);
     int _validate_arp_entry(arp_config *arp_cfg_in);
-    void _standardize_mac_address(string &mac_string);
-    
+
     /**************** Data plane operations *********************/
     int _validate_arp_message(arp_message *arpmsg);
     string _get_requested_ip(arp_message *arpmsg);

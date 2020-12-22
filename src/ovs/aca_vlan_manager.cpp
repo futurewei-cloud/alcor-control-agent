@@ -17,6 +17,7 @@
 #include "aca_vlan_manager.h"
 #include "aca_ovs_control.h"
 #include "aca_ovs_l2_programmer.h"
+#include "aca_arp_responder.h"
 #include <errno.h>
 #include <algorithm>
 #include <shared_mutex>
@@ -24,6 +25,7 @@
 
 using namespace aca_ovs_control;
 using namespace aca_ovs_l2_programmer;
+using namespace aca_arp_responder;
 
 extern std::atomic_ulong g_total_vpcs_table_mutex_time;
 
@@ -183,6 +185,8 @@ int ACA_Vlan_Manager::create_l2_neighbor(string virtual_ip, string virtual_mac,
 
   int internal_vlan_id = get_or_create_vlan_id(tunnel_id);
 
+  arp_config stArpCfg;
+
   // match internal vlan based on VPC and destination neighbor mac,
   // strip the internal vlan, encap with tunnel id,
   // output to the neighbor host through vxlan-generic ovs port
@@ -214,6 +218,15 @@ int ACA_Vlan_Manager::create_l2_neighbor(string virtual_ip, string virtual_mac,
   ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
           cmd_string, culminative_time, overall_rc);
 
+
+  // create arp entry in arp responder for the l2 neighbor
+  stArpCfg.mac_address = virtual_mac;
+  stArpCfg.ipv4_address = virtual_ip;
+  stArpCfg.vlan_id = internal_vlan_id;
+
+  ACA_ARP_Responder::get_instance().create_or_update_arp_entry(&stArpCfg);
+  ACA_LOG_DEBUG("create_l2_neighbor with ip = %s and vlan id = %x\n",virtual_ip.c_str(),internal_vlan_id);
+
   ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::create_l2_neighbor <--- Exiting\n");
 
   return overall_rc;
@@ -229,6 +242,8 @@ int ACA_Vlan_Manager::delete_l2_neighbor(string virtual_ip, string virtual_mac,
 
   int internal_vlan_id = get_or_create_vlan_id(tunnel_id);
 
+  arp_config stArpCfg;
+
   // delete the rule l2 neighbor rule
   string cmd_string = "del-flows br-tun \"table=20,priority=50,dl_vlan=" +
                       to_string(internal_vlan_id) + ",dl_dst:" + virtual_mac + "\" --strict";
@@ -242,6 +257,13 @@ int ACA_Vlan_Manager::delete_l2_neighbor(string virtual_ip, string virtual_mac,
 
   ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
           cmd_string, culminative_time, overall_rc);
+
+  // create arp entry in arp responder for the l2 neighbor
+  stArpCfg.mac_address = virtual_mac;
+  stArpCfg.ipv4_address = virtual_ip;
+  stArpCfg.vlan_id = internal_vlan_id;
+
+  ACA_ARP_Responder::get_instance().delete_arp_entry(&stArpCfg);
 
   ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::delete_l2_neighbor <--- Exiting\n");
 

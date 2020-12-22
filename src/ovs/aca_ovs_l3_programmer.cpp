@@ -220,7 +220,7 @@ int ACA_OVS_L3_Programmer::create_or_update_router(RouterConfiguration &current_
           addr = inet_network(found_gateway_ip.c_str());
           snprintf(hex_ip_buffer, HEX_IP_BUFFER_SIZE, "0x%08x", addr);
 
-          //Program ARP responder:
+          // Program ARP responder:
           cmd_string = "add-flow br-tun \"table=51,priority=50,arp,dl_vlan=" +
                        to_string(source_vlan_id) + ",nw_dst=" + found_gateway_ip +
                        " actions=move:NXM_OF_ETH_SRC[]->NXM_OF_ETH_DST[],mod_dl_src:" + found_gateway_mac +

@@ -181,7 +181,7 @@ void ACA_OVS_Control::parse_packet(uint32_t in_port, void *packet)
     ACA_LOG_INFO("%s", "Ethernet Type: 802.1Q VLAN tagging (0x8100) \n");
     ether_type = ntohs(*(uint16_t *)(base + 16));
     vlan_len = 4;
-    vlan_hdr = (unsigned char *)(base + SIZE_ETHERNET);
+    vlan_hdr = (unsigned char *)(base + 12);
   }
 
   if (ether_type == ETHERTYPE_ARP) {

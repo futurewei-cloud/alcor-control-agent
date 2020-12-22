@@ -20,7 +20,6 @@
 #include "aca_log.h"
 #include "goalstateprovisioner.grpc.pb.h"
 #include "aca_util.h"
-#include "aca_arp_responder.h"
 #include <errno.h>
 #include <arpa/inet.h>
 #include "aca_zeta_programming.h"
@@ -30,7 +29,7 @@ using namespace alcor::schema;
 using namespace aca_ovs_l2_programmer;
 using namespace aca_ovs_l3_programmer;
 using namespace aca_zeta_programming;
-using namespace aca_arp_responder;
+
 
 namespace aca_dataplane_ovs
 {
@@ -332,7 +331,6 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
                                                       GoalStateOperationReply &gsOperationReply)
 {
   int overall_rc;
-  int rc;
   struct sockaddr_in sa;
   string virtual_ip_address;
   string virtual_mac_address;
@@ -343,8 +341,6 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
   bool subnet_info_found = false;
   ulong culminative_dataplane_programming_time = 0;
   ulong culminative_network_configuration_time = 0;
-
-  arp_config stArpCfg;
 
   auto operation_start = chrono::steady_clock::now();
 
@@ -429,10 +425,6 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
           // only need to update L2 neighbor info if it is not on the same compute host
           bool is_neighbor_port_on_same_host = aca_is_port_on_same_host(host_ip_address);
           
-          stArpCfg.mac_address = virtual_mac_address;
-          stArpCfg.ipv4_address = virtual_ip_address;
-          stArpCfg.vlan_id = 0;
-
           if (is_neighbor_port_on_same_host) {
             ACA_LOG_DEBUG("neighbor host: %s is on the same compute node, don't need to update L2 neighbor info.\n",
                           host_ip_address.c_str());
@@ -447,25 +439,17 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
               // we can consider doing this L2 neighbor creation as an on demand rule to support scale
               // when we are ready to put the DVR rule as on demand, we should put the L2 neighbor rule
               // as on demand also
-  
-              if(current_NeighborState.operation_type() == OperationType::CREATE){
-                rc = ACA_ARP_Responder::get_instance().add_arp_entry(&stArpCfg);
-              }
-              else if(current_NeighborState.operation_type() == OperationType::UPDATE){
-                rc = ACA_ARP_Responder::get_instance().update_arp_entry(&stArpCfg);
-              }
 
             } else if (current_NeighborState.operation_type() == OperationType::DELETE) {
               overall_rc = ACA_OVS_L2_Programmer::get_instance().delete_l2_neighbor(
                       virtual_ip_address, virtual_mac_address, found_tunnel_id,
                       culminative_dataplane_programming_time);
-              rc = ACA_ARP_Responder::get_instance().delete_arp_entry(&stArpCfg);
             } else {
               ACA_LOG_ERROR("Invalid neighbor state operation type %d\n",
                             current_NeighborState.operation_type());
               overall_rc = -EXIT_FAILURE;
             }
-            ACA_LOG_DEBUG("operation of arp entry with rc = %d\n",rc);
+
           }
 
           if (overall_rc == EXIT_SUCCESS) {
