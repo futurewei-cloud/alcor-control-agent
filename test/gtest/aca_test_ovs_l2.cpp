@@ -502,7 +502,14 @@ TEST(ovs_l2_test_cases, 10_l2_neighbor_CREATE)
 
 TEST(ovs_l2_test_cases, 1_port_CREATE_plus_10_l2_neighbor_CREATE)
 {
+  // unset debug mode
+  bool previous_debug_mode = g_debug_mode;
+  g_debug_mode = false;
+
   aca_test_1_port_CREATE_plus_N_neighbors_CREATE(NeighborType::L2, neighbors_to_create);
+
+  // restore debug mode
+  g_debug_mode = previous_debug_mode;
 }
 
 TEST(ovs_l2_test_cases, DISABLED_2_ports_CREATE_test_traffic_PARENT)

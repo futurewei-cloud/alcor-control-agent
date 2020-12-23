@@ -51,12 +51,53 @@ TEST(ovs_flow_mod_cases, add_flows)
   overall_rc = EXIT_SUCCESS;
 }
 
+TEST(ovs_flow_mod_cases, mod_flows)
+{
+  int overall_rc;
+
+  // create and setup br-int and br-tun bridges, and their patch ports
+  overall_rc = ACA_OVS_L2_Programmer::get_instance().setup_ovs_bridges_if_need();
+  ASSERT_EQ(overall_rc, EXIT_SUCCESS);
+
+  // add flow
+  ACA_OVS_Control::get_instance().add_flow(
+          "br-tun", "tcp,nw_dst=192.168.0.1,priority=1,actions=drop");
+
+  // modify flow
+  ACA_OVS_Control::get_instance().mod_flows(
+          "br-tun", "tcp,nw_dst=192.168.0.1,priority=1,actions=resubmit(,2)");
+
+  overall_rc = ACA_OVS_Control::get_instance().flow_exists("br-tun", "tcp,nw_dst=192.168.0.1");
+  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
+}
+
+TEST(ovs_flow_mod_cases, del_flows)
+{
+  int overall_rc;
+
+  // create and setup br-int and br-tun bridges, and their patch ports
+  overall_rc = ACA_OVS_L2_Programmer::get_instance().setup_ovs_bridges_if_need();
+  ASSERT_EQ(overall_rc, EXIT_SUCCESS);
+
+  // add flow
+  ACA_OVS_Control::get_instance().add_flow(
+          "br-tun", "tcp,nw_dst=192.168.0.9,priority=1,actions=drop");
+
+  // delete flow
+  ACA_OVS_Control::get_instance().del_flows("br-tun", "tcp,nw_dst=192.168.0.9,priority=1");
+
+  overall_rc = ACA_OVS_Control::get_instance().flow_exists("br-tun", "tcp,nw_dst=192.168.0.9");
+  EXPECT_NE(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
+}
+
 //
-// Test suite: ovs_flow_mod_cases
+// Test suite: add_delete_flows_l2_neighbor_cases
 //
-// Testing the openflow helper functions for add/mod/delete flows and flow_exists
+// Testing the openflow helper functions for add/delete flows and flow_exists related to L2 neighbors
 //
-TEST(ovs_flow_mod_cases, add_flows_l2_neighbor)
+TEST(ovs_flow_mod_cases, add_delete_flows_l2_neighbor)
 {
   ulong not_care_culminative_time;
   int overall_rc;
@@ -147,45 +188,4 @@ TEST(ovs_flow_mod_cases, add_flows_l2_neighbor)
   overall_rc = ACA_OVS_Control::get_instance().flow_exists(
           "br-tun", flow_exists_match_string.c_str());
   EXPECT_NE(overall_rc, EXIT_SUCCESS);
-}
-
-TEST(ovs_flow_mod_cases, mod_flows)
-{
-  int overall_rc;
-
-  // create and setup br-int and br-tun bridges, and their patch ports
-  overall_rc = ACA_OVS_L2_Programmer::get_instance().setup_ovs_bridges_if_need();
-  ASSERT_EQ(overall_rc, EXIT_SUCCESS);
-
-  // add flow
-  ACA_OVS_Control::get_instance().add_flow(
-          "br-tun", "tcp,nw_dst=192.168.0.1,priority=1,actions=drop");
-
-  // modify flow
-  ACA_OVS_Control::get_instance().mod_flows(
-          "br-tun", "tcp,nw_dst=192.168.0.1,priority=1,actions=resubmit(,2)");
-
-  overall_rc = ACA_OVS_Control::get_instance().flow_exists("br-tun", "tcp,nw_dst=192.168.0.1");
-  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
-  overall_rc = EXIT_SUCCESS;
-}
-
-TEST(ovs_flow_mod_cases, del_flows)
-{
-  int overall_rc;
-
-  // create and setup br-int and br-tun bridges, and their patch ports
-  overall_rc = ACA_OVS_L2_Programmer::get_instance().setup_ovs_bridges_if_need();
-  ASSERT_EQ(overall_rc, EXIT_SUCCESS);
-
-  // add flow
-  ACA_OVS_Control::get_instance().add_flow(
-          "br-tun", "tcp,nw_dst=192.168.0.9,priority=1,actions=drop");
-
-  // delete flow
-  ACA_OVS_Control::get_instance().del_flows("br-tun", "tcp,nw_dst=192.168.0.9,priority=1");
-
-  overall_rc = ACA_OVS_Control::get_instance().flow_exists("br-tun", "tcp,nw_dst=192.168.0.9");
-  EXPECT_NE(overall_rc, EXIT_SUCCESS);
-  overall_rc = EXIT_SUCCESS;
 }
