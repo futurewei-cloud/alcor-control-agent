@@ -35,17 +35,10 @@ ACA_ARP_Responder::~ACA_ARP_Responder(){
 
 void ACA_ARP_Responder::_init_arp_db(){
   _arp_db.clear();
-  // try{
-  //   _arp_db = new unordered_map<arp_entry_data,string,arp_hash>;
-  // } catch(const bad_alloc &e){
-  //   return;
-  // }
 }
 
 void ACA_ARP_Responder::_deinit_arp_db(){
   _arp_db.clear();
-  // delete _arp_db;
-  // _arp_db = nullptr;
 }
 
 void ACA_ARP_Responder::_init_arp_ofp(){
@@ -90,8 +83,8 @@ int ACA_ARP_Responder::add_arp_entry(arp_config *arp_cfg_in){
   ARP_TABLE_DATA_SET(current_arp_data, arp_cfg_in);
 
   if (_arp_db.find(stData,current_arp_data)) {
-    ACA_LOG_ERROR("Entry already existed! (ip = %s)\n",
-                  arp_cfg_in->ipv4_address.c_str());
+    ACA_LOG_ERROR("Entry already existed! (ip = %s and vlan id = %u)\n",
+                  arp_cfg_in->ipv4_address.c_str(), arp_cfg_in->vlan_id);
     return EXIT_FAILURE;
   }
 
@@ -121,9 +114,7 @@ int ACA_ARP_Responder::create_or_update_arp_entry(arp_config *arp_cfg_in){
     add_arp_entry(arp_cfg_in);
   }
   else{   
-    std::unique_lock<std::shared_timed_mutex> lock(current_arp_data->arp_mutex);
     current_arp_data->mac_address = arp_cfg_in->mac_address;
-    lock.unlock();
   } 
 
   return EXIT_SUCCESS;
@@ -147,9 +138,7 @@ int ACA_ARP_Responder::delete_arp_entry(arp_config *arp_cfg_in){
     return EXIT_SUCCESS;
   }
 
-  std::unique_lock<std::shared_timed_mutex> lock(current_arp_data->arp_mutex);
   _arp_db.erase(stData);
-  lock.unlock();
 
   return EXIT_SUCCESS;
 }
@@ -228,7 +217,7 @@ void ACA_ARP_Responder::arp_recv(uint32_t in_port, void *vlan_hdr, void *message
   arp_message *arpmsg = nullptr;
   vlan_message *vlanmsg = nullptr;
 
-  printf("============== receive packet ==============\n");
+  printf("receiving arp message\n");
   if (!message) {
     ACA_LOG_ERROR("%s", "ARP message is null!\n");
     return;
@@ -296,6 +285,8 @@ void ACA_ARP_Responder::_parse_arp_request(uint32_t in_port, vlan_message *vlanm
     //TO DO
   }
   else{
+    ACA_LOG_DEBUG("ARP entry exist (ip = %s and vlan id = %u) with mac = %s\n",
+                  stData.ipv4_address.c_str(),stData.vlan_id,current_arp_data->mac_address.c_str());
     arpreply = _pack_arp_reply(arpmsg,current_arp_data->mac_address);
   }
   if(!arpreply){
@@ -363,14 +354,6 @@ string ACA_ARP_Responder::_serialize_arp_message(vlan_message *vlanmsg, arp_mess
     return string();
   }
 
-  if(vlanmsg){
-    sprintf(str,"%04x",vlanmsg->vlan_proto);
-    packet.append(str);
-    sprintf(str,"%04x",vlanmsg->vlan_tci);
-    packet.append(str);
-  }
-
-  
   sprintf(str,"%04x",ntohs(arpmsg->hrd));
   packet.append(str);
   sprintf(str,"%04x",ntohs(arpmsg->pro));
@@ -405,6 +388,14 @@ string ACA_ARP_Responder::_serialize_arp_message(vlan_message *vlanmsg, arp_mess
     sprintf(str, "%02x", arpmsg->sha[i]);
     packet_header.append(str);
   }
+
+  if(vlanmsg){
+    sprintf(str,"%04x",ntohs(vlanmsg->vlan_proto));
+    packet_header.append(str);
+    sprintf(str,"%04x",ntohs(vlanmsg->vlan_tci));
+    packet_header.append(str);
+  }
+
 
   packet_header.append("0806");
   packet.insert(0,packet_header);

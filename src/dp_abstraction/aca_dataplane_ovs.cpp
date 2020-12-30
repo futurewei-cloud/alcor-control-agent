@@ -30,7 +30,6 @@ using namespace aca_ovs_l2_programmer;
 using namespace aca_ovs_l3_programmer;
 using namespace aca_zeta_programming;
 
-
 namespace aca_dataplane_ovs
 {
 static bool aca_lookup_subnet_info(GoalState &parsed_struct, const string targeted_subnet_id,
@@ -424,7 +423,7 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
 
           // only need to update L2 neighbor info if it is not on the same compute host
           bool is_neighbor_port_on_same_host = aca_is_port_on_same_host(host_ip_address);
-          
+
           if (is_neighbor_port_on_same_host) {
             ACA_LOG_DEBUG("neighbor host: %s is on the same compute node, don't need to update L2 neighbor info.\n",
                           host_ip_address.c_str());
@@ -439,7 +438,6 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
               // we can consider doing this L2 neighbor creation as an on demand rule to support scale
               // when we are ready to put the DVR rule as on demand, we should put the L2 neighbor rule
               // as on demand also
-
             } else if (current_NeighborState.operation_type() == OperationType::DELETE) {
               overall_rc = ACA_OVS_L2_Programmer::get_instance().delete_l2_neighbor(
                       virtual_ip_address, virtual_mac_address, found_tunnel_id,
@@ -449,7 +447,6 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
                             current_NeighborState.operation_type());
               overall_rc = -EXIT_FAILURE;
             }
-
           }
 
           if (overall_rc == EXIT_SUCCESS) {

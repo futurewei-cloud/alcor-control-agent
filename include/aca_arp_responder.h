@@ -67,7 +67,6 @@ struct arp_hash{
 
 struct arp_table_data{
   string mac_address;
-  mutable std::shared_timed_mutex arp_mutex;
 };
 
 struct arp_message{

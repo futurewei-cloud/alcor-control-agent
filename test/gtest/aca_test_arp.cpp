@@ -183,7 +183,7 @@ TEST(arp_request_test_cases, arps_recv_valid)
 
 TEST(arp_request_test_cases, DISABLED_l2_arp_test)
 {
-  // ulong not_care_culminative_time = 0;
+  ulong not_care_culminative_time = 0;
   string cmd_string;
   arp_config stArpCfgIn;
   int overall_rc;
@@ -192,11 +192,11 @@ TEST(arp_request_test_cases, DISABLED_l2_arp_test)
   overall_rc = ACA_OVS_L2_Programmer::get_instance().setup_ovs_bridges_if_need();
   ASSERT_EQ(overall_rc, EXIT_SUCCESS);
 
-  // re adding arp default flows
-  // ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
-  //         "add-flow br-int \"table=0,priority=25,arp,arp_op=1, actions=OUTPUT:\"patch-tun\"\"",
-  //         not_care_culminative_time, overall_rc);
-  // ASSERT_EQ(overall_rc, EXIT_SUCCESS);
+  //re adding arp default flows
+  ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
+          "add-flow br-tun \"table=0,priority=25,arp,arp_op=1, actions=CONTROLLER\"",
+          not_care_culminative_time, overall_rc);
+  ASSERT_EQ(overall_rc, EXIT_SUCCESS);
 
   // monitor br-tun for arp request message
   ovs_monitor_thread = 
@@ -269,9 +269,6 @@ TEST(arp_request_test_cases, DISABLED_l2_arp_test)
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
 
-  Aca_Net_Config::get_instance().execute_system_command(cmd_string);
-  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
-  overall_rc = EXIT_SUCCESS;
 
   // con2
   overall_rc = Aca_Net_Config::get_instance().execute_system_command(
@@ -297,19 +294,20 @@ TEST(arp_request_test_cases, DISABLED_l2_arp_test)
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
 
+
   //clean up
-  // overall_rc = Aca_Net_Config::get_instance().execute_system_command(
-  //             "ovs-docker del-ports br-int con1");
-  // EXPECT_EQ(overall_rc, EXIT_SUCCESS);
+  overall_rc = Aca_Net_Config::get_instance().execute_system_command(
+              "ovs-docker del-ports br-int con1");
+  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
 
-  // overall_rc = Aca_Net_Config::get_instance().execute_system_command(
-  //             "ovs-docker del-ports br-int con2");
-  // EXPECT_EQ(overall_rc, EXIT_SUCCESS);
+  overall_rc = Aca_Net_Config::get_instance().execute_system_command(
+              "ovs-docker del-ports br-int con2");
+  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
 
-  // overall_rc = Aca_Net_Config::get_instance().execute_system_command("docker rm con1 -f");
-  // EXPECT_EQ(overall_rc, EXIT_SUCCESS);
+  overall_rc = Aca_Net_Config::get_instance().execute_system_command("docker rm con1 -f");
+  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
 
-  // overall_rc = Aca_Net_Config::get_instance().execute_system_command("docker rm con2 -f");
-  // EXPECT_EQ(overall_rc, EXIT_SUCCESS);
+  overall_rc = Aca_Net_Config::get_instance().execute_system_command("docker rm con2 -f");
+  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
 }
 
