@@ -442,6 +442,7 @@ void aca_test_1_port_CREATE_plus_N_neighbors_CREATE(NeighborType input_neighbor_
   string port_name_postfix = "-2222-3333-4444-555555555555";
   string neighbor_id_postfix = "-baad-f00d-4444-555555555555";
   string ip_address_prefix = "10.";
+  string mac_address_prefix = "6c:dd:ee:";
   string remote_ip_address_prefix = "123.";
   int overall_rc;
 
@@ -480,8 +481,10 @@ void aca_test_1_port_CREATE_plus_N_neighbors_CREATE(NeighborType input_neighbor_
     string ip_4th_octet = std::to_string(i % 100);
 
     string ip_postfix = ip_2nd_octet + "." + ip_3rd_octet + "." + ip_4th_octet;
-    string remote_ip = remote_ip_address_prefix + ip_postfix;
     string virtual_ip = ip_address_prefix + ip_postfix;
+    string mac_postfix = ip_2nd_octet + ":" + ip_3rd_octet + ":" + ip_4th_octet;
+    string virtual_mac = mac_address_prefix + mac_postfix;
+    string remote_ip = remote_ip_address_prefix + ip_postfix;
 
     new_neighbor_states = GoalState_builder.add_neighbor_states();
     new_neighbor_states->set_operation_type(OperationType::CREATE);
@@ -493,7 +496,7 @@ void aca_test_1_port_CREATE_plus_N_neighbors_CREATE(NeighborType input_neighbor_
     NeighborConfiguration_builder->set_vpc_id("1b08a5bc-b718-11ea-b3de-111122223333");
     NeighborConfiguration_builder->set_id(neighbor_id);
     NeighborConfiguration_builder->set_name(port_name);
-    NeighborConfiguration_builder->set_mac_address(vmac_address_1);
+    NeighborConfiguration_builder->set_mac_address(virtual_mac);
     NeighborConfiguration_builder->set_host_ip_address(remote_ip);
 
     NeighborConfiguration_FixedIp *FixedIp_builder =

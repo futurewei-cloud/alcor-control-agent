@@ -163,7 +163,8 @@ void OVS_Control::monitor(const char *bridge, const char *opt)
                                          ports_to_accept(bridge),
                                          tables_to_accept(bridge), &usable_protocols);
       if (error) {
-        ovs_fatal(0, "%s", error);
+        // ovs_fatal(0, "%s", error);
+        ACA_LOG_ERROR("failed to parse_flow_monitor_request, error: %s", error);
       }
 
       if (!(usable_protocols & allowed_protocols)) {
@@ -913,7 +914,7 @@ void OVS_Control::monitor_vconn(vconn *vconn, bool reply_to_echo_requests,
   daemonize_start(false);
   error = unixctl_server_create(unixctl_path, &server);
   if (error) {
-    ovs_fatal(error, "failed to create unixctl server");
+    // ovs_fatal(error, "failed to create unixctl server");
     ACA_LOG_ERROR("%s", "failed to create unixctl server");
   }
   unixctl_command_register("exit", "", 0, 0, X::ofctl_exit, &exiting);
