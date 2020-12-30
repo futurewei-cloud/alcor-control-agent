@@ -71,7 +71,7 @@ uint ACA_Vlan_Manager::get_or_create_vlan_id(uint tunnel_id)
 {
   ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::get_or_create_vlan_id ---> Entering\n");
 
-  vpc_table_entry *new_vpc_table_entry;
+  vpc_table_entry *new_vpc_table_entry = nullptr;
 
   if (!_vpcs_table.find(tunnel_id, new_vpc_table_entry)) {
     create_entry(tunnel_id);
@@ -301,7 +301,7 @@ void ACA_Vlan_Manager::set_aux_gateway(uint tunnel_id, const string auxGateway_i
 {
   ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::set_aux_gateway ---> Entering\n");
 
-  vpc_table_entry *new_vpc_table_entry;
+  vpc_table_entry *new_vpc_table_entry = nullptr;
 
   if (!_vpcs_table.find(tunnel_id, new_vpc_table_entry)) {
     create_entry(tunnel_id);

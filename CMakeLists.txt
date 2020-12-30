@@ -1,9 +1,12 @@
 cmake_minimum_required(VERSION 3.10)
 project(AlcorControlAgent)
 
-# Set the version number.
-set(CMAKE_BUILD_TYPE Debug)
+# CMAKE_BUILD_TYPE can be Debug or Release
+set(CMAKE_BUILD_TYPE Release)
+
 set(CMAKE_CXX_STANDARD 17)
+
+# Set the version number.
 set(CPPKAFKA_VERSION_MAJOR 0)
 set(CPPKAFKA_VERSION_MINOR 3)
 set(CPPKAFKA_VERSION_REVISION 1)
