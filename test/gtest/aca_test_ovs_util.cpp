@@ -67,6 +67,20 @@ string subnet1_gw_mac = "fa:16:3e:d7:f2:11";
 string subnet2_gw_mac = "fa:16:3e:d7:f2:21";
 
 extern bool g_demo_mode;
+// total time for execute_system_command in microseconds
+extern std::atomic_ulong g_initialize_execute_system_time;
+// total time for execute_ovsdb_command in microseconds
+extern std::atomic_ulong g_initialize_execute_ovsdb_time;
+// total time for execute_openflow_command in microseconds
+extern std::atomic_ulong g_initialize_execute_openflow_time;
+// total time for execute_system_command in microseconds
+extern std::atomic_ulong g_total_execute_system_time;
+// total time for execute_ovsdb_command in microseconds
+extern std::atomic_ulong g_total_execute_ovsdb_time;
+// total time for execute_openflow_command in microseconds
+extern std::atomic_ulong g_total_execute_openflow_time;
+// total time for goal state update in microseconds
+extern std::atomic_ulong g_total_update_GS_time;
 
 void aca_test_reset_environment()
 {
@@ -87,6 +101,16 @@ void aca_test_reset_environment()
   // create and setup br-int and br-tun bridges, and their patch ports
   overall_rc = ACA_OVS_L2_Programmer::get_instance().setup_ovs_bridges_if_need();
   ASSERT_EQ(overall_rc, EXIT_SUCCESS);
+
+  // test init/reset environment completed, store the time spend
+  g_initialize_execute_system_time = g_total_execute_system_time.load();
+  g_initialize_execute_ovsdb_time = g_total_execute_ovsdb_time.load();
+  g_initialize_execute_openflow_time = g_total_execute_openflow_time.load();
+
+  // reset the total time counters
+  g_total_execute_system_time = 0;
+  g_total_execute_ovsdb_time = 0;
+  g_total_execute_openflow_time = 0;
 }
 
 void aca_test_create_default_port_state(PortState *new_port_states)

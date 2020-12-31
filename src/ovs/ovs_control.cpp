@@ -88,7 +88,7 @@ OVS_Control &OVS_Control::get_instance()
 
   /* -F, --flow-format: Allowed protocols.  By default, any protocol is allowed. */
   allowed_protocols = static_cast<ofputil_protocol>(OFPUTIL_P_ANY);
-  bundle = false;
+  bundle = true;
 
   return instance;
 }

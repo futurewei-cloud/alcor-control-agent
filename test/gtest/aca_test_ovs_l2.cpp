@@ -504,7 +504,7 @@ TEST(ovs_l2_test_cases, 1_port_CREATE_plus_10_l2_neighbor_CREATE)
 {
   // unset debug mode
   bool previous_debug_mode = g_debug_mode;
-  g_debug_mode = false;
+  // g_debug_mode = false;
 
   aca_test_1_port_CREATE_plus_N_neighbors_CREATE(NeighborType::L2, neighbors_to_create);
 
