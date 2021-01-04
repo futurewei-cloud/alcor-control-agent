@@ -16,6 +16,7 @@
 #include "aca_log.h"
 #include "aca_ovs_l2_programmer.h"
 #include "aca_ovs_control.h"
+#include "aca_util.h"
 #include <shared_mutex>
 #include <arpa/inet.h>
 
@@ -73,100 +74,83 @@ int ACA_ARP_Responder::add_arp_entry(arp_config *arp_cfg_in){
   arp_entry_data stData;
   arp_table_data *current_arp_data = new arp_table_data;
 
-  if(_validate_arp_entry(arp_cfg_in)){
-    ACA_LOG_ERROR("Valiate arp cfg failed! (mac = %s)\n",
-                  arp_cfg_in->mac_address.c_str());
+  try{
+    _validate_arp_entry(arp_cfg_in);
+
+    ARP_ENTRY_DATA_SET((arp_entry_data *)&stData, arp_cfg_in);
+    ARP_TABLE_DATA_SET(current_arp_data, arp_cfg_in);
+
+    if (_arp_db.find(stData,current_arp_data)) {
+      ACA_LOG_ERROR("Entry already existed! (ip = %s and vlan id = %u)\n",
+                    arp_cfg_in->ipv4_address.c_str(), arp_cfg_in->vlan_id);
+      return EXIT_FAILURE;
+    }
+
+    _arp_db.insert(stData,current_arp_data);
+
+    ACA_LOG_DEBUG("Arp Entry with ip: %s and vlan id %u added\n",arp_cfg_in->ipv4_address.c_str(),arp_cfg_in->vlan_id);
+
+    return EXIT_SUCCESS;
+  }
+  catch(std::invalid_argument &ia){
+    ACA_LOG_ERROR("%s,validate arp config failed! (ip = %s and vlan id = %u)\n",
+                  ia.what(),arp_cfg_in->ipv4_address.c_str(),arp_cfg_in->vlan_id);
     return EXIT_FAILURE;
   }
-
-  ARP_ENTRY_DATA_SET((arp_entry_data *)&stData, arp_cfg_in);
-  ARP_TABLE_DATA_SET(current_arp_data, arp_cfg_in);
-
-  if (_arp_db.find(stData,current_arp_data)) {
-    ACA_LOG_ERROR("Entry already existed! (ip = %s and vlan id = %u)\n",
-                  arp_cfg_in->ipv4_address.c_str(), arp_cfg_in->vlan_id);
-    return EXIT_FAILURE;
-  }
-
-  _arp_db.insert(stData,current_arp_data);
-
-  ACA_LOG_DEBUG("Arp Entry with ip: %s and vlan id %u added\n",arp_cfg_in->ipv4_address.c_str(),arp_cfg_in->vlan_id);
-
-  return EXIT_SUCCESS;
 }  
 
 int ACA_ARP_Responder::create_or_update_arp_entry(arp_config *arp_cfg_in){
   arp_entry_data stData;
   arp_table_data *current_arp_data = new arp_table_data;
 
-  if(_validate_arp_entry(arp_cfg_in)){
-    ACA_LOG_ERROR("Validate arp cfg failed! (ip = %s and vlan id = %u)\n",
-                  arp_cfg_in->ipv4_address.c_str(),arp_cfg_in->vlan_id);
+  try{
+    _validate_arp_entry(arp_cfg_in);
+    ARP_ENTRY_DATA_SET((arp_entry_data *)&stData, arp_cfg_in);
+    ARP_TABLE_DATA_SET(current_arp_data, arp_cfg_in);
+
+    if(!_arp_db.find(stData,current_arp_data)){
+      ACA_LOG_DEBUG("Entry not exist! (ip = %s and vlan id = %u)\n",
+                    arp_cfg_in->ipv4_address.c_str(),arp_cfg_in->vlan_id);    
+      add_arp_entry(arp_cfg_in);
+    }
+    else{   
+      current_arp_data->mac_address = arp_cfg_in->mac_address;
+    }
+    return EXIT_SUCCESS;
+  }
+  catch(std::invalid_argument &ia){
+    ACA_LOG_ERROR("%s,validate arp config failed! (ip = %s and vlan id = %u)\n",
+                  ia.what(),arp_cfg_in->ipv4_address.c_str(),arp_cfg_in->vlan_id);
     return EXIT_FAILURE;
   }
 
-  ARP_ENTRY_DATA_SET((arp_entry_data *)&stData, arp_cfg_in);
-  ARP_TABLE_DATA_SET(current_arp_data, arp_cfg_in);
-
-  if(!_arp_db.find(stData,current_arp_data)){
-    ACA_LOG_DEBUG("Entry not exist! (ip = %s and vlan id = %u)\n",
-                  arp_cfg_in->ipv4_address.c_str(),arp_cfg_in->vlan_id);    
-    add_arp_entry(arp_cfg_in);
-  }
-  else{   
-    current_arp_data->mac_address = arp_cfg_in->mac_address;
-  } 
-
-  return EXIT_SUCCESS;
+  
 
 }
 int ACA_ARP_Responder::delete_arp_entry(arp_config *arp_cfg_in){
   arp_entry_data stData;
   arp_table_data *current_arp_data = new arp_table_data;
-  if (_validate_arp_entry(arp_cfg_in)) {
-    ACA_LOG_ERROR("Valiate arp cfg failed! (ip = %s and vlan id = %u)\n",
-                  arp_cfg_in->ipv4_address.c_str(),arp_cfg_in->vlan_id);
-    return EXIT_FAILURE;
-  }
 
-  ARP_ENTRY_DATA_SET((arp_entry_data *)&stData, arp_cfg_in);
-  ARP_TABLE_DATA_SET(current_arp_data, arp_cfg_in);
+  try{
+    _validate_arp_entry(arp_cfg_in);
+    ARP_ENTRY_DATA_SET((arp_entry_data *)&stData, arp_cfg_in);
+    ARP_TABLE_DATA_SET(current_arp_data, arp_cfg_in);
 
-  if (!_arp_db.find(stData,current_arp_data)) {
-    ACA_LOG_ERROR("Entry not exist! (ip = %s and vlan id = %u)\n",
-                  arp_cfg_in->ipv4_address.c_str(),arp_cfg_in->vlan_id);
+    if (!_arp_db.find(stData,current_arp_data)) {
+      ACA_LOG_DEBUG("Entry not exist! (ip = %s and vlan id = %u)\n",
+                    arp_cfg_in->ipv4_address.c_str(),arp_cfg_in->vlan_id);
+      return EXIT_SUCCESS;
+    }
+    _arp_db.erase(stData);
     return EXIT_SUCCESS;
   }
-
-  _arp_db.erase(stData);
-
-  return EXIT_SUCCESS;
+  catch(std::invalid_argument &ia){
+    ACA_LOG_ERROR("%s,validate arp config failed! (ip = %s and vlan id = %u)\n",
+                  ia.what(),arp_cfg_in->ipv4_address.c_str(),arp_cfg_in->vlan_id);
+    return EXIT_FAILURE;
+  }
 }
 
-
-void ACA_ARP_Responder::_validate_mac_address(const char *mac_string)
-{
-  unsigned char mac[6];
-
-  if (!mac_string) {
-    throw std::invalid_argument("Input mac_string is null");
-  }
-
-  if (sscanf(mac_string, "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx", &mac[0], &mac[1],
-             &mac[2], &mac[3], &mac[4], &mac[5]) == 6) {
-    return;
-  }
-
-  if (sscanf(mac_string, "%hhx-%hhx-%hhx-%hhx-%hhx-%hhx", &mac[0], &mac[1],
-             &mac[2], &mac[3], &mac[4], &mac[5]) == 6) {
-    return;
-  }
-
-  // nothing matched
-  ACA_LOG_ERROR("Invalid mac address: %s\n", mac_string);
-
-  throw std::invalid_argument("Input mac_string is not in the expect format");
-}
 
 void ACA_ARP_Responder::_validate_ipv4_address(const char *ip_address)
 {
@@ -194,7 +178,9 @@ int ACA_ARP_Responder::_validate_arp_entry(arp_config *arp_cfg_in)
     throw std::invalid_argument("Input mac_string is null");
   }
 
-  _validate_mac_address(arp_cfg_in->mac_address.c_str());
+  if(!aca_validate_mac_address(arp_cfg_in->mac_address.c_str())){
+    throw std::invalid_argument("Virtual mac address is not in the expect format");
+  }
 
   if (0 < arp_cfg_in->ipv4_address.size()) {
     _validate_ipv4_address(arp_cfg_in->ipv4_address.c_str());
@@ -217,7 +203,7 @@ void ACA_ARP_Responder::arp_recv(uint32_t in_port, void *vlan_hdr, void *message
   arp_message *arpmsg = nullptr;
   vlan_message *vlanmsg = nullptr;
 
-  printf("receiving arp message\n");
+  ACA_LOG_DEBUG("Receiving arp message from inport=%u\n",in_port);
   if (!message) {
     ACA_LOG_ERROR("%s", "ARP message is null!\n");
     return;
@@ -249,11 +235,13 @@ void ACA_ARP_Responder::arp_xmit(uint32_t in_port, void  *vlanmsg, void *message
 
   arpmsg = (arp_message *)message;
   if(!arpmsg){
+    ACA_LOG_ERROR("%s","ARP Reply is null!\n");
     return;
   }
 
   packet = _serialize_arp_message((vlan_message *)vlanmsg, arpmsg);
   if(packet.empty()){
+    ACA_LOG_ERROR("%s","Serialized ARP Reply is null!\n");
     return;
   }
 
@@ -269,16 +257,18 @@ void ACA_ARP_Responder::_parse_arp_request(uint32_t in_port, vlan_message *vlanm
   arp_table_data *current_arp_data = new arp_table_data;
   arp_message *arpreply = nullptr;
 
+  // get the ip address from arp message
   stData.ipv4_address = _get_requested_ip(arpmsg);
+
+  // get the vlan id from vlan header
   if(vlanmsg){
-    stData.vlan_id = ntohs(vlanmsg->vlan_tci) & 0x0111;
-    
+    stData.vlan_id = ntohs(vlanmsg->vlan_tci) & 0x0111; 
   }
   else{
     stData.vlan_id = 0;
   }
   
-
+  //find the corresponding mac address in the db based on ip and vlan id
   if(!_arp_db.find(stData,current_arp_data)){
     ACA_LOG_DEBUG("ARP entry does not exist! (ip = %s and vlan id = %u)\n",
                   stData.ipv4_address.c_str(),stData.vlan_id);
@@ -301,6 +291,7 @@ arp_message *ACA_ARP_Responder::_pack_arp_reply(arp_message *arpreq, string mac_
   arpreply = new arp_message();
   unsigned int tmp_mac[6];
 
+  //construct arp reply form arp request and mac address in the db
   arpreply->hrd = arpreq->hrd;
   arpreply->pro = arpreq->pro;
   arpreply->hln = arpreq->hln;
@@ -338,7 +329,7 @@ string ACA_ARP_Responder::_get_requested_ip(arp_message *arpmsg){
   struct in_addr inaddr;
   if(!arpmsg){
     ACA_LOG_ERROR("%s", "ARP message is null!\n");
-    return 0;
+    return string();
   }
 
   inaddr.s_addr = arpmsg->tpa;
@@ -354,6 +345,7 @@ string ACA_ARP_Responder::_serialize_arp_message(vlan_message *vlanmsg, arp_mess
     return string();
   }
 
+  //fix arp header
   sprintf(str,"%04x",ntohs(arpmsg->hrd));
   packet.append(str);
   sprintf(str,"%04x",ntohs(arpmsg->pro));
@@ -364,12 +356,16 @@ string ACA_ARP_Responder::_serialize_arp_message(vlan_message *vlanmsg, arp_mess
   packet.append(str);
   sprintf(str,"%04x",ntohs(arpmsg->op));
   packet.append(str);
+
+  //fix ip and mac address of source node
   for (int i = 0; i < 6; i++) {
     sprintf(str, "%02x", arpmsg->sha[i]);
     packet.append(str);
   }
   sprintf(str,"%08x",ntohl(arpmsg->spa));
   packet.append(str);
+
+  //fix ip and mac address of target node
   for (int i = 0; i < 6; i++) {
     sprintf(str, "%02x", arpmsg->tha[i]);
     packet.append(str);
@@ -377,7 +373,7 @@ string ACA_ARP_Responder::_serialize_arp_message(vlan_message *vlanmsg, arp_mess
   sprintf(str,"%08x",ntohl(arpmsg->tpa));
   packet.append(str);
 
-
+  //fix the ethernet header
   string packet_header;
   for (int i = 0; i < 6; i++) {
     sprintf(str, "%02x", arpmsg->tha[i]);
@@ -388,7 +384,7 @@ string ACA_ARP_Responder::_serialize_arp_message(vlan_message *vlanmsg, arp_mess
     sprintf(str, "%02x", arpmsg->sha[i]);
     packet_header.append(str);
   }
-
+  //fix the vlan header
   if(vlanmsg){
     sprintf(str,"%04x",ntohs(vlanmsg->vlan_proto));
     packet_header.append(str);
@@ -396,7 +392,7 @@ string ACA_ARP_Responder::_serialize_arp_message(vlan_message *vlanmsg, arp_mess
     packet_header.append(str);
   }
 
-
+  //arp protocol：0806
   packet_header.append("0806");
   packet.insert(0,packet_header);
   return packet;

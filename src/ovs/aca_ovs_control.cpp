@@ -188,7 +188,9 @@ void ACA_OVS_Control::parse_packet(uint32_t in_port, void *packet)
     ACA_LOG_INFO("%s", "Ethernet Type: ARP (0x0806) \n");
     ACA_LOG_INFO("   From: %s\n", inet_ntoa(*(in_addr *)(base + 14 + vlan_len + 14)));
     ACA_LOG_INFO("     to: %s\n", inet_ntoa(*(in_addr *)(base + 14 + vlan_len + 14 + 10)));
+    /* compute arp message offset */
     unsigned char *arp_hdr= (unsigned char *)(base + SIZE_ETHERNET + vlan_len);
+    /* arp request procedure,type = 1 */
     if(ntohs(*(uint16_t *)(arp_hdr + 6)) == 0x0001){
       aca_arp_responder::ACA_ARP_Responder::get_instance().arp_recv(in_port,vlan_hdr,arp_hdr);
     }

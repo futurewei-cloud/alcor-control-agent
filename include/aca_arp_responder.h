@@ -113,7 +113,7 @@ class ACA_ARP_Responder{
   private:
     ACA_ARP_Responder();
     ~ACA_ARP_Responder();
-    // std::unordered_map<arp_entry_data,string,arp_hash> *_arp_db;
+
     CTSL::HashMap<arp_entry_data,arp_table_data *,arp_hash> _arp_db;
     
 

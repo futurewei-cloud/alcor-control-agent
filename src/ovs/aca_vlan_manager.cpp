@@ -226,7 +226,7 @@ int ACA_Vlan_Manager::create_l2_neighbor(string virtual_ip, string virtual_mac,
 
   ACA_ARP_Responder::get_instance().create_or_update_arp_entry(&stArpCfg);
   
-  ACA_LOG_DEBUG("create_l2_neighbor with ip = %s, vlan id = %u and mac = %s\n",virtual_ip.c_str(),internal_vlan_id, virtual_mac.c_str());
+  ACA_LOG_DEBUG("create_l2_neighbor arp entry with ip = %s, vlan id = %u and mac = %s\n",virtual_ip.c_str(),internal_vlan_id, virtual_mac.c_str());
 
   ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::create_l2_neighbor <--- Exiting\n");
 
@@ -265,6 +265,8 @@ int ACA_Vlan_Manager::delete_l2_neighbor(string virtual_ip, string virtual_mac,
   stArpCfg.vlan_id = internal_vlan_id;
 
   ACA_ARP_Responder::get_instance().delete_arp_entry(&stArpCfg);
+  ACA_LOG_DEBUG("delete_l2_neighbor arp entry with ip = %s, vlan id = %u and mac = %s\n",virtual_ip.c_str(),internal_vlan_id, virtual_mac.c_str());
+
 
   ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::delete_l2_neighbor <--- Exiting\n");
 
