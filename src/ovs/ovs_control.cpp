@@ -271,8 +271,7 @@ int OVS_Control::dump_flows(const char *bridge, const char *flow, bool show_stat
                                 //ports_to_show(ctx->argv[1]),
                                 //tables_to_show(ctx->argv[1]),
                                 show_stats);
-      printf(" %s\n", ds_cstr(&s));
-      ;
+      ACA_LOG_DEBUG(" %s\n", ds_cstr(&s));
     }
     if (n_fses > 0)
       rc = EXIT_SUCCESS;

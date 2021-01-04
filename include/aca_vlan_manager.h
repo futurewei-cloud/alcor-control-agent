@@ -35,10 +35,8 @@ struct vpc_table_entry {
   uint vlan_id;
 
   // list of ovs_ports names on this host in the same VPC to share the same internal vlan_id
-  list<string> ovs_ports;
-
-  // mutex to protect ovs_ports
-  mutable std::shared_timed_mutex ovs_ports_mutex;
+  // hashtable <key: ovs_port name, value: int* (not used)>
+  CTSL::HashMap<string, int *> ovs_ports;
 
   string auxGateway_id;
 };

@@ -118,11 +118,7 @@ int ACA_Vlan_Manager::create_ovs_port(string /*vpc_id*/, string ovs_port,
       ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
               cmd_string, culminative_time, overall_rc);
     }
-    //-----Start exclusive lock to enable single write-----
-    std::unique_lock<std::shared_timed_mutex> lock(current_vpc_table_entry->ovs_ports_mutex);
-    current_vpc_table_entry->ovs_ports.push_back(ovs_port);
-    lock.unlock();
-    //-----End exclusive lock to enable single write-----
+    current_vpc_table_entry->ovs_ports.insert(ovs_port, nullptr);
   }
 
   ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::create_ovs_port <--- Exiting\n");
@@ -143,9 +139,7 @@ int ACA_Vlan_Manager::delete_ovs_port(string /*vpc_id*/, string ovs_port,
     ACA_LOG_ERROR("tunnel_id %u not found in vpc_table\n", tunnel_id);
     overall_rc = ENOENT;
   } else {
-    //-----Start exclusive lock to enable single writer-----
-    std::unique_lock<std::shared_timed_mutex> lock(current_vpc_table_entry->ovs_ports_mutex);
-    current_vpc_table_entry->ovs_ports.remove(ovs_port);
+    current_vpc_table_entry->ovs_ports.erase(ovs_port);
 
     // clean up the vpc_table entry if there is no port assoicated
     if (current_vpc_table_entry->ovs_ports.empty()) {
@@ -163,8 +157,6 @@ int ACA_Vlan_Manager::delete_ovs_port(string /*vpc_id*/, string ovs_port,
       ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
               cmd_string, culminative_time, overall_rc);
     }
-    lock.unlock();
-    //-----End exclusive lock to enable single writer-----
   }
 
   ACA_LOG_DEBUG("ACA_Vlan_Manager::delete_ovs_port <--- Exiting, overall_rc = %d\n", overall_rc);
