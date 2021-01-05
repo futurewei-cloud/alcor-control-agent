@@ -94,7 +94,10 @@ void ACA_Oam_Server::_init_oam_msg_ops()
           &aca_oam_server::ACA_Oam_Server::_parse_oam_flow_injection;
   _parse_oam_msg_ops[OAM_MSG_FLOW_DELETION] =
           &aca_oam_server::ACA_Oam_Server::_parse_oam_flow_deletion;
-  _parse_oam_msg_ops[OAM_MSG_NONE] = &aca_oam_server::ACA_Oam_Server::_parse_oam_none;
+  // error: array subscript is above array bounds [-Werror=array-bounds]
+  // because _parse_oam_msg_ops and defined to have three element so
+  // doing _parse_oam_msg_ops[OAM_MSG_NONE(3)] in invalid
+  // _parse_oam_msg_ops[OAM_MSG_NONE] = &aca_oam_server::ACA_Oam_Server::_parse_oam_none;
 }
 
 uint8_t ACA_Oam_Server::_get_message_type(oam_message *oammsg)

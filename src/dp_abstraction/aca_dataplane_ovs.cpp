@@ -335,7 +335,7 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
   string virtual_mac_address;
   string host_ip_address;
   NetworkType found_network_type;
-  uint found_tunnel_id;
+  uint found_tunnel_id = 0;
   string found_gateway_mac;
   bool subnet_info_found = false;
   ulong culminative_dataplane_programming_time = 0;

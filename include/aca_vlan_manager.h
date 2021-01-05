@@ -35,10 +35,8 @@ struct vpc_table_entry {
   uint vlan_id;
 
   // list of ovs_ports names on this host in the same VPC to share the same internal vlan_id
-  list<string> ovs_ports;
-
-  // mutex to protect ovs_ports
-  mutable std::shared_timed_mutex ovs_ports_mutex;
+  // CTSL::HashMap <key: ovs_port name, value: int* (not used)>
+  CTSL::HashMap<string, int *> ovs_ports;
 
   string auxGateway_id;
 };
@@ -79,7 +77,7 @@ class ACA_Vlan_Manager {
   ACA_Vlan_Manager(){};
   ~ACA_Vlan_Manager(){};
 
-  // hashtable <key: tunnel ID, value: vpc_table_entry>
+  // CTSL::HashMap <key: tunnel ID, value: vpc_table_entry>
   CTSL::HashMap<uint, vpc_table_entry *> _vpcs_table;
 
   void create_entry(uint tunnel_id);

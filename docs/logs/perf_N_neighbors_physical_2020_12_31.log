@@ -1,0 +1,186 @@
+./build/tests/aca_tests --gtest_filter=*1_port_CREATE_plus_10_l2_neighbor_CREATE* -n [number of L2 neighbors to create]
+build = release
+
+[***1 port + 1 neighbor***]
+[METRICS] Elapsed time for message total operation took: 37951 microseconds or 37 milliseconds
+Number: 0 Resource Type: 2 with id: 01111111-b718-11ea-b3de-111111111111 took: 18236 microseconds or 18 milliseconds
+Number: 1 Resource Type: 3 with id: 0-baad-f00d-4444-555555555555 took: 5539 microseconds or 5 milliseconds
+Average port + neighbor states with NeighborType: 0 Create of 1 took: 23775 microseconds or 23 milliseconds
+[TEST METRICS] Elapsed time for message total operation took: 37951 microseconds or 37 milliseconds
+
+==========INIT TIMES:==========
+g_initialize_execute_system_time = 1580573 microseconds or 1580 milliseconds
+g_initialize_execute_ovsdb_time = 1549356 microseconds or 1549 milliseconds
+g_initialize_execute_openflow_time = 32235 microseconds or 32 milliseconds
+==========EXECUTION TIMES:==========
+g_total_execute_system_time = 33442 microseconds or 33 milliseconds
+g_total_execute_ovsdb_time = 17381 microseconds or 17 milliseconds
+g_total_execute_openflow_time = 10385 microseconds or 10 milliseconds
+==========UPDATE GS TIMES:==========
+g_total_update_GS_time = 37951 microseconds or 37 milliseconds
+
+[***1 port + 1 neighbor***NO DEBUG LOG TO CONSOLE]
+==========INIT TIMES:==========
+g_initialize_execute_system_time = 1650380 microseconds or 1650 milliseconds
+g_initialize_execute_ovsdb_time = 1618482 microseconds or 1618 milliseconds
+g_initialize_execute_openflow_time = 32649 microseconds or 32 milliseconds
+==========EXECUTION TIMES:==========
+g_total_execute_system_time = 33700 microseconds or 33 milliseconds
+g_total_execute_ovsdb_time = 17310 microseconds or 17 milliseconds
+g_total_execute_openflow_time = 10739 microseconds or 10 milliseconds
+==========UPDATE GS TIMES:==========
+g_total_update_GS_time = 37582 microseconds or 37 milliseconds
+
+
+[***1 port + 10 neighbor***]
+[METRICS] Elapsed time for message total operation took: 42969 microseconds or 42 milliseconds
+Number: 0 Resource Type: 2 with id: 01111111-b718-11ea-b3de-111111111111 took: 18345 microseconds or 18 milliseconds
+Number: 1 Resource Type: 3 with id: 3-baad-f00d-4444-555555555555 took: 6406 microseconds or 6 milliseconds
+Number: 2 Resource Type: 3 with id: 2-baad-f00d-4444-555555555555 took: 7632 microseconds or 7 milliseconds
+Number: 3 Resource Type: 3 with id: 1-baad-f00d-4444-555555555555 took: 8618 microseconds or 8 milliseconds
+Number: 4 Resource Type: 3 with id: 0-baad-f00d-4444-555555555555 took: 9362 microseconds or 9 milliseconds
+Number: 5 Resource Type: 3 with id: 4-baad-f00d-4444-555555555555 took: 8184 microseconds or 8 milliseconds
+Number: 6 Resource Type: 3 with id: 5-baad-f00d-4444-555555555555 took: 8350 microseconds or 8 milliseconds
+Number: 7 Resource Type: 3 with id: 6-baad-f00d-4444-555555555555 took: 8200 microseconds or 8 milliseconds
+Number: 8 Resource Type: 3 with id: 7-baad-f00d-4444-555555555555 took: 8124 microseconds or 8 milliseconds
+Number: 9 Resource Type: 3 with id: 8-baad-f00d-4444-555555555555 took: 7725 microseconds or 7 milliseconds
+Number: 10 Resource Type: 3 with id: 9-baad-f00d-4444-555555555555 took: 7754 microseconds or 7 milliseconds
+Average port + neighbor states with NeighborType: 0 Create of 10 took: 9870 microseconds or 9 milliseconds
+[TEST METRICS] Elapsed time for message total operation took: 42969 microseconds or 42 milliseconds
+
+==========INIT TIMES:==========
+g_initialize_execute_system_time = 1585544 microseconds or 1585 milliseconds
+g_initialize_execute_ovsdb_time = 1554307 microseconds or 1554 milliseconds
+g_initialize_execute_openflow_time = 32220 microseconds or 32 milliseconds
+==========EXECUTION TIMES:==========
+g_total_execute_system_time = 62846 microseconds or 62 milliseconds
+g_total_execute_ovsdb_time = 16991 microseconds or 16 milliseconds
+g_total_execute_openflow_time = 49817 microseconds or 49 milliseconds
+==========UPDATE GS TIMES:==========
+g_total_update_GS_time = 42969 microseconds or 42 milliseconds
+
+[***1 port + 10 neighbor***NO DEBUG LOG TO CONSOLE]
+==========INIT TIMES:==========
+g_initialize_execute_system_time = 1632393 microseconds or 1632 milliseconds
+g_initialize_execute_ovsdb_time = 1600248 microseconds or 1600 milliseconds
+g_initialize_execute_openflow_time = 32947 microseconds or 32 milliseconds
+==========EXECUTION TIMES:==========
+g_total_execute_system_time = 63215 microseconds or 63 milliseconds
+g_total_execute_ovsdb_time = 16779 microseconds or 16 milliseconds
+g_total_execute_openflow_time = 49330 microseconds or 49 milliseconds
+==========UPDATE GS TIMES:==========
+g_total_update_GS_time = 41986 microseconds or 41 milliseconds
+
+
+[***1 port + 100 neighbor***]
+Number: 91 Resource Type: 3 with id: 90-baad-f00d-4444-555555555555 took: 19236 microseconds or 19 milliseconds
+Number: 92 Resource Type: 3 with id: 95-baad-f00d-4444-555555555555 took: 14895 microseconds or 14 milliseconds
+Number: 93 Resource Type: 3 with id: 91-baad-f00d-4444-555555555555 took: 19888 microseconds or 19 milliseconds
+Number: 94 Resource Type: 3 with id: 93-baad-f00d-4444-555555555555 took: 16233 microseconds or 16 milliseconds
+Number: 95 Resource Type: 3 with id: 97-baad-f00d-4444-555555555555 took: 14835 microseconds or 14 milliseconds
+Number: 96 Resource Type: 3 with id: 94-baad-f00d-4444-555555555555 took: 16833 microseconds or 16 milliseconds
+Number: 97 Resource Type: 3 with id: 92-baad-f00d-4444-555555555555 took: 19262 microseconds or 19 milliseconds
+Number: 98 Resource Type: 3 with id: 98-baad-f00d-4444-555555555555 took: 15640 microseconds or 15 milliseconds
+Number: 99 Resource Type: 3 with id: 99-baad-f00d-4444-555555555555 took: 13934 microseconds or 13 milliseconds
+Number: 100 Resource Type: 3 with id: 96-baad-f00d-4444-555555555555 took: 17530 microseconds or 17 milliseconds
+Average port + neighbor states with NeighborType: 0 Create of 100 took: 26756 microseconds or 26 milliseconds
+[TEST METRICS] Elapsed time for message total operation took: 147056 microseconds or 147 milliseconds
+
+==========INIT TIMES:==========
+g_initialize_execute_system_time = 1614445 microseconds or 1614 milliseconds
+g_initialize_execute_ovsdb_time = 1581729 microseconds or 1581 milliseconds
+g_initialize_execute_openflow_time = 33848 microseconds or 33 milliseconds
+==========EXECUTION TIMES:==========
+g_total_execute_system_time = 404072 microseconds or 404 milliseconds
+g_total_execute_ovsdb_time = 16995 microseconds or 16 milliseconds
+g_total_execute_openflow_time = 548246 microseconds or 548 milliseconds
+==========UPDATE GS TIMES:==========
+g_total_update_GS_time = 147056 microseconds or 147 milliseconds
+
+[***1 port + 100 neighbor***NO DEBUG LOG TO CONSOLE]
+==========INIT TIMES:==========
+g_initialize_execute_system_time = 1627848 microseconds or 1627 milliseconds
+g_initialize_execute_ovsdb_time = 1597390 microseconds or 1597 milliseconds
+g_initialize_execute_openflow_time = 31197 microseconds or 31 milliseconds
+==========EXECUTION TIMES:==========
+g_total_execute_system_time = 434089 microseconds or 434 milliseconds
+g_total_execute_ovsdb_time = 17189 microseconds or 17 milliseconds
+g_total_execute_openflow_time = 730961 microseconds or 730 milliseconds
+==========UPDATE GS TIMES:==========
+g_total_update_GS_time = 147560 microseconds or 147 milliseconds
+
+
+[***1 port + 1000 neighbor***]
+Number: 991 Resource Type: 3 with id: 983-baad-f00d-4444-555555555555 took: 103292 microseconds or 103 milliseconds
+Number: 992 Resource Type: 3 with id: 990-baad-f00d-4444-555555555555 took: 62757 microseconds or 62 milliseconds
+Number: 993 Resource Type: 3 with id: 989-baad-f00d-4444-555555555555 took: 67505 microseconds or 67 milliseconds
+Number: 994 Resource Type: 3 with id: 994-baad-f00d-4444-555555555555 took: 53421 microseconds or 53 milliseconds
+Number: 995 Resource Type: 3 with id: 998-baad-f00d-4444-555555555555 took: 49431 microseconds or 49 milliseconds
+Number: 996 Resource Type: 3 with id: 995-baad-f00d-4444-555555555555 took: 53962 microseconds or 53 milliseconds
+Number: 997 Resource Type: 3 with id: 997-baad-f00d-4444-555555555555 took: 49936 microseconds or 49 milliseconds
+Number: 998 Resource Type: 3 with id: 996-baad-f00d-4444-555555555555 took: 50833 microseconds or 50 milliseconds
+Number: 999 Resource Type: 3 with id: 991-baad-f00d-4444-555555555555 took: 64756 microseconds or 64 milliseconds
+Number: 1000 Resource Type: 3 with id: 999-baad-f00d-4444-555555555555 took: 38297 microseconds or 38 milliseconds
+Average port + neighbor states with NeighborType: 0 Create of 1000 took: 51431 microseconds or 51 milliseconds
+[TEST METRICS] Elapsed time for message total operation took: 2728847 microseconds or 2728 milliseconds
+
+==========INIT TIMES:==========
+g_initialize_execute_system_time = 1646912 microseconds or 1646 milliseconds
+g_initialize_execute_ovsdb_time = 1615486 microseconds or 1615 milliseconds
+g_initialize_execute_openflow_time = 32500 microseconds or 32 milliseconds
+==========EXECUTION TIMES:==========
+g_total_execute_system_time = 7690721 microseconds or 7690 milliseconds
+g_total_execute_ovsdb_time = 16898 microseconds or 16 milliseconds
+g_total_execute_openflow_time = 9218667 microseconds or 9218 milliseconds
+==========UPDATE GS TIMES:==========
+g_total_update_GS_time = 2728847 microseconds or 2728 milliseconds
+
+[***1 port + 1000 neighbor***NO DEBUG LOG TO CONSOLE]
+==========INIT TIMES:==========
+g_initialize_execute_system_time = 1666865 microseconds or 1666 milliseconds
+g_initialize_execute_ovsdb_time = 1634400 microseconds or 1634 milliseconds
+g_initialize_execute_openflow_time = 33242 microseconds or 33 milliseconds
+==========EXECUTION TIMES:==========
+g_total_execute_system_time = 9143983 microseconds or 9143 milliseconds
+g_total_execute_ovsdb_time = 16737 microseconds or 16 milliseconds
+g_total_execute_openflow_time = 15212445 microseconds or 15212 milliseconds
+==========UPDATE GS TIMES:==========
+g_total_update_GS_time = 2504186 microseconds or 2504 milliseconds
+
+
+[***1 port + 10000 neighbor***]
+Number: 9991 Resource Type: 3 with id: 9987-baad-f00d-4444-555555555555 took: 754776 microseconds or 754 milliseconds
+Number: 9992 Resource Type: 3 with id: 9989-baad-f00d-4444-555555555555 took: 706937 microseconds or 706 milliseconds
+Number: 9993 Resource Type: 3 with id: 9991-baad-f00d-4444-555555555555 took: 469338 microseconds or 469 milliseconds
+Number: 9994 Resource Type: 3 with id: 9993-baad-f00d-4444-555555555555 took: 469559 microseconds or 469 milliseconds
+Number: 9995 Resource Type: 3 with id: 9994-baad-f00d-4444-555555555555 took: 470216 microseconds or 470 milliseconds
+Number: 9996 Resource Type: 3 with id: 9996-baad-f00d-4444-555555555555 took: 194263 microseconds or 194 milliseconds
+Number: 9997 Resource Type: 3 with id: 9995-baad-f00d-4444-555555555555 took: 330624 microseconds or 330 milliseconds
+Number: 9998 Resource Type: 3 with id: 9997-baad-f00d-4444-555555555555 took: 194692 microseconds or 194 milliseconds
+Number: 9999 Resource Type: 3 with id: 9999-baad-f00d-4444-555555555555 took: 194422 microseconds or 194 milliseconds
+Number: 10000 Resource Type: 3 with id: 9998-baad-f00d-4444-555555555555 took: 224144 microseconds or 224 milliseconds
+Average port + neighbor states with NeighborType: 0 Create of 10000 took: 354686 microseconds or 354 milliseconds
+[TEST METRICS] Elapsed time for message total operation took: 237042161 microseconds or 237042 milliseconds
+
+==========INIT TIMES:==========
+g_initialize_execute_system_time = 1610816 microseconds or 1610 milliseconds
+g_initialize_execute_ovsdb_time = 1578347 microseconds or 1578 milliseconds
+g_initialize_execute_openflow_time = 33505 microseconds or 33 milliseconds
+==========EXECUTION TIMES:==========
+g_total_execute_system_time = 565191760 microseconds or 565191 milliseconds
+g_total_execute_ovsdb_time = 21864 microseconds or 21 milliseconds
+g_total_execute_openflow_time = 923029054 microseconds or 923029 milliseconds
+==========UPDATE GS TIMES:==========
+g_total_update_GS_time = 237042161 microseconds or 237042 milliseconds
+
+[***1 port + 10000 neighbor***NO DEBUG LOG TO CONSOLE]
+==========INIT TIMES:==========
+g_initialize_execute_system_time = 1594609 microseconds or 1594 milliseconds
+g_initialize_execute_ovsdb_time = 1562838 microseconds or 1562 milliseconds
+g_initialize_execute_openflow_time = 32488 microseconds or 32 milliseconds
+==========EXECUTION TIMES:==========
+g_total_execute_system_time = 600716495 microseconds or 600716 milliseconds
+g_total_execute_ovsdb_time = 17072 microseconds or 17 milliseconds
+g_total_execute_openflow_time = 1300917374 microseconds or 1300917 milliseconds
+==========UPDATE GS TIMES:==========
+g_total_update_GS_time = 230731661 microseconds or 230731 milliseconds

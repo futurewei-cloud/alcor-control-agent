@@ -31,6 +31,12 @@ string g_ofctl_target = EMPTY_STRING;
 string g_ofctl_options = EMPTY_STRING;
 
 // total time for execute_system_command in microseconds
+std::atomic_ulong g_initialize_execute_system_time(0);
+// total time for execute_ovsdb_command in microseconds
+std::atomic_ulong g_initialize_execute_ovsdb_time(0);
+// total time for execute_openflow_command in microseconds
+std::atomic_ulong g_initialize_execute_openflow_time(0);
+// total time for execute_system_command in microseconds
 std::atomic_ulong g_total_execute_system_time(0);
 // total time for execute_ovsdb_command in microseconds
 std::atomic_ulong g_total_execute_ovsdb_time(0);
@@ -77,6 +83,22 @@ TEST(pulsar_test_cases, DISABLED_pulsar_consumer_test)
 
 static void aca_cleanup()
 {
+  ACA_LOG_DEBUG("%s", "==========INIT TIMES:==========\n");
+
+  ACA_LOG_DEBUG("g_initialize_execute_system_time = %lu microseconds or %lu milliseconds\n",
+                g_initialize_execute_system_time.load(),
+                us_to_ms(g_initialize_execute_system_time.load()));
+
+  ACA_LOG_DEBUG("g_initialize_execute_ovsdb_time = %lu microseconds or %lu milliseconds\n",
+                g_initialize_execute_ovsdb_time.load(),
+                us_to_ms(g_initialize_execute_ovsdb_time.load()));
+
+  ACA_LOG_DEBUG("g_initialize_execute_openflow_time = %lu microseconds or %lu milliseconds\n",
+                g_initialize_execute_openflow_time.load(),
+                us_to_ms(g_initialize_execute_openflow_time.load()));
+
+  ACA_LOG_DEBUG("%s", "==========EXECUTION TIMES:==========\n");
+
   ACA_LOG_DEBUG("g_total_execute_system_time = %lu microseconds or %lu milliseconds\n",
                 g_total_execute_system_time.load(),
                 us_to_ms(g_total_execute_system_time.load()));
@@ -89,9 +111,7 @@ static void aca_cleanup()
                 g_total_execute_openflow_time.load(),
                 us_to_ms(g_total_execute_openflow_time.load()));
 
-  ACA_LOG_DEBUG("g_total_vpcs_table_mutex_time = %lu microseconds or %lu milliseconds\n",
-                g_total_vpcs_table_mutex_time.load(),
-                us_to_ms(g_total_vpcs_table_mutex_time.load()));
+  ACA_LOG_DEBUG("%s", "==========UPDATE GS TIMES:==========\n");
 
   ACA_LOG_DEBUG("g_total_update_GS_time = %lu microseconds or %lu milliseconds\n",
                 g_total_update_GS_time.load(), us_to_ms(g_total_update_GS_time.load()));

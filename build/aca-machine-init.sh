@@ -96,7 +96,7 @@ echo "6--- installing openvswitch dependancies ---" && \
     git clone -b $OVS_RELEASE_TAG https://github.com/openvswitch/ovs.git /var/local/git/openvswitch && \
     cd /var/local/git/openvswitch && \
     ./boot.sh && \
-    ./configure --prefix=/usr/local --localstatedir=/var --sysconfdir=/etc --enable-shared && \
+    ./configure --prefix=/usr/local --localstatedir=/var --sysconfdir=/etc --enable-shared --enable-ndebug && \
     make && \
     make install && \
     cp /var/local/git/openvswitch/lib/vconn-provider.h /usr/local/include/openvswitch/vconn-provider.h && \
