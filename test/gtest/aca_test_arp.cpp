@@ -66,6 +66,9 @@ extern string subnet2_gw_mac;
 extern string remote_ip_1; // for docker network
 extern string remote_ip_2; // for docker network
 
+extern bool g_demo_mode;
+extern void aca_test_reset_environment();
+
 static string arp_test_router_namespace = "arp_test_router";
 
 //
@@ -185,20 +188,11 @@ TEST(arp_request_test_cases, arps_recv_valid)
 
 TEST(arp_request_test_cases, DISABLED_l2_arp_test_one_machine)
 {
-  ulong not_care_culminative_time = 0;
   string cmd_string;
   arp_config stArpCfgIn;
   int overall_rc;
 
-  // create and setup br-int and br-tun bridges, and their patch ports
-  overall_rc = ACA_OVS_L2_Programmer::get_instance().setup_ovs_bridges_if_need();
-  ASSERT_EQ(overall_rc, EXIT_SUCCESS);
-
-  //re adding arp default flows
-  ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
-          "add-flow br-tun \"table=0,priority=25,arp,arp_op=1, actions=CONTROLLER\"",
-          not_care_culminative_time, overall_rc);
-  ASSERT_EQ(overall_rc, EXIT_SUCCESS);
+  aca_test_reset_environment();
 
   // monitor br-tun for arp request message
   ovs_monitor_thread = 
@@ -250,6 +244,7 @@ TEST(arp_request_test_cases, DISABLED_l2_arp_test_one_machine)
 
   NeighborConfiguration_builder->set_mac_address(vmac_address_1);
   FixedIp_builder->set_ip_address(vip_address_1);
+
   overall_rc = Aca_Comm_Manager::get_instance().update_goal_state(
           GoalState_builder, gsOperationalReply);
   ASSERT_EQ(overall_rc, EXIT_SUCCESS);
@@ -317,20 +312,11 @@ TEST(arp_request_test_cases, DISABLED_l2_arp_test_one_machine)
 
 TEST(arp_request_test_cases, DISABLED_l2_arp_test_PARENT)
 {
-  ulong not_care_culminative_time = 0;
   string cmd_string;
   arp_config stArpCfgIn;
   int overall_rc;
 
-  // create and setup br-int and br-tun bridges, and their patch ports
-  overall_rc = ACA_OVS_L2_Programmer::get_instance().setup_ovs_bridges_if_need();
-  ASSERT_EQ(overall_rc, EXIT_SUCCESS);
-
-  //re adding arp default flows
-  ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
-          "add-flow br-tun \"table=0,priority=25,arp,arp_op=1, actions=CONTROLLER\"",
-          not_care_culminative_time, overall_rc);
-  ASSERT_EQ(overall_rc, EXIT_SUCCESS);
+  aca_test_reset_environment();
 
   // monitor br-tun for arp request message
   ovs_monitor_thread = 
@@ -339,23 +325,42 @@ TEST(arp_request_test_cases, DISABLED_l2_arp_test_PARENT)
 
   GoalState GoalState_builder;
 
+  PortState *new_port_states = GoalState_builder.add_port_states();
+  new_port_states->set_operation_type(OperationType::CREATE);
+
+  // fill in port state structs for port 1
+  PortConfiguration *PortConfiguration_builder = new_port_states->mutable_configuration();
+  PortConfiguration_builder->set_revision_number(1);
+  PortConfiguration_builder->set_update_type(UpdateType::FULL);
+  PortConfiguration_builder->set_id(port_id_1);
+
+  PortConfiguration_builder->set_vpc_id(vpc_id_1);
+  PortConfiguration_builder->set_name(port_name_1);
+  PortConfiguration_builder->set_mac_address(vmac_address_1);
+  PortConfiguration_builder->set_admin_state_up(true);
+
+  PortConfiguration_FixedIp *FixedIp_builder = PortConfiguration_builder->add_fixed_ips();
+  FixedIp_builder->set_subnet_id(subnet_id_1);
+  FixedIp_builder->set_ip_address(vip_address_1);
+
+  PortConfiguration_SecurityGroupId *SecurityGroup_builder =
+          PortConfiguration_builder->add_security_group_ids();
+  SecurityGroup_builder->set_id("1");
+
+  
   SubnetState *new_subnet_states = GoalState_builder.add_subnet_states();
   new_subnet_states->set_operation_type(OperationType::INFO);
+
+  // fill in subnet state structs
   SubnetConfiguration *SubnetConiguration_builder =
           new_subnet_states->mutable_configuration();
   SubnetConiguration_builder->set_revision_number(1);
   SubnetConiguration_builder->set_vpc_id(vpc_id_1);
   SubnetConiguration_builder->set_id(subnet_id_1);
-  SubnetConiguration_builder->set_cidr(subnet1_cidr);
-  SubnetConiguration_builder->set_tunnel_id(123);
-
-  auto *subnetConfig_GatewayBuilder(new SubnetConfiguration_Gateway);
-  subnetConfig_GatewayBuilder->set_ip_address(subnet1_gw_ip);
-  subnetConfig_GatewayBuilder->set_mac_address(subnet1_gw_mac);
-  SubnetConiguration_builder->set_allocated_gateway(subnetConfig_GatewayBuilder);
+  SubnetConiguration_builder->set_cidr("10.0.0.0/24");
+  SubnetConiguration_builder->set_tunnel_id(20);
 
   NeighborState *new_neighbor_states = GoalState_builder.add_neighbor_states();
-
   new_neighbor_states->set_operation_type(OperationType::CREATE);
 
   // fill in neighbor state structs
@@ -365,21 +370,20 @@ TEST(arp_request_test_cases, DISABLED_l2_arp_test_PARENT)
 
   NeighborConfiguration_builder->set_vpc_id(vpc_id_1);
   NeighborConfiguration_builder->set_id(port_id_3);
-  NeighborConfiguration_builder->set_mac_address(vmac_address_4);
+  NeighborConfiguration_builder->set_mac_address(vmac_address_3);
   NeighborConfiguration_builder->set_host_ip_address(remote_ip_2);
 
-  NeighborConfiguration_FixedIp *FixedIp_builder =
+  NeighborConfiguration_FixedIp *FixedIp_builder2 =
           NeighborConfiguration_builder->add_fixed_ips();
-  FixedIp_builder->set_neighbor_type(NeighborType::L2);
-  FixedIp_builder->set_subnet_id(subnet_id_1);
-  FixedIp_builder->set_ip_address(vip_address_4);
+  FixedIp_builder2->set_neighbor_type(NeighborType::L2);
+  FixedIp_builder2->set_subnet_id(subnet_id_1);
+  FixedIp_builder2->set_ip_address(vip_address_3);
 
-  GoalStateOperationReply gsOperationalReply;
-
-  overall_rc = Aca_Comm_Manager::get_instance().update_goal_state(
-          GoalState_builder, gsOperationalReply);
-  ASSERT_EQ(overall_rc, EXIT_SUCCESS);
-
+  
+  // set demo mode to false because routing test needs real routable port
+  // e.g. container port created by docker + ovs-docker
+  bool previous_demo_mode = g_demo_mode;
+  g_demo_mode = false;
 
   // create docker instances for test
   // con3
@@ -387,7 +391,7 @@ TEST(arp_request_test_cases, DISABLED_l2_arp_test_PARENT)
           "docker run -itd --cap-add=NET_ADMIN --name con3 --net=none alpine sh");
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
 
-  cmd_string = "ovs-docker add-port br-int eth1 con3 --macaddress=" + vmac_address_2 + " --ipaddress="+ vip_address_2 + "/24";
+  cmd_string = "ovs-docker add-port br-int eth1 con3 --macaddress=" + vmac_address_1 + " --ipaddress="+ vip_address_1 + "/24";
   overall_rc = Aca_Net_Config::get_instance().execute_system_command(cmd_string);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
@@ -397,9 +401,17 @@ TEST(arp_request_test_cases, DISABLED_l2_arp_test_PARENT)
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
 
+  GoalStateOperationReply gsOperationalReply;
+
+  overall_rc = Aca_Comm_Manager::get_instance().update_goal_state(
+          GoalState_builder, gsOperationalReply);
+  EXPECT_NE(overall_rc, EXIT_SUCCESS);
+
+  // restore demo mode
+  g_demo_mode = previous_demo_mode;
 
   // test ping 
-  cmd_string = "docker exec con3 ping -c1 " + vip_address_4;
+  cmd_string = "docker exec con3 ping -c1 " + vip_address_3;
   overall_rc = Aca_Net_Config::get_instance().execute_system_command(cmd_string);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
@@ -416,27 +428,38 @@ TEST(arp_request_test_cases, DISABLED_l2_arp_test_PARENT)
 
 TEST(arp_request_test_cases, DISABLED_l2_arp_test_CHILD)
 {
-  ulong not_care_culminative_time = 0;
   string cmd_string;
   arp_config stArpCfgIn;
   int overall_rc;
 
-  // create and setup br-int and br-tun bridges, and their patch ports
-  overall_rc = ACA_OVS_L2_Programmer::get_instance().setup_ovs_bridges_if_need();
-  ASSERT_EQ(overall_rc, EXIT_SUCCESS);
+  aca_test_reset_environment();
 
-  //re adding arp default flows
-  ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
-          "add-flow br-tun \"table=0,priority=25,arp,arp_op=1, actions=CONTROLLER\"",
-          not_care_culminative_time, overall_rc);
-  ASSERT_EQ(overall_rc, EXIT_SUCCESS);
-
-  // monitor br-tun for arp request message
-  ovs_monitor_thread = 
-    new thread(bind(&ACA_OVS_Control::monitor, &ACA_OVS_Control::get_instance(), "br-tun", "resume"));
-  ovs_monitor_thread->detach();
+  // kill the docker instances just in case
+  Aca_Net_Config::get_instance().execute_system_command("docker rm -f con4");
 
   GoalState GoalState_builder;
+
+  PortState *new_port_states = GoalState_builder.add_port_states();
+  new_port_states->set_operation_type(OperationType::CREATE);
+  
+  // fill in port state structs for port 3
+  PortConfiguration *PortConfiguration_builder = new_port_states->mutable_configuration();
+  PortConfiguration_builder->set_revision_number(1);
+  PortConfiguration_builder->set_update_type(UpdateType::FULL);
+  PortConfiguration_builder->set_id(port_id_3);
+
+  PortConfiguration_builder->set_vpc_id(vpc_id_1);
+  PortConfiguration_builder->set_name(port_name_3);
+  PortConfiguration_builder->set_mac_address(vmac_address_3);
+  PortConfiguration_builder->set_admin_state_up(true);
+
+  PortConfiguration_FixedIp *FixedIp_builder = PortConfiguration_builder->add_fixed_ips();
+  FixedIp_builder->set_subnet_id(subnet_id_1);
+  FixedIp_builder->set_ip_address(vip_address_3);
+
+  PortConfiguration_SecurityGroupId *SecurityGroup_builder =
+          PortConfiguration_builder->add_security_group_ids();
+  SecurityGroup_builder->set_id("1");
 
   SubnetState *new_subnet_states = GoalState_builder.add_subnet_states();
   new_subnet_states->set_operation_type(OperationType::INFO);
@@ -445,13 +468,8 @@ TEST(arp_request_test_cases, DISABLED_l2_arp_test_CHILD)
   SubnetConiguration_builder->set_revision_number(1);
   SubnetConiguration_builder->set_vpc_id(vpc_id_1);
   SubnetConiguration_builder->set_id(subnet_id_1);
-  SubnetConiguration_builder->set_cidr(subnet1_cidr);
-  SubnetConiguration_builder->set_tunnel_id(123);
-
-  auto *subnetConfig_GatewayBuilder(new SubnetConfiguration_Gateway);
-  subnetConfig_GatewayBuilder->set_ip_address(subnet1_gw_ip);
-  subnetConfig_GatewayBuilder->set_mac_address(subnet1_gw_mac);
-  SubnetConiguration_builder->set_allocated_gateway(subnetConfig_GatewayBuilder);
+  SubnetConiguration_builder->set_cidr("10.0.0.0/24");
+  SubnetConiguration_builder->set_tunnel_id(20);
 
   NeighborState *new_neighbor_states = GoalState_builder.add_neighbor_states();
 
@@ -463,21 +481,21 @@ TEST(arp_request_test_cases, DISABLED_l2_arp_test_CHILD)
   NeighborConfiguration_builder->set_revision_number(1);
 
   NeighborConfiguration_builder->set_vpc_id(vpc_id_1);
-  NeighborConfiguration_builder->set_id(port_id_3);
-  NeighborConfiguration_builder->set_mac_address(vmac_address_2);
+  NeighborConfiguration_builder->set_id(port_id_1);
+  NeighborConfiguration_builder->set_mac_address(vmac_address_1);
   NeighborConfiguration_builder->set_host_ip_address(remote_ip_1);
 
-  NeighborConfiguration_FixedIp *FixedIp_builder =
+  NeighborConfiguration_FixedIp *FixedIp_builder2 =
           NeighborConfiguration_builder->add_fixed_ips();
-  FixedIp_builder->set_neighbor_type(NeighborType::L2);
-  FixedIp_builder->set_subnet_id(subnet_id_1);
-  FixedIp_builder->set_ip_address(vip_address_2);
+  FixedIp_builder2->set_neighbor_type(NeighborType::L2);
+  FixedIp_builder2->set_subnet_id(subnet_id_1);
+  FixedIp_builder2->set_ip_address(vip_address_1);
 
-  GoalStateOperationReply gsOperationalReply;
 
-  overall_rc = Aca_Comm_Manager::get_instance().update_goal_state(
-          GoalState_builder, gsOperationalReply);
-  ASSERT_EQ(overall_rc, EXIT_SUCCESS);
+  // set demo mode to false because routing test needs real routable port
+  // e.g. container port created by docker + ovs-docker
+  bool previous_demo_mode = g_demo_mode;
+  g_demo_mode = false;
 
 
   // create docker instances for test
@@ -486,13 +504,23 @@ TEST(arp_request_test_cases, DISABLED_l2_arp_test_CHILD)
           "docker run -itd --cap-add=NET_ADMIN --name con4 --net=none alpine sh");
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
 
-  cmd_string = "ovs-docker add-port br-int eth1 con4 --macaddress=" + vmac_address_4 + " --ipaddress="+ vip_address_4 + "/24";
+  cmd_string = "ovs-docker add-port br-int eth0 con4 --macaddress=" + vmac_address_3 + " --ipaddress="+ vip_address_3 + "/24";
   overall_rc = Aca_Net_Config::get_instance().execute_system_command(cmd_string);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
 
-  cmd_string = "ovs-docker set-vlan br-int eth1 con4 1";
+  cmd_string = "ovs-docker set-vlan br-int eth0 con4 1";
   overall_rc = Aca_Net_Config::get_instance().execute_system_command(cmd_string);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
+
+  GoalStateOperationReply gsOperationalReply;
+
+  overall_rc = Aca_Comm_Manager::get_instance().update_goal_state(
+          GoalState_builder, gsOperationalReply);
+  EXPECT_NE(overall_rc, EXIT_SUCCESS);
+
+    // restore demo mode
+  g_demo_mode = previous_demo_mode;
+
 }

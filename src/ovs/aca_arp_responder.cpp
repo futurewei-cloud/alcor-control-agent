@@ -49,7 +49,6 @@ void ACA_ARP_Responder::_init_arp_ofp(){
   aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
     "add-flow br-tun \"table=0,priority=50,arp,arp_op=1, actions=CONTROLLER\"",
     not_care_culminative_time, overall_rc);
-
   return;
 }
 
@@ -60,6 +59,11 @@ void ACA_ARP_Responder::_deinit_arp_ofp(){
   aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
           "del-flows br-tun \"arp,arp_op=1\"",
           not_care_culminative_time, overall_rc);
+  
+  aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
+          "add-flow br-tun \"table=2,priority=25,arp,arp_op=1,in_port=\"patch-int\" actions=resubmit(,51)\"",
+          not_care_culminative_time, overall_rc);
+
   return;  
 }
 
