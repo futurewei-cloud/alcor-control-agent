@@ -185,6 +185,18 @@ TEST(arp_request_test_cases, arps_recv_valid)
   EXPECT_EQ(retcode, EXIT_SUCCESS);
 }
 
+// Test suite: arp_request_test_cases
+//
+// Testing the arp responder for l2 neighbors, including port and neighbor configurations
+// and test traffics on one machine and two machines.
+// Note: the two machine tests requires a two machines setup therefore it is DISABLED by default
+//   it can be executed by:
+//
+//     child machine (-p 10.213.43.187 -> IP of parent machine):
+//     aca_tests --gtest_also_run_disabled_tests --gtest_filter=arp_request_test_cases.DISABLED_l2_arp_test_CHILD -p 10.213.43.187
+//     parent machine (-c 10.213.43.188 -> IP of child machine):
+//     aca_tests --gtest_also_run_disabled_tests --gtest_filter=arp_request_test_cases.DISABLED_l2_arp_test_PARENT -c 10.213.43.188
+//
 
 TEST(arp_request_test_cases, DISABLED_l2_arp_test_one_machine)
 {
