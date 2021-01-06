@@ -65,6 +65,12 @@ string subnet1_gw_ip = "10.10.0.1";
 string subnet2_gw_ip = "10.10.1.1";
 string subnet1_gw_mac = "fa:16:3e:d7:f2:11";
 string subnet2_gw_mac = "fa:16:3e:d7:f2:21";
+string auxGateway_id_1 = "11";
+string auxGateway_id_2 = "22";
+uint tunnel_id_1 = 555;
+uint tunnel_id_2 = 666;
+uint oam_port_1 = 6799;
+uint oam_port_2 = 6800;
 
 extern bool g_demo_mode;
 // total time for execute_system_command in microseconds
