@@ -200,7 +200,39 @@ void aca_test_zeta_setup(string zeta_gateway_path_config_file)
   ASSERT_EQ(overall_rc, EXIT_SUCCESS);
 }
 
+<<<<<<< HEAD
 TEST(zeta_programming_test_cases, create_zeta_config_valid)
+=======
+// test if the IP in gws is included in the group entry or not
+bool test_gws_ip_correct(string zeta_gateway_path_config_file, uint group_id)
+{
+  bool overall_rc;
+  ifstream ifs(zeta_gateway_path_config_file);
+  if (!ifs)
+    cout << zeta_gateway_path_config_file << "open error" << endl;
+  nlohmann::json zeta_data = nlohmann::json::parse(ifs);
+  nlohmann::json gw_array = zeta_data["vpc_response"]["gws"];
+  // Construct query command
+  string dump_flows = "ovs-ofctl -O OpenFlow13 dump-groups br-tun";
+  string opt1 = "group_id=" + to_string(group_id);
+  const string tail = "->tun_dst";
+  for (nlohmann::json::iterator it = gw_array.begin(); it != gw_array.end(); ++it) 
+  {
+    string opt2 = "set_field:" + (*it)["ip"] + tail;
+    string cmd_string = dump_flows + " | grep " + opt1 + " | grep " + opt2;
+    overall_rc = aca_net_config::Aca_Net_Config::get_instance().execute_system_command(cmd_string);
+    if (overall_rc == EXIT_SUCCESS) {
+      printf("gws_ip %s is in group rule.\n",(*it)["ip"]);
+      return true;
+    } else {
+      printf("gws_ip %s is not in group rule.\n",(*it)["ip"]);
+      return false;
+    }
+  }
+}
+
+TEST(zeta_programming_test_cases, create_or_update_zeta_config_valid)
+>>>>>>> [validation]: group entry exist & gws ip right -[1]
 {
   int retcode = 0;
 
@@ -305,6 +337,16 @@ TEST(zeta_programming_test_cases, DISABLED_zeta_gateway_path_CHILD)
   aca_test_zeta_setup(zeta_gateway_path_CHILD_config_file);
 
   // do some validate
+  // Simply verify if the group table entry exists or not
+  uint group_id = ACA_Zeta_Programming::get_instance().get_group_id(auxGateway_id_1);
+  int retcode1,retcode2;
+  retcode1 = ACA_Zeta_Programming::get_instance().group_rule_exists(group_id);
+  if (retcode1){
+    // Further validate if the ip in gws is included in the group entry or not
+    retcode2 = test_gws_ip_correct(zeta_gateway_path_CHILD_config_file, group_id);
+    EXPECT_EQ(retcode2, true);
+  }
+  EXPECT_EQ(retcode1, true);
 }
 
 TEST(zeta_programming_test_cases, DISABLED_zeta_gateway_path_PARENT)
@@ -314,6 +356,16 @@ TEST(zeta_programming_test_cases, DISABLED_zeta_gateway_path_PARENT)
   aca_test_zeta_setup(zeta_gateway_path_PARENT_config_file);
 
   // do some validate
+  // Simply verify if the group table entry exists or not
+  uint group_id = ACA_Zeta_Programming::get_instance().get_group_id(auxGateway_id_1);
+  int retcode1,retcode2;
+  retcode1 = ACA_Zeta_Programming::get_instance().group_rule_exists(group_id);
+  if (retcode1){
+    // Further validate if the ip in gws is included in the group entry or not
+    retcode2 = test_gws_ip_correct(zeta_gateway_path_PARENT_config_file, group_id);
+    EXPECT_EQ(retcode2, true);
+  }
+  EXPECT_EQ(retcode1, true);
 }
 
 TEST(zeta_programming_test_cases, DISABLED_zeta_scale_CHILD)
