@@ -19,56 +19,55 @@
 #include <list>
 #include <atomic>
 #include "goalstateprovisioner.grpc.pb.h"
+#include "hashmap/HashMap.h"
 
 using namespace std;
+
 static atomic_uint current_available_group_id(1);
 
 namespace aca_zeta_programming
 {
 struct zeta_config {
-  string group_id;
-  //
-  list<string> zeta_buckets;
-  uint32_t port_inband_operation;
-};
-
-struct aux_gateway_entry {
-  uint oam_port;
   uint group_id;
+  uint oam_port;
+  // set<gateway_node_ip_address>
+  unordered_set<string> zeta_buckets;
 };
 
 class ACA_Zeta_Programming {
   public:
+  ACA_Zeta_Programming();
+  ~ACA_Zeta_Programming();
   static ACA_Zeta_Programming &get_instance();
 
-  uint get_or_create_group_id(string auxGateway_id);
+  void create_entry(string zeta_gateway_id, uint oam_port);
 
-  int create_or_update_zeta_config(const alcor::schema::AuxGateway current_AuxGateway,
-                                   const string vpc_id, uint32_t tunnel_id);
+  void clear_all_data();
 
-  int delete_zeta_config(const alcor::schema::AuxGateway current_AuxGateway,
-                         const string vpc_id, uint32_t tunnel_id);
+  int create_zeta_config(const alcor::schema::AuxGateway current_AuxGateway, uint tunnel_id);
 
-  bool is_exist_group_rule(uint group_id);
+  int delete_zeta_config(const alcor::schema::AuxGateway current_AuxGateway, uint tunnel_id);
 
-  uint get_oam_server_port(string auxGateway_id);
+  bool oam_port_rule_exists(uint port_number);
 
-  void set_oam_server_port(string auxGateway_id, uint port_number);
+  bool group_rule_exists(uint group_id);
 
-  bool is_exist_oam_port(uint port_number);
+  uint get_oam_port(string zeta_gateway_id);
+
+  uint get_group_id(string zeta_gateway_id);
 
   private:
-  int _create_or_update_zeta_group_entry(zeta_config *zeta_config_in);
+  int _create_oam_ofp(uint port_number);
+  int _delete_oam_ofp(uint port_number);
 
+  int _create_group_punt_rule(uint tunnel_id, uint group_id);
+  int _delete_group_punt_rule(uint tunnel_id);
+
+  int _create_zeta_group_entry(zeta_config *zeta_config_in);
   int _delete_zeta_group_entry(zeta_config *zeta_config_in);
 
-  private:
-  // unordered_map<aux_gateway_id, aux_gateway_entry>
-  unordered_map<string, aux_gateway_entry> _zeta_gateways_table;
-
-  mutex _zeta_gateways_table_mutex;
-
-  void create_entry_unsafe(string auxGateway_id);
+  // hashtable <key: zeta_gateway_id, value: zeta_config>
+  CTSL::HashMap<string, zeta_config *> _zeta_config_table;
 };
 } // namespace aca_zeta_programming
 #endif // #ifndef ACA_ZETA_PROGRAMMING_H

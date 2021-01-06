@@ -38,7 +38,7 @@ struct vpc_table_entry {
   // CTSL::HashMap <key: ovs_port name, value: int* (not used)>
   CTSL::HashMap<string, int *> ovs_ports;
 
-  string auxGateway_id;
+  string zeta_gateway_id;
 };
 
 class ACA_Vlan_Manager {
@@ -59,15 +59,13 @@ class ACA_Vlan_Manager {
   int delete_l2_neighbor(string virtual_ip, string virtual_mac, uint tunnel_id,
                          ulong &culminative_time);
 
-  // create a neighbor port without specifying vpc_id and neighbor ID
-  int create_neighbor_outport(alcor::schema::NetworkType network_type, string remote_host_ip,
-                              uint tunnel_id, ulong &culminative_time);
+  void set_zeta_gateway(uint tunnel_id, const string auxGateway_id);
 
-  void set_aux_gateway(uint tunnel_id, const string auxGateway_id);
+  int remove_zeta_gateway(uint tunnel_id);
 
-  string get_aux_gateway_id(uint tunnel_id);
+  string get_zeta_gateway_id(uint tunnel_id);
 
-  bool is_exist_aux_gateway(const string auxGateway_id);
+  bool is_exist_zeta_gateway(const string auxGateway_id);
 
   // compiler will flag error when below is called
   ACA_Vlan_Manager(ACA_Vlan_Manager const &) = delete;
