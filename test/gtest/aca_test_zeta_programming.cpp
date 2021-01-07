@@ -200,9 +200,6 @@ void aca_test_zeta_setup(string zeta_gateway_path_config_file)
   ASSERT_EQ(overall_rc, EXIT_SUCCESS);
 }
 
-<<<<<<< HEAD
-TEST(zeta_programming_test_cases, create_zeta_config_valid)
-=======
 // test if the IP in gws is included in the group entry or not
 bool test_gws_ip_correct(string zeta_gateway_path_config_file, uint group_id)
 {
@@ -216,15 +213,16 @@ bool test_gws_ip_correct(string zeta_gateway_path_config_file, uint group_id)
   string dump_flows = "ovs-ofctl -O OpenFlow13 dump-groups br-tun";
   string opt1 = "group_id=" + to_string(group_id);
   const string tail = "->tun_dst";
-  for (nlohmann::json::iterator it = gw_array.begin(); it != gw_array.end(); ++it) 
+  for (nlohmann::json::iterator it = gw_array.begin(); it != gw_array.end(); ++it)
   {
-    string opt2 = "set_field:" + (*it)["ip"] + tail;
+    string gws_ip = (*it)["ip"];
+    string opt2 = "set_field:" + gws_ip + tail;
     string cmd_string = dump_flows + " | grep " + opt1 + " | grep " + opt2;
     overall_rc = aca_net_config::Aca_Net_Config::get_instance().execute_system_command(cmd_string);
     if (overall_rc == EXIT_SUCCESS) {
-      printf("gws_ip %s is in group rule.\n",(*it)["ip"]);
+      cout << "gws_ip " << gws_ip << " is in group rule." << endl;
     } else {
-      printf("gws_ip %s is not in group rule.\n",(*it)["ip"]);
+      cout << "gws_ip " << gws_ip << " is not in group rule." << endl;
       return false;
     }
   }
@@ -232,7 +230,6 @@ bool test_gws_ip_correct(string zeta_gateway_path_config_file, uint group_id)
 }
 
 TEST(zeta_programming_test_cases, create_or_update_zeta_config_valid)
->>>>>>> [validation]: group entry exist & gws ip right -[1]
 {
   int retcode = 0;
 
