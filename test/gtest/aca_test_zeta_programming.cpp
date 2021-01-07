@@ -223,12 +223,12 @@ bool test_gws_ip_correct(string zeta_gateway_path_config_file, uint group_id)
     overall_rc = aca_net_config::Aca_Net_Config::get_instance().execute_system_command(cmd_string);
     if (overall_rc == EXIT_SUCCESS) {
       printf("gws_ip %s is in group rule.\n",(*it)["ip"]);
-      return true;
     } else {
       printf("gws_ip %s is not in group rule.\n",(*it)["ip"]);
       return false;
     }
   }
+  return true;
 }
 
 TEST(zeta_programming_test_cases, create_or_update_zeta_config_valid)
