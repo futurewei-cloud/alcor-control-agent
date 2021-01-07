@@ -29,6 +29,8 @@
 #include <grpcpp/grpcpp.h>
 #include <grpc/support/log.h>
 
+#define UNREFERENCED_PARAMETER(P) (void)(P)
+
 #define ACALOGNAME "AlcorControlAgentTest"
 static char EMPTY_STRING[] = "";
 static char LOCALHOST[] = "localhost";
@@ -454,6 +456,8 @@ static void aca_signal_handler(int sig_num)
 
 void parse_goalstate(GoalState parsed_struct, GoalState GoalState_builder)
 {
+  UNREFERENCED_PARAMETER(GoalState_builder);
+
   assert(parsed_struct.port_states_size() == GoalState_builder.port_states_size());
   for (int i = 0; i < parsed_struct.port_states_size(); i++) {
     assert(parsed_struct.port_states(i).operation_type() ==

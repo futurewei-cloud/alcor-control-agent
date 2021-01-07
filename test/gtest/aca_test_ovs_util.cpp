@@ -65,8 +65,28 @@ string subnet1_gw_ip = "10.10.0.1";
 string subnet2_gw_ip = "10.10.1.1";
 string subnet1_gw_mac = "fa:16:3e:d7:f2:11";
 string subnet2_gw_mac = "fa:16:3e:d7:f2:21";
+string auxGateway_id_1 = "11";
+string auxGateway_id_2 = "22";
+uint tunnel_id_1 = 555;
+uint tunnel_id_2 = 666;
+uint oam_port_1 = 6799;
+uint oam_port_2 = 6800;
 
 extern bool g_demo_mode;
+// total time for execute_system_command in microseconds
+extern std::atomic_ulong g_initialize_execute_system_time;
+// total time for execute_ovsdb_command in microseconds
+extern std::atomic_ulong g_initialize_execute_ovsdb_time;
+// total time for execute_openflow_command in microseconds
+extern std::atomic_ulong g_initialize_execute_openflow_time;
+// total time for execute_system_command in microseconds
+extern std::atomic_ulong g_total_execute_system_time;
+// total time for execute_ovsdb_command in microseconds
+extern std::atomic_ulong g_total_execute_ovsdb_time;
+// total time for execute_openflow_command in microseconds
+extern std::atomic_ulong g_total_execute_openflow_time;
+// total time for goal state update in microseconds
+extern std::atomic_ulong g_total_update_GS_time;
 
 void aca_test_reset_environment()
 {
@@ -87,6 +107,16 @@ void aca_test_reset_environment()
   // create and setup br-int and br-tun bridges, and their patch ports
   overall_rc = ACA_OVS_L2_Programmer::get_instance().setup_ovs_bridges_if_need();
   ASSERT_EQ(overall_rc, EXIT_SUCCESS);
+
+  // test init/reset environment completed, store the time spend
+  g_initialize_execute_system_time = g_total_execute_system_time.load();
+  g_initialize_execute_ovsdb_time = g_total_execute_ovsdb_time.load();
+  g_initialize_execute_openflow_time = g_total_execute_openflow_time.load();
+
+  // reset the total time counters
+  g_total_execute_system_time = 0;
+  g_total_execute_ovsdb_time = 0;
+  g_total_execute_openflow_time = 0;
 }
 
 void aca_test_create_default_port_state(PortState *new_port_states)
@@ -442,6 +472,7 @@ void aca_test_1_port_CREATE_plus_N_neighbors_CREATE(NeighborType input_neighbor_
   string port_name_postfix = "-2222-3333-4444-555555555555";
   string neighbor_id_postfix = "-baad-f00d-4444-555555555555";
   string ip_address_prefix = "10.";
+  string mac_address_prefix = "6c:dd:ee:";
   string remote_ip_address_prefix = "123.";
   int overall_rc;
 
@@ -480,8 +511,10 @@ void aca_test_1_port_CREATE_plus_N_neighbors_CREATE(NeighborType input_neighbor_
     string ip_4th_octet = std::to_string(i % 100);
 
     string ip_postfix = ip_2nd_octet + "." + ip_3rd_octet + "." + ip_4th_octet;
-    string remote_ip = remote_ip_address_prefix + ip_postfix;
     string virtual_ip = ip_address_prefix + ip_postfix;
+    string mac_postfix = ip_2nd_octet + ":" + ip_3rd_octet + ":" + ip_4th_octet;
+    string virtual_mac = mac_address_prefix + mac_postfix;
+    string remote_ip = remote_ip_address_prefix + ip_postfix;
 
     new_neighbor_states = GoalState_builder.add_neighbor_states();
     new_neighbor_states->set_operation_type(OperationType::CREATE);
@@ -493,7 +526,7 @@ void aca_test_1_port_CREATE_plus_N_neighbors_CREATE(NeighborType input_neighbor_
     NeighborConfiguration_builder->set_vpc_id("1b08a5bc-b718-11ea-b3de-111122223333");
     NeighborConfiguration_builder->set_id(neighbor_id);
     NeighborConfiguration_builder->set_name(port_name);
-    NeighborConfiguration_builder->set_mac_address(vmac_address_1);
+    NeighborConfiguration_builder->set_mac_address(virtual_mac);
     NeighborConfiguration_builder->set_host_ip_address(remote_ip);
 
     NeighborConfiguration_FixedIp *FixedIp_builder =

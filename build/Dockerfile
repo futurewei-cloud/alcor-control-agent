@@ -97,7 +97,7 @@ RUN echo "5--- installing openvswitch dependancies ---" && \
     git clone -b ${OVS_RELEASE_TAG} https://github.com/openvswitch/ovs.git /var/local/git/openvswitch && \
     cd /var/local/git/openvswitch && \
     ./boot.sh && \
-    ./configure --prefix=/usr/local --localstatedir=/var --sysconfdir=/etc --enable-shared && \
+    ./configure --prefix=/usr/local --localstatedir=/var --sysconfdir=/etc --enable-shared --enable-ndebug && \
     make && \
     make install && \
     mkdir -p /usr/local/include/openvswitch && \

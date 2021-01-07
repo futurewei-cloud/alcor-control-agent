@@ -28,7 +28,11 @@
 #define TAP_PREFIX "tap" // vm tap device prefix
 #define PORT_NAME_LEN 14 // Nova generated port name length
 
+// the number of characters needed to store the HEX form of IP address
 #define HEX_IP_BUFFER_SIZE 12
+
+// vxlan-generic openflow outport number
+#define VXLAN_GENERIC_OUTPORT_NUMBER "100"
 
 // maximun valid value of a VNI, that (2^24) - 1
 // applicable for VxLAN, GRE, VxLAN-GPE and Geneve

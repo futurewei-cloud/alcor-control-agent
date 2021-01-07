@@ -82,6 +82,26 @@ template <typename K, typename V, typename F = std::hash<K> > class HashMap {
     hashTable[hashValue].erase(key);
   }
 
+  //Function to see if the whole hashtable is empty.
+  bool empty() const
+  {
+    for (size_t i = 0; i < hashSize; i++) {
+      auto hash_node = (hashTable[i]).head;
+      if (hash_node == nullptr) {
+        // no entry for this hashtable bucket, go look at the next bucket
+        continue;
+      } else {
+        // found an entry in this hashtable bucket,
+        // return false since the hashtable is not emply
+        return false;
+      }
+    }
+
+    // went through the whole table and didn't find any hashtable bucket
+    // return true since the hashtable is emply
+    return true;
+  }
+
   //Function to clean up the hasp map, i.e., remove all entries from it
   void clear()
   {
