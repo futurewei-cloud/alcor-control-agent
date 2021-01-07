@@ -33,8 +33,7 @@
 #include <netinet/ip.h>
 #include <arpa/inet.h>
 #include "aca_dhcp_server.h"
-#include "aca_oam_server.h"
-#include "aca_oam_port_manager.h"
+#include "aca_zeta_oam_server.h"
 
 using namespace std;
 using namespace ovs_control;
@@ -267,10 +266,9 @@ void ACA_OVS_Control::parse_packet(uint32_t in_port, void *packet)
       }
 
       /* oam message procedure */
-      if (aca_oam_port_manager::Aca_Oam_Port_Manager::get_instance().is_oam_server_port(
-                  (uint32_t)udp_dport)) {
+      if (aca_zeta_oam_server::ACA_Zeta_Oam_Server::get_instance().lookup_oam_port_in_cache((uint)udp_dport)) {
         ACA_LOG_INFO("%s", "   Message Type: OAM\n");
-        aca_oam_server::ACA_Oam_Server::get_instance().oams_recv(
+        aca_zeta_oam_server::ACA_Zeta_Oam_Server::get_instance().oams_recv(
                 (uint32_t)udp_dport, const_cast<unsigned char *>(payload));
       }
     }

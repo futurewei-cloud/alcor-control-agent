@@ -256,42 +256,26 @@ int ACA_Vlan_Manager::delete_l2_neighbor(string virtual_ip, string virtual_mac,
   return overall_rc;
 }
 
-// create a neighbor port without specifying vpc_id and neighbor ID
-int ACA_Vlan_Manager::create_neighbor_outport(alcor::schema::NetworkType network_type,
-                                              string remote_host_ip, uint /*tunnel_id*/,
-                                              ulong &culminative_time)
+string ACA_Vlan_Manager::get_zeta_gateway_id(uint tunnel_id)
 {
-  int overall_rc = EXIT_SUCCESS;
+  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::get_zeta_gateway_id ---> Entering\n");
 
-  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::create_neighbor_outport ---> Entering\n");
+  vpc_table_entry *current_vpc_table_entry;
+  string zeta_gateway_id;
 
-  string outport_name = aca_get_outport_name(network_type, remote_host_ip);
+  if (!_vpcs_table.find(tunnel_id, current_vpc_table_entry)) {
+    ACA_LOG_ERROR("tunnel_id %u not found in vpc_table\n", tunnel_id);
+  } else {
+    zeta_gateway_id = current_vpc_table_entry->zeta_gateway_id;
+  }
 
-  // since this is a new outport, configure OVS and openflow rule
-  string cmd_string =
-          "--may-exist add-port br-tun " + outport_name + " -- set interface " +
-          outport_name + " type=" + aca_get_network_type_string(network_type) +
-          " options:df_default=true options:egress_pkt_mark=0 options:in_key=flow options:out_key=flow options:remote_ip=" +
-          remote_host_ip;
-
-  ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
-          cmd_string, culminative_time, overall_rc);
-
-  // incoming from neighbor through vxlan port (based on remote IP)
-  cmd_string = "add-flow br-tun \"table=0,priority=25,in_port=\"" +
-               outport_name + "\" actions=resubmit(,4)\"";
-
-  ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
-          cmd_string, culminative_time, overall_rc);
-
-  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::create_neighbor_outport <--- Exiting\n");
-
-  return overall_rc;
+  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::get_zeta_gateway_id <--- Entering\n");
+  return zeta_gateway_id;
 }
 
-void ACA_Vlan_Manager::set_aux_gateway(uint tunnel_id, const string auxGateway_id)
+void ACA_Vlan_Manager::set_zeta_gateway(uint tunnel_id, const string auxGateway_id)
 {
-  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::set_aux_gateway ---> Entering\n");
+  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::set_zeta_gateway ---> Entering\n");
 
   vpc_table_entry *new_vpc_table_entry = nullptr;
 
@@ -300,34 +284,34 @@ void ACA_Vlan_Manager::set_aux_gateway(uint tunnel_id, const string auxGateway_i
 
     _vpcs_table.find(tunnel_id, new_vpc_table_entry);
   }
-  new_vpc_table_entry->auxGateway_id = auxGateway_id;
+  new_vpc_table_entry->zeta_gateway_id = auxGateway_id;
 
-  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::set_aux_gateway <--- Exiting\n");
+  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::set_zeta_gateway <--- Exiting\n");
 }
 
-string ACA_Vlan_Manager::get_aux_gateway_id(uint tunnel_id)
+int ACA_Vlan_Manager::remove_zeta_gateway(uint tunnel_id)
 {
-  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::get_aux_gateway_id ---> Entering\n");
+  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::remove_zeta_gateway ---> Entering\n");
+  int overall_rc = EXIT_SUCCESS;
 
+  string zeta_gateway_id;
   vpc_table_entry *current_vpc_table_entry;
-  string auxGateway_id;
 
   if (!_vpcs_table.find(tunnel_id, current_vpc_table_entry)) {
     ACA_LOG_ERROR("tunnel_id %u not found in vpc_table\n", tunnel_id);
   } else {
-    auxGateway_id = current_vpc_table_entry->auxGateway_id;
+    current_vpc_table_entry->zeta_gateway_id = "";
   }
 
-  ACA_LOG_DEBUG("ACA_Vlan_Manager::get_aux_gateway_id <--- Exiting, auxGateway_id =%s\n",
-                auxGateway_id.c_str());
-
-  return auxGateway_id;
+  ACA_LOG_DEBUG("ACA_Vlan_Manager::remove_zeta_gateway <--- Exiting, overall_rc = %d\n",
+                overall_rc);
+  return overall_rc;
 }
 
-bool ACA_Vlan_Manager::is_exist_aux_gateway(string auxGateway_id)
+bool ACA_Vlan_Manager::is_exist_zeta_gateway(string zeta_gateway_id)
 {
   ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::get_aux_gateway_id ---> Entering\n");
-  bool auxGateway_id_found = false;
+  bool zeta_gateway_id_found = false;
 
   for (size_t i = 0; i < _vpcs_table.hashSize; i++) {
     auto hash_node = (_vpcs_table.hashTable[i]).head;
@@ -341,15 +325,15 @@ bool ACA_Vlan_Manager::is_exist_aux_gateway(string auxGateway_id)
               (_vpcs_table.hashTable[i]).mutex_);
 
       while (hash_node != nullptr) {
-        if (hash_node->getValue()->auxGateway_id == auxGateway_id) {
-          auxGateway_id_found = true;
+        if (hash_node->getValue()->zeta_gateway_id == zeta_gateway_id) {
+          zeta_gateway_id_found = true;
           break;
         }
 
-        if (auxGateway_id_found) {
+        if (zeta_gateway_id_found) {
           break; // break out of for loop on _vpcs_table
         } else {
-          // aux_Gateway_id not found yet, look at the next hash_node
+          // zeta_gateway_id not found yet, look at the next hash_node
           hash_node = hash_node->next;
         }
       }
@@ -359,9 +343,9 @@ bool ACA_Vlan_Manager::is_exist_aux_gateway(string auxGateway_id)
     }
   }
 
-  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::get_aux_gateway_id ---> Entering\n");
+  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::get_aux_gateway_id <--- Entering\n");
 
-  return auxGateway_id_found;
+  return zeta_gateway_id_found;
 }
 
 } // namespace aca_vlan_manager

@@ -26,6 +26,7 @@
 #include <iostream>
 #include <typeinfo>
 
+using namespace std;
 using namespace aca_comm_manager;
 using namespace alcor::schema;
 using namespace aca_zeta_programming;
@@ -59,13 +60,13 @@ extern bool g_demo_mode;
 extern void aca_test_create_default_port_state(PortState *new_port_states);
 extern void aca_test_create_default_subnet_state(SubnetState *new_subnet_states);
 
-string auxGateway_id_1 = "11";
-string auxGateway_id_2 = "22";
+extern string auxGateway_id_1;
+extern string auxGateway_id_2;
 
-uint tunnel_id_1 = 555;
-uint tunnel_id_2 = 666;
-uint oam_port_1 = 6799;
-uint oam_port_2 = 6800;
+extern uint tunnel_id_1;
+extern uint tunnel_id_2;
+extern uint oam_port_1;
+extern uint oam_port_2;
 uint parent_position_in_port_info = 0;
 uint child_position_in_port_info = 1;
 
@@ -227,7 +228,7 @@ bool test_gws_ip_correct(string zeta_gateway_path_config_file, uint group_id)
   }
 }
 
-TEST(zeta_programming_test_cases, create_or_update_zeta_config_valid)
+TEST(zeta_programming_test_cases, create_zeta_config_valid)
 {
   int retcode = 0;
 
@@ -246,8 +247,7 @@ TEST(zeta_programming_test_cases, create_or_update_zeta_config_valid)
   destination->set_ip_address(remote_ip_2);
   destination->set_mac_address(node_mac_address_4);
 
-  retcode = ACA_Zeta_Programming::get_instance().create_or_update_zeta_config(
-          new_auxGateway, vpc_id_2, tunnel_id_2);
+  retcode = ACA_Zeta_Programming::get_instance().create_zeta_config(new_auxGateway, tunnel_id_2);
 
   EXPECT_EQ(retcode, EXIT_SUCCESS);
 }
@@ -271,13 +271,12 @@ TEST(zeta_programming_test_cases, delete_zeta_config_valid)
   destination->set_ip_address(remote_ip_2);
   destination->set_mac_address(node_mac_address_4);
 
-  retcode = ACA_Zeta_Programming::get_instance().delete_zeta_config(
-          new_auxGateway, vpc_id_2, tunnel_id_2);
+  retcode = ACA_Zeta_Programming::get_instance().delete_zeta_config(new_auxGateway, tunnel_id_2);
 
   EXPECT_EQ(retcode, EXIT_SUCCESS);
 }
 
-TEST(zeta_programming_test_cases, DISABLED_auxgateway_test)
+TEST(zeta_programming_test_cases, create_auxgateway_test)
 {
   // from here.
   int retcode;
@@ -365,9 +364,9 @@ TEST(zeta_programming_test_cases, DISABLED_zeta_gateway_path_PARENT)
   EXPECT_EQ(retcode1, true);
 }
 
-
-TEST(zeta_programming_test_cases, DISABLED_zeta_scale_CHILD){
-    // ulong culminative_network_configuration_time = 0;
+TEST(zeta_programming_test_cases, DISABLED_zeta_scale_CHILD)
+{
+  // ulong culminative_network_configuration_time = 0;
   ulong not_care_culminative_time = 0;
   int overall_rc = EXIT_SUCCESS;
   // delete br-int and br-tun bridges
@@ -391,7 +390,8 @@ TEST(zeta_programming_test_cases, DISABLED_zeta_scale_CHILD){
   g_demo_mode = previous_demo_mode;
 }
 
-TEST(zeta_programming_test_cases, DISABLED_zeta_scale_PARENT){
+TEST(zeta_programming_test_cases, DISABLED_zeta_scale_PARENT)
+{
   // ulong culminative_network_configuration_time = 0;
   ulong not_care_culminative_time = 0;
   int overall_rc = EXIT_SUCCESS;
