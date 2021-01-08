@@ -264,7 +264,7 @@ def run():
     # right now the only argument should be how many ports to be generated.
     arguments = sys.argv
     print(f'Arguments: {arguments}')
-    file_path = './data/zeta_data.json'
+    file_path = './data/zeta_data_sdn.json'
     zeta_data = {}
     with open(file_path, 'r', encoding='utf8')as fp:
         zeta_data = json.loads(fp.read())
