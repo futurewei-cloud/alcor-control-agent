@@ -40,7 +40,7 @@ class ACA_Zeta_Programming {
   ~ACA_Zeta_Programming();
   static ACA_Zeta_Programming &get_instance();
 
-  void create_entry(string zeta_gateway_id, uint oam_port);
+  void create_entry(string zeta_gateway_id, uint oam_port, alcor::schema::AuxGateway current_AuxGateway);
 
   void clear_all_data();
 

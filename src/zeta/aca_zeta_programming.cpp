@@ -41,7 +41,8 @@ ACA_Zeta_Programming &ACA_Zeta_Programming::get_instance()
   return instance;
 }
 
-void ACA_Zeta_Programming::create_entry(string zeta_gateway_id, uint oam_port)
+void ACA_Zeta_Programming::create_entry(string zeta_gateway_id, uint oam_port,
+                                        alcor::schema::AuxGateway current_AuxGateway)
 {
   ACA_LOG_DEBUG("%s", "ACA_Zeta_Programming::create_entry ---> Entering\n");
 
@@ -50,10 +51,14 @@ void ACA_Zeta_Programming::create_entry(string zeta_gateway_id, uint oam_port)
   // then add 1 after, doing both atomically
   // std::memory_order_relaxed option won't help much for x86 but other
   // CPU architecture can take advantage of it
-  new_zeta_cfg->group_id =
-          current_available_group_id.fetch_add(1, std::memory_order_relaxed);
 
   new_zeta_cfg->oam_port = oam_port;
+  new_zeta_cfg->group_id =
+          current_available_group_id.fetch_add(1, std::memory_order_relaxed);
+  for (auto destination : current_AuxGateway.destinations()) {
+    new_zeta_cfg->zeta_buckets.insert(destination.ip_address());
+  }
+
   _zeta_config_table.insert(zeta_gateway_id, new_zeta_cfg);
 
   ACA_LOG_DEBUG("%s", "ACA_Zeta_Programming::create_entry <--- Exiting\n");
@@ -181,34 +186,34 @@ int ACA_Zeta_Programming::create_zeta_config(const alcor::schema::AuxGateway cur
 {
   ACA_LOG_DEBUG("%s", "ACA_Zeta_Programming::create_zeta_config ---> Entering\n");
   int overall_rc = EXIT_SUCCESS;
-  zeta_config *new_zeta_cfg;
+  zeta_config *current_zeta_cfg;
   bool bucket_not_found = false;
   unordered_set<string> new_zeta_buckets;
 
   uint oam_port = current_AuxGateway.zeta_info().port_inband_operation();
 
-  if (!_zeta_config_table.find(current_AuxGateway.id(), new_zeta_cfg)) {
-    create_entry(current_AuxGateway.id(), oam_port);
+  if (!_zeta_config_table.find(current_AuxGateway.id(), current_zeta_cfg)) {
+    create_entry(current_AuxGateway.id(), oam_port, current_AuxGateway);
+    _zeta_config_table.find(current_AuxGateway.id(), current_zeta_cfg);
+    overall_rc = _create_zeta_group_entry(current_zeta_cfg);
+
     _create_oam_ofp(oam_port);
     // add oam port number to cache
     aca_zeta_oam_server::ACA_Zeta_Oam_Server::get_instance().add_oam_port_cache(oam_port);
-
-    _zeta_config_table.find(current_AuxGateway.id(), new_zeta_cfg);
-  }
-
-  for (auto destination : current_AuxGateway.destinations()) {
-    if (new_zeta_cfg->zeta_buckets.find(destination.ip_address()) ==
-        new_zeta_cfg->zeta_buckets.end()) {
-      bucket_not_found |= true;
+  } else {
+    for (auto destination : current_AuxGateway.destinations()) {
+      if (current_zeta_cfg->zeta_buckets.find(destination.ip_address()) ==
+          current_zeta_cfg->zeta_buckets.end()) {
+        bucket_not_found |= true;
+      }
+      new_zeta_buckets.insert(destination.ip_address());
     }
-    new_zeta_buckets.insert(destination.ip_address());
-  }
-
-  // If the buckets have changed, update the buckets and group table rules.
-  if (new_zeta_cfg->zeta_buckets.size() != new_zeta_buckets.size() ||
-      bucket_not_found == true) {
-    new_zeta_cfg->zeta_buckets = new_zeta_buckets;
-    overall_rc = _create_zeta_group_entry(new_zeta_cfg);
+    // If the buckets have changed, update the buckets and group table rules.
+    if (current_zeta_cfg->zeta_buckets.size() != new_zeta_buckets.size() ||
+        bucket_not_found == true) {
+      current_zeta_cfg->zeta_buckets = std::unordered_set<string>(new_zeta_buckets);
+      overall_rc = _create_zeta_group_entry(current_zeta_cfg);
+    }
   }
 
   // get the current auxgateway_id of vpc
@@ -217,7 +222,7 @@ int ACA_Zeta_Programming::create_zeta_config(const alcor::schema::AuxGateway cur
     ACA_LOG_INFO("%s", "The vpc currently has not auxgateway set!\n");
     ACA_Vlan_Manager::get_instance().set_zeta_gateway(tunnel_id,
                                                       current_AuxGateway.id());
-    _create_group_punt_rule(tunnel_id, new_zeta_cfg->group_id);
+    _create_group_punt_rule(tunnel_id, current_zeta_cfg->group_id);
   } else {
     ACA_LOG_INFO("%s", "The vpc currently has an auxgateway set!\n");
   }
@@ -272,7 +277,6 @@ int ACA_Zeta_Programming::_create_zeta_group_entry(zeta_config *zeta_cfg)
   ACA_LOG_DEBUG("%s", "ACA_Zeta_Programming::_create_zeta_group_entry ---> Entering\n");
   unsigned long not_care_culminative_time;
   int overall_rc = EXIT_SUCCESS;
-
   // adding group table rule
   string cmd = "-O OpenFlow13 add-group br-tun group_id=" + to_string(zeta_cfg->group_id) +
                ",type=select";

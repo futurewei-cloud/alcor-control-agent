@@ -250,6 +250,18 @@ TEST(zeta_programming_test_cases, delete_zeta_config_valid)
 
 TEST(zeta_programming_test_cases, create_auxgateway_test)
 {
+  ulong not_care_culminative_time = 0;
+  int overall_rc;
+  // delete br-int and br-tun bridges
+  ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
+          "del-br br-int", not_care_culminative_time, overall_rc);
+
+  ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
+          "del-br br-tun", not_care_culminative_time, overall_rc);
+
+  // create and setup br-int and br-tun bridges, and their patch ports
+  overall_rc = ACA_OVS_L2_Programmer::get_instance().setup_ovs_bridges_if_need();
+  ASSERT_EQ(overall_rc, EXIT_SUCCESS);
   // from here.
   int retcode;
   GoalState GoalState_builder;
