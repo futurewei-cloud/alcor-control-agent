@@ -20,9 +20,11 @@
 #include "aca_comm_mgr.h"
 #include "gtest/gtest.h"
 #include "goalstate.pb.h"
+#include "aca_ovs_control.h"
 #include <unistd.h> /* for getopt */
 #include <iostream>
 #include <string>
+#include <thread>
 
 using namespace std;
 using namespace alcor::schema;
@@ -30,6 +32,7 @@ using namespace aca_vlan_manager;
 using namespace aca_comm_manager;
 using namespace aca_net_config;
 using namespace aca_ovs_l2_programmer;
+using aca_ovs_control::ACA_OVS_Control;
 
 // extern the string and helper functions from aca_test_ovs_util.cpp
 extern string project_id;
@@ -62,6 +65,7 @@ extern string subnet1_gw_mac;
 extern string subnet2_gw_mac;
 extern bool g_demo_mode;
 extern uint neighbors_to_create;
+extern thread *ovs_monitor_thread;
 
 extern void aca_test_create_default_port_state(PortState *new_port_states);
 extern void aca_test_create_default_subnet_state(SubnetState *new_subnet_states);
@@ -532,6 +536,12 @@ TEST(ovs_l2_test_cases, DISABLED_2_ports_CREATE_test_traffic_PARENT)
   ASSERT_EQ(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
 
+  // monitor br-tun for arp request message
+  ovs_monitor_thread = 
+    new thread(bind(&ACA_OVS_Control::monitor, &ACA_OVS_Control::get_instance(), "br-tun", "resume"));
+  ovs_monitor_thread->detach();
+
+
   GoalState GoalState_builder;
   PortState *new_port_states = GoalState_builder.add_port_states();
   SubnetState *new_subnet_states = GoalState_builder.add_subnet_states();
@@ -736,6 +746,12 @@ TEST(ovs_l2_test_cases, DISABLED_2_ports_CREATE_test_traffic_CHILD)
   ASSERT_EQ(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
 
+  // monitor br-tun for arp request message
+  ovs_monitor_thread = 
+    new thread(bind(&ACA_OVS_Control::monitor, &ACA_OVS_Control::get_instance(), "br-tun", "resume"));
+  ovs_monitor_thread->detach();
+
+
   GoalState GoalState_builder;
   PortState *new_port_states = GoalState_builder.add_port_states();
   SubnetState *new_subnet_states = GoalState_builder.add_subnet_states();
@@ -844,6 +860,17 @@ TEST(ovs_l2_test_cases, DISABLED_2_ports_CREATE_test_traffic_CHILD)
   ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
           "get Interface " + port_name_4 + " ofport", not_care_culminative_time, overall_rc);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
+
+  // test invalid traffic from child to parent 
+  cmd_string = "ping -I " + vip_address_3 + " -c1 " + vip_address_1;
+  overall_rc = Aca_Net_Config::get_instance().execute_system_command(cmd_string);
+  EXPECT_NE(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
+
+  cmd_string = "ping -I " + vip_address_4 + " -c1 " + vip_address_2;
+  overall_rc = Aca_Net_Config::get_instance().execute_system_command(cmd_string);
+  EXPECT_NE(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
 
   // test traffic between the two newly created ports

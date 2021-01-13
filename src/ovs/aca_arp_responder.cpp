@@ -59,11 +59,6 @@ void ACA_ARP_Responder::_deinit_arp_ofp(){
   aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
           "del-flows br-tun \"arp,arp_op=1\"",
           not_care_culminative_time, overall_rc);
-  
-  aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
-          "add-flow br-tun \"table=2,priority=25,arp,arp_op=1,in_port=\"patch-int\" actions=resubmit(,51)\"",
-          not_care_culminative_time, overall_rc);
-
   return;  
 }
 
@@ -266,7 +261,7 @@ void ACA_ARP_Responder::_parse_arp_request(uint32_t in_port, vlan_message *vlanm
 
   // get the vlan id from vlan header
   if(vlanmsg){
-    stData.vlan_id = ntohs(vlanmsg->vlan_tci) & 0x0111; 
+    stData.vlan_id = ntohs(vlanmsg->vlan_tci) & 0x0fff; 
   }
   else{
     stData.vlan_id = 0;

@@ -172,7 +172,6 @@ int ACA_Vlan_Manager::create_l2_neighbor(string virtual_ip, string virtual_mac,
 {
   ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::create_l2_neighbor ---> Entering\n");
 
-  char hex_ip_buffer[HEX_IP_BUFFER_SIZE];
   int overall_rc;
 
   int internal_vlan_id = get_or_create_vlan_id(tunnel_id);
@@ -194,29 +193,7 @@ int ACA_Vlan_Manager::create_l2_neighbor(string virtual_ip, string virtual_mac,
 
   if (overall_rc != EXIT_SUCCESS) {
     ACA_LOG_ERROR("%s", "Failed to add L2 neighbor rule\n");
-  } else {
-    // add the static arp responder for this l2 neighbor
-    string current_virtual_mac = virtual_mac;
-    current_virtual_mac.erase(
-            remove(current_virtual_mac.begin(), current_virtual_mac.end(), ':'),
-            current_virtual_mac.end());
-
-    int addr = inet_network(virtual_ip.c_str());
-    snprintf(hex_ip_buffer, HEX_IP_BUFFER_SIZE, "0x%08x", addr);
-
-    match_string = "table=51,priority=50,arp,dl_vlan=" + to_string(internal_vlan_id) +
-                   ",nw_dst=" + virtual_ip;
-
-    action_string =
-            " actions=move:NXM_OF_ETH_SRC[]->NXM_OF_ETH_DST[],mod_dl_src:" + virtual_mac +
-            ",load:0x2->NXM_OF_ARP_OP[],move:NXM_NX_ARP_SHA[]->NXM_NX_ARP_THA[],move:NXM_OF_ARP_SPA[]->NXM_OF_ARP_TPA[],load:0x" +
-            current_virtual_mac + "->NXM_NX_ARP_SHA[],load:" + string(hex_ip_buffer) +
-            "->NXM_OF_ARP_SPA[],in_port";
-
-    overall_rc = ACA_OVS_Control::get_instance().add_flow(
-            "br-tun", (match_string + action_string).c_str());
-  }
-
+  };
 
   // create arp entry in arp responder for the l2 neighbor
   stArpCfg.mac_address = virtual_mac;
@@ -256,23 +233,13 @@ int ACA_Vlan_Manager::delete_l2_neighbor(string virtual_ip, string virtual_mac,
     overall_rc = EXIT_FAILURE;
   }
 
-  // delete the static arp responder for this l2 neighbor
-  match_string = "table=51,priority=50,arp,dl_vlan=" + to_string(internal_vlan_id) +
-                 ",nw_dst=" + virtual_ip;
-
-  overall_rc = ACA_OVS_Control::get_instance().del_flows("br-tun", match_string.c_str());
-
-  if (rc != EXIT_SUCCESS) {
-    ACA_LOG_ERROR("Failed to delete L2 ARP rule, rc: %d\n", rc);
-    overall_rc = EXIT_FAILURE;
-  }
-
   // delete arp entry in arp responder for the l2 neighbor
   stArpCfg.mac_address = virtual_mac;
   stArpCfg.ipv4_address = virtual_ip;
   stArpCfg.vlan_id = internal_vlan_id;
 
   ACA_ARP_Responder::get_instance().delete_arp_entry(&stArpCfg);
+
   ACA_LOG_DEBUG("delete_l2_neighbor arp entry with ip = %s, vlan id = %u and mac = %s\n",virtual_ip.c_str(),internal_vlan_id, virtual_mac.c_str());
 
 

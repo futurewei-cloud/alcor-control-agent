@@ -20,6 +20,7 @@
 #include "aca_ovs_l2_programmer.h"
 #include "aca_ovs_l3_programmer.h"
 #include "goalstateprovisioner.grpc.pb.h"
+#include "aca_arp_responder.h"
 #include <unordered_map>
 #include <mutex>
 #include <chrono>
@@ -29,6 +30,7 @@
 using namespace std;
 using namespace aca_vlan_manager;
 using namespace aca_ovs_l2_programmer;
+using namespace aca_arp_responder;
 
 namespace aca_ovs_l3_programmer
 {
@@ -219,18 +221,18 @@ int ACA_OVS_L3_Programmer::create_or_update_router(RouterConfiguration &current_
 
           addr = inet_network(found_gateway_ip.c_str());
           snprintf(hex_ip_buffer, HEX_IP_BUFFER_SIZE, "0x%08x", addr);
-
+          
           // Program ARP responder:
-          cmd_string = "add-flow br-tun \"table=51,priority=50,arp,dl_vlan=" +
-                       to_string(source_vlan_id) + ",nw_dst=" + found_gateway_ip +
-                       " actions=move:NXM_OF_ETH_SRC[]->NXM_OF_ETH_DST[],mod_dl_src:" + found_gateway_mac +
-                       ",load:0x2->NXM_OF_ARP_OP[],move:NXM_NX_ARP_SHA[]->NXM_NX_ARP_THA[],move:NXM_OF_ARP_SPA[]->NXM_OF_ARP_TPA[],load:0x" +
-                       current_gateway_mac +
-                       "->NXM_NX_ARP_SHA[],load:" + string(hex_ip_buffer) +
-                       "->NXM_OF_ARP_SPA[],in_port\"";
+          arp_config stArpCfg;
 
-          ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
-                  cmd_string, dataplane_programming_time, overall_rc);
+          stArpCfg.mac_address = found_gateway_mac;
+          stArpCfg.ipv4_address = found_gateway_ip;
+          stArpCfg.vlan_id = source_vlan_id;
+
+          ACA_ARP_Responder::get_instance().create_or_update_arp_entry(&stArpCfg);
+
+          ACA_LOG_DEBUG("Add arp entry for gateway: ip = %s,vlan id = %u and mac = %s",
+                        found_gateway_ip.c_str(), source_vlan_id, found_gateway_mac.c_str());
 
           // Program ICMP responder:
           cmd_string =
@@ -414,12 +416,18 @@ int ACA_OVS_L3_Programmer::delete_router(RouterConfiguration &current_RouterConf
             remove(current_gateway_mac.begin(), current_gateway_mac.end(), ':'),
             current_gateway_mac.end());
 
-    // Delete Arp responder:
-    cmd_string = "del-flows br-tun \"table=51,arp,dl_vlan=" + to_string(source_vlan_id) +
-                 ",nw_dst=" + subnet_it->second.gateway_ip + "\"";
+    // Program ARP responder:
+    arp_config stArpCfg;
 
-    ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
-            cmd_string, dataplane_programming_time, overall_rc);
+    stArpCfg.mac_address = current_gateway_mac;
+    stArpCfg.ipv4_address = subnet_it->second.gateway_ip;
+    stArpCfg.vlan_id = source_vlan_id;
+
+    ACA_ARP_Responder::get_instance().delete_arp_entry(&stArpCfg);
+
+    ACA_LOG_DEBUG("Delete arp entry for gateway: ip = %s,vlan id = %u",
+                  stArpCfg.ipv4_address.c_str(), source_vlan_id);
+
 
     // Delete ICMP responder:
     cmd_string = "del-flows br-tun \"table=52,icmp,dl_vlan=" + to_string(source_vlan_id) +

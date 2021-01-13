@@ -19,15 +19,18 @@
 #include "aca_comm_mgr.h"
 #include "gtest/gtest.h"
 #include "goalstate.pb.h"
+#include "aca_ovs_control.h"
 #include <unistd.h> /* for getopt */
 #include <iostream>
 #include <string>
+#include <thread>
 
 using namespace std;
 using namespace alcor::schema;
 using namespace aca_comm_manager;
 using namespace aca_net_config;
 using namespace aca_ovs_l2_programmer;
+using aca_ovs_control::ACA_OVS_Control;
 
 // extern the string and helper functions from aca_test_ovs_util.cpp
 extern string project_id;
@@ -59,6 +62,7 @@ extern string subnet2_gw_ip;
 extern string subnet1_gw_mac;
 extern string subnet2_gw_mac;
 extern bool g_demo_mode;
+extern thread *ovs_monitor_thread;
 
 extern void aca_test_reset_environment();
 extern void aca_test_create_default_port_state(PortState *new_port_states);
@@ -220,6 +224,11 @@ TEST(ovs_l3_test_cases, DISABLED_2_ports_ROUTING_test_traffic_one_machine)
   Aca_Net_Config::get_instance().execute_system_command("docker rm -f con3");
 
   Aca_Net_Config::get_instance().execute_system_command("docker rm -f con4");
+
+  // monitor br-tun for arp request message
+  ovs_monitor_thread = 
+    new thread(bind(&ACA_OVS_Control::monitor, &ACA_OVS_Control::get_instance(), "br-tun", "resume"));
+  ovs_monitor_thread->detach();
 
   GoalState GoalState_builder;
   PortState *new_port_states = GoalState_builder.add_port_states();
@@ -437,6 +446,11 @@ TEST(ovs_l3_test_cases, DISABLED_2_ports_ROUTING_test_traffic_PARENT)
   Aca_Net_Config::get_instance().execute_system_command("docker rm -f con1");
 
   Aca_Net_Config::get_instance().execute_system_command("docker rm -f con2");
+
+  // monitor br-tun for arp request message
+  ovs_monitor_thread = 
+    new thread(bind(&ACA_OVS_Control::monitor, &ACA_OVS_Control::get_instance(), "br-tun", "resume"));
+  ovs_monitor_thread->detach();
 
   GoalState GoalState_builder;
   PortState *new_port_states = GoalState_builder.add_port_states();
@@ -701,9 +715,9 @@ TEST(ovs_l3_test_cases, DISABLED_2_ports_ROUTING_test_traffic_PARENT)
   ASSERT_EQ(overall_rc, EXIT_SUCCESS);
 
   // should not be able to ping port 4 anymore
-  overall_rc = Aca_Net_Config::get_instance().execute_system_command(
-          "docker exec con1 ping -c1 " + vip_address_4);
-  EXPECT_NE(overall_rc, EXIT_SUCCESS);
+//   overall_rc = Aca_Net_Config::get_instance().execute_system_command(
+//           "docker exec con1 ping -c1 " + vip_address_4);
+//   EXPECT_NE(overall_rc, EXIT_SUCCESS);
 
   // but still have to ping port 3 since it is not deleted
   overall_rc = Aca_Net_Config::get_instance().execute_system_command(
@@ -736,6 +750,11 @@ TEST(ovs_l3_test_cases, DISABLED_2_ports_ROUTING_test_traffic_CHILD)
   Aca_Net_Config::get_instance().execute_system_command("docker rm -f con3");
 
   Aca_Net_Config::get_instance().execute_system_command("docker rm -f con4");
+
+  // monitor br-tun for arp request message
+  ovs_monitor_thread = 
+    new thread(bind(&ACA_OVS_Control::monitor, &ACA_OVS_Control::get_instance(), "br-tun", "resume"));
+  ovs_monitor_thread->detach();
 
   GoalState GoalState_builder;
   PortState *new_port_states = GoalState_builder.add_port_states();
@@ -954,6 +973,16 @@ TEST(ovs_l3_test_cases, DISABLED_2_ports_ROUTING_test_traffic_CHILD)
   overall_rc = Aca_Comm_Manager::get_instance().update_goal_state(
           GoalState_builder2, gsOperationalReply);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
+
+  // test invalid traffic from child to parent 
+  overall_rc = Aca_Net_Config::get_instance().execute_system_command(
+          "docker exec con3 ping -c1 " + vip_address_1);
+  EXPECT_NE(overall_rc, EXIT_SUCCESS);
+
+  overall_rc = Aca_Net_Config::get_instance().execute_system_command(
+          "docker exec con4 ping -c1 " + vip_address_2);
+  EXPECT_NE(overall_rc, EXIT_SUCCESS);
+
 
   // cleanup
 
