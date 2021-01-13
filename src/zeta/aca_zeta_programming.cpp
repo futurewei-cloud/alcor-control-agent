@@ -55,8 +55,12 @@ void ACA_Zeta_Programming::create_entry(string zeta_gateway_id, uint oam_port,
   new_zeta_cfg->oam_port = oam_port;
   new_zeta_cfg->group_id =
           current_available_group_id.fetch_add(1, std::memory_order_relaxed);
+
+  // fill in the ip_address and mac_address of fwds
   for (auto destination : current_AuxGateway.destinations()) {
-    new_zeta_cfg->zeta_buckets.insert(destination.ip_address());
+    fwd_info *new_fwd =
+            new fwd_info(destination.ip_address(), destination.mac_address());
+    new_zeta_cfg->zeta_buckets.insert(new_fwd, nullptr);
   }
 
   _zeta_config_table.insert(zeta_gateway_id, new_zeta_cfg);
@@ -188,31 +192,59 @@ int ACA_Zeta_Programming::create_zeta_config(const alcor::schema::AuxGateway cur
   int overall_rc = EXIT_SUCCESS;
   zeta_config *current_zeta_cfg;
   bool bucket_not_found = false;
-  unordered_set<string> new_zeta_buckets;
+  CTSL::HashMap<fwd_info *, int *> new_zeta_buckets;
 
   uint oam_port = current_AuxGateway.zeta_info().port_inband_operation();
 
   if (!_zeta_config_table.find(current_AuxGateway.id(), current_zeta_cfg)) {
     create_entry(current_AuxGateway.id(), oam_port, current_AuxGateway);
     _zeta_config_table.find(current_AuxGateway.id(), current_zeta_cfg);
+    
+    //-----Start unique lock-----
+    std::unique_lock<std::timed_mutex> group_entry_lock(_group_operation_mutex);
     overall_rc = _create_zeta_group_entry(current_zeta_cfg);
+    group_entry_lock.unlock();
+    //-----End unique lock-----
 
     _create_oam_ofp(oam_port);
     // add oam port number to cache
     aca_zeta_oam_server::ACA_Zeta_Oam_Server::get_instance().add_oam_port_cache(oam_port);
   } else {
-    for (auto destination : current_AuxGateway.destinations()) {
-      if (current_zeta_cfg->zeta_buckets.find(destination.ip_address()) ==
-          current_zeta_cfg->zeta_buckets.end()) {
-        bucket_not_found |= true;
+    if (current_zeta_cfg->zeta_buckets.hashSize !=
+        (uint)current_AuxGateway.destinations().size()) {
+      bucket_not_found = true;
+    } else {
+      for (auto destination : current_AuxGateway.destinations()) {
+        fwd_info *target_fwd =
+                new fwd_info(destination.ip_address(), destination.mac_address());
+
+        int *found = nullptr;
+
+        if (current_zeta_cfg->zeta_buckets.find(target_fwd, found)) {
+          continue;
+        } else {
+          bucket_not_found |= true;
+          break;
+        }
+        new_zeta_buckets.insert(target_fwd, nullptr);
       }
-      new_zeta_buckets.insert(destination.ip_address());
     }
+
     // If the buckets have changed, update the buckets and group table rules.
-    if (current_zeta_cfg->zeta_buckets.size() != new_zeta_buckets.size() ||
-        bucket_not_found == true) {
-      current_zeta_cfg->zeta_buckets = std::unordered_set<string>(new_zeta_buckets);
-      overall_rc = _create_zeta_group_entry(current_zeta_cfg);
+    if (bucket_not_found == true) {
+      current_zeta_cfg->zeta_buckets.clear();
+      for (auto destination : current_AuxGateway.destinations()) {
+        fwd_info *target_fwd =
+                new fwd_info(destination.ip_address(), destination.mac_address());
+
+        current_zeta_cfg->zeta_buckets.insert(target_fwd, nullptr);
+      }
+
+      //-----Start unique lock-----
+      std::unique_lock<std::timed_mutex> group_entry_lock(_group_operation_mutex);
+      overall_rc = _update_zeta_group_entry(current_zeta_cfg);
+      group_entry_lock.unlock();
+      //-----End unique lock-----
     }
   }
 
@@ -280,9 +312,69 @@ int ACA_Zeta_Programming::_create_zeta_group_entry(zeta_config *zeta_cfg)
   // adding group table rule
   string cmd = "-O OpenFlow13 add-group br-tun group_id=" + to_string(zeta_cfg->group_id) +
                ",type=select";
-  unordered_set<string>::iterator it;
-  for (it = zeta_cfg->zeta_buckets.begin(); it != zeta_cfg->zeta_buckets.end(); it++) {
-    cmd += ",bucket=\"set_field:" + *it + "->tun_dst,output:vxlan-generic\"";
+
+  for (size_t i = 0; i < zeta_cfg->zeta_buckets.hashSize; i++) {
+    auto hash_node = zeta_cfg->zeta_buckets.hashTable[i].head;
+    if (hash_node == nullptr) {
+      continue;
+    } else {
+      //-----Start share lock to enable mutiple concurrent reads-----
+      std::shared_lock<std::shared_timed_mutex> hash_bucket_lock(
+              (zeta_cfg->zeta_buckets.hashTable[i]).mutex_);
+
+      while (hash_node != nullptr) {
+        cmd += ",bucket=\"set_field:" + hash_node->getKey()->ip_addr +
+               "->tun_dst,mod_dl_dst:" + hash_node->getKey()->mac_addr +
+               ",output:vxlan-generic\"";
+        hash_node = hash_node->next;
+      }
+      hash_bucket_lock.unlock();
+      //-----End share lock to enable mutiple concurrent reads-----
+    }
+  }
+
+  // add group table rule
+  aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
+          cmd, not_care_culminative_time, overall_rc);
+
+  if (overall_rc == EXIT_SUCCESS) {
+    ACA_LOG_INFO("%s", "create_zeta_group_entry succeeded!\n");
+  } else {
+    ACA_LOG_ERROR("create_zeta_group_entry failed!!! overrall_rc: %d\n", overall_rc);
+  }
+
+  ACA_LOG_DEBUG("ACA_Zeta_Programming::_create_zeta_group_entry <--- Exiting, overall_rc = %d\n",
+                overall_rc);
+  return overall_rc;
+}
+
+int ACA_Zeta_Programming::_update_zeta_group_entry(zeta_config *zeta_cfg)
+{
+  ACA_LOG_DEBUG("%s", "ACA_Zeta_Programming::_update_zeta_group_entry ---> Entering\n");
+  unsigned long not_care_culminative_time;
+  int overall_rc = EXIT_SUCCESS;
+  // adding group table rule
+  string cmd = "-O OpenFlow13 mod-group br-tun group_id=" + to_string(zeta_cfg->group_id) +
+               ",type=select";
+
+  for (size_t i = 0; i < zeta_cfg->zeta_buckets.hashSize; i++) {
+    auto hash_node = zeta_cfg->zeta_buckets.hashTable[i].head;
+    if (hash_node == nullptr) {
+      continue;
+    } else {
+      //-----Start share lock to enable mutiple concurrent reads-----
+      std::shared_lock<std::shared_timed_mutex> hash_bucket_lock(
+              (zeta_cfg->zeta_buckets.hashTable[i]).mutex_);
+
+      while (hash_node != nullptr) {
+        cmd += ",bucket=\"set_field:" + hash_node->getKey()->ip_addr +
+               "->tun_dst,mod_dl_dst:" + hash_node->getKey()->mac_addr +
+               ",output:vxlan-generic\"";
+        hash_node = hash_node->next;
+      }
+      hash_bucket_lock.unlock();
+      //-----End share lock to enable mutiple concurrent reads-----
+    }
   }
 
   // add group table rule
@@ -295,7 +387,7 @@ int ACA_Zeta_Programming::_create_zeta_group_entry(zeta_config *zeta_cfg)
     ACA_LOG_ERROR("update_zeta_group_entry failed!!! overrall_rc: %d\n", overall_rc);
   }
 
-  ACA_LOG_DEBUG("ACA_Zeta_Programming::_create_zeta_group_entry <--- Exiting, overall_rc = %d\n",
+  ACA_LOG_DEBUG("ACA_Zeta_Programming::_update_zeta_group_entry <--- Exiting, overall_rc = %d\n",
                 overall_rc);
   return overall_rc;
 }
