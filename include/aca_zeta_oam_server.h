@@ -20,7 +20,7 @@
 #include <arpa/inet.h>
 #include <net/ethernet.h>
 #include <netinet/ether.h>
-
+#include "hashmap/HashMap.h"
 #include "goalstateprovisioner.grpc.pb.h"
 
 using namespace std;
@@ -101,7 +101,7 @@ class ACA_Zeta_Oam_Server {
 
   int _add_direct_path(oam_match match, oam_action action);
   int _del_direct_path(oam_match match);
-  
+
   void _init_oam_msg_ops();
   void _parse_oam_flow_injection(uint32_t udp_dport, oam_message *oammsg);
   void _parse_oam_flow_deletion(uint32_t udp_dport, oam_message *oammsg);
@@ -110,11 +110,8 @@ class ACA_Zeta_Oam_Server {
   void (aca_zeta_oam_server::ACA_Zeta_Oam_Server ::*_parse_oam_msg_ops[OAM_MSG_MAX])(
           uint32_t udp_dpost, oam_message *oammsg);
 
-  // unordered_set<oam_port_number>
-  unordered_set<uint> _oam_ports_cache;
-
-  // mutex for reading and writing to _oam_ports_cache
-  mutex _oam_ports_cache_mutex;
+  //  hashtable <key: oam_port, value: int *(not used)>
+  CTSL::HashMap<uint, int *> _oam_ports_cache;
 };
 } // namespace aca_zeta_oam_server
 #endif // #ifndef ACA_Zeta_OAM_SERVER_H

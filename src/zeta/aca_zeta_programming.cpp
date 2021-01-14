@@ -198,7 +198,6 @@ int ACA_Zeta_Programming::create_zeta_config(const alcor::schema::AuxGateway cur
   if (!_zeta_config_table.find(current_AuxGateway.id(), current_zeta_cfg)) {
     create_entry(current_AuxGateway.id(), oam_port, current_AuxGateway);
     _zeta_config_table.find(current_AuxGateway.id(), current_zeta_cfg);
-
     overall_rc = _create_zeta_group_entry(current_zeta_cfg);
 
     _create_oam_ofp(oam_port);
@@ -372,9 +371,13 @@ int ACA_Zeta_Programming::_update_zeta_group_entry(zeta_config *zeta_cfg)
     }
   }
 
+  //-----Start unique lock-----
+  std::unique_lock<std::timed_mutex> group_entry_lock(_group_operation_mutex);
   // add group table rule
   aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
           cmd, not_care_culminative_time, overall_rc);
+  group_entry_lock.unlock();
+  //-----End unique lock-----
 
   if (overall_rc == EXIT_SUCCESS) {
     ACA_LOG_INFO("%s", "update_zeta_group_entry succeeded!\n");
