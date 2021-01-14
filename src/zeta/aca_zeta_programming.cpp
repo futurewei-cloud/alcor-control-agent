@@ -47,19 +47,18 @@ void ACA_Zeta_Programming::create_entry(string zeta_gateway_id, uint oam_port,
   ACA_LOG_DEBUG("%s", "ACA_Zeta_Programming::create_entry ---> Entering\n");
 
   zeta_config *new_zeta_cfg = new zeta_config;
+  new_zeta_cfg->oam_port = oam_port;
   // fetch the value first to used for new_zeta_cfg->group_id
   // then add 1 after, doing both atomically
   // std::memory_order_relaxed option won't help much for x86 but other
   // CPU architecture can take advantage of it
-
-  new_zeta_cfg->oam_port = oam_port;
   new_zeta_cfg->group_id =
           current_available_group_id.fetch_add(1, std::memory_order_relaxed);
 
   // fill in the ip_address and mac_address of fwds
   for (auto destination : current_AuxGateway.destinations()) {
-    fwd_info *new_fwd =
-            new fwd_info(destination.ip_address(), destination.mac_address());
+    FWD_Info *new_fwd =
+            new FWD_Info(destination.ip_address(), destination.mac_address());
     new_zeta_cfg->zeta_buckets.insert(new_fwd, nullptr);
   }
 
@@ -192,19 +191,15 @@ int ACA_Zeta_Programming::create_zeta_config(const alcor::schema::AuxGateway cur
   int overall_rc = EXIT_SUCCESS;
   zeta_config *current_zeta_cfg;
   bool bucket_not_found = false;
-  CTSL::HashMap<fwd_info *, int *> new_zeta_buckets;
+  CTSL::HashMap<FWD_Info *, int *> new_zeta_buckets;
 
   uint oam_port = current_AuxGateway.zeta_info().port_inband_operation();
 
   if (!_zeta_config_table.find(current_AuxGateway.id(), current_zeta_cfg)) {
     create_entry(current_AuxGateway.id(), oam_port, current_AuxGateway);
     _zeta_config_table.find(current_AuxGateway.id(), current_zeta_cfg);
-    
-    //-----Start unique lock-----
-    std::unique_lock<std::timed_mutex> group_entry_lock(_group_operation_mutex);
+
     overall_rc = _create_zeta_group_entry(current_zeta_cfg);
-    group_entry_lock.unlock();
-    //-----End unique lock-----
 
     _create_oam_ofp(oam_port);
     // add oam port number to cache
@@ -215,8 +210,8 @@ int ACA_Zeta_Programming::create_zeta_config(const alcor::schema::AuxGateway cur
       bucket_not_found = true;
     } else {
       for (auto destination : current_AuxGateway.destinations()) {
-        fwd_info *target_fwd =
-                new fwd_info(destination.ip_address(), destination.mac_address());
+        FWD_Info *target_fwd =
+                new FWD_Info(destination.ip_address(), destination.mac_address());
 
         int *found = nullptr;
 
@@ -234,17 +229,13 @@ int ACA_Zeta_Programming::create_zeta_config(const alcor::schema::AuxGateway cur
     if (bucket_not_found == true) {
       current_zeta_cfg->zeta_buckets.clear();
       for (auto destination : current_AuxGateway.destinations()) {
-        fwd_info *target_fwd =
-                new fwd_info(destination.ip_address(), destination.mac_address());
+        FWD_Info *target_fwd =
+                new FWD_Info(destination.ip_address(), destination.mac_address());
 
         current_zeta_cfg->zeta_buckets.insert(target_fwd, nullptr);
       }
 
-      //-----Start unique lock-----
-      std::unique_lock<std::timed_mutex> group_entry_lock(_group_operation_mutex);
       overall_rc = _update_zeta_group_entry(current_zeta_cfg);
-      group_entry_lock.unlock();
-      //-----End unique lock-----
     }
   }
 
@@ -333,9 +324,13 @@ int ACA_Zeta_Programming::_create_zeta_group_entry(zeta_config *zeta_cfg)
     }
   }
 
+  //-----Start unique lock-----
+  std::unique_lock<std::timed_mutex> group_entry_lock(_group_operation_mutex);
   // add group table rule
   aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
           cmd, not_care_culminative_time, overall_rc);
+  group_entry_lock.unlock();
+  //-----End unique lock-----
 
   if (overall_rc == EXIT_SUCCESS) {
     ACA_LOG_INFO("%s", "create_zeta_group_entry succeeded!\n");
