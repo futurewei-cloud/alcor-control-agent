@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "gtest/gtest.h"
+#include "goalstateprovisioner.grpc.pb.h"
 #define private public
 #include "aca_zeta_oam_server.h"
 #include "aca_util.h"
@@ -26,6 +27,7 @@ using namespace aca_zeta_oam_server;
 using namespace aca_ovs_control;
 using namespace aca_zeta_programming;
 using namespace aca_ovs_l2_programmer;
+using namespace alcor::schema;
 
 extern string vmac_address_1;
 extern string vmac_address_2;
@@ -90,8 +92,14 @@ TEST(oam_message_test_cases, oams_recv_valid)
   aca_vlan_manager::ACA_Vlan_Manager::get_instance().create_entry(match.vni);
   aca_vlan_manager::ACA_Vlan_Manager::get_instance().set_zeta_gateway(match.vni, auxGateway_id_1);
 
+  // fill in auxgateway state structs
+  AuxGateway new_auxGateway;
+  new_auxGateway.set_id(auxGateway_id_1);
+  AuxGateway_zeta *zeta_info = new_auxGateway.mutable_zeta_info();
+  zeta_info->set_port_inband_operation(oam_port_1); //port_ibo
+
   // fill zeta_config_table
-  ACA_Zeta_Programming::get_instance().create_entry(auxGateway_id_1, oam_port_1);
+  ACA_Zeta_Programming::get_instance().create_entry(auxGateway_id_1, oam_port_1, new_auxGateway);
 
   // flow injection
   stOamMsg.op_code = htonl(0);
