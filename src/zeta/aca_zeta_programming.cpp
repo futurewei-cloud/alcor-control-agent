@@ -19,11 +19,14 @@
 #include "aca_vlan_manager.h"
 #include "aca_ovs_control.h"
 #include "aca_zeta_oam_server.h"
+#include <thread>
 
+// using namespace std;
 using namespace alcor::schema;
 using namespace aca_ovs_control;
 using namespace aca_vlan_manager;
 using namespace aca_ovs_l2_programmer;
+
 namespace aca_zeta_programming
 {
 ACA_Zeta_Programming::ACA_Zeta_Programming()
@@ -183,7 +186,46 @@ uint ACA_Zeta_Programming::get_oam_port(string zeta_gateway_id)
   ACA_LOG_DEBUG("ACA_Zeta_Programming::get_oam_port <--- Exiting, oam_port = %d\n", oam_port);
   return oam_port;
 }
+void start_upd_listener(uint oam_port_number){
+  ACA_LOG_INFO("Starting a listener for port %d", oam_port_number);
+  int z;
+  struct sockaddr_in portList;
+  int len_inet;
+  int s;
+  char dgram[512];
+  // time_t td;
+  // struct tm tm;
+  s = socket(AF_INET,SOCK_DGRAM,0);
+  if ( s == -1 ) {
+    strerror(errno);
+  }
+  memset(&portList,0,sizeof portList);
+  portList.sin_family = AF_INET;
+  portList.sin_port = htons(oam_port_number);
+  // listen to all interfaces
+  portList.sin_addr.s_addr =  inet_addr(INADDR_ANY);
 
+  if ( portList.sin_addr.s_addr == INADDR_NONE ) {
+    strerror(errno);
+  }
+  len_inet = sizeof portList;
+
+  z = bind(s, (struct sockaddr *)&portList, len_inet);
+  if ( z == -1 ) {
+    strerror(errno);
+  }
+
+  for (;;) {
+    z = recv(s, dgram, sizeof dgram, 0);
+    if ( z < 0 ) {
+      strerror(errno);
+    }
+    ACA_LOG_INFO("Got this udp packet when listening to port %d", oam_port_number);
+    ACA_LOG_INFO("%s", dgram);
+
+    aca_zeta_oam_server::ACA_Zeta_Oam_Server::get_instance().oams_recv((uint32_t)oam_port_number, dgram);
+  }
+}
 int ACA_Zeta_Programming::create_zeta_config(const alcor::schema::AuxGateway current_AuxGateway,
                                              uint tunnel_id)
 {
@@ -201,7 +243,12 @@ int ACA_Zeta_Programming::create_zeta_config(const alcor::schema::AuxGateway cur
 
     overall_rc = _create_zeta_group_entry(current_zeta_cfg);
 
-    _create_oam_ofp(oam_port);
+    // _create_oam_ofp(oam_port);
+    ACA_LOG_INFO("Creating thread for port %d.\n", oam_port);
+    std::thread *g_grpc_server_thread = NULL;
+    g_grpc_server_thread = new std::thread(std::bind(&start_upd_listener, oam_port));
+    g_grpc_server_thread->detach();
+    ACA_LOG_INFO("Created thread for port %d and it is detached.\n", oam_port);
     // add oam port number to cache
     aca_zeta_oam_server::ACA_Zeta_Oam_Server::get_instance().add_oam_port_cache(oam_port);
   } else {
