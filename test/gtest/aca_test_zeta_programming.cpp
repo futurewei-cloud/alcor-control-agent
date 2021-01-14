@@ -201,7 +201,7 @@ void aca_test_zeta_setup(string zeta_gateway_path_config_file)
 }
 
 // test if the IP in gws is included in the group entry or not
-bool test_gws_ip_correct(string zeta_gateway_path_config_file, uint group_id)
+bool test_gws_info_correct(string zeta_gateway_path_config_file, uint group_id)
 {
   bool overall_rc;
   ifstream ifs(zeta_gateway_path_config_file);
@@ -213,10 +213,12 @@ bool test_gws_ip_correct(string zeta_gateway_path_config_file, uint group_id)
   string dump_flows = "ovs-ofctl -O OpenFlow13 dump-groups br-tun";
   string opt1 = "group_id=" + to_string(group_id);
   const string tail = "->tun_dst";
+  const string tail_mac = "->dl_dst";
   for (nlohmann::json::iterator it = gw_array.begin(); it != gw_array.end(); ++it)
   {
     string gws_ip = (*it)["ip"];
-    string opt2 = "set_field:" + gws_ip + tail;
+    string gws_mac = (*it)["mac"];
+    string opt2 = "set_field:" + gws_ip + tail +",set_field:" + gws_mac + tail_mac;
     string cmd_string = dump_flows + " | grep " + opt1 + " | grep " + opt2;
     overall_rc = aca_net_config::Aca_Net_Config::get_instance().execute_system_command(cmd_string);
     if (overall_rc == EXIT_SUCCESS) {
@@ -340,7 +342,7 @@ TEST(zeta_programming_test_cases, DISABLED_zeta_gateway_path_CHILD)
   retcode1 = ACA_Zeta_Programming::get_instance().group_rule_exists(group_id);
   if (retcode1){
     // Further validate if the ip in gws is included in the group entry or not
-    retcode2 = test_gws_ip_correct(zeta_gateway_path_CHILD_config_file, group_id);
+    retcode2 = test_gws_info_correct(zeta_gateway_path_CHILD_config_file, group_id);
     EXPECT_EQ(retcode2, true);
   }
   EXPECT_EQ(retcode1, true);
@@ -359,7 +361,7 @@ TEST(zeta_programming_test_cases, DISABLED_zeta_gateway_path_PARENT)
   retcode1 = ACA_Zeta_Programming::get_instance().group_rule_exists(group_id);
   if (retcode1){
     // Further validate if the ip in gws is included in the group entry or not
-    retcode2 = test_gws_ip_correct(zeta_gateway_path_PARENT_config_file, group_id);
+    retcode2 = test_gws_info_correct(zeta_gateway_path_PARENT_config_file, group_id);
     EXPECT_EQ(retcode2, true);
   }
   EXPECT_EQ(retcode1, true);
