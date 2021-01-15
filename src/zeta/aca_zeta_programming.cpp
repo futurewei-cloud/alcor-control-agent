@@ -21,7 +21,6 @@
 #include "aca_zeta_oam_server.h"
 #include <thread>
 
-// using namespace std;
 using namespace alcor::schema;
 using namespace aca_ovs_control;
 using namespace aca_vlan_manager;
@@ -191,13 +190,11 @@ void start_upd_listener(uint oam_port_number){
   int packet_length;
   struct sockaddr_in portList;
   int len_inet;
-  int socket_instance;
   char packet_content[512];
-  // time_t td;
-  // struct tm tm;
-  socket_instance = socket(AF_INET,SOCK_DGRAM,0);
+
+  int socket_instance = socket(AF_INET,SOCK_DGRAM,0);
   if ( socket_instance == -1 ) {
-    ACA_LOG_ERROR("%d\n",errno);
+    ACA_LOG_ERROR("Socket creation error: %d\n",errno);
   }
   memset(&portList,0,sizeof portList);
   portList.sin_family = AF_INET;
@@ -206,16 +203,15 @@ void start_upd_listener(uint oam_port_number){
   portList.sin_addr.s_addr =  htonl(INADDR_ANY);
 
   len_inet = sizeof portList;
-
-  packet_length = bind(socket_instance, (struct sockaddr *)&portList, len_inet);
-  if ( packet_length == -1 ) {
-    ACA_LOG_ERROR("%d\n",errno);
+  int bind_rc  = bind(socket_instance, (struct sockaddr *)&portList, len_inet);
+  if ( bind_rc == -1 ) {
+    ACA_LOG_ERROR("Socket binding error: %d\n",errno);
   }
 
   for (;;) {
     packet_length = recv(socket_instance, packet_content, sizeof packet_content, 0);
     if ( packet_length < 0 ) {
-      ACA_LOG_ERROR("%d\n",errno);
+      ACA_LOG_ERROR("Packet receiving error: %d\n",errno);
     }
     ACA_LOG_INFO("Packet length is %d\n", packet_length);
     ACA_LOG_INFO("Got this udp packet when listening to port %d\n", oam_port_number);
@@ -242,9 +238,10 @@ int ACA_Zeta_Programming::create_zeta_config(const alcor::schema::AuxGateway cur
 
     // _create_oam_ofp(oam_port);
     ACA_LOG_INFO("Creating thread for port %d.\n", oam_port);
-    std::thread *g_grpc_server_thread = NULL;
-    g_grpc_server_thread = new std::thread(std::bind(&start_upd_listener, oam_port));
-    g_grpc_server_thread->detach();
+    std::thread *oam_port_listener_thread = NULL;
+    // TODO: Need to track, and kill this thread when this zeta config is deleted.
+    oam_port_listener_thread = new std::thread(std::bind(&start_upd_listener, oam_port));
+    oam_port_listener_thread->detach();
     ACA_LOG_INFO("Created thread for port %d and it is detached.\n", oam_port);
     // add oam port number to cache
     aca_zeta_oam_server::ACA_Zeta_Oam_Server::get_instance().add_oam_port_cache(oam_port);
