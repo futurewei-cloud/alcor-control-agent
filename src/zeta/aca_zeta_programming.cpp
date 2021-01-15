@@ -19,11 +19,13 @@
 #include "aca_vlan_manager.h"
 #include "aca_ovs_control.h"
 #include "aca_zeta_oam_server.h"
+#include <thread>
 
 using namespace alcor::schema;
 using namespace aca_ovs_control;
 using namespace aca_vlan_manager;
 using namespace aca_ovs_l2_programmer;
+
 namespace aca_zeta_programming
 {
 ACA_Zeta_Programming::ACA_Zeta_Programming()
@@ -183,7 +185,40 @@ uint ACA_Zeta_Programming::get_oam_port(string zeta_gateway_id)
   ACA_LOG_DEBUG("ACA_Zeta_Programming::get_oam_port <--- Exiting, oam_port = %d\n", oam_port);
   return oam_port;
 }
+void start_upd_listener(uint oam_port_number){
+  ACA_LOG_INFO("Starting a listener for port %d\n", oam_port_number);
+  int packet_length;
+  struct sockaddr_in portList;
+  int len_inet;
+  char packet_content[512];
 
+  int socket_instance = socket(AF_INET,SOCK_DGRAM,0);
+  if ( socket_instance == -1 ) {
+    ACA_LOG_ERROR("Socket creation error: %d\n",errno);
+  }
+  memset(&portList,0,sizeof portList);
+  portList.sin_family = AF_INET;
+  portList.sin_port = htons(oam_port_number);
+  // listen to all interfaces
+  portList.sin_addr.s_addr =  htonl(INADDR_ANY);
+
+  len_inet = sizeof portList;
+  int bind_rc  = bind(socket_instance, (struct sockaddr *)&portList, len_inet);
+  if ( bind_rc == -1 ) {
+    ACA_LOG_ERROR("Socket binding error: %d\n",errno);
+  }
+
+  for (;;) {
+    packet_length = recv(socket_instance, packet_content, sizeof packet_content, 0);
+    if ( packet_length < 0 ) {
+      ACA_LOG_ERROR("Packet receiving error: %d\n",errno);
+    }
+    ACA_LOG_INFO("Packet length is %d\n", packet_length);
+    ACA_LOG_INFO("Got this udp packet when listening to port %d\n", oam_port_number);
+    ACA_OVS_Control::get_instance().print_payload(reinterpret_cast<const unsigned char *>(packet_content), packet_length);
+    aca_zeta_oam_server::ACA_Zeta_Oam_Server::get_instance().oams_recv((uint32_t)oam_port_number, packet_content);
+  }
+}
 int ACA_Zeta_Programming::create_zeta_config(const alcor::schema::AuxGateway current_AuxGateway,
                                              uint tunnel_id)
 {
@@ -200,7 +235,13 @@ int ACA_Zeta_Programming::create_zeta_config(const alcor::schema::AuxGateway cur
     _zeta_config_table.find(current_AuxGateway.id(), current_zeta_cfg);
     overall_rc = _create_zeta_group_entry(current_zeta_cfg);
 
-    _create_oam_ofp(oam_port);
+    // _create_oam_ofp(oam_port);
+    ACA_LOG_INFO("Creating thread for port %d.\n", oam_port);
+    std::thread *oam_port_listener_thread = NULL;
+    // TODO: Need to track, and kill this thread when this zeta config is deleted.
+    oam_port_listener_thread = new std::thread(std::bind(&start_upd_listener, oam_port));
+    oam_port_listener_thread->detach();
+    ACA_LOG_INFO("Created thread for port %d and it is detached.\n", oam_port);
     // add oam port number to cache
     aca_zeta_oam_server::ACA_Zeta_Oam_Server::get_instance().add_oam_port_cache(oam_port);
   } else {
