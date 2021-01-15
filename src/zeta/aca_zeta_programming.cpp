@@ -221,6 +221,12 @@ void start_upd_listener(uint oam_port_number){
     ACA_LOG_INFO("Got this udp packet when listening to port %d\n", oam_port_number);
     ACA_LOG_INFO("dgram content: %s\n", dgram);
     std::cout << dgram << std::endl;
+    ACA_OVS_Control::get_instance().print_payload(reinterpret_cast<const unsigned char *>(dgram), z);
+    std::cout << "Printing char by char: " << std::endl;
+    for (uint i = 0 ; i < strlen(dgram); i++){
+      std::cout << dgram[i];
+    }
+    std::cout << "\nThis is the end" << std::endl;
     aca_zeta_oam_server::ACA_Zeta_Oam_Server::get_instance().oams_recv((uint32_t)oam_port_number, dgram);
   }
 }
