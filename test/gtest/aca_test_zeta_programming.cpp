@@ -350,6 +350,7 @@ TEST(zeta_programming_test_cases, DISABLED_zeta_scale_CHILD)
   // construct the GoalState from the json file
   string zeta_gateway_path_CHILD_config_file = "./test/gtest/aca_data.json";
   aca_test_zeta_setup(zeta_gateway_path_CHILD_config_file);
+  sleep(120);
   // restore demo mode
   g_demo_mode = previous_demo_mode;
 }
@@ -376,6 +377,7 @@ TEST(zeta_programming_test_cases, DISABLED_zeta_scale_PARENT)
   // construct the GoalState from the json file
   string zeta_gateway_path_CHILD_config_file = "./test/gtest/aca_data.json";
   aca_test_zeta_setup(zeta_gateway_path_CHILD_config_file);
+  sleep(120);
   // restore demo mode
   g_demo_mode = previous_demo_mode;
 }

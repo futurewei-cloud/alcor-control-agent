@@ -187,7 +187,7 @@ uint ACA_Zeta_Programming::get_oam_port(string zeta_gateway_id)
   return oam_port;
 }
 void start_upd_listener(uint oam_port_number){
-  ACA_LOG_INFO("Starting a listener for port %d", oam_port_number);
+  ACA_LOG_INFO("Starting a listener for port %d\n", oam_port_number);
   int z;
   struct sockaddr_in portList;
   int len_inet;
@@ -197,7 +197,7 @@ void start_upd_listener(uint oam_port_number){
   // struct tm tm;
   s = socket(AF_INET,SOCK_DGRAM,0);
   if ( s == -1 ) {
-    strerror(errno);
+    ACA_LOG_ERROR("%d\n",errno);
   }
   memset(&portList,0,sizeof portList);
   portList.sin_family = AF_INET;
@@ -209,16 +209,16 @@ void start_upd_listener(uint oam_port_number){
 
   z = bind(s, (struct sockaddr *)&portList, len_inet);
   if ( z == -1 ) {
-    strerror(errno);
+    ACA_LOG_ERROR("%d\n",errno);
   }
 
   for (;;) {
     z = recv(s, dgram, sizeof dgram, 0);
     if ( z < 0 ) {
-      strerror(errno);
+      ACA_LOG_ERROR("%d\n",errno);
     }
-    ACA_LOG_INFO("Got this udp packet when listening to port %d", oam_port_number);
-    ACA_LOG_INFO("%s", dgram);
+    ACA_LOG_INFO("Got this udp packet when listening to port %d\n", oam_port_number);
+    ACA_LOG_INFO("dgram content: %s\n", dgram);
 
     aca_zeta_oam_server::ACA_Zeta_Oam_Server::get_instance().oams_recv((uint32_t)oam_port_number, dgram);
   }
