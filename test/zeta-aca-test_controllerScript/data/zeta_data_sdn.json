@@ -60,9 +60,9 @@
         "id_control": "ubuntu",
         "pwd_control": "Lab12345",
         "inf_tenant": "ens4",
-        "mac_tenant": "52:54:00:82:df:3c",
+        "mac_tenant": "52:54:00:a9:3f:b9",
         "inf_zgc": "ens3",
-        "mac_zgc": "52:54:00:bf:cc:3c"
+        "mac_zgc": "52:54:00:1a:cf:38"
       },
       {
         "zgc_id": "zgc_id",
@@ -72,9 +72,9 @@
         "id_control": "ubuntu",
         "pwd_control": "Lab12345",
         "inf_tenant": "ens4",
-        "mac_tenant": "52:54:00:46:41:61",
+        "mac_tenant": "52:54:00:69:4d:be",
         "inf_zgc": "ens3",
-        "mac_zgc": "52:54:00:fe:a8:ed"
+        "mac_zgc": "52:54:00:0c:1e:f9"
       },
       {
         "zgc_id": "zgc_id",
@@ -84,9 +84,9 @@
         "id_control": "ubuntu",
         "pwd_control": "Lab12345",
         "inf_tenant": "ens4",
-        "mac_tenant": "52:54:00:d2:da:47",
+        "mac_tenant": "52:54:00:bb:47:12",
         "inf_zgc": "ens3",
-        "mac_zgc": "52:54:00:76:ac:70"
+        "mac_zgc": "52:54:00:bd:96:0b"
       },
       {
         "zgc_id": "zgc_id",
@@ -96,9 +96,9 @@
         "id_control": "ubuntu",
         "pwd_control": "Lab12345",
         "inf_tenant": "ens4",
-        "mac_tenant": "52:54:00:98:20:5a",
+        "mac_tenant": "52:54:00:ad:3d:1c",
         "inf_zgc": "ens3",
-        "mac_zgc": "52:54:00:76:a3:eb"
+        "mac_zgc": "52:54:00:f3:ba:7c"
       },
       {
         "zgc_id": "zgc_id",
@@ -108,9 +108,9 @@
         "id_control": "ubuntu",
         "pwd_control": "Lab12345",
         "inf_tenant": "ens4",
-        "mac_tenant": "52:54:00:47:c5:9f",
+        "mac_tenant": "52:54:00:b9:30:17",
         "inf_zgc": "ens3",
-        "mac_zgc": "52:54:00:b5:db:68"
+        "mac_zgc": "52:54:00:3d:27:36"
       },
       {
         "zgc_id": "zgc_id",
@@ -120,9 +120,9 @@
         "id_control": "ubuntu",
         "pwd_control": "Lab12345",
         "inf_tenant": "ens4",
-        "mac_tenant": "52:54:00:77:fd:90",
+        "mac_tenant": "52:54:00:1e:40:5a",
         "inf_zgc": "ens3",
-        "mac_zgc": "52:54:00:be:0b:85"
+        "mac_zgc": "52:54:00:23:17:1b"
       }
     ]
   }
