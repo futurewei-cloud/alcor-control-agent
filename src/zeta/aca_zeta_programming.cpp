@@ -217,9 +217,10 @@ void start_upd_listener(uint oam_port_number){
     if ( z < 0 ) {
       ACA_LOG_ERROR("%d\n",errno);
     }
+    ACA_LOG_INFO("Z is %d", z);
     ACA_LOG_INFO("Got this udp packet when listening to port %d\n", oam_port_number);
     ACA_LOG_INFO("dgram content: %s\n", dgram);
-
+    std::cout << dgram << std::endl;
     aca_zeta_oam_server::ACA_Zeta_Oam_Server::get_instance().oams_recv((uint32_t)oam_port_number, dgram);
   }
 }
