@@ -136,7 +136,7 @@ uint ACA_Zeta_Oam_Server::_get_tunnel_id(uint8_t *vni)
 
   // Convert tunnel_id to uint
   // from uint8[3] to uint
-  tunnel_id = ((uint)vni[0]) | ((uint)vni[1]) << 8 | ((uint) vni[2]) << 16;
+  tunnel_id = ((uint)vni[0]) | ((uint)vni[1]) << 8 | ((uint)vni[2]) << 16;
 
   return tunnel_id;
 }
@@ -300,18 +300,16 @@ int ACA_Zeta_Oam_Server::_del_direct_path(oam_match match)
 // add oam port number to cache
 void ACA_Zeta_Oam_Server::add_oam_port_cache(uint port_number)
 {
-  if (_oam_ports_cache.find(port_number) == _oam_ports_cache.end()) {
-    _oam_ports_cache.emplace(port_number);
+  int *not_used;
+  if (!_oam_ports_cache.find(port_number, not_used)) {
+    _oam_ports_cache.insert(port_number, nullptr);
   }
 }
 
 // find the oam port number in the cache
 bool ACA_Zeta_Oam_Server::lookup_oam_port_in_cache(uint port_number)
 {
-  if (_oam_ports_cache.find(port_number) != _oam_ports_cache.end()) {
-    return true;
-  } else {
-    return false;
-  }
+  int *not_used;
+  return _oam_ports_cache.find(port_number, not_used);
 }
 } // namespace aca_zeta_oam_server
