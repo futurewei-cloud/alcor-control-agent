@@ -203,11 +203,8 @@ void start_upd_listener(uint oam_port_number){
   portList.sin_family = AF_INET;
   portList.sin_port = htons(oam_port_number);
   // listen to all interfaces
-  portList.sin_addr.s_addr =  inet_addr(INADDR_ANY);
+  portList.sin_addr.s_addr =  htonl(INADDR_ANY);
 
-  if ( portList.sin_addr.s_addr == INADDR_NONE ) {
-    strerror(errno);
-  }
   len_inet = sizeof portList;
 
   z = bind(s, (struct sockaddr *)&portList, len_inet);
