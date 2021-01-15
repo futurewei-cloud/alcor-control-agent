@@ -188,15 +188,15 @@ uint ACA_Zeta_Programming::get_oam_port(string zeta_gateway_id)
 }
 void start_upd_listener(uint oam_port_number){
   ACA_LOG_INFO("Starting a listener for port %d\n", oam_port_number);
-  int z;
+  int packet_length;
   struct sockaddr_in portList;
   int len_inet;
-  int s;
-  char dgram[512];
+  int socket_instance;
+  char packet_content[512];
   // time_t td;
   // struct tm tm;
-  s = socket(AF_INET,SOCK_DGRAM,0);
-  if ( s == -1 ) {
+  socket_instance = socket(AF_INET,SOCK_DGRAM,0);
+  if ( socket_instance == -1 ) {
     ACA_LOG_ERROR("%d\n",errno);
   }
   memset(&portList,0,sizeof portList);
@@ -207,27 +207,20 @@ void start_upd_listener(uint oam_port_number){
 
   len_inet = sizeof portList;
 
-  z = bind(s, (struct sockaddr *)&portList, len_inet);
-  if ( z == -1 ) {
+  packet_length = bind(socket_instance, (struct sockaddr *)&portList, len_inet);
+  if ( packet_length == -1 ) {
     ACA_LOG_ERROR("%d\n",errno);
   }
 
   for (;;) {
-    z = recv(s, dgram, sizeof dgram, 0);
-    if ( z < 0 ) {
+    packet_length = recv(socket_instance, packet_content, sizeof packet_content, 0);
+    if ( packet_length < 0 ) {
       ACA_LOG_ERROR("%d\n",errno);
     }
-    ACA_LOG_INFO("Z is %d", z);
+    ACA_LOG_INFO("Packet length is %d\n", packet_length);
     ACA_LOG_INFO("Got this udp packet when listening to port %d\n", oam_port_number);
-    ACA_LOG_INFO("dgram content: %s\n", dgram);
-    std::cout << dgram << std::endl;
-    ACA_OVS_Control::get_instance().print_payload(reinterpret_cast<const unsigned char *>(dgram), z);
-    std::cout << "Printing char by char: " << std::endl;
-    for (uint i = 0 ; i < strlen(dgram); i++){
-      std::cout << dgram[i];
-    }
-    std::cout << "\nThis is the end" << std::endl;
-    aca_zeta_oam_server::ACA_Zeta_Oam_Server::get_instance().oams_recv((uint32_t)oam_port_number, dgram);
+    ACA_OVS_Control::get_instance().print_payload(reinterpret_cast<const unsigned char *>(packet_content), packet_length);
+    aca_zeta_oam_server::ACA_Zeta_Oam_Server::get_instance().oams_recv((uint32_t)oam_port_number, packet_content);
   }
 }
 int ACA_Zeta_Programming::create_zeta_config(const alcor::schema::AuxGateway current_AuxGateway,
