@@ -136,7 +136,7 @@ uint ACA_Zeta_Oam_Server::_get_tunnel_id(uint8_t *vni)
 
   // Convert tunnel_id to uint
   // from uint8[3] to uint
-  tunnel_id = ((uint)vni[0]) | ((uint)vni[1]) << 8 | ((uint)vni[2]) << 16;
+  tunnel_id = ((uint)vni[0]) << 16 | ((uint)vni[1]) << 8 | ((uint) vni[2]);
 
   return tunnel_id;
 }
