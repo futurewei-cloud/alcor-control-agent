@@ -139,8 +139,8 @@ def talk_to_zeta(file_path, zgc_api_url, zeta_data, port_api_upper_limit, time_i
 
     # second delay
     # TODO: Check if this can be removed.
-    print('Sleep 60 seconds after the VPC call')
-    time.sleep(60)
+    print('Sleep 10 seconds after the VPC call')
+    time.sleep(10)
     print('Start calling /ports API')
 
     # notify ZGC the ports created on each ACA
@@ -280,7 +280,9 @@ def run():
 
     testcases_to_run = ['DISABLED_zeta_gateway_path_CHILD',
                         'DISABLED_zeta_gateway_path_PARENT']
-    execute_ping = False
+    testcases_to_run = ['DISABLED_zeta_scale_CHILD',
+                                'DISABLED_zeta_scale_PARENT']
+    execute_ping = True
     # second argument should be amount of ports to be generated
     if len(arguments) > 1:
         ports_to_create = int(arguments[1])
@@ -289,7 +291,7 @@ def run():
                 f'You tried to create {ports_to_create} ports, but the pseudo controller only supports up to 1,000,000 ports, sorry.')
             return
         print("Has arguments, need to generate some ports!")
-        if ports_to_create > 2:
+        if ports_to_create >= 2:
             print(f'Trying to create {ports_to_create} ports.')
             testcases_to_run = ['DISABLED_zeta_scale_CHILD',
                                 'DISABLED_zeta_scale_PARENT']
@@ -364,9 +366,12 @@ def run():
         child_ports = [port for port in json_content_for_aca['port_response'] if (port['ip_node'].split('.'))[3] == (zeta_data['aca_nodes']['ip'][1].split('.'))[3]]
         ping_result = {}
         if len(parent_ports) > 0 and len(child_ports) > 0:
+            dump_flow_cmd = ['sudo ovs-ofctl dump-flows br-tun']
+            br_tun_before_ping = exec_sshCommand_aca(host=aca_nodes[0], user=aca_nodes_data['username'], password=aca_nodes_data['password'], cmd=dump_flow_cmd, timeout=20)
             ping_cmd = [f'ping -I {parent_ports[0]["ips_port"][0]["ip"]} -c1 {child_ports[0]["ips_port"][0]["ip"]}']
             print(f'Command for ping: {ping_cmd[0]}')
             ping_result = exec_sshCommand_aca(host=aca_nodes[0], user=aca_nodes_data['username'], password=aca_nodes_data['password'], cmd=ping_cmd, timeout=20)
+            br_tun_after_ping = exec_sshCommand_aca(host=aca_nodes[0], user=aca_nodes_data['username'], password=aca_nodes_data['password'], cmd=dump_flow_cmd, timeout=20)
         else:
             print(f'Either parent or child does not have any ports, somethings wrong.')
         print(f'Ping succeeded: {ping_result["status"][0] == 0}')
