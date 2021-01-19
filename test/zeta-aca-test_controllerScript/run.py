@@ -46,7 +46,7 @@ def upload_file_aca(host, user, password, server_path, local_path, timeout=600):
 
 
 # Execute remote SSH commands
-def exec_sshCommand_aca(host, user, password, cmd, timeout=60):
+def exec_sshCommand_aca(host, user, password, cmd, timeout=60, output=True):
     """
     :param host
     :param user
@@ -79,8 +79,10 @@ def exec_sshCommand_aca(host, user, password, cmd, timeout=60):
             channel = stdout.channel
             status = channel.recv_exit_status()
             result['status'].append(status)
-            # result['data'].append(out1)
-            print(f'Output: {out2.decode()}')
+            decoded_output = out2.decode()
+            result['data'].append(decoded_output)
+            if output:
+                print(f'Output: {decoded_output}')
         ssh.close()  # close ssh connection
         return result
     except Exception as e:
@@ -228,20 +230,24 @@ def get_port_template(i):
 def generate_ports(ports_to_create):
     print(f'Need to generate {ports_to_create} ports')
     node_data = {}
-    all_ports_generated = []
-    for i in range(ports_to_create):
-        port_template_to_use = get_port_template(i)
-        port_id = '{0:07d}ae-7dec-11d0-a765-00a0c9341120'.format(i)
-        ip_2nd_octet = str((i // 10000))
-        ip_3rd_octet = str((i % 10000 // 100))
-        ip_4th_octet = str((i % 100))
-        ip = ips_ports_ip_prefix + ip_2nd_octet + \
-            "." + ip_3rd_octet + "." + ip_4th_octet
-        mac = mac_port_prefix + ip_2nd_octet + ":" + ip_3rd_octet + ":" + ip_4th_octet
-        port_template_to_use['port_id'] = port_id
-        port_template_to_use['ips_port'][0]['ip'] = ip
-        port_template_to_use['mac_port'] = mac
-        all_ports_generated.append(port_template_to_use)
+    all_ports_generated = []    # Need to skip when i == 0
+    # real_i = (ports_to_create // 10) + ports_to_create
+    i = 0
+    while len(all_ports_generated) != ports_to_create:
+        if i % 10 != 0:
+            port_template_to_use = get_port_template(i)
+            port_id = '{0:07d}ae-7dec-11d0-a765-00a0c9341120'.format(i)
+            ip_2nd_octet = str((i // 10000))
+            ip_3rd_octet = str((i % 10000 // 100))
+            ip_4th_octet = str((i % 100))
+            ip = ips_ports_ip_prefix + ip_2nd_octet + \
+                "." + ip_3rd_octet + "." + ip_4th_octet
+            mac = mac_port_prefix + ip_2nd_octet + ":" + ip_3rd_octet + ":" + ip_4th_octet
+            port_template_to_use['port_id'] = port_id
+            port_template_to_use['ips_port'][0]['ip'] = ip
+            port_template_to_use['mac_port'] = mac
+            all_ports_generated.append(port_template_to_use)
+        i = i +1
     return all_ports_generated
 
 # To run the pseudo controller, the user either runs it without specifying how many ports to create, which leads to creating 2 ports and running the
