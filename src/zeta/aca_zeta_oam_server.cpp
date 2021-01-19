@@ -255,8 +255,8 @@ int ACA_Zeta_Oam_Server::_add_direct_path(oam_match match, oam_action action)
   string source_port_cmd = "";
 
   string destination_port_cmd = "";
-  ACA_LOG_DEBUG("Detected source port: %s", match.sport);
-  ACA_LOG_DEBUG("Detected destination port: %s", match.dport);
+  std::cout << "Detected source port: " << match.sport << std::endl;
+  std::cout << "Detected destination port: " << match.dport << std::endl;
 
   if (match.sport != "0"){
     destination_port_cmd = ",tp_src=" + match.sport;
