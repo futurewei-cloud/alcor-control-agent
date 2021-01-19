@@ -255,17 +255,16 @@ int ACA_Zeta_Oam_Server::_add_direct_path(oam_match match, oam_action action)
   string source_port_cmd = "";
 
   string destination_port_cmd = "";
+  ACA_LOG_DEBUG("Detected source port: %s", match.sport);
+  ACA_LOG_DEBUG("Detected destination port: %s", match.dport);
 
   if (match.sport != "0"){
-    destination_port_cmd = ",tp_src" + match.sport;
+    destination_port_cmd = ",tp_src=" + match.sport;
   }
 
   if (match.dport != "0"){
-    source_port_cmd = ",tp_dst" + match.dport;
+    source_port_cmd = ",tp_dst=" + match.dport;
   }
-
-
-
 
   string cmd_match = "ip,nw_proto=" + match.proto + ",nw_src=" + match.sip +
                      ",nw_dst=" + match.dip + source_port_cmd +
