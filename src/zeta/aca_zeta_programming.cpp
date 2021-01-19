@@ -185,38 +185,41 @@ uint ACA_Zeta_Programming::get_oam_port(string zeta_gateway_id)
   ACA_LOG_DEBUG("ACA_Zeta_Programming::get_oam_port <--- Exiting, oam_port = %d\n", oam_port);
   return oam_port;
 }
-void start_upd_listener(uint oam_port_number){
+void start_upd_listener(uint oam_port_number)
+{
   ACA_LOG_INFO("Starting a listener for port %d\n", oam_port_number);
   int packet_length;
   struct sockaddr_in portList;
   int len_inet;
   char packet_content[512];
 
-  int socket_instance = socket(AF_INET,SOCK_DGRAM,0);
-  if ( socket_instance == -1 ) {
-    ACA_LOG_ERROR("Socket creation error: %d\n",errno);
+  int socket_instance = socket(AF_INET, SOCK_DGRAM, 0);
+  if (socket_instance == -1) {
+    ACA_LOG_ERROR("Socket creation error: %d\n", errno);
   }
-  memset(&portList,0,sizeof portList);
+  memset(&portList, 0, sizeof portList);
   portList.sin_family = AF_INET;
   portList.sin_port = htons(oam_port_number);
   // listen to all interfaces
-  portList.sin_addr.s_addr =  htonl(INADDR_ANY);
+  portList.sin_addr.s_addr = htonl(INADDR_ANY);
 
   len_inet = sizeof portList;
-  int bind_rc  = bind(socket_instance, (struct sockaddr *)&portList, len_inet);
-  if ( bind_rc == -1 ) {
-    ACA_LOG_ERROR("Socket binding error: %d\n",errno);
+  int bind_rc = bind(socket_instance, (struct sockaddr *)&portList, len_inet);
+  if (bind_rc == -1) {
+    ACA_LOG_ERROR("Socket binding error: %d\n", errno);
   }
 
   for (;;) {
     packet_length = recv(socket_instance, packet_content, sizeof packet_content, 0);
-    if ( packet_length < 0 ) {
-      ACA_LOG_ERROR("Packet receiving error: %d\n",errno);
+    if (packet_length < 0) {
+      ACA_LOG_ERROR("Packet receiving error: %d\n", errno);
     }
     ACA_LOG_INFO("Packet length is %d\n", packet_length);
     ACA_LOG_INFO("Got this udp packet when listening to port %d\n", oam_port_number);
-    ACA_OVS_Control::get_instance().print_payload(reinterpret_cast<const unsigned char *>(packet_content), packet_length);
-    aca_zeta_oam_server::ACA_Zeta_Oam_Server::get_instance().oams_recv((uint32_t)oam_port_number, packet_content);
+    ACA_OVS_Control::get_instance().print_payload(
+            reinterpret_cast<const unsigned char *>(packet_content), packet_length);
+    aca_zeta_oam_server::ACA_Zeta_Oam_Server::get_instance().oams_recv(
+            (uint32_t)oam_port_number, packet_content);
   }
 }
 int ACA_Zeta_Programming::create_zeta_config(const alcor::schema::AuxGateway current_AuxGateway,
@@ -253,9 +256,9 @@ int ACA_Zeta_Programming::create_zeta_config(const alcor::schema::AuxGateway cur
         FWD_Info *target_fwd =
                 new FWD_Info(destination.ip_address(), destination.mac_address());
 
-        int *found = nullptr;
+        int *not_used = nullptr;
 
-        if (current_zeta_cfg->zeta_buckets.find(target_fwd, found)) {
+        if (current_zeta_cfg->zeta_buckets.find(target_fwd, not_used)) {
           continue;
         } else {
           bucket_not_found |= true;
@@ -326,6 +329,7 @@ int ACA_Zeta_Programming::delete_zeta_config(const alcor::schema::AuxGateway cur
     if (!ACA_Vlan_Manager::get_instance().is_exist_zeta_gateway(
                 current_AuxGateway.id())) {
       _delete_oam_ofp(current_zeta_cfg->oam_port);
+      overall_rc = _delete_zeta_group_entry(current_zeta_cfg);
       _zeta_config_table.erase(current_AuxGateway.id());
     }
   }
@@ -354,6 +358,12 @@ int ACA_Zeta_Programming::_create_zeta_group_entry(zeta_config *zeta_cfg)
               (zeta_cfg->zeta_buckets.hashTable[i]).mutex_);
 
       while (hash_node != nullptr) {
+         // add the static arp entries
+        string static_arp_string = "arp -s " + hash_node->getKey()->ip_addr +
+                                   " " + hash_node->getKey()->mac_addr;
+        aca_net_config::Aca_Net_Config::get_instance().execute_system_command(static_arp_string);
+
+        // fill zeta_gws
         cmd += ",bucket=\"set_field:" + hash_node->getKey()->ip_addr +
                "->tun_dst,mod_dl_dst:" + hash_node->getKey()->mac_addr +
                ",output:vxlan-generic\"";
@@ -402,6 +412,11 @@ int ACA_Zeta_Programming::_update_zeta_group_entry(zeta_config *zeta_cfg)
               (zeta_cfg->zeta_buckets.hashTable[i]).mutex_);
 
       while (hash_node != nullptr) {
+        // add the static arp entries
+        string static_arp_string = "arp -s " + hash_node->getKey()->ip_addr +
+                                   " " + hash_node->getKey()->mac_addr;
+        aca_net_config::Aca_Net_Config::get_instance().execute_system_command(static_arp_string);
+
         cmd += ",bucket=\"set_field:" + hash_node->getKey()->ip_addr +
                "->tun_dst,mod_dl_dst:" + hash_node->getKey()->mac_addr +
                ",output:vxlan-generic\"";
@@ -439,6 +454,7 @@ int ACA_Zeta_Programming::_delete_zeta_group_entry(zeta_config *zeta_cfg)
 
   // delete group table rule
   string cmd = "-O OpenFlow13 del-groups br-tun group_id=" + to_string(zeta_cfg->group_id);
+
   aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
           cmd, not_care_culminative_time, overall_rc);
 
@@ -446,6 +462,26 @@ int ACA_Zeta_Programming::_delete_zeta_group_entry(zeta_config *zeta_cfg)
     ACA_LOG_INFO("%s", "delete_zeta_group_entry succeeded!\n");
   } else {
     ACA_LOG_ERROR("delete_zeta_group_entry failed!!! overrall_rc: %d\n", overall_rc);
+  }
+
+  for (size_t i = 0; i < zeta_cfg->zeta_buckets.hashSize; i++) {
+    auto hash_node = zeta_cfg->zeta_buckets.hashTable[i].head;
+    if (hash_node == nullptr) {
+      continue;
+    } else {
+      //-----Start share lock to enable mutiple concurrent reads-----
+      std::shared_lock<std::shared_timed_mutex> hash_bucket_lock(
+              (zeta_cfg->zeta_buckets.hashTable[i]).mutex_);
+
+      while (hash_node != nullptr) {
+        // delete the static arp entries
+        string static_arp_string = "arp -d " + hash_node->getKey()->ip_addr;
+        aca_net_config::Aca_Net_Config::get_instance().execute_system_command(static_arp_string);
+        hash_node = hash_node->next;
+      }
+      hash_bucket_lock.unlock();
+      //-----End share lock to enable mutiple concurrent reads-----
+    }
   }
 
   ACA_LOG_DEBUG("ACA_Zeta_Programming::_delete_zeta_group_entry <--- Exiting, overall_rc = %d\n",
