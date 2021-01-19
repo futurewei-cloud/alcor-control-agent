@@ -252,9 +252,21 @@ int ACA_Zeta_Oam_Server::_add_direct_path(oam_match match, oam_action action)
   string vlan_id = to_string(aca_vlan_manager::ACA_Vlan_Manager::get_instance().get_or_create_vlan_id(
           match.vni));
 
+  string source_port_cmd = "";
+
+  string destination_port_cmd = "";
+
+  if (match.sport != "0"){
+    destination_port_cmd = ",tp_src=" + match.sport;
+  }
+
+  if (match.dport != "0"){
+    source_port_cmd = ",tp_dst=" + match.dport;
+  }
+
   string cmd_match = "ip,nw_proto=" + match.proto + ",nw_src=" + match.sip +
-                     ",nw_dst=" + match.dip + ",tp_src=" + match.sport +
-                     ",tp_dst=" + match.dport + ",dl_vlan=" + vlan_id;
+                     ",nw_dst=" + match.dip + source_port_cmd +
+                     destination_port_cmd + ",dl_vlan=" + vlan_id;
   string cmd_action = ",actions=\"strip_vlan,load:" + to_string(match.vni) +
                       "->NXM_NX_TUN_ID[],set_field:" + action.node_nw_dst +
                       "->tun_dst,mod_dl_dst=" + action.inst_dl_dst +
