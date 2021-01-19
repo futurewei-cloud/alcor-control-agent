@@ -8,7 +8,7 @@ import itertools
 from math import ceil
 import threading
 import concurrent.futures
-
+import subprocess
 
 server_aca_repo_path = ''
 aca_data_destination_path = '/test/gtest/aca_data.json'
@@ -262,6 +262,7 @@ def generate_ports(ports_to_create):
 
 
 def run():
+    subprocess.call(['/home/user/ws/zzxgzgz/zeta/deploy/zeta_deploy.sh', '-d',  'lab'])
     port_api_upper_limit = 1000
     time_interval_between_calls_in_seconds = 10
     ports_to_create = 2
