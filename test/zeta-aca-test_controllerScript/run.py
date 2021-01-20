@@ -100,8 +100,8 @@ def talk_to_zeta(file_path, zgc_api_url, zeta_data, port_api_upper_limit, time_i
         zgc_api_url + "/zgcs", data=json.dumps(ZGC_data), headers=headers)
     print(f'zgc creation response: \n{zgc_response.text}')
     if zgc_response.status_code >= 300:
-            print('Failed to create zgc, pseudo controller will stop now.')
-            return False
+        print('Failed to create zgc, pseudo controller will stop now.')
+        return False
     zgc_id = zgc_response.json()['zgc_id']
 
     # add Nodes
@@ -186,9 +186,9 @@ def talk_to_zeta(file_path, zgc_api_url, zeta_data, port_api_upper_limit, time_i
     print(
         f'ALL PORT post call ended, for {amount_of_ports} ports creation it took: {all_ports_end_time - all_ports_start_time} seconds')
     json_content_for_aca['port_response'] = list(
-        itertools.chain.from_iterable(all_post_responses))
+        itertools.chain.from_iterable(all_post_responses))[:10]
     print(
-        f'Length of all ports response: {len(json_content_for_aca["port_response"])}')
+        f'Amount of ports to send to aca: {len(json_content_for_aca["port_response"])}')
     with open('aca_data.json', 'w') as outfile:
         json.dump(json_content_for_aca, outfile)
         print(f'The aca data is exported to {aca_data_local_path}')
@@ -247,7 +247,7 @@ def generate_ports(ports_to_create):
             port_template_to_use['ips_port'][0]['ip'] = ip
             port_template_to_use['mac_port'] = mac
             all_ports_generated.append(port_template_to_use)
-        i = i +1
+        i = i + 1
     return all_ports_generated
 
 # To run the pseudo controller, the user either runs it without specifying how many ports to create, which leads to creating 2 ports and running the
@@ -262,7 +262,8 @@ def generate_ports(ports_to_create):
 
 
 def run():
-    subprocess.call(['/home/user/ws/zzxgzgz/zeta/deploy/zeta_deploy.sh', '-d',  'lab'])
+    subprocess.call(
+        ['/home/user/ws/zzxgzgz/zeta/deploy/zeta_deploy.sh', '-d',  'lab'])
     port_api_upper_limit = 1000
     time_interval_between_calls_in_seconds = 10
     ports_to_create = 2
@@ -280,8 +281,8 @@ def run():
 
     testcases_to_run = ['DISABLED_zeta_gateway_path_CHILD',
                         'DISABLED_zeta_gateway_path_PARENT']
-    testcases_to_run = ['DISABLED_zeta_scale_CHILD',
-                                'DISABLED_zeta_scale_PARENT']
+    testcases_to_run = ['DISABLED_zeta_scale_container',
+                        'DISABLED_zeta_scale_container']
     execute_ping = True
     # second argument should be amount of ports to be generated
     if len(arguments) > 1:
@@ -293,8 +294,8 @@ def run():
         print("Has arguments, need to generate some ports!")
         if ports_to_create >= 2:
             print(f'Trying to create {ports_to_create} ports.')
-            testcases_to_run = ['DISABLED_zeta_scale_CHILD',
-                                'DISABLED_zeta_scale_PARENT']
+            testcases_to_run = ['DISABLED_zeta_scale_container',
+                                'DISABLED_zeta_scale_container']
             zeta_data['PORT_data'] = generate_ports(ports_to_create)
             execute_ping = True
             print(
@@ -318,7 +319,7 @@ def run():
             f'Set time interval between /nodes POST calls to be {arg3} seconds.')
 
     json_content_for_aca = talk_to_zeta(file_path, zgc_api_url, zeta_data,
-                 port_api_upper_limit, time_interval_between_calls_in_seconds)
+                                        port_api_upper_limit, time_interval_between_calls_in_seconds)
 
     if json_content_for_aca is False:
         print('Failed to talk to Zeta, pseudo controller will exit now.')
@@ -344,38 +345,53 @@ def run():
         f'cd {server_aca_repo_path};sudo ./build/tests/aca_tests --gtest_also_run_disabled_tests --gtest_filter=*{testcases_to_run[1]}']
 
     with concurrent.futures.ThreadPoolExecutor() as executor:
-        future_child = executor.submit(exec_sshCommand_aca, aca_nodes[1], aca_nodes_data['username'], aca_nodes_data['password'], cmd_child, 1500)
-        future_parent = executor.submit(exec_sshCommand_aca, aca_nodes[0], aca_nodes_data['username'], aca_nodes_data['password'], cmd_parent, 1500)
+        future_child = executor.submit(
+            exec_sshCommand_aca, aca_nodes[1], aca_nodes_data['username'], aca_nodes_data['password'], cmd_child, 1500)
+        future_parent = executor.submit(
+            exec_sshCommand_aca, aca_nodes[0], aca_nodes_data['username'], aca_nodes_data['password'], cmd_parent, 1500)
         result_child = future_child.result()
         result_parent = future_parent.result()
         for status_code in result_child["status"]:
             if status_code != 0:
-                print(f'Child command: [{cmd_child}] failed, pseudo controller will stop now.')
+                print(
+                    f'Child command: [{cmd_child}] failed, pseudo controller will stop now.')
                 return
         for status_code in result_parent["status"]:
             if status_code != 0:
-                print(f'Parent command: [{cmd_parent}] failed, pseudo controller will stop now.')
+                print(
+                    f'Parent command: [{cmd_parent}] failed, pseudo controller will stop now.')
                 return
-    
+
     test_end_time = time.time()
     print(
         f'Time took for the tests of ACA nodes are {test_end_time - test_start_time} seconds.')
     if execute_ping:
         print('Time for the Ping test')
-        parent_ports = [port for port in json_content_for_aca['port_response'] if (port['ip_node'].split('.'))[3] == (zeta_data['aca_nodes']['ip'][0].split('.'))[3]]
-        child_ports = [port for port in json_content_for_aca['port_response'] if (port['ip_node'].split('.'))[3] == (zeta_data['aca_nodes']['ip'][1].split('.'))[3]]
+        parent_ports = [port for port in json_content_for_aca['port_response'] if (
+            port['ip_node'].split('.'))[3] == (zeta_data['aca_nodes']['ip'][0].split('.'))[3]]
+        child_ports = [port for port in json_content_for_aca['port_response'] if (
+            port['ip_node'].split('.'))[3] == (zeta_data['aca_nodes']['ip'][1].split('.'))[3]]
         ping_result = {}
         if len(parent_ports) > 0 and len(child_ports) > 0:
             dump_flow_cmd = ['sudo ovs-ofctl dump-flows br-tun']
-            br_tun_before_ping = exec_sshCommand_aca(host=aca_nodes[0], user=aca_nodes_data['username'], password=aca_nodes_data['password'], cmd=dump_flow_cmd, timeout=20)
-            ping_cmd = [f'ping -I {parent_ports[0]["ips_port"][0]["ip"]} -c1 {child_ports[0]["ips_port"][0]["ip"]}']
+            br_tun_before_ping = exec_sshCommand_aca(
+                host=aca_nodes[0], user=aca_nodes_data['username'], password=aca_nodes_data['password'], cmd=dump_flow_cmd, timeout=20)
+            pinger = parent_ports[0]["ips_port"][0]["ip"]
+            pingee = child_ports[0]["ips_port"][0]["ip"]
+            # ping_cmd = [
+            #     f'ping -I {parent_ports[0]["ips_port"][0]["ip"]} -c1 {child_ports[0]["ips_port"][0]["ip"]}']
+            ping_cmd = [
+                f'docker exec con-{pinger} ping -c1 {pingee}']
             print(f'Command for ping: {ping_cmd[0]}')
-            ping_result = exec_sshCommand_aca(host=aca_nodes[0], user=aca_nodes_data['username'], password=aca_nodes_data['password'], cmd=ping_cmd, timeout=20)
-            br_tun_after_ping = exec_sshCommand_aca(host=aca_nodes[0], user=aca_nodes_data['username'], password=aca_nodes_data['password'], cmd=dump_flow_cmd, timeout=20)
+            ping_result = exec_sshCommand_aca(
+                host=aca_nodes[0], user=aca_nodes_data['username'], password=aca_nodes_data['password'], cmd=ping_cmd, timeout=20)
+            br_tun_after_ping = exec_sshCommand_aca(
+                host=aca_nodes[0], user=aca_nodes_data['username'], password=aca_nodes_data['password'], cmd=dump_flow_cmd, timeout=20)
         else:
             print(f'Either parent or child does not have any ports, somethings wrong.')
         print(f'Ping succeeded: {ping_result["status"][0] == 0}')
     print('This is the end of the pseudo controller, goodbye.')
+
 
 if __name__ == '__main__':
     run()
