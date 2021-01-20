@@ -226,8 +226,6 @@ void aca_test_zeta_setup_container(string zeta_gateway_path_config_file)
     }
   }
 
-
-
   GoalStateOperationReply gsOperationalReply;
   overall_rc = Aca_Comm_Manager::get_instance().update_goal_state(
           GoalState_builder, gsOperationalReply);
@@ -240,11 +238,11 @@ void aca_test_zeta_setup_container(string zeta_gateway_path_config_file)
 
   std::cout << "After ping, should remove containers." << std::endl;
   // kill the docker instances at the end.
-  for (auto &container_name : container_names){
-    string rm_container_string = "docker rm -f "+container_name;
-    overall_rc = Aca_Net_Config::get_instance().execute_system_command(rm_container_string);
-    EXPECT_EQ(overall_rc, EXIT_SUCCESS);
-  }
+  // for (auto &container_name : container_names){
+  //   string rm_container_string = "docker rm -f "+container_name;
+  //   overall_rc = Aca_Net_Config::get_instance().execute_system_command(rm_container_string);
+  //   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
+  // }
 }
 
 
