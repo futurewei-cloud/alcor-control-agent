@@ -93,6 +93,7 @@ int ACA_Vlan_Manager::create_ovs_port(string /*vpc_id*/, string ovs_port,
   vpc_table_entry *current_vpc_table_entry;
   int overall_rc = EXIT_FAILURE;
 
+  _vpcs_table_mutex.lock();
   bool vpc_table_entry_found = _vpcs_table.find(tunnel_id, current_vpc_table_entry);
 
   if (!vpc_table_entry_found) {
@@ -103,6 +104,7 @@ int ACA_Vlan_Manager::create_ovs_port(string /*vpc_id*/, string ovs_port,
     // create_entry(tunnel_id) above and the _vpcs_table.find below
     vpc_table_entry_found = _vpcs_table.find(tunnel_id, current_vpc_table_entry);
   }
+  _vpcs_table_mutex.unlock();
 
   if (vpc_table_entry_found) {
     // first port in the VPC will add the below rule:
