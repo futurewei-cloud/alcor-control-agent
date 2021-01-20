@@ -34,7 +34,6 @@ using namespace aca_zeta_programming;
 using namespace aca_ovs_l2_programmer;
 using namespace aca_net_config;
 
-
 extern string vmac_address_1;
 extern string vmac_address_2;
 extern string vmac_address_3;
@@ -116,19 +115,22 @@ void aca_test_create_default_subnet_state_with_zeta_data(SubnetState *new_subnet
   SubnetConiguration_builder->set_allocated_gateway(subnetConfig_GatewayBuilder);
 }
 
-void create_container(string container_name, string vip_address, string vmac_address){
-  std::cout<< "Creating container with name: "<< container_name << ", VIP: "<<vip_address<<", VMAC: "<<vmac_address << std::endl;
+void create_container(string container_name, string vip_address, string vmac_address)
+{
+  std::cout << "Creating container with name: " << container_name
+            << ", VIP: " << vip_address << ", VMAC: " << vmac_address << std::endl;
   int overall_rc = 0;
-  string create_container_cmd = "docker run -itd --name " + container_name + " --net=none busybox sh";
-  overall_rc = Aca_Net_Config::get_instance().execute_system_command(
-          create_container_cmd);
+  string create_container_cmd =
+          "docker run -itd --name " + container_name + " --net=none busybox sh";
+  overall_rc = Aca_Net_Config::get_instance().execute_system_command(create_container_cmd);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
-  string cmd_string_assign_ip_mac = "ovs-docker add-port br-int eth0 "+container_name+" --ipaddress=" + vip_address +
-               " --macaddress=" + vmac_address;
+  string cmd_string_assign_ip_mac =
+          "ovs-docker add-port br-int eth0 " + container_name +
+          " --ipaddress=" + vip_address + "/24 --macaddress=" + vmac_address;
   overall_rc = Aca_Net_Config::get_instance().execute_system_command(cmd_string_assign_ip_mac);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
 
-  string  cmd_string_set_vlan = "ovs-docker set-vlan br-int eth0 "+container_name+" 1";
+  string cmd_string_set_vlan = "ovs-docker set-vlan br-int eth0 " + container_name + " 1";
   overall_rc = Aca_Net_Config::get_instance().execute_system_command(cmd_string_set_vlan);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
 }
@@ -189,7 +191,6 @@ void aca_test_zeta_setup_container(string zeta_gateway_path_config_file)
 
   nlohmann::json gw_array = zeta_data["vpc_response"]["gws"];
 
-
   for (nlohmann::json::iterator it = gw_array.begin(); it != gw_array.end(); ++it) {
     cout << "Filling in: " << *it << "to the destination" << endl;
     destination = auxGateway->add_destinations();
@@ -208,19 +209,19 @@ void aca_test_zeta_setup_container(string zeta_gateway_path_config_file)
        it != port_response_array.end(); ++it) {
     string ip_node = (*it)["ip_node"];
     string vip = (*it)["ips_port"][0]["ip"];
-    string vmac = (*it)["mac_port"]; 
+    string vmac = (*it)["mac_port"];
     if (aca_is_port_on_same_host(ip_node)) { //  if this ip_node is an ip on one of the interfaces on this machine ...
       cout << "IP: " << ip_node
            << " is on this same machine, add port states to it." << endl;
       PortState *new_port_states = GoalState_builder.add_port_states();
       // fill in port state structs
       aca_test_create_default_port_state_with_zeta_data(new_port_states, *it); // use 0th position for now, but need to check all ports on this host.
-      
+
       // create containers
       string container_name = "con-" + vip;
       create_container(container_name, vip, vmac);
       container_names.push_back(container_name);
-    }else{
+    } else {
       // add this vip to vip_on_other_host for pinging later;
       vip_on_other_host.push_back(vip);
     }
@@ -232,8 +233,8 @@ void aca_test_zeta_setup_container(string zeta_gateway_path_config_file)
   ASSERT_EQ(overall_rc, EXIT_SUCCESS);
 
   // do the ping
-  for (auto &other_ip : vip_on_other_host){
-    std::cout<< "Should ping vip: " + other_ip << std::endl;
+  for (auto &other_ip : vip_on_other_host) {
+    std::cout << "Should ping vip: " + other_ip << std::endl;
   }
 
   std::cout << "After ping, should remove containers." << std::endl;
@@ -244,7 +245,6 @@ void aca_test_zeta_setup_container(string zeta_gateway_path_config_file)
   //   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
   // }
 }
-
 
 void aca_test_zeta_setup(string zeta_gateway_path_config_file)
 {
@@ -332,7 +332,6 @@ void aca_test_zeta_setup(string zeta_gateway_path_config_file)
           GoalState_builder, gsOperationalReply);
   ASSERT_EQ(overall_rc, EXIT_SUCCESS);
 }
-
 
 TEST(zeta_programming_test_cases, create_zeta_config_valid)
 {
@@ -515,7 +514,6 @@ TEST(zeta_programming_test_cases, DISABLED_zeta_scale_PARENT)
   // restore demo mode
   g_demo_mode = previous_demo_mode;
 }
-
 
 TEST(zeta_programming_test_cases, DISABLED_zeta_scale_container)
 {
