@@ -72,12 +72,13 @@ uint ACA_Vlan_Manager::get_or_create_vlan_id(uint tunnel_id)
   ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::get_or_create_vlan_id ---> Entering\n");
 
   vpc_table_entry *new_vpc_table_entry = nullptr;
-
+  _vpcs_table_mutex.lock();
   if (!_vpcs_table.find(tunnel_id, new_vpc_table_entry)) {
     create_entry(tunnel_id);
 
     _vpcs_table.find(tunnel_id, new_vpc_table_entry);
   }
+  _vpcs_table_mutex.unlock();
   uint acquired_vlan_id = new_vpc_table_entry->vlan_id;
 
   ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::get_or_create_vlan_id <--- Exiting\n");
