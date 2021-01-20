@@ -136,7 +136,7 @@ uint ACA_Zeta_Oam_Server::_get_tunnel_id(uint8_t *vni)
 
   // Convert tunnel_id to uint
   // from uint8[3] to uint
-  tunnel_id = ((uint)vni[0]) | ((uint)vni[1]) << 8 | ((uint) vni[2]) << 16;
+  tunnel_id = ((uint)vni[0]) << 16 | ((uint)vni[1]) << 8 | ((uint) vni[2]);
 
   return tunnel_id;
 }
@@ -252,9 +252,21 @@ int ACA_Zeta_Oam_Server::_add_direct_path(oam_match match, oam_action action)
   string vlan_id = to_string(aca_vlan_manager::ACA_Vlan_Manager::get_instance().get_or_create_vlan_id(
           match.vni));
 
+  string source_port_cmd = "";
+
+  string destination_port_cmd = "";
+
+  if (match.sport != "0"){
+    destination_port_cmd = ",tp_src=" + match.sport;
+  }
+
+  if (match.dport != "0"){
+    source_port_cmd = ",tp_dst=" + match.dport;
+  }
+
   string cmd_match = "ip,nw_proto=" + match.proto + ",nw_src=" + match.sip +
-                     ",nw_dst=" + match.dip + ",tp_src=" + match.sport +
-                     ",tp_dst=" + match.dport + ",dl_vlan=" + vlan_id;
+                     ",nw_dst=" + match.dip + source_port_cmd +
+                     destination_port_cmd + ",dl_vlan=" + vlan_id;
   string cmd_action = ",actions=\"strip_vlan,load:" + to_string(match.vni) +
                       "->NXM_NX_TUN_ID[],set_field:" + action.node_nw_dst +
                       "->tun_dst,mod_dl_dst=" + action.inst_dl_dst +
@@ -300,18 +312,16 @@ int ACA_Zeta_Oam_Server::_del_direct_path(oam_match match)
 // add oam port number to cache
 void ACA_Zeta_Oam_Server::add_oam_port_cache(uint port_number)
 {
-  if (_oam_ports_cache.find(port_number) == _oam_ports_cache.end()) {
-    _oam_ports_cache.emplace(port_number);
+  int *not_used;
+  if (!_oam_ports_cache.find(port_number, not_used)) {
+    _oam_ports_cache.insert(port_number, nullptr);
   }
 }
 
 // find the oam port number in the cache
 bool ACA_Zeta_Oam_Server::lookup_oam_port_in_cache(uint port_number)
 {
-  if (_oam_ports_cache.find(port_number) != _oam_ports_cache.end()) {
-    return true;
-  } else {
-    return false;
-  }
+  int *not_used;
+  return _oam_ports_cache.find(port_number, not_used);
 }
 } // namespace aca_zeta_oam_server
