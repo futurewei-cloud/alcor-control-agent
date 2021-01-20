@@ -126,7 +126,7 @@ void create_container(string container_name, string vip_address, string vmac_add
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
 
   string cmd_string_assign_ip_mac =
-          "ovs-docker add-port br-int eth0" + container_name +
+          "ovs-docker add-port br-int eth0 " + container_name +
           " --ipaddress=" + vip_address + "/16 --macaddress=" + vmac_address;
   overall_rc = Aca_Net_Config::get_instance().execute_system_command(cmd_string_assign_ip_mac);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
