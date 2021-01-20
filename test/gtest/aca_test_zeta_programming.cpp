@@ -115,24 +115,23 @@ void aca_test_create_default_subnet_state_with_zeta_data(SubnetState *new_subnet
   SubnetConiguration_builder->set_allocated_gateway(subnetConfig_GatewayBuilder);
 }
 
-void create_container(string container_name, string vip_address, string vmac_address, int counter)
+void create_container(string container_name, string vip_address, string vmac_address)
 {
   std::cout << "Creating container with name: " << container_name
             << ", VIP: " << vip_address << ", VMAC: " << vmac_address << std::endl;
   int overall_rc = 0;
-  // string create_container_cmd =
-  //         "docker run -itd --name " + container_name + " --net=none busybox sh";
-  // overall_rc = Aca_Net_Config::get_instance().execute_system_command(create_container_cmd);
+  string create_container_cmd =
+          "docker run -itd --name " + container_name + " --net=none busybox sh";
+  overall_rc = Aca_Net_Config::get_instance().execute_system_command(create_container_cmd);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
 
   string cmd_string_assign_ip_mac =
-          "ovs-docker add-port br-int eth" + std::to_string(counter) + " " + container_name +
+          "ovs-docker add-port br-int eth0" + container_name +
           " --ipaddress=" + vip_address + "/16 --macaddress=" + vmac_address;
   overall_rc = Aca_Net_Config::get_instance().execute_system_command(cmd_string_assign_ip_mac);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
 
-  string cmd_string_set_vlan = "ovs-docker set-vlan br-int eth" +
-                               std::to_string(counter) + " " + container_name + " 1";
+  string cmd_string_set_vlan = "ovs-docker set-vlan br-int eth0 " + container_name + " 1";
   overall_rc = Aca_Net_Config::get_instance().execute_system_command(cmd_string_set_vlan);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
 }
@@ -207,11 +206,7 @@ void aca_test_zeta_setup_container(string zeta_gateway_path_config_file)
   nlohmann::json port_response_array = zeta_data["port_response"];
   std::vector<string> container_names;
   std::vector<string> vip_on_other_host;
-  string container_name = "con";
-  string create_container_cmd =
-          "docker run -itd --name " + container_name + " --net=none busybox sh";
-  overall_rc = Aca_Net_Config::get_instance().execute_system_command(create_container_cmd);
-  int counter = 0;
+
   for (nlohmann::json::iterator it = port_response_array.begin();
        it != port_response_array.end(); ++it) {
     string ip_node = (*it)["ip_node"];
@@ -225,8 +220,8 @@ void aca_test_zeta_setup_container(string zeta_gateway_path_config_file)
       aca_test_create_default_port_state_with_zeta_data(new_port_states, *it); // use 0th position for now, but need to check all ports on this host.
 
       // create containers
-      // string container_name = "con-" + vip;
-      create_container(container_name, vip, vmac, counter);
+      string container_name = "con-" + vip;
+      create_container(container_name, vip, vmac);
       container_names.push_back(container_name);
     } else {
       // add this vip to vip_on_other_host for pinging later;
