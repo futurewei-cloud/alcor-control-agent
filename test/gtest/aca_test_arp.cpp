@@ -193,9 +193,9 @@ TEST(arp_request_test_cases, arps_recv_valid)
 //   it can be executed by:
 //
 //     child machine (-p 10.213.43.187 -> IP of parent machine):
-//     aca_tests --gtest_also_run_disabled_tests --gtest_filter=arp_request_test_cases.DISABLED_l2_arp_test_CHILD -p 10.213.43.187
+//     ./build/tests/aca_tests --gtest_also_run_disabled_tests --gtest_filter=arp_request_test_cases.DISABLED_l2_arp_test_CHILD -p 10.213.43.187
 //     parent machine (-c 10.213.43.188 -> IP of child machine):
-//     aca_tests --gtest_also_run_disabled_tests --gtest_filter=arp_request_test_cases.DISABLED_l2_arp_test_PARENT -c 10.213.43.188
+//     ./build/tests/aca_tests --gtest_also_run_disabled_tests --gtest_filter=arp_request_test_cases.DISABLED_l2_arp_test_PARENT -c 10.213.43.188
 //
 
 TEST(arp_request_test_cases, DISABLED_l2_arp_test_one_machine)
@@ -422,7 +422,7 @@ TEST(arp_request_test_cases, DISABLED_l2_arp_test_PARENT)
   // restore demo mode
   g_demo_mode = previous_demo_mode;
 
-  // test ping 
+  // test valid traffic from parent to child
   cmd_string = "docker exec con3 ping -c1 " + vip_address_3;
   overall_rc = Aca_Net_Config::get_instance().execute_system_command(cmd_string);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);

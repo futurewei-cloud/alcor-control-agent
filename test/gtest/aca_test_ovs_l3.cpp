@@ -715,9 +715,9 @@ TEST(ovs_l3_test_cases, DISABLED_2_ports_ROUTING_test_traffic_PARENT)
   ASSERT_EQ(overall_rc, EXIT_SUCCESS);
 
   // should not be able to ping port 4 anymore
-//   overall_rc = Aca_Net_Config::get_instance().execute_system_command(
-//           "docker exec con1 ping -c1 " + vip_address_4);
-//   EXPECT_NE(overall_rc, EXIT_SUCCESS);
+  overall_rc = Aca_Net_Config::get_instance().execute_system_command(
+          "docker exec con1 ping -c1 " + vip_address_4);
+  EXPECT_NE(overall_rc, EXIT_SUCCESS);
 
   // but still have to ping port 3 since it is not deleted
   overall_rc = Aca_Net_Config::get_instance().execute_system_command(

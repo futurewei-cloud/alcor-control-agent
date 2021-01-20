@@ -107,7 +107,7 @@ class ACA_ARP_Responder{
 
     /* Data plane Ops */
     void arp_recv(uint32_t in_port, void *vlanmsg, void *message);
-    void arp_xmit(uint32_t in_port, void *vlanmsg, void *message);
+    void arp_xmit(uint32_t in_port, void *vlanmsg, void *message, int is_find);
 
 
   private:

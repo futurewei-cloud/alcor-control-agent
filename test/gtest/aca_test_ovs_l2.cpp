@@ -98,9 +98,9 @@ extern void aca_test_1_port_CREATE_plus_N_neighbors_CREATE(NeighborType input_ne
 //   it can be executed by:
 //
 //     child machine (-p 10.213.43.187 -> IP of parent machine):
-//     aca_tests --gtest_also_run_disabled_tests --gtest_filter=*DISABLED_2_ports_CREATE_test_traffic_CHILD -p 10.213.43.187
+//     ./build/tests/aca_tests --gtest_also_run_disabled_tests --gtest_filter=*DISABLED_2_ports_CREATE_test_traffic_CHILD -p 10.213.43.187
 //     parent machine (-c 10.213.43.188 -> IP of child machine):
-//     aca_tests --gtest_also_run_disabled_tests --gtest_filter=*DISABLED_2_ports_CREATE_test_traffic_PARENT -c 10.213.43.188
+//     ./build/tests/aca_tests --gtest_also_run_disabled_tests --gtest_filter=*DISABLED_2_ports_CREATE_test_traffic_PARENT -c 10.213.43.188
 //
 TEST(ovs_l2_test_cases, 2_ports_CREATE_test_traffic_plus_neighbor_internal)
 {

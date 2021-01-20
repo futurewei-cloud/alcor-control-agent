@@ -18,6 +18,7 @@
 #include "aca_message_pulsar_consumer.h"
 #include "aca_grpc.h"
 #include "aca_ovs_l2_programmer.h"
+#include "aca_ovs_control.h"
 #include "goalstateprovisioner.grpc.pb.h"
 #include <thread>
 #include <unistd.h> /* for getopt */
@@ -41,6 +42,8 @@ using namespace std;
 
 // Global variables
 std::thread *g_grpc_server_thread = NULL;
+std::thread *ovs_monitor_brtun_thread = NULL;
+std::thread *ovs_monitor_brint_thread = NULL;
 GoalStateProvisionerImpl *g_grpc_server = NULL;
 string g_broker_list = EMPTY_STRING;
 string g_pulsar_topic = EMPTY_STRING;
@@ -126,7 +129,7 @@ static void aca_signal_handler(int sig_num)
 int main(int argc, char *argv[])
 {
   int option;
-  int rc;
+  int rc = 0;
 
   ACA_LOG_INIT(ACALOGNAME);
 
@@ -207,11 +210,18 @@ int main(int argc, char *argv[])
 
   aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().setup_ovs_bridges_if_need();
 
-  ACA_OVS_Control::get_instance().monitor("br-int", "resume");
 
-  ACA_Message_Pulsar_Consumer network_config_consumer(g_broker_list, g_pulsar_subsription_name);
-  rc = network_config_consumer.consumeDispatched(g_pulsar_topic);
+  // monitor br-int for dhcp request message
+  ovs_monitor_brint_thread =
+          new thread(bind(&ACA_OVS_Control::monitor,
+                          &ACA_OVS_Control::get_instance(), "br-int", "resume"));
+  ovs_monitor_brint_thread->detach();
 
+  // monitor br-tun for arp request message
+  ACA_OVS_Control::get_instance().monitor("br-tun","resume");
+
+  // ACA_Message_Pulsar_Consumer network_config_consumer(g_broker_list, g_pulsar_subsription_name);
+  // rc = network_config_consumer.consumeDispatched(g_pulsar_topic);
   aca_cleanup();
   return rc;
 }
