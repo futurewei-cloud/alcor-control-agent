@@ -25,12 +25,15 @@
 #include <nlohmann/json.hpp>
 #include <iostream>
 #include <typeinfo>
+// #include <vector>
 
 using namespace std;
 using namespace aca_comm_manager;
 using namespace alcor::schema;
 using namespace aca_zeta_programming;
 using namespace aca_ovs_l2_programmer;
+using namespace aca_net_config;
+
 
 extern string vmac_address_1;
 extern string vmac_address_2;
@@ -112,6 +115,138 @@ void aca_test_create_default_subnet_state_with_zeta_data(SubnetState *new_subnet
   subnetConfig_GatewayBuilder->set_mac_address(subnet1_gw_mac); // make it up
   SubnetConiguration_builder->set_allocated_gateway(subnetConfig_GatewayBuilder);
 }
+
+void create_container(string container_name, string vip_address, string vmac_address){
+  std::cout<< "Creating container with name: "<< container_name << ", VIP: "<<vip_address<<", VMAC: "<<vmac_address << std::endl;
+  int overall_rc = 0;
+  string create_container_cmd = "docker run -itd --name " + container_name + " --net=none busybox sh";
+  overall_rc = Aca_Net_Config::get_instance().execute_system_command(
+          create_container_cmd);
+  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
+  string cmd_string_assign_ip_mac = "ovs-docker add-port br-int eth0 "+container_name+" --ipaddress=" + vip_address +
+               " --macaddress=" + vmac_address;
+  overall_rc = Aca_Net_Config::get_instance().execute_system_command(cmd_string_assign_ip_mac);
+  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
+
+  string  cmd_string_set_vlan = "ovs-docker set-vlan br-int eth0 "+container_name+" 1";
+  overall_rc = Aca_Net_Config::get_instance().execute_system_command(cmd_string_set_vlan);
+  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
+}
+
+void aca_test_zeta_setup_container(string zeta_gateway_path_config_file)
+{
+  ifstream ifs(zeta_gateway_path_config_file);
+  if (!ifs)
+    cout << zeta_gateway_path_config_file << "open error" << endl;
+
+  nlohmann::json zeta_data = nlohmann::json::parse(ifs);
+  cout << zeta_data << endl;
+  // print something to check if read json succeed
+  cout << "VPC DATA: " << endl;
+  cout << zeta_data["vpc_response"]["port_ibo"] << endl;
+  cout << zeta_data["vpc_response"]["vni"] << endl;
+  cout << zeta_data["vpc_response"]["vpc_id"] << endl;
+  cout << zeta_data["vpc_response"]["zgc_id"] << endl;
+  cout << "PORT DATA: " << endl;
+  cout << zeta_data["port_response"][0]["ip_node"] << endl;
+  cout << zeta_data["port_response"][0]["mac_port"] << endl;
+
+  int overall_rc;
+
+  // from here.
+
+  GoalState GoalState_builder;
+  VpcState *new_vpc_states = GoalState_builder.add_vpc_states();
+  SubnetState *new_subnet_states = GoalState_builder.add_subnet_states();
+
+  new_vpc_states->set_operation_type(OperationType::INFO);
+
+  // fill in vpc state structs
+  VpcConfiguration *VpcConfiguration_builder = new_vpc_states->mutable_configuration();
+  cout << "Filling in vni: " << zeta_data["vpc_response"]["vni"] << endl;
+  VpcConfiguration_builder->set_tunnel_id(zeta_data["vpc_response"]["vni"]); //vni
+  cout << "Filling in vpc_id: " << zeta_data["vpc_response"]["vpc_id"] << endl;
+  VpcConfiguration_builder->set_id(zeta_data["vpc_response"]["vpc_id"]); // vpc_id
+
+  // fill in auxgateway state structs
+  AuxGateway *auxGateway = VpcConfiguration_builder->mutable_auxiliary_gateway();
+  auxGateway->set_aux_gateway_type(AuxGatewayType::ZETA);
+  cout << "Filling in zgc_id: " << zeta_data["vpc_response"]["zgc_id"] << endl;
+
+  auxGateway->set_id(zeta_data["vpc_response"]["zgc_id"]); //zgc_id
+
+  AuxGateway_zeta *zeta_info = auxGateway->mutable_zeta_info();
+  cout << "Filling in port_ibo: " << zeta_data["vpc_response"]["port_ibo"] << endl; // should be int, not string
+
+  string port_ibo_string = zeta_data["vpc_response"]["port_ibo"];
+  uint port_ibo_unit = std::stoul(port_ibo_string, nullptr, 10);
+  cout << "uint in port_ibo: " << port_ibo_unit << endl;
+  zeta_info->set_port_inband_operation(port_ibo_unit); //port_ibo
+
+  AuxGateway_destination *destination;
+
+  cout << "Try to fill in gw ips/macs now" << endl;
+
+  nlohmann::json gw_array = zeta_data["vpc_response"]["gws"];
+
+
+  for (nlohmann::json::iterator it = gw_array.begin(); it != gw_array.end(); ++it) {
+    cout << "Filling in: " << *it << "to the destination" << endl;
+    destination = auxGateway->add_destinations();
+    destination->set_ip_address((*it)["ip"]);
+    destination->set_mac_address((*it)["mac"]);
+  }
+
+  // fill in subnet state structs
+  aca_test_create_default_subnet_state_with_zeta_data(
+          new_subnet_states, zeta_data["vpc_response"]);
+
+  nlohmann::json port_response_array = zeta_data["port_response"];
+  std::vector<string> container_names;
+  std::vector<string> vip_on_other_host;
+  for (nlohmann::json::iterator it = port_response_array.begin();
+       it != port_response_array.end(); ++it) {
+    string ip_node = (*it)["ip_node"];
+    string vip = (*it)["ips_port"][0]["ip"];
+    string vmac = (*it)["mac_port"]; 
+    if (aca_is_port_on_same_host(ip_node)) { //  if this ip_node is an ip on one of the interfaces on this machine ...
+      cout << "IP: " << ip_node
+           << " is on this same machine, add port states to it." << endl;
+      PortState *new_port_states = GoalState_builder.add_port_states();
+      // fill in port state structs
+      aca_test_create_default_port_state_with_zeta_data(new_port_states, *it); // use 0th position for now, but need to check all ports on this host.
+      
+      // create containers
+      string container_name = "con-" + vip;
+      create_container(container_name, vip, vmac);
+      container_names.push_back(container_name);
+    }else{
+      // add this vip to vip_on_other_host for pinging later;
+      vip_on_other_host.push_back(vip);
+    }
+  }
+
+
+
+  GoalStateOperationReply gsOperationalReply;
+  overall_rc = Aca_Comm_Manager::get_instance().update_goal_state(
+          GoalState_builder, gsOperationalReply);
+  ASSERT_EQ(overall_rc, EXIT_SUCCESS);
+
+  // do the ping
+  for (auto &other_ip : vip_on_other_host){
+    std::cout<< "Should ping vip: " + other_ip << std::endl;
+  }
+
+  std::cout << "After ping, should remove containers." << std::endl;
+  // kill the docker instances at the end.
+  for (auto &container_name : container_names){
+    string rm_container_string = "docker rm -f "+container_name;
+    overall_rc = Aca_Net_Config::get_instance().execute_system_command(rm_container_string);
+    EXPECT_EQ(overall_rc, EXIT_SUCCESS);
+  }
+}
+
 
 void aca_test_zeta_setup(string zeta_gateway_path_config_file)
 {
@@ -199,6 +334,7 @@ void aca_test_zeta_setup(string zeta_gateway_path_config_file)
           GoalState_builder, gsOperationalReply);
   ASSERT_EQ(overall_rc, EXIT_SUCCESS);
 }
+
 
 TEST(zeta_programming_test_cases, create_zeta_config_valid)
 {
@@ -378,6 +514,33 @@ TEST(zeta_programming_test_cases, DISABLED_zeta_scale_PARENT)
   string zeta_gateway_path_CHILD_config_file = "./test/gtest/aca_data.json";
   aca_test_zeta_setup(zeta_gateway_path_CHILD_config_file);
   sleep(120);
+  // restore demo mode
+  g_demo_mode = previous_demo_mode;
+}
+
+
+TEST(zeta_programming_test_cases, DISABLED_zeta_scale_container)
+{
+  // ulong culminative_network_configuration_time = 0;
+  ulong not_care_culminative_time = 0;
+  int overall_rc = EXIT_SUCCESS;
+  // delete br-int and br-tun bridges
+  ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
+          "del-br br-int", not_care_culminative_time, overall_rc);
+
+  ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
+          "del-br br-tun", not_care_culminative_time, overall_rc);
+
+  // create and setup br-int and br-tun bridges, and their patch ports
+  overall_rc = ACA_OVS_L2_Programmer::get_instance().setup_ovs_bridges_if_need();
+  ASSERT_EQ(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
+  // set demo mode
+  bool previous_demo_mode = g_demo_mode;
+  g_demo_mode = false;
+  // construct the GoalState from the json file
+  string zeta_gateway_path_CHILD_config_file = "./test/gtest/aca_data.json";
+  aca_test_zeta_setup_container(zeta_gateway_path_CHILD_config_file);
   // restore demo mode
   g_demo_mode = previous_demo_mode;
 }
