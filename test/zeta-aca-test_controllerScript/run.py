@@ -342,10 +342,19 @@ def run():
         return
     else:
         print("upload file %s successfully" % aca_data_local_path)
+        print('Before the Ping test, remove previously created containers on aca nodes, if any.')
+
+    remove_container_cmd = [
+        'docker rm -f $(docker ps --filter "label=test=zeta" -aq)']
+    aca_nodes = aca_nodes_ip
+
+    exec_sshCommand_aca(
+        host=aca_nodes[0], user=aca_nodes_data['username'], password=aca_nodes_data['password'], cmd=remove_container_cmd, timeout=20)
+    exec_sshCommand_aca(
+        host=aca_nodes[1], user=aca_nodes_data['username'], password=aca_nodes_data['password'], cmd=remove_container_cmd, timeout=20)
 
     test_start_time = time.time()
     # Execute remote command, use the transferred file to change the information in aca_test_ovs_util.cpp,recompile using 'make',perform aca_test
-    aca_nodes = aca_nodes_ip
     cmd_child = [
         f'cd {server_aca_repo_path};sudo ./build/tests/aca_tests --gtest_also_run_disabled_tests --gtest_filter=*{testcases_to_run[0]}']
 
@@ -371,14 +380,6 @@ def run():
     print(
         f'Time took for the tests of ACA nodes are {test_end_time - test_start_time} seconds.')
     if execute_ping:
-        print('Before the Ping test, remove previously created containers on aca nodes, if any.')
-        remove_container_cmd = [
-            'docker rm $(docker ps --filter "label=test=zeta" -aq)']
-        exec_sshCommand_aca(
-            host=aca_nodes[0], user=aca_nodes_data['username'], password=aca_nodes_data['password'], cmd=remove_container_cmd, timeout=20)
-        exec_sshCommand_aca(
-            host=aca_nodes[1], user=aca_nodes_data['username'], password=aca_nodes_data['password'], cmd=remove_container_cmd, timeout=20)
-
         print('Time for the Ping test')
         parent_ports = [port for port in json_content_for_aca['port_response'] if (
             port['ip_node'].split('.'))[3] == (zeta_data['aca_nodes']['ip'][0].split('.'))[3]]
