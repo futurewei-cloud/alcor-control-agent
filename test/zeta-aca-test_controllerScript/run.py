@@ -426,9 +426,9 @@ def run():
             print(
                 '************* All pings ended, time to cleanup the containers *************')
             exec_sshCommand_aca(
-                host=aca_nodes[0], user=aca_nodes_data['username'], password=aca_nodes_data['password'], cmd=f'docker rm -f {parent_node_containers_names_string}', timeout=20)
+                host=aca_nodes[0], user=aca_nodes_data['username'], password=aca_nodes_data['password'], cmd=[f'docker rm -f {parent_node_containers_names_string}'], timeout=20)
             exec_sshCommand_aca(
-                host=aca_nodes[1], user=aca_nodes_data['username'], password=aca_nodes_data['password'], cmd=f'docker rm -f {child_node_containers_names_string}', timeout=20)
+                host=aca_nodes[1], user=aca_nodes_data['username'], password=aca_nodes_data['password'], cmd=[f'docker rm -f {child_node_containers_names_string}'], timeout=20)
         else:
             print(f'Either parent or child does not have any ports, somethings wrong.')
     print('This is the end of the pseudo controller, goodbye.')
