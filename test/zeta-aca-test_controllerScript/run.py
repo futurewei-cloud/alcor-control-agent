@@ -371,6 +371,14 @@ def run():
     print(
         f'Time took for the tests of ACA nodes are {test_end_time - test_start_time} seconds.')
     if execute_ping:
+        print('Before the Ping test, remove previously created containers on aca nodes, if any.')
+        remove_container_cmd = [
+            'docker rm $(docker ps --filter "label=test=zeta" -aq)']
+        exec_sshCommand_aca(
+            host=aca_nodes[0], user=aca_nodes_data['username'], password=aca_nodes_data['password'], cmd=remove_container_cmd, timeout=20)
+        exec_sshCommand_aca(
+            host=aca_nodes[1], user=aca_nodes_data['username'], password=aca_nodes_data['password'], cmd=remove_container_cmd, timeout=20)
+
         print('Time for the Ping test')
         parent_ports = [port for port in json_content_for_aca['port_response'] if (
             port['ip_node'].split('.'))[3] == (zeta_data['aca_nodes']['ip'][0].split('.'))[3]]
@@ -423,12 +431,6 @@ def run():
                 br_tun_after_ping = exec_sshCommand_aca(
                     host=aca_nodes[1], user=aca_nodes_data['username'], password=aca_nodes_data['password'], cmd=dump_flow_cmd, timeout=20)
                 print(f'Ping succeeded: {ping_result["status"][0] == 0}')
-            print(
-                '************* All pings ended, time to cleanup the containers *************')
-            exec_sshCommand_aca(
-                host=aca_nodes[0], user=aca_nodes_data['username'], password=aca_nodes_data['password'], cmd=[f'docker rm -f {parent_node_containers_names_string}'], timeout=20)
-            exec_sshCommand_aca(
-                host=aca_nodes[1], user=aca_nodes_data['username'], password=aca_nodes_data['password'], cmd=[f'docker rm -f {child_node_containers_names_string}'], timeout=20)
         else:
             print(f'Either parent or child does not have any ports, somethings wrong.')
     print('This is the end of the pseudo controller, goodbye.')

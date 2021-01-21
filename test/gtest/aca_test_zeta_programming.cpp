@@ -120,8 +120,8 @@ void create_container(string container_name, string vip_address, string vmac_add
   std::cout << "Creating container with name: " << container_name
             << ", VIP: " << vip_address << ", VMAC: " << vmac_address << std::endl;
   int overall_rc = 0;
-  string create_container_cmd =
-          "docker run -itd --name " + container_name + " --net=none busybox sh";
+  string create_container_cmd = "docker run -itd --name " + container_name +
+                                " --net=none --label test=zeta busybox sh";
   overall_rc = Aca_Net_Config::get_instance().execute_system_command(create_container_cmd);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
 
