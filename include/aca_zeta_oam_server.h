@@ -87,7 +87,7 @@ class ACA_Zeta_Oam_Server {
 
   static ACA_Zeta_Oam_Server &get_instance();
   void oams_recv(uint32_t udp_dport, void *message);
-  
+
   private:
   uint8_t _get_message_type(oam_message *oammsg);
   string _get_mac_addr(uint8_t *mac);
@@ -107,9 +107,6 @@ class ACA_Zeta_Oam_Server {
 
   void (aca_zeta_oam_server::ACA_Zeta_Oam_Server ::*_parse_oam_msg_ops[OAM_MSG_MAX])(
           uint32_t udp_dpost, oam_message *oammsg);
-
-  //  hashtable <key: oam_port, value: int *(not used)>
-  CTSL::HashMap<uint, int *> _oam_ports_cache;
 };
 } // namespace aca_zeta_oam_server
 #endif // #ifndef ACA_Zeta_OAM_SERVER_H

@@ -144,6 +144,7 @@ uint ACA_Zeta_Programming::get_oam_port(string zeta_gateway_id)
   ACA_LOG_DEBUG("ACA_Zeta_Programming::get_oam_port <--- Exiting, oam_port = %d\n", oam_port);
   return oam_port;
 }
+
 void start_upd_listener(uint oam_port_number)
 {
   ACA_LOG_INFO("Starting a listener for port %d\n", oam_port_number);
@@ -181,6 +182,7 @@ void start_upd_listener(uint oam_port_number)
             (uint32_t)oam_port_number, packet_content);
   }
 }
+
 int ACA_Zeta_Programming::create_zeta_config(const alcor::schema::AuxGateway current_AuxGateway,
                                              uint tunnel_id)
 {
