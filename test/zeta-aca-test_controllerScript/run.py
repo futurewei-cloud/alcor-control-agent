@@ -390,7 +390,7 @@ def run():
         if len(parent_ports) > 0 and len(child_ports) > 0:
             ping_times = 3
             print(
-                f"Doing ping from parent: {aca_nodes[0]} to child: {aca_nodes[1]}")
+                f"*************Doing ping from parent: {aca_nodes[0]} to child: {aca_nodes[1]}*************")
             for i in range(ping_times):
                 dump_flow_cmd = ['sudo ovs-ofctl dump-flows br-tun']
                 br_tun_before_ping = exec_sshCommand_aca(
@@ -400,16 +400,15 @@ def run():
                 pingee = child_ports[randint(0,
                                              len(child_ports)-1)]["ips_port"][0]["ip"]
 
-                ping_cmd = ["sudo ln -s /snap/bin/docker /usr/bin/docker",
-                            f'docker exec con-{pinger} ping -c1 {pingee}']
+                ping_cmd = [f'docker exec con-{pinger} ping -c1 {pingee}']
                 print(f'Command for ping: {ping_cmd[0]}')
                 ping_result = exec_sshCommand_aca(
                     host=aca_nodes[0], user=aca_nodes_data['username'], password=aca_nodes_data['password'], cmd=ping_cmd, timeout=20)
                 br_tun_after_ping = exec_sshCommand_aca(
                     host=aca_nodes[0], user=aca_nodes_data['username'], password=aca_nodes_data['password'], cmd=dump_flow_cmd, timeout=20)
-                print(f'Ping succeeded: {ping_result["status"][1] == 0}')
+                print(f'Ping succeeded: {ping_result["status"][0] == 0}')
             print(
-                f"Doing ping from child: {aca_nodes[1]} to parent: {aca_nodes[0]}")
+                f"*************Doing ping from child: {aca_nodes[1]} to parent: {aca_nodes[0]}*************")
             for i in range(ping_times):
                 dump_flow_cmd = ['sudo ovs-ofctl dump-flows br-tun']
                 br_tun_before_ping = exec_sshCommand_aca(
@@ -419,14 +418,13 @@ def run():
                 pingee = parent_ports[randint(0,
                                               len(parent_ports)-1)]["ips_port"][0]["ip"]
 
-                ping_cmd = ["sudo ln -s /snap/bin/docker /usr/bin/docker",
-                            f'docker exec con-{pinger} ping -c1 {pingee}']
+                ping_cmd = [f'docker exec con-{pinger} ping -c1 {pingee}']
                 print(f'Command for ping: {ping_cmd[0]}')
                 ping_result = exec_sshCommand_aca(
                     host=aca_nodes[1], user=aca_nodes_data['username'], password=aca_nodes_data['password'], cmd=ping_cmd, timeout=20)
                 br_tun_after_ping = exec_sshCommand_aca(
                     host=aca_nodes[1], user=aca_nodes_data['username'], password=aca_nodes_data['password'], cmd=dump_flow_cmd, timeout=20)
-                print(f'Ping succeeded: {ping_result["status"][1] == 0}')
+                print(f'Ping succeeded: {ping_result["status"][0] == 0}')
         else:
             print(f'Either parent or child does not have any ports, somethings wrong.')
     print('This is the end of the pseudo controller, goodbye.')
