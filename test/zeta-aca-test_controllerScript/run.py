@@ -319,6 +319,8 @@ def run():
         print(
             f'Set time interval between /nodes POST calls to be {arg3} seconds.')
 
+    ports_to_send_to_aca = 2
+
     if len(arguments) > 4:
         arg4 = int(arguments[4])
         ports_to_send_to_aca = arg4
