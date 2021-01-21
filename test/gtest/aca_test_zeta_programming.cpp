@@ -25,7 +25,6 @@
 #include <nlohmann/json.hpp>
 #include <iostream>
 #include <typeinfo>
-// #include <vector>
 
 using namespace std;
 using namespace aca_comm_manager;
