@@ -366,16 +366,6 @@ def run():
         text_file_parent.write(result_parent['data'][0])
         text_file_parent.close()
         print("Port set up finished")
-        # for status_code in result_child["status"]:
-        #     if status_code != 0:
-        #         print(
-        #             f'Child command: [{cmd_child}] failed, pseudo controller will stop now.')
-        #         return
-        # for status_code in result_parent["status"]:
-        #     if status_code != 0:
-        #         print(
-        #             f'Parent command: [{cmd_parent}] failed, pseudo controller will stop now.')
-        #         return
 
     test_end_time = time.time()
     print(
@@ -384,8 +374,16 @@ def run():
         print('Time for the Ping test')
         parent_ports = [port for port in json_content_for_aca['port_response'] if (
             port['ip_node'].split('.'))[3] == (zeta_data['aca_nodes']['ip'][0].split('.'))[3]]
+        parent_node_containers_names_string = ""
+        for port in parent_ports:
+            parent_node_containers_names_string = parent_node_containers_names_string + \
+                f' con-{port["ips_port"][0]["ip"]}'
         child_ports = [port for port in json_content_for_aca['port_response'] if (
             port['ip_node'].split('.'))[3] == (zeta_data['aca_nodes']['ip'][1].split('.'))[3]]
+        child_node_containers_names_string = ""
+        for port in child_ports:
+            child_node_containers_names_string = child_node_containers_names_string + \
+                f' con-{port["ips_port"][0]["ip"]}'
         ping_result = {}
         if len(parent_ports) > 0 and len(child_ports) > 0:
             ping_times = 3
@@ -425,6 +423,12 @@ def run():
                 br_tun_after_ping = exec_sshCommand_aca(
                     host=aca_nodes[1], user=aca_nodes_data['username'], password=aca_nodes_data['password'], cmd=dump_flow_cmd, timeout=20)
                 print(f'Ping succeeded: {ping_result["status"][0] == 0}')
+            print(
+                '************* All pings ended, time to cleanup the containers *************')
+            exec_sshCommand_aca(
+                host=aca_nodes[0], user=aca_nodes_data['username'], password=aca_nodes_data['password'], cmd=f'docker rm -f {parent_node_containers_names_string}', timeout=20)
+            exec_sshCommand_aca(
+                host=aca_nodes[1], user=aca_nodes_data['username'], password=aca_nodes_data['password'], cmd=f'docker rm -f {child_node_containers_names_string}', timeout=20)
         else:
             print(f'Either parent or child does not have any ports, somethings wrong.')
     print('This is the end of the pseudo controller, goodbye.')
