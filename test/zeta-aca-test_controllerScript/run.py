@@ -360,10 +360,10 @@ def run():
         result_child = future_child.result()
         result_parent = future_parent.result()
         text_file_child = open("output_child.log", "w")
-        text_file_child.write(result_child['data'])
+        text_file_child.write(result_child['data'][0])
         text_file_child.close()
         text_file_parent = open("output_parent.log", "w")
-        text_file_parent.write(result_parent['data'])
+        text_file_parent.write(result_parent['data'][0])
         text_file_parent.close()
         print("Port set up finished")
         # for status_code in result_child["status"]:
@@ -395,10 +395,10 @@ def run():
                 dump_flow_cmd = ['sudo ovs-ofctl dump-flows br-tun']
                 br_tun_before_ping = exec_sshCommand_aca(
                     host=aca_nodes[0], user=aca_nodes_data['username'], password=aca_nodes_data['password'], cmd=dump_flow_cmd, timeout=20)
-                pinger = parent_ports[randint(
-                    len(parent_ports))]["ips_port"][0]["ip"]
-                pingee = child_ports[randint(
-                    len(child_ports))]["ips_port"][0]["ip"]
+                pinger = parent_ports[randint(0,
+                                              len(parent_ports))]["ips_port"][0]["ip"]
+                pingee = child_ports[randint(0,
+                                             len(child_ports))]["ips_port"][0]["ip"]
 
                 ping_cmd = ["sudo ln -s /snap/bin/docker /usr/bin/docker",
                             f'docker exec con-{pinger} ping -c1 {pingee}']
@@ -414,10 +414,10 @@ def run():
                 dump_flow_cmd = ['sudo ovs-ofctl dump-flows br-tun']
                 br_tun_before_ping = exec_sshCommand_aca(
                     host=aca_nodes[1], user=aca_nodes_data['username'], password=aca_nodes_data['password'], cmd=dump_flow_cmd, timeout=20)
-                pinger = child_ports[randint(
-                    len(child_ports))]["ips_port"][0]["ip"]
-                pingee = parent_ports[randint(
-                    len(parent_ports))]["ips_port"][0]["ip"]
+                pinger = child_ports[randint(0,
+                                             len(child_ports))]["ips_port"][0]["ip"]
+                pingee = parent_ports[randint(0,
+                                              len(parent_ports))]["ips_port"][0]["ip"]
 
                 ping_cmd = ["sudo ln -s /snap/bin/docker /usr/bin/docker",
                             f'docker exec con-{pinger} ping -c1 {pingee}']
