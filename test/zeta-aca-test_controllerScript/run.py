@@ -232,7 +232,6 @@ def generate_ports(ports_to_create):
     print(f'Need to generate {ports_to_create} ports')
     node_data = {}
     all_ports_generated = []    # Need to skip when i == 0
-    # real_i = (ports_to_create // 10) + ports_to_create
     i = 0
     while len(all_ports_generated) != ports_to_create:
         if i % 10 != 0:
@@ -251,15 +250,19 @@ def generate_ports(ports_to_create):
         i = i + 1
     return all_ports_generated
 
-# To run the pseudo controller, the user either runs it without specifying how many ports to create, which leads to creating 2 ports and running the
-# DISABLED_zeta_gateway_path_CHILD and DISABLED_zeta_gateway_path_PARENT; if you specify the amount of ports to create (up to one milliion ports), using the command 'python3 run.py amount_of_ports_to_create', the controller will that many ports, and then run DISABLED_zeta_scale_CHILD and DISABLED_zeta_scale_PARENT
+# To run the pseudo controller, the user either runs it without specifying how many ports to create, which leads to creating 2 ports;
+# if you specify the amount of ports to create (up to one milliion ports), using the command 'python3 run.py amount_of_ports_to_create', the controller will that many ports
 
-# Also, two more params are added.
+# Also, three more params are added.
 # First is port_api_upper_limit, which should not exceed 4000, it is the batch number for each /ports POST call.
 # Second is time_interval_between_calls_in_seconds, it is the time the pseudo controller sleeps after each /port POST call, except for the last call.
+# Third is how many ports to send to aca, this amount is defaulted to the 2, if specified, no more than amount_of_ports_to_create will be send to aca. However, we suggest not to set this number to more than 10, as it may significantly slow down the aca nodes, as the amount of ports (also amount of containers to be created on the aca nodes) increases.
+
+# After ports are created and aca data is sent to the aca nodes, testcase DISABLED_zeta_scale_container will be called on the aca nodes, to create the aca data, construct the goalstate accordingly, and spins up containers that reprsents the ports.
+# After that, 3 ping tests will be performed from aca parent node to aca child node with random ports selected, which are followed by another 3 similar ping test from the aca child node to aca parent node.
 
 # So if you only want to run the two nodes test, you can simply run 'python3 run.py'
-# If you want to try to scale test, you can run 'python3 run.py total_amount_of_ports how_many_ports_each_batch, how_many_seconds_controller_sleeps_after_each_call.'
+# If you want to try to scale test, you can run 'python3 run.py total_amount_of_ports how_many_ports_each_batch how_many_seconds_controller_sleeps_after_each_call how_many_port_to_send_to_aca'
 
 
 def run():
@@ -280,8 +283,6 @@ def run():
     print(f'Server aca repo path: {server_aca_repo_path}')
     zgc_api_url = zeta_data["zeta_api_ip"]
 
-    testcases_to_run = ['DISABLED_zeta_gateway_path_CHILD',
-                        'DISABLED_zeta_gateway_path_PARENT']
     testcases_to_run = ['DISABLED_zeta_scale_container',
                         'DISABLED_zeta_scale_container']
     execute_ping = True
@@ -295,8 +296,6 @@ def run():
         print("Has arguments, need to generate some ports!")
         if ports_to_create >= 2:
             print(f'Trying to create {ports_to_create} ports.')
-            testcases_to_run = ['DISABLED_zeta_scale_container',
-                                'DISABLED_zeta_scale_container']
             zeta_data['PORT_data'] = generate_ports(ports_to_create)
             execute_ping = True
             print(

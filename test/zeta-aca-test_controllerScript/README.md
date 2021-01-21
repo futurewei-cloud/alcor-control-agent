@@ -17,6 +17,8 @@ There are now two ways to use the controller:
 python3 run.py total_ports_to_create number_of_ports_each_call amount_of_time_to_sleep amount_of_ports_to_send_to_aca
 ```
 
+2. If no parameters are specified, 2 ports will be created and be sent to the aca nodes, after which the ping will be performed between these two ports.
+
 ## Known Issues
 
 1. It is suggested that the total amount of ports to send to aca not to exceed 10, the reason for this is, after the data is sent to the aca nodes and the gtest are called, because of the large amount of data to process for the ACA(thus with longer time needed and more output will be produced), the pseudo controller will be 'frozen', and users may have to stop the controller by `control + c`.

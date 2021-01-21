@@ -203,8 +203,6 @@ void aca_test_zeta_setup_container(string zeta_gateway_path_config_file)
           new_subnet_states, zeta_data["vpc_response"]);
 
   nlohmann::json port_response_array = zeta_data["port_response"];
-  std::vector<string> container_names;
-  std::vector<string> vip_on_other_host;
 
   for (nlohmann::json::iterator it = port_response_array.begin();
        it != port_response_array.end(); ++it) {
@@ -221,10 +219,6 @@ void aca_test_zeta_setup_container(string zeta_gateway_path_config_file)
       // create containers
       string container_name = "con-" + vip;
       create_container(container_name, vip, vmac);
-      container_names.push_back(container_name);
-    } else {
-      // add this vip to vip_on_other_host for pinging later;
-      vip_on_other_host.push_back(vip);
     }
   }
 
@@ -232,19 +226,6 @@ void aca_test_zeta_setup_container(string zeta_gateway_path_config_file)
   overall_rc = Aca_Comm_Manager::get_instance().update_goal_state(
           GoalState_builder, gsOperationalReply);
   ASSERT_EQ(overall_rc, EXIT_SUCCESS);
-
-  // do the ping
-  for (auto &other_ip : vip_on_other_host) {
-    std::cout << "Should ping vip: " + other_ip << std::endl;
-  }
-
-  std::cout << "After ping, should remove containers." << std::endl;
-  // kill the docker instances at the end.
-  // for (auto &container_name : container_names){
-  //   string rm_container_string = "docker rm -f "+container_name;
-  //   overall_rc = Aca_Net_Config::get_instance().execute_system_command(rm_container_string);
-  //   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
-  // }
 }
 
 void aca_test_zeta_setup(string zeta_gateway_path_config_file)
