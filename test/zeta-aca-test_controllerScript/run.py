@@ -17,6 +17,7 @@ aca_data_local_path = './aca_data.json'
 
 ips_ports_ip_prefix = "123."
 mac_port_prefix = "6c:dd:ee:"
+ports_to_send_to_aca = 10
 
 
 # Transfer the file locally to aca nodes
@@ -187,7 +188,7 @@ def talk_to_zeta(file_path, zgc_api_url, zeta_data, port_api_upper_limit, time_i
     print(
         f'ALL PORT post call ended, for {amount_of_ports} ports creation it took: {all_ports_end_time - all_ports_start_time} seconds')
     json_content_for_aca['port_response'] = list(
-        itertools.chain.from_iterable(all_post_responses))[:10]
+        itertools.chain.from_iterable(all_post_responses))[:ports_to_send_to_aca]
     print(
         f'Amount of ports to send to aca: {len(json_content_for_aca["port_response"])}')
     with open('aca_data.json', 'w') as outfile:
@@ -319,6 +320,12 @@ def run():
         print(
             f'Set time interval between /nodes POST calls to be {arg3} seconds.')
 
+    if len(arguments) > 4:
+        arg4 = int(arguments[4])
+        ports_to_send_to_aca = arg4
+        print(
+            f'Set amount of ports to sent to aca to be: {ports_to_send_to_aca}')
+
     json_content_for_aca = talk_to_zeta(file_path, zgc_api_url, zeta_data,
                                         port_api_upper_limit, time_interval_between_calls_in_seconds)
 
@@ -347,21 +354,28 @@ def run():
 
     with concurrent.futures.ThreadPoolExecutor() as executor:
         future_child = executor.submit(
-            exec_sshCommand_aca, aca_nodes[1], aca_nodes_data['username'], aca_nodes_data['password'], cmd_child, 1500)
+            exec_sshCommand_aca, aca_nodes[1], aca_nodes_data['username'], aca_nodes_data['password'], cmd_child, 1500, False)
         future_parent = executor.submit(
-            exec_sshCommand_aca, aca_nodes[0], aca_nodes_data['username'], aca_nodes_data['password'], cmd_parent, 1500)
+            exec_sshCommand_aca, aca_nodes[0], aca_nodes_data['username'], aca_nodes_data['password'], cmd_parent, 1500, False)
         result_child = future_child.result()
         result_parent = future_parent.result()
-        for status_code in result_child["status"]:
-            if status_code != 0:
-                print(
-                    f'Child command: [{cmd_child}] failed, pseudo controller will stop now.')
-                return
-        for status_code in result_parent["status"]:
-            if status_code != 0:
-                print(
-                    f'Parent command: [{cmd_parent}] failed, pseudo controller will stop now.')
-                return
+        text_file_child = open("output_child.log", "w")
+        text_file_child.write(result_child['data'])
+        text_file_child.close()
+        text_file_parent = open("output_parent.log", "w")
+        text_file_parent.write(result_parent['data'])
+        text_file_parent.close()
+        print("Port set up finished")
+        # for status_code in result_child["status"]:
+        #     if status_code != 0:
+        #         print(
+        #             f'Child command: [{cmd_child}] failed, pseudo controller will stop now.')
+        #         return
+        # for status_code in result_parent["status"]:
+        #     if status_code != 0:
+        #         print(
+        #             f'Parent command: [{cmd_parent}] failed, pseudo controller will stop now.')
+        #         return
 
     test_end_time = time.time()
     print(
@@ -393,6 +407,7 @@ def run():
                     host=aca_nodes[0], user=aca_nodes_data['username'], password=aca_nodes_data['password'], cmd=ping_cmd, timeout=20)
                 br_tun_after_ping = exec_sshCommand_aca(
                     host=aca_nodes[0], user=aca_nodes_data['username'], password=aca_nodes_data['password'], cmd=dump_flow_cmd, timeout=20)
+                print(f'Ping succeeded: {ping_result["status"][0] == 0}')
             print(
                 f"Doing ping from child: {aca_nodes[1]} to parent: {aca_nodes[0]}")
             for i in range(ping_times):
@@ -411,9 +426,9 @@ def run():
                     host=aca_nodes[1], user=aca_nodes_data['username'], password=aca_nodes_data['password'], cmd=ping_cmd, timeout=20)
                 br_tun_after_ping = exec_sshCommand_aca(
                     host=aca_nodes[1], user=aca_nodes_data['username'], password=aca_nodes_data['password'], cmd=dump_flow_cmd, timeout=20)
+                print(f'Ping succeeded: {ping_result["status"][0] == 0}')
         else:
             print(f'Either parent or child does not have any ports, somethings wrong.')
-        print(f'Ping succeeded: {ping_result["status"][0] == 0}')
     print('This is the end of the pseudo controller, goodbye.')
 
 
