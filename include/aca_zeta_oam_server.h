@@ -87,9 +87,7 @@ class ACA_Zeta_Oam_Server {
 
   static ACA_Zeta_Oam_Server &get_instance();
   void oams_recv(uint32_t udp_dport, void *message);
-  bool lookup_oam_port_in_cache(uint port_number);
-  void add_oam_port_cache(uint port_number);
-
+  
   private:
   uint8_t _get_message_type(oam_message *oammsg);
   string _get_mac_addr(uint8_t *mac);

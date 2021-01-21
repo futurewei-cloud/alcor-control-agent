@@ -129,47 +129,6 @@ int ACA_Zeta_Programming::_delete_group_punt_rule(uint tunnel_id)
   return overall_rc;
 }
 
-// add the OAM punt rule
-int ACA_Zeta_Programming::_create_oam_ofp(uint port_number)
-{
-  ACA_LOG_DEBUG("%s", "ACA_Zeta_Programming::_create_oam_ofp ---> Entering\n");
-  int overall_rc;
-
-  string opt = "table=0,priority=25,udp,udp_dst=" + to_string(port_number) + ",actions=CONTROLLER";
-  overall_rc = ACA_OVS_Control::get_instance().add_flow("br-int", opt.c_str());
-
-  if (overall_rc == EXIT_SUCCESS) {
-    ACA_LOG_INFO("%s", "creat_oam_ofp succeeded!\n");
-  } else {
-    ACA_LOG_ERROR("creat_oam_ofp failed!!! overrall_rc: %d\n", overall_rc);
-  }
-
-  ACA_LOG_DEBUG("ACA_Zeta_Programming::_create_oam_ofp <--- Exiting, overall_rc = %d\n",
-                overall_rc);
-  return overall_rc;
-}
-
-// delete the OAM punt rule
-int ACA_Zeta_Programming::_delete_oam_ofp(uint port_number)
-{
-  ACA_LOG_DEBUG("%s", "ACA_Zeta_Programming::_delete_oam_ofp ---> Entering\n");
-  int overall_rc;
-
-  string opt = "udp,udp_dst=" + to_string(port_number);
-
-  overall_rc = ACA_OVS_Control::get_instance().del_flows("br-int", opt.c_str());
-
-  if (overall_rc == EXIT_SUCCESS) {
-    ACA_LOG_INFO("%s", "delete_oam_ofp succeeded!\n");
-  } else {
-    ACA_LOG_ERROR("delete_oam_ofp failed!!! overrall_rc: %d\n", overall_rc);
-  }
-
-  ACA_LOG_DEBUG("ACA_Zeta_Programming::_delete_oam_ofp <--- Exiting, overall_rc = %d\n",
-                overall_rc);
-  return overall_rc;
-}
-
 uint ACA_Zeta_Programming::get_oam_port(string zeta_gateway_id)
 {
   ACA_LOG_DEBUG("%s", "ACA_Zeta_Programming::get_oam_port ---> Entering\n");
@@ -238,15 +197,12 @@ int ACA_Zeta_Programming::create_zeta_config(const alcor::schema::AuxGateway cur
     _zeta_config_table.find(current_AuxGateway.id(), current_zeta_cfg);
     overall_rc = _create_zeta_group_entry(current_zeta_cfg);
 
-    // _create_oam_ofp(oam_port);
     ACA_LOG_INFO("Creating thread for port %d.\n", oam_port);
     std::thread *oam_port_listener_thread = NULL;
     // TODO: Need to track, and kill this thread when this zeta config is deleted.
     oam_port_listener_thread = new std::thread(std::bind(&start_upd_listener, oam_port));
     oam_port_listener_thread->detach();
     ACA_LOG_INFO("Created thread for port %d and it is detached.\n", oam_port);
-    // add oam port number to cache
-    aca_zeta_oam_server::ACA_Zeta_Oam_Server::get_instance().add_oam_port_cache(oam_port);
   } else {
     if (current_zeta_cfg->zeta_buckets.hashSize !=
         (uint)current_AuxGateway.destinations().size()) {
@@ -328,7 +284,6 @@ int ACA_Zeta_Programming::delete_zeta_config(const alcor::schema::AuxGateway cur
 
     if (!ACA_Vlan_Manager::get_instance().is_exist_zeta_gateway(
                 current_AuxGateway.id())) {
-      _delete_oam_ofp(current_zeta_cfg->oam_port);
       overall_rc = _delete_zeta_group_entry(current_zeta_cfg);
       _zeta_config_table.erase(current_AuxGateway.id());
     }
@@ -358,7 +313,7 @@ int ACA_Zeta_Programming::_create_zeta_group_entry(zeta_config *zeta_cfg)
               (zeta_cfg->zeta_buckets.hashTable[i]).mutex_);
 
       while (hash_node != nullptr) {
-         // add the static arp entries
+        // add the static arp entries
         string static_arp_string = "arp -s " + hash_node->getKey()->ip_addr +
                                    " " + hash_node->getKey()->mac_addr;
         aca_net_config::Aca_Net_Config::get_instance().execute_system_command(static_arp_string);
@@ -509,29 +464,13 @@ bool ACA_Zeta_Programming::group_rule_exists(uint group_id)
   }
 }
 
-bool ACA_Zeta_Programming::oam_port_rule_exists(uint port_number)
-{
-  int overall_rc = EXIT_FAILURE;
-
-  string opt = "table=0,udp,udp_dst=" + to_string(port_number);
-
-  overall_rc = ACA_OVS_Control::get_instance().flow_exists("br_tun", opt.c_str());
-  if (overall_rc == EXIT_SUCCESS) {
-    ACA_LOG_INFO("%s", "Oam port rule is exist!\n");
-    return true;
-  } else {
-    ACA_LOG_INFO("%s", "Oam port rule is not exist!\n");
-    return false;
-  }
-}
-
 uint ACA_Zeta_Programming::get_group_id(string zeta_gateway_id)
 {
   ACA_LOG_DEBUG("%s", "ACA_Zeta_Programming::get_group_id ---> Entering\n");
   uint group_id = 0;
   zeta_config *current_zeta_cfg;
 
-  if (!_zeta_config_table.find(zeta_gateway_id, current_zeta_cfg)) {
+  if (_zeta_config_table.find(zeta_gateway_id, current_zeta_cfg)) {
     group_id = current_zeta_cfg->group_id;
   } else {
     ACA_LOG_ERROR("zeta_gateway_id %s not found in zeta_config_table\n",
