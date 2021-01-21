@@ -17,7 +17,6 @@ aca_data_local_path = './aca_data.json'
 
 ips_ports_ip_prefix = "123."
 mac_port_prefix = "6c:dd:ee:"
-ports_to_send_to_aca = 10
 
 
 # Transfer the file locally to aca nodes
@@ -93,7 +92,7 @@ def exec_sshCommand_aca(host, user, password, cmd, timeout=60, output=True):
         return result
 
 
-def talk_to_zeta(file_path, zgc_api_url, zeta_data, port_api_upper_limit, time_interval_between_calls_in_seconds):
+def talk_to_zeta(file_path, zgc_api_url, zeta_data, port_api_upper_limit, time_interval_between_calls_in_seconds, ports_to_send_to_aca):
     headers = {'Content-type': 'application/json'}
     # create ZGC
     ZGC_data = zeta_data["ZGC_data"]
@@ -327,7 +326,7 @@ def run():
             f'Set amount of ports to sent to aca to be: {ports_to_send_to_aca}')
 
     json_content_for_aca = talk_to_zeta(file_path, zgc_api_url, zeta_data,
-                                        port_api_upper_limit, time_interval_between_calls_in_seconds)
+                                        port_api_upper_limit, time_interval_between_calls_in_seconds, ports_to_send_to_aca)
 
     if json_content_for_aca is False:
         print('Failed to talk to Zeta, pseudo controller will exit now.')
