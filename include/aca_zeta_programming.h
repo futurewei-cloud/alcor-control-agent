@@ -68,8 +68,6 @@ class ACA_Zeta_Programming {
 
   int delete_zeta_config(const alcor::schema::AuxGateway current_AuxGateway, uint tunnel_id);
 
-  bool oam_port_rule_exists(uint port_number);
-
   bool group_rule_exists(uint group_id);
 
   uint get_oam_port(string zeta_gateway_id);
@@ -77,9 +75,6 @@ class ACA_Zeta_Programming {
   uint get_group_id(string zeta_gateway_id);
 
   private:
-  int _create_oam_ofp(uint port_number);
-  int _delete_oam_ofp(uint port_number);
-
   int _create_group_punt_rule(uint tunnel_id, uint group_id);
   int _delete_group_punt_rule(uint tunnel_id);
 
