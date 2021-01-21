@@ -77,7 +77,8 @@ class ACA_Vlan_Manager {
 
   // CTSL::HashMap <key: tunnel ID, value: vpc_table_entry>
   CTSL::HashMap<uint, vpc_table_entry *> _vpcs_table;
-
+  // mutex for reading and writing to _vpcs_table
+  mutex _vpcs_table_mutex;
   void create_entry(uint tunnel_id);
 };
 } // namespace aca_vlan_manager

@@ -72,12 +72,15 @@ uint ACA_Vlan_Manager::get_or_create_vlan_id(uint tunnel_id)
   ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::get_or_create_vlan_id ---> Entering\n");
 
   vpc_table_entry *new_vpc_table_entry = nullptr;
-
+  // -----critical section starts-----
+  _vpcs_table_mutex.lock();
   if (!_vpcs_table.find(tunnel_id, new_vpc_table_entry)) {
     create_entry(tunnel_id);
 
     _vpcs_table.find(tunnel_id, new_vpc_table_entry);
   }
+  _vpcs_table_mutex.unlock();
+  // -----critical section ends-----
   uint acquired_vlan_id = new_vpc_table_entry->vlan_id;
 
   ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::get_or_create_vlan_id <--- Exiting\n");
@@ -92,7 +95,8 @@ int ACA_Vlan_Manager::create_ovs_port(string /*vpc_id*/, string ovs_port,
 
   vpc_table_entry *current_vpc_table_entry;
   int overall_rc = EXIT_FAILURE;
-
+  // -----critical section starts-----
+  _vpcs_table_mutex.lock();
   bool vpc_table_entry_found = _vpcs_table.find(tunnel_id, current_vpc_table_entry);
 
   if (!vpc_table_entry_found) {
@@ -103,21 +107,21 @@ int ACA_Vlan_Manager::create_ovs_port(string /*vpc_id*/, string ovs_port,
     // create_entry(tunnel_id) above and the _vpcs_table.find below
     vpc_table_entry_found = _vpcs_table.find(tunnel_id, current_vpc_table_entry);
   }
+  _vpcs_table_mutex.unlock();
+  // -----critical section ends-----
 
-  if (vpc_table_entry_found) {
-    // first port in the VPC will add the below rule:
-    // table 4 = incoming vxlan, allow incoming vxlan traffic matching tunnel_id
-    // to stamp with internal vlan and deliver to br-int
-    if (current_vpc_table_entry->ovs_ports.empty()) {
-      int internal_vlan_id = current_vpc_table_entry->vlan_id;
+  // first port in the VPC will add the below rule:
+  // table 4 = incoming vxlan, allow incoming vxlan traffic matching tunnel_id
+  // to stamp with internal vlan and deliver to br-int
+  if (current_vpc_table_entry->ovs_ports.empty()) {
+    int internal_vlan_id = current_vpc_table_entry->vlan_id;
 
-      string cmd_string =
-              "add-flow br-tun \"table=4, priority=1,tun_id=" + to_string(tunnel_id) +
-              " actions=mod_vlan_vid:" + to_string(internal_vlan_id) + ",output:\"patch-int\"\"";
+    string cmd_string =
+            "add-flow br-tun \"table=4, priority=1,tun_id=" + to_string(tunnel_id) +
+            " actions=mod_vlan_vid:" + to_string(internal_vlan_id) + ",output:\"patch-int\"\"";
 
-      ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
-              cmd_string, culminative_time, overall_rc);
-    }
+    ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
+            cmd_string, culminative_time, overall_rc);
     current_vpc_table_entry->ovs_ports.insert(ovs_port, nullptr);
   }
 
