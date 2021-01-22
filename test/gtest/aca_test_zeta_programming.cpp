@@ -425,24 +425,6 @@ TEST(zeta_programming_test_cases, create_auxgateway_test)
   EXPECT_EQ(retcode, EXIT_SUCCESS);
 }
 
-TEST(zeta_programming_test_cases, DISABLED_zeta_gateway_path_CHILD)
-{
-  // TODO: The relative path of the CHILD configuration file
-  string zeta_gateway_path_CHILD_config_file = "./test/gtest/aca_data.json";
-  aca_test_zeta_setup(zeta_gateway_path_CHILD_config_file);
-
-  // do some validate
-}
-
-TEST(zeta_programming_test_cases, DISABLED_zeta_gateway_path_PARENT)
-{
-  // TODO: The relative path of the PARENT configuration file
-  string zeta_gateway_path_PARENT_config_file = "./test/gtest/aca_data.json";
-  aca_test_zeta_setup(zeta_gateway_path_PARENT_config_file);
-
-  // do some validate
-}
-
 TEST(zeta_programming_test_cases, DISABLED_zeta_scale_CHILD)
 {
   // ulong culminative_network_configuration_time = 0;
