@@ -466,6 +466,25 @@ bool ACA_Zeta_Programming::group_rule_exists(uint group_id)
   }
 }
 
+// Determine whether the gws_ip and gws_mac is right in group entry?
+bool ACA_Zeta_Programming::group_rule_info_correct(uint group_id, string gws_ip, string gws_mac)
+{
+  bool overall_rc;
+  // Construct query command
+  string dump_flows = "ovs-ofctl -O OpenFlow13 dump-groups br-tun";
+  string opt1 = "group_id=" + to_string(group_id);
+  const string tail = "-\\>tun_dst";
+  const string tail_mac = "-\\>eth_dst";
+  string opt2 = "bucket=actions=set_field:" + gws_ip + tail +",set_field:" + gws_mac + tail_mac + " >/dev/null 2>&1";
+  string cmd_string = dump_flows + " | grep " + opt1 + " | grep " + opt2;
+  overall_rc = aca_net_config::Aca_Net_Config::get_instance().execute_system_command(cmd_string);
+  if (overall_rc == EXIT_SUCCESS) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
 uint ACA_Zeta_Programming::get_group_id(string zeta_gateway_id)
 {
   ACA_LOG_DEBUG("%s", "ACA_Zeta_Programming::get_group_id ---> Entering\n");

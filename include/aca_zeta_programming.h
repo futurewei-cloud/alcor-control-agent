@@ -74,6 +74,8 @@ class ACA_Zeta_Programming {
 
   uint get_group_id(string zeta_gateway_id);
 
+  bool group_rule_info_correct(uint group_id,string gws_ip,string gws_mac);
+
   private:
   int _create_group_punt_rule(uint tunnel_id, uint group_id);
   int _delete_group_punt_rule(uint tunnel_id);
