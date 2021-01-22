@@ -63,6 +63,7 @@ extern void aca_test_create_default_subnet_state(SubnetState *new_subnet_states)
 
 extern string auxGateway_id_1;
 extern string auxGateway_id_2;
+string auxGateway_id_from_aca_data;
 
 extern uint tunnel_id_1;
 extern uint tunnel_id_2;
@@ -175,6 +176,8 @@ void aca_test_zeta_setup_container(string zeta_gateway_path_config_file)
   auxGateway->set_aux_gateway_type(AuxGatewayType::ZETA);
   cout << "Filling in zgc_id: " << zeta_data["vpc_response"]["zgc_id"] << endl;
 
+  auxGateway_id_from_aca_data = zeta_data["vpc_response"]["zgc_id"];
+
   auxGateway->set_id(zeta_data["vpc_response"]["zgc_id"]); //zgc_id
 
   AuxGateway_zeta *zeta_info = auxGateway->mutable_zeta_info();
@@ -226,6 +229,30 @@ void aca_test_zeta_setup_container(string zeta_gateway_path_config_file)
   overall_rc = Aca_Comm_Manager::get_instance().update_goal_state(
           GoalState_builder, gsOperationalReply);
   ASSERT_EQ(overall_rc, EXIT_SUCCESS);
+}
+
+// test if the IP in gws is included in the group entry or not
+bool test_gws_info_correct(string zeta_gateway_path_config_file, uint group_id)
+{
+  bool overall_rc;
+  ifstream ifs(zeta_gateway_path_config_file);
+  if (!ifs)
+    cout << zeta_gateway_path_config_file << "open error" << endl;
+  nlohmann::json zeta_data = nlohmann::json::parse(ifs);
+  nlohmann::json gw_array = zeta_data["vpc_response"]["gws"];
+  for (nlohmann::json::iterator it = gw_array.begin(); it != gw_array.end(); ++it)
+  {
+    string gws_ip = (*it)["ip"];
+    string gws_mac = (*it)["mac"];
+    overall_rc = ACA_Zeta_Programming::get_instance().group_rule_info_correct(group_id,gws_ip,gws_mac);
+    if (overall_rc) {
+      cout << "gws_ip:" << gws_ip << ",gws_mac:" << gws_mac << " is in group rule." << endl;
+    } else {
+      cout << "gws_ip:" << gws_ip << ",gws_mac:" << gws_mac << " is not in group rule." << endl;
+      return false;
+    }
+  }
+  return true;
 }
 
 void aca_test_zeta_setup(string zeta_gateway_path_config_file)
@@ -501,6 +528,29 @@ TEST(zeta_programming_test_cases, DISABLED_zeta_scale_container)
   // construct the GoalState from the json file
   string zeta_gateway_path_CHILD_config_file = "./test/gtest/aca_data.json";
   aca_test_zeta_setup_container(zeta_gateway_path_CHILD_config_file);
+
+  // do some validate
+  uint group_id = ACA_Zeta_Programming::get_instance().get_group_id(auxGateway_id_from_aca_data);
+  if (group_id==0){
+    cout << "CHILD group_id not exist" << endl;
+  }
+  else{
+    int retcode1=0,retcode2=0;
+    retcode1 = ACA_Zeta_Programming::get_instance().group_rule_exists(group_id);
+    if (retcode1){
+      cout << "CHILD group rule exist" << endl;
+      // Further validate if the ip in gws is included in the group entry or not
+      retcode2 = test_gws_info_correct(zeta_gateway_path_CHILD_config_file, group_id);
+      if (retcode2){
+        cout << "CHILD group rule is right" << endl;
+      }else{
+        cout << "CHILD group rule is not right" << endl;
+      }
+    }else{
+      cout << "CHILD group rule not exist" << endl;
+    }
+  }
+
   // restore demo mode
   g_demo_mode = previous_demo_mode;
 }
