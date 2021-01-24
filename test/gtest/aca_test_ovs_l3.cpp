@@ -754,7 +754,6 @@ TEST(ovs_l3_test_cases, DISABLED_2_ports_ROUTING_test_traffic_CHILD)
   // monitor br-tun for arp request message
   ovs_monitor_thread = 
     new thread(bind(&ACA_OVS_Control::monitor, &ACA_OVS_Control::get_instance(), "br-tun", "resume"));
-  ovs_monitor_thread->detach();
 
   GoalState GoalState_builder;
   PortState *new_port_states = GoalState_builder.add_port_states();
@@ -974,16 +973,6 @@ TEST(ovs_l3_test_cases, DISABLED_2_ports_ROUTING_test_traffic_CHILD)
           GoalState_builder2, gsOperationalReply);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
 
-  // test invalid traffic from child to parent 
-  overall_rc = Aca_Net_Config::get_instance().execute_system_command(
-          "docker exec con3 ping -c1 " + vip_address_1);
-  EXPECT_NE(overall_rc, EXIT_SUCCESS);
-
-  overall_rc = Aca_Net_Config::get_instance().execute_system_command(
-          "docker exec con4 ping -c1 " + vip_address_2);
-  EXPECT_NE(overall_rc, EXIT_SUCCESS);
-
-
   // cleanup
 
   // free the allocated configurations since we are done with it now
@@ -991,6 +980,9 @@ TEST(ovs_l3_test_cases, DISABLED_2_ports_ROUTING_test_traffic_CHILD)
   new_neighbor_states4->clear_configuration();
   new_subnet_states1->clear_configuration();
   new_subnet_states2->clear_configuration();
+  
+  // wait for parent to ping child
+  ovs_monitor_thread->join();
 
   // don't delete br-int and br-tun bridges and the docker instance so that parent can ping
 }

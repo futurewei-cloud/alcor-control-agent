@@ -449,7 +449,6 @@ TEST(arp_request_test_cases, DISABLED_l2_arp_test_CHILD)
 // monitor br-tun for arp request message
   ovs_monitor_thread = 
     new thread(bind(&ACA_OVS_Control::monitor, &ACA_OVS_Control::get_instance(), "br-tun", "resume"));
-  ovs_monitor_thread->detach();
 
   // kill the docker instances just in case
   Aca_Net_Config::get_instance().execute_system_command("docker rm -f con4");
@@ -537,12 +536,10 @@ TEST(arp_request_test_cases, DISABLED_l2_arp_test_CHILD)
           GoalState_builder, gsOperationalReply);
   EXPECT_NE(overall_rc, EXIT_SUCCESS);
 
-  cmd_string = "docker exec con4 ping -c1 " + vip_address_1;
-  overall_rc = Aca_Net_Config::get_instance().execute_system_command(cmd_string);
-  EXPECT_NE(overall_rc, EXIT_SUCCESS);
+  // wait for parent to ping child
+  ovs_monitor_thread->join();
 
-
-    // restore demo mode
+  // restore demo mode
   g_demo_mode = previous_demo_mode;
 
 }

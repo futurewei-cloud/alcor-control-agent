@@ -222,7 +222,7 @@ void ACA_ARP_Responder::arp_recv(uint32_t in_port, void *vlan_hdr, void *message
   return;
 
 }
-void ACA_ARP_Responder::arp_xmit(uint32_t in_port, void  *vlanmsg, void *message, int is_find){
+void ACA_ARP_Responder::arp_xmit(uint32_t in_port, void  *vlanmsg, void *message, int is_found){
   arp_message *arpmsg = nullptr;
   string bridge = "br-tun";
   string inport = "in_port=controller";
@@ -244,7 +244,7 @@ void ACA_ARP_Responder::arp_xmit(uint32_t in_port, void  *vlanmsg, void *message
     ACA_LOG_ERROR("%s","Serialized ARP Reply is null!\n");
     return;
   }
-  if(is_find){
+  if(is_found){
     options = inport + whitespace + packetpre + packet +whitespace + action;
   }
   else{

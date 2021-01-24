@@ -749,8 +749,6 @@ TEST(ovs_l2_test_cases, DISABLED_2_ports_CREATE_test_traffic_CHILD)
   // monitor br-tun for arp request message
   ovs_monitor_thread = 
     new thread(bind(&ACA_OVS_Control::monitor, &ACA_OVS_Control::get_instance(), "br-tun", "resume"));
-  ovs_monitor_thread->detach();
-
 
   GoalState GoalState_builder;
   PortState *new_port_states = GoalState_builder.add_port_states();
@@ -862,17 +860,6 @@ TEST(ovs_l2_test_cases, DISABLED_2_ports_CREATE_test_traffic_CHILD)
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
 
-  // test invalid traffic from child to parent 
-  cmd_string = "ping -I " + vip_address_3 + " -c1 " + vip_address_1;
-  overall_rc = Aca_Net_Config::get_instance().execute_system_command(cmd_string);
-  EXPECT_NE(overall_rc, EXIT_SUCCESS);
-  overall_rc = EXIT_SUCCESS;
-
-  cmd_string = "ping -I " + vip_address_4 + " -c1 " + vip_address_2;
-  overall_rc = Aca_Net_Config::get_instance().execute_system_command(cmd_string);
-  EXPECT_NE(overall_rc, EXIT_SUCCESS);
-  overall_rc = EXIT_SUCCESS;
-
   // test traffic between the two newly created ports
   cmd_string = "ping -I " + vip_address_3 + " -c1 " + vip_address_4;
   overall_rc = Aca_Net_Config::get_instance().execute_system_command(cmd_string);
@@ -890,6 +877,9 @@ TEST(ovs_l2_test_cases, DISABLED_2_ports_CREATE_test_traffic_CHILD)
   new_port_states->clear_configuration();
   new_neighbor_states->clear_configuration();
   new_subnet_states->clear_configuration();
+
+  // wait for parent to ping child
+  ovs_monitor_thread->join();
 
   // not deleting br-int and br-tun bridges so that parent can ping the two new ports
 }
