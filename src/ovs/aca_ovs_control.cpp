@@ -273,13 +273,6 @@ void ACA_OVS_Control::parse_packet(uint32_t in_port, void *packet)
         aca_dhcp_server::ACA_Dhcp_Server::get_instance().dhcps_recv(
                 in_port, const_cast<unsigned char *>(payload));
       }
-
-      /* oam message procedure */
-      if (aca_zeta_oam_server::ACA_Zeta_Oam_Server::get_instance().lookup_oam_port_in_cache((uint)udp_dport)) {
-        ACA_LOG_INFO("%s", "   Message Type: OAM\n");
-        aca_zeta_oam_server::ACA_Zeta_Oam_Server::get_instance().oams_recv(
-                (uint32_t)udp_dport, const_cast<unsigned char *>(payload));
-      }
     }
   }
 }
