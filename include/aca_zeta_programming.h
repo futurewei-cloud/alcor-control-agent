@@ -40,9 +40,9 @@ class FWD_Info {
   }
 
   // Overload "==" for hash operation
-  bool operator==(const FWD_Info &other) const
+  bool operator==(const FWD_Info* &other) const
   {
-    return ((ip_addr == other.ip_addr) && (mac_addr == other.mac_addr));
+    return ((ip_addr == other->ip_addr) && (mac_addr == other->mac_addr));
   };
 };
 struct zeta_config {
@@ -87,6 +87,8 @@ class ACA_Zeta_Programming {
 
   //The mutex for modifying group table entry
   std::timed_mutex _group_operation_mutex;
+
+  mutex _zeta_config_table_mutex;
 };
 } // namespace aca_zeta_programming
 #endif // #ifndef ACA_ZETA_PROGRAMMING_H

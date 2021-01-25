@@ -194,6 +194,8 @@ int ACA_Zeta_Programming::create_zeta_config(const alcor::schema::AuxGateway cur
 
   uint oam_port = current_AuxGateway.zeta_info().port_inband_operation();
 
+  // -----critical section starts-----
+  _zeta_config_table_mutex.lock();
   if (!_zeta_config_table.find(current_AuxGateway.id(), current_zeta_cfg)) {
     create_entry(current_AuxGateway.id(), oam_port, current_AuxGateway);
     _zeta_config_table.find(current_AuxGateway.id(), current_zeta_cfg);
@@ -206,24 +208,19 @@ int ACA_Zeta_Programming::create_zeta_config(const alcor::schema::AuxGateway cur
     oam_port_listener_thread->detach();
     ACA_LOG_INFO("Created thread for port %d and it is detached.\n", oam_port);
   } else {
-    if (current_zeta_cfg->zeta_buckets.hashSize !=
-        (uint)current_AuxGateway.destinations().size()) {
-      bucket_not_found = true;
-    } else {
-      for (auto destination : current_AuxGateway.destinations()) {
-        FWD_Info *target_fwd =
-                new FWD_Info(destination.ip_address(), destination.mac_address());
+    for (auto destination : current_AuxGateway.destinations()) {
+      FWD_Info *target_fwd =
+              new FWD_Info(destination.ip_address(), destination.mac_address());
 
-        int *not_used = nullptr;
+      int *not_used = nullptr;
 
-        if (current_zeta_cfg->zeta_buckets.find(target_fwd, not_used)) {
-          continue;
-        } else {
-          bucket_not_found |= true;
-          break;
-        }
-        new_zeta_buckets.insert(target_fwd, nullptr);
+      if (current_zeta_cfg->zeta_buckets.find(target_fwd, not_used)) {
+        continue;
+      } else {
+        bucket_not_found |= true;
+        break;
       }
+      new_zeta_buckets.insert(target_fwd, nullptr);
     }
 
     // If the buckets have changed, update the buckets and group table rules.
@@ -239,6 +236,8 @@ int ACA_Zeta_Programming::create_zeta_config(const alcor::schema::AuxGateway cur
       overall_rc = _update_zeta_group_entry(current_zeta_cfg);
     }
   }
+  _zeta_config_table_mutex.unlock();
+  // -----critical section ends-----
 
   // get the current auxgateway_id of vpc
   string current_zeta_id = ACA_Vlan_Manager::get_instance().get_zeta_gateway_id(tunnel_id);
@@ -265,6 +264,8 @@ int ACA_Zeta_Programming::delete_zeta_config(const alcor::schema::AuxGateway cur
 
   zeta_config *current_zeta_cfg;
 
+  // -----critical section starts-----
+  _zeta_config_table_mutex.lock();
   if (!_zeta_config_table.find(current_AuxGateway.id(), current_zeta_cfg)) {
     ACA_LOG_ERROR("zeta_gateway_id %s not found in zeta_config_table\n",
                   current_AuxGateway.id().c_str());
@@ -290,6 +291,8 @@ int ACA_Zeta_Programming::delete_zeta_config(const alcor::schema::AuxGateway cur
       _zeta_config_table.erase(current_AuxGateway.id());
     }
   }
+  _zeta_config_table_mutex.unlock();
+  // -----critical section ends-----
 
   ACA_LOG_DEBUG("ACA_Zeta_Programming::delete_zeta_config <--- Exiting, overall_rc = %d\n",
                 overall_rc);
