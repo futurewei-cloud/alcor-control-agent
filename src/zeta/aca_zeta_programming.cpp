@@ -26,6 +26,8 @@ using namespace aca_ovs_control;
 using namespace aca_vlan_manager;
 using namespace aca_ovs_l2_programmer;
 
+
+
 namespace aca_zeta_programming
 {
 ACA_Zeta_Programming::ACA_Zeta_Programming()
@@ -59,8 +61,7 @@ void ACA_Zeta_Programming::create_entry(string zeta_gateway_id, uint oam_port,
 
   // fill in the ip_address and mac_address of fwds
   for (auto destination : current_AuxGateway.destinations()) {
-    FWD_Info *new_fwd =
-            new FWD_Info(destination.ip_address(), destination.mac_address());
+    FWD_Info new_fwd(destination.ip_address(), destination.mac_address());
     new_zeta_cfg->zeta_buckets.insert(new_fwd, nullptr);
   }
 
@@ -190,7 +191,7 @@ int ACA_Zeta_Programming::create_zeta_config(const alcor::schema::AuxGateway cur
   int overall_rc = EXIT_SUCCESS;
   zeta_config *current_zeta_cfg;
   bool bucket_not_found = false;
-  CTSL::HashMap<FWD_Info *, int *> new_zeta_buckets;
+  CTSL::HashMap<FWD_Info, int *, FWD_Info_Hash> new_zeta_buckets;
 
   uint oam_port = current_AuxGateway.zeta_info().port_inband_operation();
 
@@ -209,8 +210,7 @@ int ACA_Zeta_Programming::create_zeta_config(const alcor::schema::AuxGateway cur
     ACA_LOG_INFO("Created thread for port %d and it is detached.\n", oam_port);
   } else {
     for (auto destination : current_AuxGateway.destinations()) {
-      FWD_Info *target_fwd =
-              new FWD_Info(destination.ip_address(), destination.mac_address());
+      FWD_Info target_fwd(destination.ip_address(), destination.mac_address());
 
       int *not_used = nullptr;
 
@@ -227,8 +227,8 @@ int ACA_Zeta_Programming::create_zeta_config(const alcor::schema::AuxGateway cur
     if (bucket_not_found == true) {
       current_zeta_cfg->zeta_buckets.clear();
       for (auto destination : current_AuxGateway.destinations()) {
-        FWD_Info *target_fwd =
-                new FWD_Info(destination.ip_address(), destination.mac_address());
+        FWD_Info target_fwd =
+                FWD_Info(destination.ip_address(), destination.mac_address());
 
         current_zeta_cfg->zeta_buckets.insert(target_fwd, nullptr);
       }
@@ -319,13 +319,13 @@ int ACA_Zeta_Programming::_create_zeta_group_entry(zeta_config *zeta_cfg)
 
       while (hash_node != nullptr) {
         // add the static arp entries
-        string static_arp_string = "arp -s " + hash_node->getKey()->ip_addr +
-                                   " " + hash_node->getKey()->mac_addr;
+        string static_arp_string = "arp -s " + hash_node->getKey().ip_addr +
+                                   " " + hash_node->getKey().mac_addr;
         aca_net_config::Aca_Net_Config::get_instance().execute_system_command(static_arp_string);
 
         // fill zeta_gws
-        cmd += ",bucket=\"set_field:" + hash_node->getKey()->ip_addr +
-               "->tun_dst,mod_dl_dst:" + hash_node->getKey()->mac_addr +
+        cmd += ",bucket=\"set_field:" + hash_node->getKey().ip_addr +
+               "->tun_dst,mod_dl_dst:" + hash_node->getKey().mac_addr +
                ",output:vxlan-generic\"";
         hash_node = hash_node->next;
       }
@@ -373,12 +373,12 @@ int ACA_Zeta_Programming::_update_zeta_group_entry(zeta_config *zeta_cfg)
 
       while (hash_node != nullptr) {
         // add the static arp entries
-        string static_arp_string = "arp -s " + hash_node->getKey()->ip_addr +
-                                   " " + hash_node->getKey()->mac_addr;
+        string static_arp_string = "arp -s " + hash_node->getKey().ip_addr +
+                                   " " + hash_node->getKey().mac_addr;
         aca_net_config::Aca_Net_Config::get_instance().execute_system_command(static_arp_string);
 
-        cmd += ",bucket=\"set_field:" + hash_node->getKey()->ip_addr +
-               "->tun_dst,mod_dl_dst:" + hash_node->getKey()->mac_addr +
+        cmd += ",bucket=\"set_field:" + hash_node->getKey().ip_addr +
+               "->tun_dst,mod_dl_dst:" + hash_node->getKey().mac_addr +
                ",output:vxlan-generic\"";
         hash_node = hash_node->next;
       }
@@ -435,7 +435,7 @@ int ACA_Zeta_Programming::_delete_zeta_group_entry(zeta_config *zeta_cfg)
 
       while (hash_node != nullptr) {
         // delete the static arp entries
-        string static_arp_string = "arp -d " + hash_node->getKey()->ip_addr;
+        string static_arp_string = "arp -d " + hash_node->getKey().ip_addr;
         aca_net_config::Aca_Net_Config::get_instance().execute_system_command(static_arp_string);
         hash_node = hash_node->next;
       }

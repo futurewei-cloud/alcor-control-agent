@@ -33,6 +33,7 @@ class FWD_Info {
   string mac_addr;
 
   FWD_Info(){};
+  ~FWD_Info(){};
   FWD_Info(string ip_addr, string mac_addr)
   {
     this->ip_addr = ip_addr;
@@ -40,17 +41,33 @@ class FWD_Info {
   }
 
   // Overload "==" for hash operation
-  bool operator==(const FWD_Info* &other) const
+  bool operator==(const FWD_Info &other) const
   {
-    return ((ip_addr == other->ip_addr) && (mac_addr == other->mac_addr));
+    return ((ip_addr == other.ip_addr) && (mac_addr == other.mac_addr));
+  };
+  
+  // Overload "!=" for hash operation
+  bool operator!=(const FWD_Info &other) const
+  {
+    return ((ip_addr != other.ip_addr) || (mac_addr != other.mac_addr));
   };
 };
+
+//Implement the hash of FWD_info based on std::hash<>
+class FWD_Info_Hash {
+  public:
+  std::size_t operator()(const FWD_Info &rhs) const
+  {
+    return std::hash<string>()(rhs.ip_addr) ^ std::hash<string>()(rhs.mac_addr);
+  }
+}; // namespace aca_zeta_programming
+
 struct zeta_config {
   uint group_id;
   uint oam_port;
 
-  // CTSL::HashMap <key: FWD_Info, value: int* (not used)>
-  CTSL::HashMap<FWD_Info *, int *> zeta_buckets;
+  // CTSL::HashMap <key: FWD_Info, value: int* (not used), hash: FWD_Info_Hash>
+  CTSL::HashMap<FWD_Info, int *, FWD_Info_Hash> zeta_buckets;
 };
 
 class ACA_Zeta_Programming {
@@ -88,6 +105,7 @@ class ACA_Zeta_Programming {
   //The mutex for modifying group table entry
   std::timed_mutex _group_operation_mutex;
 
+  // mutex for reading and writing to _zeta_config_table
   mutex _zeta_config_table_mutex;
 };
 } // namespace aca_zeta_programming
