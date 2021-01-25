@@ -560,14 +560,6 @@ void parse_goalstate(GoalState parsed_struct, GoalState GoalState_builder)
     assert(parsed_struct.vpc_states(i).configuration().tunnel_id() ==
            GoalState_builder.vpc_states(i).configuration().tunnel_id());
 
-    assert(parsed_struct.vpc_states(i).configuration().subnet_ids_size() ==
-           GoalState_builder.vpc_states(i).configuration().subnet_ids_size());
-
-    for (int j = 0;
-         j < parsed_struct.vpc_states(i).configuration().subnet_ids_size(); j++) {
-      assert(parsed_struct.vpc_states(i).configuration().subnet_ids(j).id() ==
-             GoalState_builder.vpc_states(i).configuration().subnet_ids(j).id());
-    }
   }
 
   fprintf(stdout, "All content matched!\n");

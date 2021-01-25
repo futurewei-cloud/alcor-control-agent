@@ -67,6 +67,16 @@ class Aca_Goal_State_Handler {
   int update_router_states(alcor::schema::GoalState &parsed_struct,
                            alcor::schema::GoalStateOperationReply &gsOperationReply);
 
+   // process ONE gateway state
+  int update_gateway_state_workitem(const alcor::schema::GatewayState current_GatewayState,
+                                   alcor::schema::GoalState &parsed_struct,
+                                   alcor::schema::GoalStateOperationReply &gsOperationReply);
+
+  // process 0 to N gateway states
+  int update_gateway_states(alcor::schema::GoalState &parsed_struct,
+                           alcor::schema::GoalStateOperationReply &gsOperationReply);
+
+
   int update_goal_state(alcor::schema::GoalState &parsed_struct,
                         alcor::schema::GoalStateOperationReply &gsOperationReply);
 

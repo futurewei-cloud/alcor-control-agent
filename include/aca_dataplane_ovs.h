@@ -41,6 +41,10 @@ class ACA_Dataplane_OVS : public aca_net_programming_if::ACA_Core_Net_Programmin
   int update_router_state_workitem(const alcor::schema::RouterState current_RouterState,
                                    alcor::schema::GoalState &parsed_struct,
                                    alcor::schema::GoalStateOperationReply &gsOperationReply);
+
+  int update_gateway_state_workitem(const alcor::schema::GatewayState current_GatewayState,
+                                    alcor::schema::GoalState &parsed_struct,
+                                    alcor::schema::GoalStateOperationReply &gsOperationReply);
 };
 } // namespace aca_dataplane_ovs
 #endif // #ifndef ACA_DATAPLANCE_OVS_H

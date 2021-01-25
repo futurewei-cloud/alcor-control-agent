@@ -77,13 +77,13 @@ class ACA_Zeta_Programming {
   static ACA_Zeta_Programming &get_instance();
 
   void create_entry(string zeta_gateway_id, uint oam_port,
-                    alcor::schema::AuxGateway current_AuxGateway);
+                    alcor::schema::GatewayConfiguration current_AuxGateway);
 
   void clear_all_data();
 
-  int create_zeta_config(const alcor::schema::AuxGateway current_AuxGateway, uint tunnel_id);
+  int create_zeta_config(const alcor::schema::GatewayConfiguration current_AuxGateway, uint tunnel_id);
 
-  int delete_zeta_config(const alcor::schema::AuxGateway current_AuxGateway, uint tunnel_id);
+  int delete_zeta_config(const alcor::schema::GatewayConfiguration current_AuxGateway, uint tunnel_id);
 
   bool group_rule_exists(uint group_id);
 

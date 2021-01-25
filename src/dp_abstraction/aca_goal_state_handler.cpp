@@ -232,6 +232,40 @@ int Aca_Goal_State_Handler::update_router_states(GoalState &parsed_struct,
   return overall_rc;
 }
 
+int Aca_Goal_State_Handler::update_gateway_state_workitem(const GatewayState current_GatewayState,
+                                                          GoalState &parsed_struct,
+                                                          GoalStateOperationReply &gsOperationReply)
+{
+  return this->core_net_programming_if->update_gateway_state_workitem(
+          current_GatewayState, std::ref(parsed_struct), std::ref(gsOperationReply));
+}
+
+int Aca_Goal_State_Handler::update_gateway_states(GoalState &parsed_struct,
+                                                  GoalStateOperationReply &gsOperationReply)
+{
+  std::vector<std::future<int> > workitem_future;
+  int rc;
+  int overall_rc = EXIT_SUCCESS;
+
+  for (int i = 0; i < parsed_struct.gateway_states_size(); i++) {
+    ACA_LOG_DEBUG("=====>parsing gateway states #%d\n", i);
+
+    GatewayState current_GatewayState = parsed_struct.gateway_states(i);
+
+    workitem_future.push_back(std::async(
+            std::launch::async, &Aca_Goal_State_Handler::update_gateway_state_workitem, this,
+            current_GatewayState, std::ref(parsed_struct), std::ref(gsOperationReply)));
+  }
+
+  for (int i = 0; i < parsed_struct.gateway_states_size(); i++) {
+    rc = workitem_future[i].get();
+    if (rc != EXIT_SUCCESS)
+      overall_rc = rc;
+  }
+
+  return overall_rc;
+}
+
 void Aca_Goal_State_Handler::add_goal_state_operation_status(
         GoalStateOperationReply &gsOperationReply, std::string id,
         ResourceType resource_type, OperationType operation_type,

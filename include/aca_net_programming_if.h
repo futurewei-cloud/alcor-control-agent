@@ -47,6 +47,12 @@ class ACA_Core_Net_Programming_Interface {
   update_router_state_workitem(const alcor::schema::RouterState current_RouterState,
                                alcor::schema::GoalState &parsed_struct,
                                alcor::schema::GoalStateOperationReply &gsOperationReply) = 0;
+
+  virtual int
+  update_gateway_state_workitem(const alcor::schema::GatewayState current_GatewayState,
+                               alcor::schema::GoalState &parsed_struct,
+                               alcor::schema::GoalStateOperationReply &gsOperationReply) = 0;
+
 };
 } // namespace aca_net_programming_if
 #endif // #ifndef ACA_NET_PROGRAMMING_IF_H
