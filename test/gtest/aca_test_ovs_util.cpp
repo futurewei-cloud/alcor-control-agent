@@ -279,10 +279,6 @@ void aca_test_1_neighbor_CREATE_DELETE(NeighborType input_neighbor_type)
           "br-tun", neighbor_opt.c_str());
   ASSERT_EQ(overall_rc, EXIT_SUCCESS);
 
-  string arp_opt = "table=51,arp,nw_dst=" + vip_address_3;
-  overall_rc = ACA_OVS_Control::get_instance().flow_exists("br-tun", arp_opt.c_str());
-  ASSERT_EQ(overall_rc, EXIT_SUCCESS);
-
   // delete neighbor info
   new_neighbor_states->set_operation_type(OperationType::DELETE);
   overall_rc = Aca_Comm_Manager::get_instance().update_goal_state(
@@ -292,9 +288,6 @@ void aca_test_1_neighbor_CREATE_DELETE(NeighborType input_neighbor_type)
   // check if the neighbor rules has been deleted on br-tun
   overall_rc = ACA_OVS_Control::get_instance().flow_exists(
           "br-tun", neighbor_opt.c_str());
-  EXPECT_NE(overall_rc, EXIT_SUCCESS);
-
-  overall_rc = ACA_OVS_Control::get_instance().flow_exists("br-tun", arp_opt.c_str());
   EXPECT_NE(overall_rc, EXIT_SUCCESS);
 
   // clean up
@@ -371,10 +364,6 @@ void aca_test_1_port_CREATE_plus_neighbor_CREATE(NeighborType input_neighbor_typ
   string neighbor_opt = "table=20,dl_dst:" + vmac_address_3;
   overall_rc = ACA_OVS_Control::get_instance().flow_exists(
           "br-tun", neighbor_opt.c_str());
-  ASSERT_EQ(overall_rc, EXIT_SUCCESS);
-
-  string arp_opt = "table=51,arp,nw_dst=" + vip_address_3;
-  overall_rc = ACA_OVS_Control::get_instance().flow_exists("br-tun", arp_opt.c_str());
   ASSERT_EQ(overall_rc, EXIT_SUCCESS);
 
   // clean up

@@ -20,9 +20,11 @@
 #include "aca_comm_mgr.h"
 #include "gtest/gtest.h"
 #include "goalstate.pb.h"
+#include "aca_ovs_control.h"
 #include <unistd.h> /* for getopt */
 #include <iostream>
 #include <string>
+#include <thread>
 
 using namespace std;
 using namespace alcor::schema;
@@ -30,6 +32,7 @@ using namespace aca_vlan_manager;
 using namespace aca_comm_manager;
 using namespace aca_net_config;
 using namespace aca_ovs_l2_programmer;
+using aca_ovs_control::ACA_OVS_Control;
 
 // extern the string and helper functions from aca_test_ovs_util.cpp
 extern string project_id;
@@ -62,6 +65,7 @@ extern string subnet1_gw_mac;
 extern string subnet2_gw_mac;
 extern bool g_demo_mode;
 extern uint neighbors_to_create;
+extern thread *ovs_monitor_thread;
 
 extern void aca_test_create_default_port_state(PortState *new_port_states);
 extern void aca_test_create_default_subnet_state(SubnetState *new_subnet_states);
@@ -94,9 +98,9 @@ extern void aca_test_1_port_CREATE_plus_N_neighbors_CREATE(NeighborType input_ne
 //   it can be executed by:
 //
 //     child machine (-p 10.213.43.187 -> IP of parent machine):
-//     aca_tests --gtest_also_run_disabled_tests --gtest_filter=*DISABLED_2_ports_CREATE_test_traffic_CHILD -p 10.213.43.187
+//     ./build/tests/aca_tests --gtest_also_run_disabled_tests --gtest_filter=*DISABLED_2_ports_CREATE_test_traffic_CHILD -p 10.213.43.187
 //     parent machine (-c 10.213.43.188 -> IP of child machine):
-//     aca_tests --gtest_also_run_disabled_tests --gtest_filter=*DISABLED_2_ports_CREATE_test_traffic_PARENT -c 10.213.43.188
+//     ./build/tests/aca_tests --gtest_also_run_disabled_tests --gtest_filter=*DISABLED_2_ports_CREATE_test_traffic_PARENT -c 10.213.43.188
 //
 TEST(ovs_l2_test_cases, 2_ports_CREATE_test_traffic_plus_neighbor_internal)
 {
@@ -532,6 +536,12 @@ TEST(ovs_l2_test_cases, DISABLED_2_ports_CREATE_test_traffic_PARENT)
   ASSERT_EQ(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
 
+  // monitor br-tun for arp request message
+  ovs_monitor_thread = 
+    new thread(bind(&ACA_OVS_Control::monitor, &ACA_OVS_Control::get_instance(), "br-tun", "resume"));
+  ovs_monitor_thread->detach();
+
+
   GoalState GoalState_builder;
   PortState *new_port_states = GoalState_builder.add_port_states();
   SubnetState *new_subnet_states = GoalState_builder.add_subnet_states();
@@ -736,6 +746,10 @@ TEST(ovs_l2_test_cases, DISABLED_2_ports_CREATE_test_traffic_CHILD)
   ASSERT_EQ(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;
 
+  // monitor br-tun for arp request message
+  ovs_monitor_thread = 
+    new thread(bind(&ACA_OVS_Control::monitor, &ACA_OVS_Control::get_instance(), "br-tun", "resume"));
+
   GoalState GoalState_builder;
   PortState *new_port_states = GoalState_builder.add_port_states();
   SubnetState *new_subnet_states = GoalState_builder.add_subnet_states();
@@ -863,6 +877,9 @@ TEST(ovs_l2_test_cases, DISABLED_2_ports_CREATE_test_traffic_CHILD)
   new_port_states->clear_configuration();
   new_neighbor_states->clear_configuration();
   new_subnet_states->clear_configuration();
+
+  // wait for parent to ping child
+  ovs_monitor_thread->join();
 
   // not deleting br-int and br-tun bridges so that parent can ping the two new ports
 }

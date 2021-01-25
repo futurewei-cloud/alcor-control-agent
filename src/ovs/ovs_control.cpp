@@ -112,7 +112,7 @@ void OVS_Control::monitor(const char *bridge, const char *opt)
   enum ofputil_protocol usable_protocols = static_cast<ofputil_protocol>(OFPUTIL_P_ANY);
   bool resume_continuations = false;
 
-  set_allowed_ofp_versions("OpenFlow10");
+  set_allowed_ofp_versions("OpenFlow13");
 
   open_vconn(bridge, &vconn);
 

@@ -47,6 +47,7 @@ add_executable(
     gtest/aca_test_ovs_util.cpp
     gtest/aca_test_oam.cpp
     gtest/aca_test_zeta_programming.cpp
+    gtest/aca_test_arp.cpp
 )
 
 # Link test executable against gtest & gtest_main
