@@ -211,7 +211,9 @@ def get_port_template(i):
             ],
             "mac_port": "cc:dd:ee:ff:11:22",
             "ip_node": "192.168.20.92",
+            # "ip_node": "172.16.150.221",
             "mac_node": "e8:bd:d1:01:77:ec"
+            # "mac_node": "64:6e:97:0d:80:a9"
         }
     return {
         "port_id": "99976feae-7dec-11d0-a765-00a0c9342230",
@@ -224,7 +226,9 @@ def get_port_template(i):
         ],
         "mac_port": "6c:dd:ee:ff:11:32",
         "ip_node": "192.168.20.93",
+        # "ip_node": "172.16.150.222",
         "mac_node": "e8:bd:d1:01:72:c8"
+        # "mac_node": "64:6e:97:1c:8e:65"
     }
 
 
@@ -266,8 +270,10 @@ def generate_ports(ports_to_create):
 
 
 def run():
+    # rebuild zgc nodes kvm and cleanup zeta data
     subprocess.call(
         ['/home/user/ws/zzxgzgz/zeta/deploy/zeta_deploy.sh', '-d',  'lab'])
+
     port_api_upper_limit = 1000
     time_interval_between_calls_in_seconds = 10
     ports_to_create = 2
@@ -275,6 +281,7 @@ def run():
     arguments = sys.argv
     print(f'Arguments: {arguments}')
     file_path = './data/zeta_data.json'
+    # file_path = './data/zeta_data_sdn.json'
     zeta_data = {}
     with open(file_path, 'r', encoding='utf8')as fp:
         zeta_data = json.loads(fp.read())
