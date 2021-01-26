@@ -532,22 +532,22 @@ TEST(zeta_programming_test_cases, DISABLED_zeta_scale_container)
   // do some validate
   uint group_id = ACA_Zeta_Programming::get_instance().get_group_id(auxGateway_id_from_aca_data);
   if (group_id==0){
-    cout << "CHILD group_id not exist" << endl;
+    cout << "group_id:" << group_id << " not exist" << endl;
   }
   else{
     int retcode1=0,retcode2=0;
     retcode1 = ACA_Zeta_Programming::get_instance().group_rule_exists(group_id);
     if (retcode1){
-      cout << "CHILD group rule exist" << endl;
+      cout << "group rule exist" << endl;
       // Further validate if the ip in gws is included in the group entry or not
       retcode2 = test_gws_info_correct(zeta_gateway_path_CHILD_config_file, group_id);
       if (retcode2){
-        cout << "CHILD group rule is right" << endl;
+        cout << "group rule is right" << endl;
       }else{
-        cout << "CHILD group rule is not right" << endl;
+        cout << "group rule is not right" << endl;
       }
     }else{
-      cout << "CHILD group rule not exist" << endl;
+      cout << "group rule not exist" << endl;
     }
   }
 
