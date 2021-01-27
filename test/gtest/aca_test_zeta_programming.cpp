@@ -172,7 +172,7 @@ void aca_test_zeta_setup_container(string zeta_gateway_path_config_file)
   VpcConfiguration_builder->set_tunnel_id(zeta_data["vpc_response"]["vni"]); //vni
   cout << "Filling in vpc_id: " << zeta_data["vpc_response"]["vpc_id"] << endl;
   VpcConfiguration_builder->set_id(zeta_data["vpc_response"]["vpc_id"]); // vpc_id
-  cout << "Filling in gateway_id: " << zeta_data["vpc_response"]["vpc_id"] << endl;
+  cout << "Filling in gateway_id: " << zeta_data["vpc_response"]["zgc_id"] << endl;
   string *GatewayId_builder = VpcConfiguration_builder->add_gateway_ids();
   *GatewayId_builder = zeta_data["vpc_response"]["zgc_id"];
 
@@ -301,7 +301,7 @@ void aca_test_zeta_setup(string zeta_gateway_path_config_file)
   VpcConfiguration_builder->set_tunnel_id(zeta_data["vpc_response"]["vni"]); //vni
   cout << "Filling in vpc_id: " << zeta_data["vpc_response"]["vpc_id"] << endl;
   VpcConfiguration_builder->set_id(zeta_data["vpc_response"]["vpc_id"]); // vpc_id
-  cout << "Filling in gateway_id: " << zeta_data["vpc_response"]["vpc_id"] << endl;
+  cout << "Filling in gateway_id: " << zeta_data["vpc_response"]["zgc_id"] << endl;
   string *GatewayId_builder = VpcConfiguration_builder->add_gateway_ids();
   *GatewayId_builder = zeta_data["vpc_response"]["zgc_id"];
 
