@@ -161,8 +161,10 @@ void aca_test_zeta_setup_container(string zeta_gateway_path_config_file)
   GoalState GoalState_builder;
   VpcState *new_vpc_states = GoalState_builder.add_vpc_states();
   SubnetState *new_subnet_states = GoalState_builder.add_subnet_states();
+  GatewayState *new_gateway_states = GoalState_builder.add_gateway_states();
 
   new_vpc_states->set_operation_type(OperationType::INFO);
+  new_gateway_states->set_operation_type(OperationType::CREATE);
 
   // fill in vpc state structs
   VpcConfiguration *VpcConfiguration_builder = new_vpc_states->mutable_configuration();
@@ -170,17 +172,24 @@ void aca_test_zeta_setup_container(string zeta_gateway_path_config_file)
   VpcConfiguration_builder->set_tunnel_id(zeta_data["vpc_response"]["vni"]); //vni
   cout << "Filling in vpc_id: " << zeta_data["vpc_response"]["vpc_id"] << endl;
   VpcConfiguration_builder->set_id(zeta_data["vpc_response"]["vpc_id"]); // vpc_id
+  cout << "Filling in gateway_id: " << zeta_data["vpc_response"]["vpc_id"] << endl;
+  string *GatewayId_builder = VpcConfiguration_builder->add_gateway_ids();
+  *GatewayId_builder = zeta_data["vpc_response"]["zgc_id"];
 
   // fill in auxgateway state structs
-  AuxGateway *auxGateway = VpcConfiguration_builder->mutable_auxiliary_gateway();
-  auxGateway->set_aux_gateway_type(AuxGatewayType::ZETA);
+  GatewayConfiguration *GatewayConfiguration_builder =
+          new_gateway_states->mutable_configuration();
+  GatewayConfiguration_builder->set_gateway_type(GatewayType::ZETA);
+  GatewayConfiguration_builder->set_revision_number(1);
+
   cout << "Filling in zgc_id: " << zeta_data["vpc_response"]["zgc_id"] << endl;
 
   auxGateway_id_from_aca_data = zeta_data["vpc_response"]["zgc_id"];
 
-  auxGateway->set_id(zeta_data["vpc_response"]["zgc_id"]); //zgc_id
+  GatewayConfiguration_builder->set_id(zeta_data["vpc_response"]["zgc_id"]); //zgc_id
 
-  AuxGateway_zeta *zeta_info = auxGateway->mutable_zeta_info();
+  GatewayConfiguration_zeta *zeta_info =
+          GatewayConfiguration_builder->mutable_zeta_info();
   cout << "Filling in port_ibo: " << zeta_data["vpc_response"]["port_ibo"] << endl; // should be int, not string
 
   string port_ibo_string = zeta_data["vpc_response"]["port_ibo"];
@@ -188,7 +197,7 @@ void aca_test_zeta_setup_container(string zeta_gateway_path_config_file)
   cout << "uint in port_ibo: " << port_ibo_unit << endl;
   zeta_info->set_port_inband_operation(port_ibo_unit); //port_ibo
 
-  AuxGateway_destination *destination;
+  GatewayConfiguration_destination *destination;
 
   cout << "Try to fill in gw ips/macs now" << endl;
 
@@ -196,7 +205,7 @@ void aca_test_zeta_setup_container(string zeta_gateway_path_config_file)
 
   for (nlohmann::json::iterator it = gw_array.begin(); it != gw_array.end(); ++it) {
     cout << "Filling in: " << *it << "to the destination" << endl;
-    destination = auxGateway->add_destinations();
+    destination = GatewayConfiguration_builder->add_destinations();
     destination->set_ip_address((*it)["ip"]);
     destination->set_mac_address((*it)["mac"]);
   }
@@ -240,15 +249,16 @@ bool test_gws_info_correct(string zeta_gateway_path_config_file, uint group_id)
     cout << zeta_gateway_path_config_file << "open error" << endl;
   nlohmann::json zeta_data = nlohmann::json::parse(ifs);
   nlohmann::json gw_array = zeta_data["vpc_response"]["gws"];
-  for (nlohmann::json::iterator it = gw_array.begin(); it != gw_array.end(); ++it)
-  {
+  for (nlohmann::json::iterator it = gw_array.begin(); it != gw_array.end(); ++it) {
     string gws_ip = (*it)["ip"];
     string gws_mac = (*it)["mac"];
-    overall_rc = ACA_Zeta_Programming::get_instance().group_rule_info_correct(group_id,gws_ip,gws_mac);
+    overall_rc = ACA_Zeta_Programming::get_instance().group_rule_info_correct(
+            group_id, gws_ip, gws_mac);
     if (overall_rc) {
       cout << "gws_ip:" << gws_ip << ",gws_mac:" << gws_mac << " is in group rule." << endl;
     } else {
-      cout << "gws_ip:" << gws_ip << ",gws_mac:" << gws_mac << " is not in group rule." << endl;
+      cout << "gws_ip:" << gws_ip << ",gws_mac:" << gws_mac
+           << " is not in group rule." << endl;
       return false;
     }
   }
@@ -280,8 +290,10 @@ void aca_test_zeta_setup(string zeta_gateway_path_config_file)
   GoalState GoalState_builder;
   VpcState *new_vpc_states = GoalState_builder.add_vpc_states();
   SubnetState *new_subnet_states = GoalState_builder.add_subnet_states();
+  GatewayState *new_gateway_states = GoalState_builder.add_gateway_states();
 
   new_vpc_states->set_operation_type(OperationType::INFO);
+  new_gateway_states->set_operation_type(OperationType::CREATE);
 
   // fill in vpc state structs
   VpcConfiguration *VpcConfiguration_builder = new_vpc_states->mutable_configuration();
@@ -289,15 +301,21 @@ void aca_test_zeta_setup(string zeta_gateway_path_config_file)
   VpcConfiguration_builder->set_tunnel_id(zeta_data["vpc_response"]["vni"]); //vni
   cout << "Filling in vpc_id: " << zeta_data["vpc_response"]["vpc_id"] << endl;
   VpcConfiguration_builder->set_id(zeta_data["vpc_response"]["vpc_id"]); // vpc_id
+  cout << "Filling in gateway_id: " << zeta_data["vpc_response"]["vpc_id"] << endl;
+  string *GatewayId_builder = VpcConfiguration_builder->add_gateway_ids();
+  *GatewayId_builder = zeta_data["vpc_response"]["zgc_id"];
 
   // fill in auxgateway state structs
-  AuxGateway *auxGateway = VpcConfiguration_builder->mutable_auxiliary_gateway();
-  auxGateway->set_aux_gateway_type(AuxGatewayType::ZETA);
+  GatewayConfiguration *GatewayConfiguration_builder =
+          new_gateway_states->mutable_configuration();
+  GatewayConfiguration_builder->set_gateway_type(GatewayType::ZETA);
+  GatewayConfiguration_builder->set_revision_number(1);
   cout << "Filling in zgc_id: " << zeta_data["vpc_response"]["zgc_id"] << endl;
 
-  auxGateway->set_id(zeta_data["vpc_response"]["zgc_id"]); //zgc_id
+  GatewayConfiguration_builder->set_id(zeta_data["vpc_response"]["zgc_id"]); //zgc_id
 
-  AuxGateway_zeta *zeta_info = auxGateway->mutable_zeta_info();
+  GatewayConfiguration_zeta *zeta_info =
+          GatewayConfiguration_builder->mutable_zeta_info();
   cout << "Filling in port_ibo: " << zeta_data["vpc_response"]["port_ibo"] << endl; // should be int, not string
 
   string port_ibo_string = zeta_data["vpc_response"]["port_ibo"];
@@ -305,7 +323,7 @@ void aca_test_zeta_setup(string zeta_gateway_path_config_file)
   cout << "uint in port_ibo: " << port_ibo_unit << endl;
   zeta_info->set_port_inband_operation(port_ibo_unit); //port_ibo
 
-  AuxGateway_destination *destination;
+  GatewayConfiguration_destination *destination;
 
   cout << "Try to fill in gw ips/macs now" << endl;
 
@@ -313,7 +331,7 @@ void aca_test_zeta_setup(string zeta_gateway_path_config_file)
 
   for (nlohmann::json::iterator it = gw_array.begin(); it != gw_array.end(); ++it) {
     cout << "Filling in: " << *it << "to the destination" << endl;
-    destination = auxGateway->add_destinations();
+    destination = GatewayConfiguration_builder->add_destinations();
     destination->set_ip_address((*it)["ip"]);
     destination->set_mac_address((*it)["mac"]);
   }
@@ -347,21 +365,22 @@ TEST(zeta_programming_test_cases, create_zeta_config_valid)
   int retcode = 0;
 
   // fill in auxgateway state structs
-  AuxGateway new_auxGateway;
-  new_auxGateway.set_id(auxGateway_id_1);
-  AuxGateway_zeta *zeta_info = new_auxGateway.mutable_zeta_info();
+  GatewayConfiguration GatewayConfiguration_builder;
+  GatewayConfiguration_builder.set_id(auxGateway_id_1);
+  GatewayConfiguration_zeta *zeta_info = GatewayConfiguration_builder.mutable_zeta_info();
   zeta_info->set_port_inband_operation(oam_port_1);
-  AuxGateway_destination *destination;
+  GatewayConfiguration_destination *destination;
 
-  destination = new_auxGateway.add_destinations();
+  destination = GatewayConfiguration_builder.add_destinations();
   destination->set_ip_address(remote_ip_1);
   destination->set_mac_address(node_mac_address_3);
 
-  destination = new_auxGateway.add_destinations();
+  destination = GatewayConfiguration_builder.add_destinations();
   destination->set_ip_address(remote_ip_2);
   destination->set_mac_address(node_mac_address_4);
 
-  retcode = ACA_Zeta_Programming::get_instance().create_zeta_config(new_auxGateway, tunnel_id_2);
+  retcode = ACA_Zeta_Programming::get_instance().create_zeta_config(
+          GatewayConfiguration_builder, tunnel_id_2);
 
   EXPECT_EQ(retcode, EXIT_SUCCESS);
 }
@@ -371,21 +390,22 @@ TEST(zeta_programming_test_cases, delete_zeta_config_valid)
   int retcode = 0;
 
   // fill in auxgateway state structs
-  AuxGateway new_auxGateway;
-  new_auxGateway.set_id(auxGateway_id_1);
-  AuxGateway_zeta *zeta_info = new_auxGateway.mutable_zeta_info();
+  GatewayConfiguration GatewayConfiguration_builder;
+  GatewayConfiguration_builder.set_id(auxGateway_id_1);
+  GatewayConfiguration_zeta *zeta_info = GatewayConfiguration_builder.mutable_zeta_info();
   zeta_info->set_port_inband_operation(oam_port_1);
-  AuxGateway_destination *destination;
+  GatewayConfiguration_destination *destination;
 
-  destination = new_auxGateway.add_destinations();
+  destination = GatewayConfiguration_builder.add_destinations();
   destination->set_ip_address(remote_ip_1);
   destination->set_mac_address(node_mac_address_3);
 
-  destination = new_auxGateway.add_destinations();
+  destination = GatewayConfiguration_builder.add_destinations();
   destination->set_ip_address(remote_ip_2);
   destination->set_mac_address(node_mac_address_4);
 
-  retcode = ACA_Zeta_Programming::get_instance().delete_zeta_config(new_auxGateway, tunnel_id_2);
+  retcode = ACA_Zeta_Programming::get_instance().delete_zeta_config(
+          GatewayConfiguration_builder, tunnel_id_2);
 
   EXPECT_EQ(retcode, EXIT_SUCCESS);
 }
@@ -410,6 +430,7 @@ TEST(zeta_programming_test_cases, create_auxgateway_test)
   VpcState *new_vpc_states = GoalState_builder.add_vpc_states();
   SubnetState *new_subnet_states = GoalState_builder.add_subnet_states();
   PortState *new_port_states = GoalState_builder.add_port_states();
+  GatewayState *new_gateway_states = GoalState_builder.add_gateway_states();
 
   new_vpc_states->set_operation_type(OperationType::INFO);
 
@@ -419,20 +440,22 @@ TEST(zeta_programming_test_cases, create_auxgateway_test)
   VpcConfiguration_builder->set_id(vpc_id_1); // vpc_id
 
   // fill in auxgateway state structs
-  AuxGateway *auxGateway = VpcConfiguration_builder->mutable_auxiliary_gateway();
-  auxGateway->set_aux_gateway_type(AuxGatewayType::ZETA);
-  auxGateway->set_id(auxGateway_id_2); //zgc_id
+  GatewayConfiguration *GatewayConfiguration_builder =
+          new_gateway_states->mutable_configuration();
+  GatewayConfiguration_builder->set_gateway_type(GatewayType::ZETA);
+  GatewayConfiguration_builder->set_id(auxGateway_id_2); //zgc_id
 
-  AuxGateway_zeta *zeta_info = auxGateway->mutable_zeta_info();
+  GatewayConfiguration_zeta *zeta_info =
+          GatewayConfiguration_builder->mutable_zeta_info();
   zeta_info->set_port_inband_operation(oam_port_2); //port_ibo
 
-  AuxGateway_destination *destination;
+  GatewayConfiguration_destination *destination;
 
-  destination = auxGateway->add_destinations();
+  destination = GatewayConfiguration_builder->add_destinations();
   destination->set_ip_address(remote_ip_1); //gw.ip
   destination->set_mac_address(node_mac_address_1); //gw.mac
 
-  destination = auxGateway->add_destinations();
+  destination = GatewayConfiguration_builder->add_destinations();
   destination->set_ip_address(remote_ip_2);
   destination->set_mac_address(node_mac_address_2);
 
@@ -531,22 +554,21 @@ TEST(zeta_programming_test_cases, DISABLED_zeta_scale_container)
 
   // do some validate
   uint group_id = ACA_Zeta_Programming::get_instance().get_group_id(auxGateway_id_from_aca_data);
-  if (group_id==0){
+  if (group_id == 0) {
     cout << "group_id:" << group_id << " not exist" << endl;
-  }
-  else{
-    int retcode1=0,retcode2=0;
+  } else {
+    int retcode1 = 0, retcode2 = 0;
     retcode1 = ACA_Zeta_Programming::get_instance().group_rule_exists(group_id);
-    if (retcode1){
+    if (retcode1) {
       cout << "group rule exist" << endl;
       // Further validate if the ip in gws is included in the group entry or not
       retcode2 = test_gws_info_correct(zeta_gateway_path_CHILD_config_file, group_id);
-      if (retcode2){
+      if (retcode2) {
         cout << "group rule is right" << endl;
-      }else{
+      } else {
         cout << "group rule is not right" << endl;
       }
-    }else{
+    } else {
       cout << "group rule not exist" << endl;
     }
   }
