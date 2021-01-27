@@ -439,6 +439,8 @@ TEST(zeta_programming_test_cases, create_auxgateway_test)
   VpcConfiguration *VpcConfiguration_builder = new_vpc_states->mutable_configuration();
   VpcConfiguration_builder->set_tunnel_id(tunnel_id_1); //vni
   VpcConfiguration_builder->set_id(vpc_id_1); // vpc_id
+  string *GatewayId_builder = VpcConfiguration_builder->add_gateway_ids();
+  *GatewayId_builder = auxGateway_id_2; // zgc_id
 
   // fill in auxgateway state structs
   GatewayConfiguration *GatewayConfiguration_builder =
