@@ -433,6 +433,7 @@ TEST(zeta_programming_test_cases, create_auxgateway_test)
   GatewayState *new_gateway_states = GoalState_builder.add_gateway_states();
 
   new_vpc_states->set_operation_type(OperationType::INFO);
+  new_gateway_states->set_operation_type(OperationType::CREATE);
 
   // fill in vpc state structs
   VpcConfiguration *VpcConfiguration_builder = new_vpc_states->mutable_configuration();
@@ -443,6 +444,7 @@ TEST(zeta_programming_test_cases, create_auxgateway_test)
   GatewayConfiguration *GatewayConfiguration_builder =
           new_gateway_states->mutable_configuration();
   GatewayConfiguration_builder->set_gateway_type(GatewayType::ZETA);
+  GatewayConfiguration_builder->set_revision_number(1);
   GatewayConfiguration_builder->set_id(auxGateway_id_2); //zgc_id
 
   GatewayConfiguration_zeta *zeta_info =
