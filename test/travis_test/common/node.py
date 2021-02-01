@@ -40,7 +40,7 @@ class Node:
         Create and initialize an ACA docker container.
         """
         docker_client = docker.from_env()
-        docker_image = "aca_build0:latest"  # Image from building ACA
+        docker_image = "busybox:latest"  # Image from building ACA
 
         # Mount current working directory to /mnt/alcor-control-agent
         mount_pnt = docker.types.Mount("/mnt/alcor-control-agent",
