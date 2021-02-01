@@ -128,20 +128,6 @@ int Aca_Comm_Manager::update_goal_state(GoalState &goal_state_message,
     rc = exec_command_rc;
   }
 
-  if (goal_state_message.gateway_states_size() > 0) {
-    exec_command_rc = Aca_Goal_State_Handler::get_instance().update_gateway_states(
-            goal_state_message, gsOperationReply);
-    if (exec_command_rc == EXIT_SUCCESS) {
-      ACA_LOG_INFO("Successfully updated gateway states, rc: %d\n", exec_command_rc);
-    } else if (exec_command_rc == EINPROGRESS) {
-      ACA_LOG_INFO("Update gateway states returned pending, rc: %d\n", exec_command_rc);
-      rc = exec_command_rc;
-    } else {
-      ACA_LOG_ERROR("Failed to update gateway states. rc: %d\n", exec_command_rc);
-      rc = exec_command_rc;
-    }
-  }
-
   auto end = chrono::steady_clock::now();
 
   auto message_total_operation_time = cast_to_microseconds(end - start).count();

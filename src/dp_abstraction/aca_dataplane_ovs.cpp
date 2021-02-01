@@ -74,6 +74,41 @@ static bool aca_lookup_subnet_info(GoalState &parsed_struct, const string target
   return false;
 }
 
+static bool aca_lookup_zeta_gateway_info(GoalState &parsed_struct, const string targeted_vpc_id,
+                                         GatewayConfiguration &found_zeta_gateway)
+{
+  // TODO: cache the zeta gateway information to a dictionary to provide
+  // a faster look up for the next run, only use the below loop for
+  // cache miss.
+  // Look up the vpc configuration to query for zeta gateway
+  for (int i = 0; i < parsed_struct.vpc_states_size(); i++) {
+    VpcConfiguration current_VpcConfiguration =
+            parsed_struct.vpc_states(i).configuration();
+
+    ACA_LOG_DEBUG("current_VpcConfiguration Vpc ID: %s.\n",
+                  current_VpcConfiguration.id().c_str());
+
+    if (parsed_struct.vpc_states(i).operation_type() == OperationType::INFO) {
+      if (current_VpcConfiguration.id() == targeted_vpc_id) {
+        for (int j = 0; j < current_VpcConfiguration.gateway_ids_size(); j++) {
+          for (int k = 0; k < parsed_struct.gateway_states_size(); k++) {
+            if (parsed_struct.gateway_states(k).configuration().id() ==
+                        current_VpcConfiguration.gateway_ids(j) &&
+                parsed_struct.gateway_states(k).configuration().gateway_type() == ZETA) {
+              found_zeta_gateway = parsed_struct.gateway_states(k).configuration();
+              return true;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  ACA_LOG_ERROR("Not able to find zeta gateway info for port with vpc ID: %s.\n",
+                targeted_vpc_id.c_str());
+  return false;
+}
+
 int ACA_Dataplane_OVS::initialize()
 {
   // TODO: improve the logging system, and add logging to this module
@@ -139,6 +174,7 @@ int ACA_Dataplane_OVS::update_port_state_workitem(const PortState current_PortSt
   string virtual_mac_address;
   string host_ip_address;
   string port_cidr;
+  GatewayConfiguration found_zeta_gateway;
   ulong culminative_dataplane_programming_time = 0;
   ulong culminative_network_configuration_time = 0;
 
@@ -169,6 +205,14 @@ int ACA_Dataplane_OVS::update_port_state_workitem(const PortState current_PortSt
                     current_PortConfiguration.fixed_ips(0).subnet_id().c_str());
       overall_rc = -EXIT_FAILURE;
       goto EXIT;
+    }
+
+    if (!aca_lookup_zeta_gateway_info(parsed_struct, current_PortConfiguration.vpc_id(),
+                                      found_zeta_gateway)) {
+      // mark as warning for now to support the current workflow
+      // the code should proceed assuming this is a non aux gateway (zeta) supported port
+      ACA_LOG_WARN("Not able to find auxgateway info for port with vpc ID: %s.\n",
+                   current_PortConfiguration.vpc_id().c_str());
     }
 
     switch (current_PortState.operation_type()) {
@@ -203,6 +247,13 @@ int ACA_Dataplane_OVS::update_port_state_workitem(const PortState current_PortSt
               current_PortConfiguration.vpc_id(), generated_port_name, port_cidr,
               virtual_mac_address, found_tunnel_id, culminative_dataplane_programming_time);
 
+      if (found_zeta_gateway.gateway_type() == ZETA) {
+        ACA_LOG_INFO("%s", "AuxGateway_type is zeta!\n");
+        // Update the zeta settings of vpc
+        overall_rc = ACA_Zeta_Programming::get_instance().create_zeta_config(
+                found_zeta_gateway, found_tunnel_id);
+      }
+
       break;
 
     case OperationType::UPDATE:
@@ -228,6 +279,13 @@ int ACA_Dataplane_OVS::update_port_state_workitem(const PortState current_PortSt
       overall_rc = ACA_OVS_L2_Programmer::get_instance().delete_port(
               current_PortConfiguration.vpc_id(), generated_port_name,
               found_tunnel_id, culminative_dataplane_programming_time);
+
+      if (found_zeta_gateway.gateway_type() == ZETA) {
+        ACA_LOG_INFO("%s", "AuxGateway_type is zeta!\n");
+        // Delete the zeta settings of vpc
+        overall_rc = ACA_Zeta_Programming::get_instance().delete_zeta_config(
+                found_zeta_gateway, found_tunnel_id);
+      }
 
       break;
 
@@ -514,103 +572,6 @@ int ACA_Dataplane_OVS::update_router_state_workitem(RouterState current_RouterSt
     ACA_LOG_INFO("%s", "Successfully configured the router state.\n");
   } else {
     ACA_LOG_ERROR("Unable to configure the router state: rc=%d\n", overall_rc);
-  }
-
-  return overall_rc;
-}
-
-int ACA_Dataplane_OVS::update_gateway_state_workitem(GatewayState current_GatewayState,
-                                                     GoalState &parsed_struct,
-                                                     GoalStateOperationReply &gsOperationReply)
-{
-  int overall_rc;
-  ulong culminative_dataplane_programming_time = 0;
-  ulong culminative_network_configuration_time = 0;
-
-  auto operation_start = chrono::steady_clock::now();
-
-  GatewayConfiguration current_GatewayConfiguration =
-          current_GatewayState.configuration();
-
-  // TODO: need to design the usage of current_GatewayConfiguration.revision_number()
-  assert(current_GatewayConfiguration.revision_number() > 0);
-
-  switch (current_GatewayState.operation_type()) {
-  case OperationType::CREATE:
-    if (current_GatewayConfiguration.gateway_type() == ZETA) {
-      ACA_LOG_INFO("%s", "Gateway_type is zeta!\n");
-      for (int i = 0; i < parsed_struct.vpc_states_size(); i++) {
-        VpcConfiguration current_VpcConfiguration =
-                parsed_struct.vpc_states(i).configuration();
-
-        ACA_LOG_DEBUG("current_VpcConfiguration vpc ID: %s.\n",
-                      current_VpcConfiguration.id().c_str());
-
-        if (parsed_struct.vpc_states(i).operation_type() == OperationType::INFO) {
-          for (int j = 0; j < current_VpcConfiguration.gateway_ids_size(); j++) {
-            if (current_VpcConfiguration.gateway_ids(j) ==
-                current_GatewayConfiguration.id()) {
-              // Update the zeta settings of vpc
-              overall_rc = ACA_Zeta_Programming::get_instance().create_zeta_config(
-                      current_GatewayConfiguration, current_VpcConfiguration.tunnel_id());
-            }
-          }
-        }
-      }
-    }
-    break;
-
-  case OperationType::UPDATE:
-    [[fallthrough]];
-  case OperationType::INFO:
-    [[fallthrough]];
-  case OperationType::DELETE:
-    if (current_GatewayConfiguration.gateway_type() == ZETA) {
-      ACA_LOG_INFO("%s", "Gateway_type is zeta!\n");
-      for (int i = 0; i < parsed_struct.vpc_states_size(); i++) {
-        VpcConfiguration current_VpcConfiguration =
-                parsed_struct.vpc_states(i).configuration();
-
-        ACA_LOG_DEBUG("current_VpcConfiguration vpc ID: %s.\n",
-                      current_VpcConfiguration.id().c_str());
-
-        if (parsed_struct.vpc_states(i).operation_type() == OperationType::INFO) {
-          for (int j = 0; j < current_VpcConfiguration.gateway_ids_size(); j++) {
-            if (current_VpcConfiguration.gateway_ids(j) ==
-                current_GatewayConfiguration.id()) {
-              // Delete the zeta settings of vpc
-              overall_rc = ACA_Zeta_Programming::get_instance().delete_zeta_config(
-                      current_GatewayConfiguration, current_VpcConfiguration.tunnel_id());
-            }
-          }
-        }
-      }
-    }
-
-    break;
-
-  default:
-    ACA_LOG_ERROR("Invalid gateway state operation type %d\n",
-                  current_GatewayState.operation_type());
-    overall_rc = -EXIT_FAILURE;
-    break;
-  }
-
-  auto operation_end = chrono::steady_clock::now();
-
-  auto operation_total_time =
-          cast_to_microseconds(operation_end - operation_start).count();
-
-  aca_goal_state_handler::Aca_Goal_State_Handler::get_instance().add_goal_state_operation_status(
-          gsOperationReply, current_GatewayConfiguration.id(),
-          ResourceType::GATEWAY, current_GatewayState.operation_type(),
-          overall_rc, culminative_dataplane_programming_time,
-          culminative_network_configuration_time, operation_total_time);
-
-  if (overall_rc == EXIT_SUCCESS) {
-    ACA_LOG_INFO("%s", "Successfully configured the gateway state.\n");
-  } else {
-    ACA_LOG_ERROR("Unable to configure the gateway state: rc=%d\n", overall_rc);
   }
 
   return overall_rc;
