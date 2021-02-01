@@ -30,5 +30,5 @@ before_script:
 jobs:
   include:
     - stage: "Compile & test"
-      script: python3 -W ignore -m unittest test/travis_test/test_aca_2_ports.py
+      script: python3 ./test/travis_test/test_aca_2_ports.py
       # script: ./deploy/full_deploy.sh -d kind && python3 -W ignore -m unittest src/mgmt/tests/test_zeta_aca_ping.py
