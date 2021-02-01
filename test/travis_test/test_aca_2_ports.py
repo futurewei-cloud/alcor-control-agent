@@ -7,8 +7,8 @@ import unittest
 import os
 import json
 from time import sleep
-from common.node import Node
-from common.common import logger, CONSTANTS
+from .common.node import Node
+from .common.common import logger, CONSTANTS
 
 
 class test_aca_2_ports(unittest.TestCase):
@@ -24,3 +24,6 @@ cd /mnt/alcor-control-agent && ./build/tests/aca_tests --gtest_also_run_disabled
         cmd = (f'''bash -c '\
 cd /mnt/alcor-control-agent && ./build/tests/aca_tests --gtest_also_run_disabled_tests --gtest_filter=*{testcases_to_run[1]}' ''')
         self.node_2.run(cmd)
+
+if __name__=='__main__':
+    unittest.main()
