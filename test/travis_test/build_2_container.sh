@@ -31,15 +31,15 @@ docker ps -a
 
 if [ "$1" == "2_port_test" ]; then
   echo "    --- building alcor-control-agent ---"
-  # docker exec aca_PARENT bash -c "cd /mnt/host/code && cmake . && make"
-  # docker exec aca_CHILD bash -c "cd /mnt/host/code && cmake . && make"
-  echo "    --- running alcor-control-agent ---"
+  docker exec aca_CHILD bash -c "cd /mnt/host/code && cmake . && make"
+  docker exec aca_PARENT bash -c "cd /mnt/host/code && cmake . && make"
+  # echo "    --- running alcor-control-agent ---"
   # sends output to null device, but stderr to console 
-  # docker exec aca_PARENT bash -c "nohup /mnt/host/code/build/bin/AlcorControlAgent -d > /dev/null 2>&1 &"
   # docker exec aca_CHILD bash -c "nohup /mnt/host/code/build/bin/AlcorControlAgent -d > /dev/null 2>&1 &"
+  # docker exec aca_PARENT bash -c "nohup /mnt/host/code/build/bin/AlcorControlAgent -d > /dev/null 2>&1 &"
   echo "    --- running 2_ports_CREATE_test ---"
   # run DISABLED_2_ports_CREATE_test_traffic_PARENT and DISABLED_2_ports_CREATE_test_traffic_CHILD
-  # docker exec aca_PARENT bash -c "cd /mnt/host/code && ./build/tests/aca_tests --gtest_also_run_disabled_tests --gtest_filter=DISABLED_2_ports_CREATE_test_traffic_PARENT"
-  # docker exec aca_CHILD bash -c "cd /mnt/host/code && ./build/tests/aca_tests --gtest_also_run_disabled_tests --gtest_filter=DISABLED_2_ports_CREATE_test_traffic_CHILD"
-
+  docker exec aca_CHILD bash -c "cd /mnt/host/code && ./build/tests/aca_tests --gtest_also_run_disabled_tests --gtest_filter=DISABLED_2_ports_CREATE_test_traffic_CHILD"
+  docker exec aca_PARENT bash -c "cd /mnt/host/code && ./build/tests/aca_tests --gtest_also_run_disabled_tests --gtest_filter=DISABLED_2_ports_CREATE_test_traffic_PARENT"
+  
 fi
