@@ -15,14 +15,17 @@ docker images
 docker build -f $code_dir/build/Dockerfile -t aca_build0 .
 echo "    --- images_2 ---"
 docker images
-# docker rm -f aca_PARENT || true
-# docker create -v $code_dir:/mnt/host/code -it --privileged --cap-add=NET_ADMIN --cap-add=SYS_PTRACE --security-opt seccomp=unconfined --name aca_PARENT aca_build0:latest /bin/bash
-# docker start aca_PARENT
+echo "    --- container-1 ---"
+docker ps -a
+docker rm -f aca_PARENT || true
+docker create -v $code_dir:/mnt/host/code -it --privileged --cap-add=NET_ADMIN --cap-add=SYS_PTRACE --security-opt seccomp=unconfined --name aca_PARENT aca_build0:latest /bin/bash
+docker start aca_PARENT
 
-# docker rm -f aca_CHILD || true
-# docker create -v $code_dir:/mnt/host/code -it --privileged --cap-add=NET_ADMIN --cap-add=SYS_PTRACE --security-opt seccomp=unconfined --name aca_CHILD aca_build0:latest /bin/bash
-# docker start aca_CHILD
-
+docker rm -f aca_CHILD || true
+docker create -v $code_dir:/mnt/host/code -it --privileged --cap-add=NET_ADMIN --cap-add=SYS_PTRACE --security-opt seccomp=unconfined --name aca_CHILD aca_build0:latest /bin/bash
+docker start aca_CHILD
+echo "    --- container-2 ---"
+docker ps -a
 # Build mizar first
 # docker exec a1 bash -c "cd /mnt/host/code/mizar && make"
 
