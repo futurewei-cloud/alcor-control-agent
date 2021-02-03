@@ -2,7 +2,7 @@
 
 ### 1. Experimental topology
 
-![](images/Experimental_topology.JPG)
+![](../images/Experimental_topology.JPG)
 
 <p align="center">Figure 1. Experimental topology</p>
 

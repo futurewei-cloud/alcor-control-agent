@@ -4,11 +4,11 @@
 
 Figure 1 Highlevel Architecture
 
-image::images/zeta_integration_high_level.jpg["Highlevel Architecture", width=800, link="zeta_integration_high_level.jpg"]
+image::../images/zeta_integration_high_level.jpg["Highlevel Architecture", width=800, link="zeta_integration_high_level.jpg"]
 
 Figure 2 Illustion of Gateway Path and Direct Path
 
-image::images/gateway_direct_path.jpg["gateway_direct_path", width=400, link="gateway_direct_path.jpg"]
+image::../images/gateway_direct_path.jpg["gateway_direct_path", width=400, link="gateway_direct_path.jpg"]
 
 . Control/API Network. Alcor server configures the group entries and the buckets in the group entries for each computing node. 
 Each group entry corresponds to a Zeta Gateway Cluster (ZGC). Each bucket in the group entry corresponds to a gateway in ZGC.
@@ -34,11 +34,11 @@ After determining which group rule will handle the packet, the group rules suppo
 
 Figure 2 Packet Processing for Gateway Path and Direct Path
 
-image::images/direct_path_configuration.jpg["direct path configuration", width=800, link="direct_path_configuration.jpg"]
+image::../images/zeta_packet_processing.jpg["zeta_packet_processing", width=800, link="zeta_packet_processing.jpg"]
 
 Figure 3 Example Topology
 
-image::images/zeta_integration_example.jpg["example", width=600, link="zeta_integration_example.jpg"]
+image::../images/zeta_integration_example.jpg["example", width=600, link="zeta_integration_example.jpg"]
 
 The following workflow is based on the figure above.
 
@@ -64,7 +64,6 @@ Gateway path configuration happens when a VM boots up and there is no existing V
 
     group_id=100,type=select,bucket=output:vxlan231,bucket=output:vxlan232
 
-. ACA installs a rules on br-tun to match the OAM packets from gateway nodes. This rule can match UDP port with 8300 and pass the matched packet to ACA;
 
 === Workflow for Group Rule Delete
 
@@ -91,8 +90,6 @@ This happens when a gateway node receive the first packet from compute node, the
 
 . The gateway node sends the OAM packet to the computing node;
 
-. The ovs on host receives the OAM packet and pass it to ACA;
-
 . ACA parses OAM packet and extract information about the IP and mac of destination host and VM;
 
 . ACA add higher priority rule in flow table to support VM to VM direct path;
@@ -111,7 +108,7 @@ When ACA receive OAM packet, it needs to parse it and decide what the action is.
 
 . ACA extracts OP_Data in OAM packet;
 
-. ACA uses OP_Data according to OP_Code to issue commands to ovs;
+. According to OP_Code, ACA uses OP_Data to add or delete rules on ovs;
 
 
 == Cross-subnet Communication 
@@ -212,18 +209,11 @@ After the first packet from docker71 send to the gateway node, the gateway node 
 
 == Code changes
 
-=== Goal State Message Change from Alcor Server to ACA
-
-Add code in aca_dataplane_ovs.h to support parsing ZGC information sended from Alcor server;
-
 === OAM Packet Handling
 . include/aca_oam_server.h
     .. Define the data struct of op_data in OAM packet;
     .. Define the interface for receiving and parsing OAM packets;
     .. Define the interface for establishing direct path between VMs;
-
-. include/aca_zeta_state_handler.h
-    .. Define the interface to receive goal state message from Alcor server;
 
 . include/aca_zeta_programming.h
     .. Define the data struct about gateway path configuration;
@@ -232,8 +222,12 @@ Add code in aca_dataplane_ovs.h to support parsing ZGC information sended from A
 . src/zeta/aca_oam_server.cpp
     .. Implement the interface in the include/aca_oam_server.h 
 
+. src/zeta/aca_zeta_programming.cpp
+    .. Implement the interface in the include/aca_zeta_programming.h 
+
 === Test Code Updates
 
-TBD
+. test/gtest/aca_test_zeta_programming.cpp
+    .. Verify gateway path and direct path
 
 
