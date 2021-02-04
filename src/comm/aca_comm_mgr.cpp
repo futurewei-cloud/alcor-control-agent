@@ -180,30 +180,12 @@ void Aca_Comm_Manager::print_goal_state(GoalState parsed_struct)
     fprintf(stdout, "current_VpcConfiguration.tunnel_id(): %u \n",
             current_VpcConfiguration.tunnel_id());
 
-    for (int j = 0; j < current_VpcConfiguration.subnet_ids_size(); j++) {
-      fprintf(stdout, "current_VpcConfiguration.subnet_ids(%d): %s \n", j,
-              current_VpcConfiguration.subnet_ids(j).id().c_str());
-    }
+    fprintf(stdout, "current_VpcConfiguration.tunnel_id(): %u \n",
+            current_VpcConfiguration.tunnel_id());
 
-    auto current_auxiliary_gateway = current_VpcConfiguration.auxiliary_gateway();
-
-    fprintf(stdout, "current_auxiliary_gateway.auxgateway_type(): %d\n",
-            current_auxiliary_gateway.aux_gateway_type());
-
-    fprintf(stdout, "current_auxiliary_gateway.id(): %s\n",
-            current_auxiliary_gateway.id().c_str());
-
-    for (int k = 0; k < current_auxiliary_gateway.destinations_size(); k++) {
-      fprintf(stdout, "current_auxiliary_gateway.destinations(%d).ip_address(): %s \n",
-              k, current_auxiliary_gateway.destinations(k).ip_address().c_str());
-
-      fprintf(stdout, "current_auxiliary_gateway.destinations(%d).mac_address(): %s \n",
-              k, current_auxiliary_gateway.destinations(k).mac_address().c_str());
-    }
-
-    if (current_auxiliary_gateway.has_zeta_info()) {
-      fprintf(stdout, "current_auxiliary_gateway.zeta_info().port_inband_operation: %d\n",
-              current_auxiliary_gateway.zeta_info().port_inband_operation());
+    for (int j = 0; j < current_VpcConfiguration.gateway_ids_size(); j++) {
+      fprintf(stdout, "current_VpcConfiguration.gateway_size(%d): %s \n", j,
+              current_VpcConfiguration.gateway_ids(j).c_str());
     }
 
     printf("\n");
@@ -524,6 +506,35 @@ void Aca_Comm_Manager::print_goal_state(GoalState parsed_struct)
         fprintf(stdout, "current_routing_rule(%d).routing_rule_extra_info().next_hop_mac()): %s\n",
                 k, current_routing_rule.routing_rule_extra_info().next_hop_mac().c_str());
       }
+    }
+
+    printf("\n");
+  }
+
+  for (int i = 0; i < parsed_struct.gateway_states_size(); i++) {
+    fprintf(stdout, "parsed_struct.gateway_states(%d).operation_type(): %s\n", i,
+            aca_get_operation_string(parsed_struct.gateway_states(i).operation_type()));
+
+    GatewayConfiguration current_GatewayConfiguration =
+            parsed_struct.gateway_states(i).configuration();
+
+    fprintf(stdout, "current_GatewayConfiguration.gateway_type(): %d\n",
+            current_GatewayConfiguration.gateway_type());
+
+    fprintf(stdout, "current_GatewayConfiguration.id(): %s\n",
+            current_GatewayConfiguration.id().c_str());
+
+    for (int k = 0; k < current_GatewayConfiguration.destinations_size(); k++) {
+      fprintf(stdout, "current_GatewayConfiguration.destinations(%d).ip_address(): %s \n",
+              k, current_GatewayConfiguration.destinations(k).ip_address().c_str());
+
+      fprintf(stdout, "current_GatewayConfiguration.destinations(%d).mac_address(): %s \n",
+              k, current_GatewayConfiguration.destinations(k).mac_address().c_str());
+    }
+
+    if (current_GatewayConfiguration.has_zeta_info()) {
+      fprintf(stdout, "current_GatewayConfiguration.zeta_info().port_inband_operation: %d\n",
+              current_GatewayConfiguration.zeta_info().port_inband_operation());
     }
 
     printf("\n");

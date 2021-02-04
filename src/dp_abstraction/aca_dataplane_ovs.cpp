@@ -74,13 +74,13 @@ static bool aca_lookup_subnet_info(GoalState &parsed_struct, const string target
   return false;
 }
 
-static bool aca_lookup_auxgateway_info(GoalState &parsed_struct, const string targeted_vpc_id,
-                                       AuxGateway &found_auxgateway)
+static bool aca_lookup_zeta_gateway_info(GoalState &parsed_struct, const string targeted_vpc_id,
+                                         GatewayConfiguration &found_zeta_gateway)
 {
-  // TODO: cache the auxgateway information to a dictionary to provide
+  // TODO: cache the zeta gateway information to a dictionary to provide
   // a faster look up for the next run, only use the below loop for
   // cache miss.
-  // Look up the vpc configuration to query for auxgateway
+  // Look up the vpc configuration to query for zeta gateway
   for (int i = 0; i < parsed_struct.vpc_states_size(); i++) {
     VpcConfiguration current_VpcConfiguration =
             parsed_struct.vpc_states(i).configuration();
@@ -90,14 +90,21 @@ static bool aca_lookup_auxgateway_info(GoalState &parsed_struct, const string ta
 
     if (parsed_struct.vpc_states(i).operation_type() == OperationType::INFO) {
       if (current_VpcConfiguration.id() == targeted_vpc_id) {
-        found_auxgateway =
-                parsed_struct.vpc_states(i).configuration().auxiliary_gateway();
-        return true;
+        for (int j = 0; j < current_VpcConfiguration.gateway_ids_size(); j++) {
+          for (int k = 0; k < parsed_struct.gateway_states_size(); k++) {
+            if (parsed_struct.gateway_states(k).configuration().id() ==
+                        current_VpcConfiguration.gateway_ids(j) &&
+                parsed_struct.gateway_states(k).configuration().gateway_type() == ZETA) {
+              found_zeta_gateway = parsed_struct.gateway_states(k).configuration();
+              return true;
+            }
+          }
+        }
       }
     }
   }
 
-  ACA_LOG_ERROR("Not able to find auxgateway info for port with vpc ID: %s.\n",
+  ACA_LOG_ERROR("Not able to find zeta gateway info for port with vpc ID: %s.\n",
                 targeted_vpc_id.c_str());
   return false;
 }
@@ -167,7 +174,7 @@ int ACA_Dataplane_OVS::update_port_state_workitem(const PortState current_PortSt
   string virtual_mac_address;
   string host_ip_address;
   string port_cidr;
-  AuxGateway found_auxgateway;
+  GatewayConfiguration found_zeta_gateway;
   ulong culminative_dataplane_programming_time = 0;
   ulong culminative_network_configuration_time = 0;
 
@@ -200,8 +207,8 @@ int ACA_Dataplane_OVS::update_port_state_workitem(const PortState current_PortSt
       goto EXIT;
     }
 
-    if (!aca_lookup_auxgateway_info(parsed_struct, current_PortConfiguration.vpc_id(),
-                                    found_auxgateway)) {
+    if (!aca_lookup_zeta_gateway_info(parsed_struct, current_PortConfiguration.vpc_id(),
+                                      found_zeta_gateway)) {
       // mark as warning for now to support the current workflow
       // the code should proceed assuming this is a non aux gateway (zeta) supported port
       ACA_LOG_WARN("Not able to find auxgateway info for port with vpc ID: %s.\n",
@@ -240,11 +247,11 @@ int ACA_Dataplane_OVS::update_port_state_workitem(const PortState current_PortSt
               current_PortConfiguration.vpc_id(), generated_port_name, port_cidr,
               virtual_mac_address, found_tunnel_id, culminative_dataplane_programming_time);
 
-      if (found_auxgateway.aux_gateway_type() == ZETA) {
+      if (found_zeta_gateway.gateway_type() == ZETA) {
         ACA_LOG_INFO("%s", "AuxGateway_type is zeta!\n");
         // Update the zeta settings of vpc
         overall_rc = ACA_Zeta_Programming::get_instance().create_zeta_config(
-                found_auxgateway, found_tunnel_id);
+                found_zeta_gateway, found_tunnel_id);
       }
 
       break;
@@ -273,11 +280,11 @@ int ACA_Dataplane_OVS::update_port_state_workitem(const PortState current_PortSt
               current_PortConfiguration.vpc_id(), generated_port_name,
               found_tunnel_id, culminative_dataplane_programming_time);
 
-      if (found_auxgateway.aux_gateway_type() == ZETA) {
+      if (found_zeta_gateway.gateway_type() == ZETA) {
         ACA_LOG_INFO("%s", "AuxGateway_type is zeta!\n");
         // Delete the zeta settings of vpc
         overall_rc = ACA_Zeta_Programming::get_instance().delete_zeta_config(
-                found_auxgateway, found_tunnel_id);
+                found_zeta_gateway, found_tunnel_id);
       }
 
       break;
@@ -569,5 +576,4 @@ int ACA_Dataplane_OVS::update_router_state_workitem(RouterState current_RouterSt
 
   return overall_rc;
 }
-
 } // namespace aca_dataplane_ovs

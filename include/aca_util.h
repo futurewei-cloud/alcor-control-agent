@@ -57,12 +57,6 @@ static inline const char *aca_get_operation_string(alcor::schema::OperationType 
     return "DELETE";
   case alcor::schema::OperationType::INFO:
     return "INFO";
-  case alcor::schema::OperationType::NEIGHBOR_CREATE_UPDATE:
-    return "NEIGHBOR_CREATE_UPDATE";
-  case alcor::schema::OperationType::NEIGHBOR_GET:
-    return "NEIGHBOR_GET";
-  case alcor::schema::OperationType::NEIGHBOR_DELETE:
-    return "NEIGHBOR_DELETE";
 
   default:
     return "ERROR: unknown operation type!";

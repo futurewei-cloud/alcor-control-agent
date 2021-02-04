@@ -46,7 +46,7 @@ ACA_Zeta_Programming &ACA_Zeta_Programming::get_instance()
 }
 
 void ACA_Zeta_Programming::create_entry(string zeta_gateway_id, uint oam_port,
-                                        alcor::schema::AuxGateway current_AuxGateway)
+                                        alcor::schema::GatewayConfiguration current_AuxGateway)
 {
   ACA_LOG_DEBUG("%s", "ACA_Zeta_Programming::create_entry ---> Entering\n");
 
@@ -184,7 +184,7 @@ void start_upd_listener(uint oam_port_number)
   }
 }
 
-int ACA_Zeta_Programming::create_zeta_config(const alcor::schema::AuxGateway current_AuxGateway,
+int ACA_Zeta_Programming::create_zeta_config(const alcor::schema::GatewayConfiguration current_AuxGateway,
                                              uint tunnel_id)
 {
   ACA_LOG_DEBUG("%s", "ACA_Zeta_Programming::create_zeta_config ---> Entering\n");
@@ -255,7 +255,7 @@ int ACA_Zeta_Programming::create_zeta_config(const alcor::schema::AuxGateway cur
   return overall_rc;
 }
 
-int ACA_Zeta_Programming::delete_zeta_config(const alcor::schema::AuxGateway current_AuxGateway,
+int ACA_Zeta_Programming::delete_zeta_config(const alcor::schema::GatewayConfiguration current_AuxGateway,
                                              uint tunnel_id)
 {
   ACA_LOG_DEBUG("%s", "ACA_Zeta_Programming::delete_zeta_config ---> Entering\n");

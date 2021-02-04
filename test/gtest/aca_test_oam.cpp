@@ -93,9 +93,9 @@ TEST(oam_message_test_cases, oams_recv_valid)
   aca_vlan_manager::ACA_Vlan_Manager::get_instance().set_zeta_gateway(match.vni, auxGateway_id_1);
 
   // fill in auxgateway state structs
-  AuxGateway new_auxGateway;
+  GatewayConfiguration new_auxGateway;
   new_auxGateway.set_id(auxGateway_id_1);
-  AuxGateway_zeta *zeta_info = new_auxGateway.mutable_zeta_info();
+  GatewayConfiguration_zeta *zeta_info = new_auxGateway.mutable_zeta_info();
   zeta_info->set_port_inband_operation(oam_port_1); //port_ibo
 
   // fill zeta_config_table

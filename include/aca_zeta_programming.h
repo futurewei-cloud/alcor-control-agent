@@ -45,7 +45,7 @@ class FWD_Info {
   {
     return ((ip_addr == other.ip_addr) && (mac_addr == other.mac_addr));
   };
-  
+
   // Overload "!=" for hash operation
   bool operator!=(const FWD_Info &other) const
   {
@@ -58,7 +58,7 @@ class FWD_Info_Hash {
   public:
   std::size_t operator()(const FWD_Info &rhs) const
   {
-    return std::hash<string>()(rhs.ip_addr) ^ std::hash<string>()(rhs.mac_addr);
+    return std::hash<string>()(rhs.ip_addr + rhs.mac_addr);
   }
 }; // namespace aca_zeta_programming
 
@@ -77,13 +77,15 @@ class ACA_Zeta_Programming {
   static ACA_Zeta_Programming &get_instance();
 
   void create_entry(string zeta_gateway_id, uint oam_port,
-                    alcor::schema::AuxGateway current_AuxGateway);
+                    alcor::schema::GatewayConfiguration current_AuxGateway);
 
   void clear_all_data();
 
-  int create_zeta_config(const alcor::schema::AuxGateway current_AuxGateway, uint tunnel_id);
+  int create_zeta_config(const alcor::schema::GatewayConfiguration current_AuxGateway,
+                         uint tunnel_id);
 
-  int delete_zeta_config(const alcor::schema::AuxGateway current_AuxGateway, uint tunnel_id);
+  int delete_zeta_config(const alcor::schema::GatewayConfiguration current_AuxGateway,
+                         uint tunnel_id);
 
   bool group_rule_exists(uint group_id);
 
@@ -91,7 +93,7 @@ class ACA_Zeta_Programming {
 
   uint get_group_id(string zeta_gateway_id);
 
-  bool group_rule_info_correct(uint group_id,string gws_ip,string gws_mac);
+  bool group_rule_info_correct(uint group_id, string gws_ip, string gws_mac);
 
   private:
   int _create_group_punt_rule(uint tunnel_id, uint group_id);
