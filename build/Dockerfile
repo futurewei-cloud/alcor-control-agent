@@ -105,7 +105,7 @@ RUN echo "5--- installing openvswitch dependancies ---" && \
     rm -rf /var/local/git/openvswitch && \
     cd ~
 
-ENV PATH=$PATH:/usr/local/share/openvswitch/scripts \
+ENV PATH=$PATH:/usr/local/share/openvswitch/scripts:/usr/local/bin \
     LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib
 
 
