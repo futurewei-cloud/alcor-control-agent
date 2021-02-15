@@ -103,9 +103,11 @@ RUN echo "5--- installing openvswitch dependancies ---" && \
     mkdir -p /usr/local/include/openvswitch && \
     cp /var/local/git/openvswitch/lib/vconn-provider.h /usr/local/include/openvswitch/vconn-provider.h && \
     rm -rf /var/local/git/openvswitch && \
+    /etc/init.d/openvswitch-switch restart \
+    ovs-vswitchd --pidfile --detach \
     cd ~
 
-ENV PATH=$PATH:/usr/local/share/openvswitch/scripts:/usr/local/bin \
+ENV PATH=$PATH:/usr/local/share/openvswitch/scripts \
     LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib
 
 
