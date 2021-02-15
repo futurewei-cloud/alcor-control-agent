@@ -32,7 +32,8 @@ RUN echo "1--- installing common dependencies ---" && \
     dh-autoreconf \
     pkg-config \
     libtool \
-    wget
+    wget \
+    openvswitch-swtich
 
 RUN pip3 install httpserver netaddr
 
@@ -103,6 +104,8 @@ RUN echo "5--- installing openvswitch dependancies ---" && \
     mkdir -p /usr/local/include/openvswitch && \
     cp /var/local/git/openvswitch/lib/vconn-provider.h /usr/local/include/openvswitch/vconn-provider.h && \
     rm -rf /var/local/git/openvswitch && \
+    etc/init.d/openvswitch-switch restart && \
+    ovs-vswitchd --pidfile --detach && \
     cd ~
 
 ENV PATH=$PATH:/usr/local/share/openvswitch/scripts \
