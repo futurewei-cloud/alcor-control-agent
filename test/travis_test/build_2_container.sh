@@ -22,9 +22,11 @@ echo "    --- create container ---"
 docker rm -f aca_PARENT || true
 docker create -v $code_dir:/mnt/host/code -it --privileged --cap-add=NET_ADMIN --cap-add=SYS_PTRACE --security-opt seccomp=unconfined --name aca_PARENT aca_build0:latest /bin/bash
 docker start aca_PARENT
+docker exec aca_PARENT bash -c "/etc/init.d/openvswitch-swtich restart"
 docker rm -f aca_CHILD || true
 docker create -v $code_dir:/mnt/host/code -it --privileged --cap-add=NET_ADMIN --cap-add=SYS_PTRACE --security-opt seccomp=unconfined --name aca_CHILD aca_build0:latest /bin/bash
 docker start aca_CHILD
+docker exec aca_CHILD bash -c "/etc/init.d/openvswitch-swtich restart"
 echo "    --- container list ---"
 docker ps -a
 

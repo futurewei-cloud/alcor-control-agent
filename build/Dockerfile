@@ -32,11 +32,12 @@ RUN echo "1--- installing common dependencies ---" && \
     dh-autoreconf \
     pkg-config \
     libtool \
-    wget
+    wget \
+    openvswitch-switch
 
 RUN pip3 install httpserver netaddr
 
-# this layer is consuming about 406MB, can try to optimize 
+# this layer is consuming about 406MB, can try to optimize
 RUN echo "2--- installing librdkafka ---" && \
     apt-get install -y --no-install-recommends\
     librdkafka-dev \
@@ -103,12 +104,8 @@ RUN echo "5--- installing openvswitch dependancies ---" && \
     mkdir -p /usr/local/include/openvswitch && \
     cp /var/local/git/openvswitch/lib/vconn-provider.h /usr/local/include/openvswitch/vconn-provider.h && \
     rm -rf /var/local/git/openvswitch && \
-    /usr/local/share/openvswitch/scripts/ovs-ctl start && \
+    test -f /usr/bin/ovs-vsctl && rm -rf /usr/local/sbin/ov* /usr/local/bin/ov* /usr/local/bin/vtep* && \
     cd ~
-
-ENV PATH=$PATH:/usr/local/share/openvswitch/scripts \
-    LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib
-
 
 ENV PULSAR_RELEASE_TAG='pulsar-2.6.1'
 RUN echo "7--- installing pulsar dependacies ---" && \
@@ -117,6 +114,5 @@ RUN echo "7--- installing pulsar dependacies ---" && \
     wget https://archive.apache.org/dist/pulsar/${PULSAR_RELEASE_TAG}/DEB/apache-pulsar-client-dev.deb -O /var/local/git/pulsar/apache-pulsar-client-dev.deb && \
     cd /var/local/git/pulsar && \
     apt install -y ./apache-pulsar-client*.deb && \
-    rm -rf /var/local/git/pulsar 
-
+    rm -rf /var/local/git/pulsar
 
