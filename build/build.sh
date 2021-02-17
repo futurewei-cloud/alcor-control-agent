@@ -19,7 +19,8 @@ if [ "$1" != "test" ]; then
   # Build alcor control agent
   echo "--- building alcor-control-agent ---"
   docker exec a1 bash -c "cd /mnt/host/code && cmake . && make && \
-    /etc/init.d/openvswitch-switch restart"
+    /etc/init.d/openvswitch-switch restart && \
+    ovs-vswitchd --pidfile --detach"
 else
   sed -i.bak -E 's/("add-br )([a-z]+-[a-z]+)(")/\1\2 -- set bridge \2 datapath_type=netdev\3/g' $BUILD/../src/ovs/aca_ovs_l2_programmer.cpp
   # Build alcor control agent
@@ -29,7 +30,6 @@ else
   echo "--- Start ACA Unit test ---"
   echo "    --- rebuilding br-tun and br-int"
   docker exec a1 bash -c ' \
-    /etc/init.d/openvswitch-switch restart && \
     ovs-ctl --delete-bridges stop && \
     rm -rf /etc/openvswitch /usr/local/etc/openvswitch && \
     mkdir -p /var/log/openvswitch && \
