@@ -31,7 +31,6 @@ docker exec aca_CHILD bash -c "/etc/init.d/openvswitch-switch restart && \
 ovs-vswitchd --pidfile --detach"
 echo "    --- container list ---"
 docker ps -a
-exit
 if [ "$1" == "2_port_test" ]; then
   echo "    --- building alcor-control-agent ---"
   docker exec aca_CHILD bash -c "cd /mnt/host/code && cmake . && make"
