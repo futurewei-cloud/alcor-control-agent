@@ -10,7 +10,7 @@ echo "code path is $code_dir"
 # git submodule update --init --recursive
 
 # Create and Start the build contrainer
-if [ "$1" == "2_port_test_make" ]; then
+if [ "$1" == "compile_and_run_unit_test" ]; then
   echo "    --- images list ---"
   docker images
   echo "    --- build image ---"
