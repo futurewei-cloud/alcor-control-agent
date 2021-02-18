@@ -20,6 +20,7 @@ before_script:
 
 jobs:
   include:
-    - stage: "Compile & test"
+    - stage: "Compile"
       script: ./test/travis_test/build_2_container.sh 2_port_test_make
+    - stage: "Start ping test"
       script: ./test/travis_test/build_2_container.sh 2_port_test_traffic
