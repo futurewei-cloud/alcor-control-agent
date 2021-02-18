@@ -21,4 +21,5 @@ before_script:
 jobs:
   include:
     - stage: "Compile & test"
-      script: ./test/travis_test/build_2_container.sh 2_port_test
+      script: ./test/travis_test/build_2_container.sh 2_port_test_make
+      script: ./test/travis_test/build_2_container.sh 2_port_test_traffic
