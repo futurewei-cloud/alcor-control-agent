@@ -21,7 +21,7 @@ before_script:
 jobs:
   include:
     - stage: "Compile and run unit test"
-      script: ./test/travis_test/build_2_container.sh 2_port_test_make
+      script: ./test/travis_test/build_2_container.sh compile_and_run_unit_test
 jobs:
   include:
     - stage: "Start ping test"
