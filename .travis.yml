@@ -1,0 +1,26 @@
+language: c
+
+dist: bionic
+addons:
+  apt:
+    packages:
+      - "python3"
+      - "python3-pip"
+      - "python3-setuptools"
+      - "docker.io"
+before_script:
+  - sudo apt-get update
+  - sudo systemctl unmask docker.service
+  - sudo systemctl unmask docker.socket
+  - sudo systemctl start docker
+  - sudo systemctl enable docker
+  - pip3 install docker
+  # Build ACA
+  # - ./build/build.sh
+
+script:
+  - echo "Compile and run unit test"
+  - ./test/travis_test/build_2_container.sh compile_and_run_unit_test
+  # - echo "Start ping test" # Commented out due to issue 216
+  # - ./test/travis_test/build_2_container.sh 2_port_test_traffic
+

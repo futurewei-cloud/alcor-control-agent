@@ -151,14 +151,11 @@ int ACA_Vlan_Manager::delete_ovs_port(string /*vpc_id*/, string ovs_port,
     if (current_vpc_table_entry->ovs_ports.empty()) {
       _vpcs_table.erase(tunnel_id);
 
-      int internal_vlan_id = current_vpc_table_entry->vlan_id;
-
       // also delete the rule assoicated with the VPC:
       // table 4 = incoming vxlan, allow incoming vxlan traffic matching tunnel_id
       // to stamp with internal vlan and deliver to br-int
-      string cmd_string =
-              "del-flows br-tun \"table=4, priority=1,tun_id=" + to_string(tunnel_id) +
-              " actions=mod_vlan_vid:" + to_string(internal_vlan_id) + "\" --strict";
+      string cmd_string = "del-flows br-tun \"table=4, priority=1,tun_id=" +
+                          to_string(tunnel_id) + "\" --strict";
 
       ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
               cmd_string, culminative_time, overall_rc);
