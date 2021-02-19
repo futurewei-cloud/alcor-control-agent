@@ -21,6 +21,6 @@ before_script:
 script:
   - echo "Compile and run unit test"
   - ./test/travis_test/build_2_container.sh compile_and_run_unit_test
-  - echo "Start ping test" # Commented out due to issue 216
-  #- ./test/travis_test/build_2_container.sh 2_port_test_traffic
+  # - echo "Start ping test" # Commented out due to issue 216
+  # - ./test/travis_test/build_2_container.sh 2_port_test_traffic
 
