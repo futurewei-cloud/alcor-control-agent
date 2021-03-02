@@ -21,6 +21,7 @@ if [ "$1" == "compile_and_run_unit_test" ]; then
   docker ps -a
   echo "    --- create network ---"
   docker network create --subnet=172.18.0.0/16 mynet123
+  
   echo "    --- create container with IP addresses assigned ---"
   docker rm -f aca_PARENT || true
   docker create -v $code_dir:/mnt/host/code -it --privileged --ip 172.18.0.2 --cap-add=NET_ADMIN --cap-add=SYS_PTRACE --security-opt seccomp=unconfined --name aca_PARENT aca_build0:latest /bin/bash
