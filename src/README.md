@@ -102,6 +102,9 @@ You should be ready to run the executable:
 root@ca62b6feec63:/mnt/host/code/alcor-control-agent# ./build/bin/AlcorControlAgent
 ```
 
+## Communication with AlcorControlAgent
+Once AlcorControlAgent is running, Alcor controller or any program will connection to it via the machine/container IP and port 50001 (configurable in ACA code). An example of a c++ program is under/test/func_tests/gs_tests.cpp, see this call to connect: GoalStateProvisionerClient grpc_client(grpc::CreateChannel( g_grpc_server + ":" + g_grpc_port, grpc::InsecureChannelCredentials()));
+
 # Build the container while behind a proxy
 
 If the docker installation environment is behind proxy the Dockerfile.proxy file needs
