@@ -19,16 +19,14 @@ if [ "$1" == "compile_and_run_unit_test" ]; then
   docker images
   echo "    --- container list ---"
   docker ps -a
-  echo "    --- create network ---"
-  docker network create --subnet=172.18.0.0/16 mynet123
   echo "    --- create container with IP addresses assigned ---"
   docker rm -f aca_PARENT || true
-  docker create -v $code_dir:/mnt/host/code -it --privileged --ip 172.18.0.2 --cap-add=NET_ADMIN --cap-add=SYS_PTRACE --security-opt seccomp=unconfined --name aca_PARENT aca_build0:latest /bin/bash
+  docker create -v $code_dir:/mnt/host/code -it --privileged --cap-add=NET_ADMIN --cap-add=SYS_PTRACE --security-opt seccomp=unconfined --name aca_PARENT aca_build0:latest /bin/bash
   docker start aca_PARENT
   docker exec aca_PARENT bash -c "/etc/init.d/openvswitch-switch restart && \
   ovs-vswitchd --pidfile --detach"
   docker rm -f aca_CHILD || true
-  docker create -v $code_dir:/mnt/host/code -it --privileged  --ip 172.18.0.3 --cap-add=NET_ADMIN --cap-add=SYS_PTRACE --security-opt seccomp=unconfined --name aca_CHILD aca_build0:latest /bin/bash
+  docker create -v $code_dir:/mnt/host/code -it --privileged --cap-add=NET_ADMIN --cap-add=SYS_PTRACE --security-opt seccomp=unconfined --name aca_CHILD aca_build0:latest /bin/bash
   docker start aca_CHILD
   docker exec aca_CHILD bash -c "/etc/init.d/openvswitch-switch restart && \
   ovs-vswitchd --pidfile --detach"
@@ -44,8 +42,14 @@ if [ "$1" == "compile_and_run_unit_test" ]; then
 
 elif [ "$1" == "2_port_test_traffic" ]; then
   echo "    --- 2_ports_CREATE test case---"
+  parent_container_ip=$(docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' aca_PARENT)
+  child_container_ip=$(docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' aca_CHILD)
+  echo "aca_PARENT ip: $parent_container_ip"
+  echo "aca_CHILD ip: $child_container_ip"
+  docker exec aca_CHILD -c "/etc/init.d/openvswitch-switch restart && ovs-vswitchd --pidfile --detach" || true
+  docker exec aca_PARENT -c "/etc/init.d/openvswitch-switch restart && ovs-vswitchd --pidfile --detach" || true
   # run DISABLED_2_ports_CREATE_test_traffic_PARENT and DISABLED_2_ports_CREATE_test_traffic_CHILD
-  docker exec aca_CHILD bash -c "cd /mnt/host/code && ./build/tests/aca_tests --gtest_also_run_disabled_tests --gtest_filter=*DISABLED_2_ports_CREATE_test_traffic_CHILD -p 172.18.0.2" &
+  docker exec aca_CHILD bash -c "cd /mnt/host/code && ./build/tests/aca_tests --gtest_also_run_disabled_tests --gtest_filter=*DISABLED_2_ports_CREATE_test_traffic_CHILD -p $parent_container_ip" &
   sleep 5
-  docker exec aca_PARENT bash -c "cd /mnt/host/code && ./build/tests/aca_tests --gtest_also_run_disabled_tests --gtest_filter=*DISABLED_2_ports_CREATE_test_traffic_PARENT -c 172.18.0.3"
+  docker exec aca_PARENT bash -c "cd /mnt/host/code && ./build/tests/aca_tests --gtest_also_run_disabled_tests --gtest_filter=*DISABLED_2_ports_CREATE_test_traffic_PARENT -c $child_container_ip"
 fi

@@ -476,6 +476,8 @@ TEST(zeta_programming_test_cases, create_auxgateway_test)
   retcode = Aca_Comm_Manager::get_instance().update_goal_state(
           GoalState_builder, gsOperationalReply);
 
+  ACA_Zeta_Programming::get_instance().cleanup_arp_entries();
+
   EXPECT_EQ(retcode, EXIT_SUCCESS);
 }
 

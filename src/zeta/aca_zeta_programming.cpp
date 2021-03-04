@@ -26,8 +26,7 @@ using namespace aca_ovs_control;
 using namespace aca_vlan_manager;
 using namespace aca_ovs_l2_programmer;
 
-
-
+vector<string> remove_arp_commands;
 namespace aca_zeta_programming
 {
 ACA_Zeta_Programming::ACA_Zeta_Programming()
@@ -299,6 +298,16 @@ int ACA_Zeta_Programming::delete_zeta_config(const alcor::schema::GatewayConfigu
   return overall_rc;
 }
 
+void ACA_Zeta_Programming::cleanup_arp_entries()
+{
+  ACA_LOG_INFO("%s", "Start cleaning all the arp entries...");
+  for (string cmd : remove_arp_commands) {
+    ACA_LOG_INFO("Removing this arp entry: %s\n", "cmd");
+    aca_net_config::Aca_Net_Config::get_instance().execute_system_command(cmd);
+  }
+  ACA_LOG_INFO("%s", "Finished cleaning all the arp entries...");
+}
+
 int ACA_Zeta_Programming::_create_zeta_group_entry(zeta_config *zeta_cfg)
 {
   ACA_LOG_DEBUG("%s", "ACA_Zeta_Programming::_create_zeta_group_entry ---> Entering\n");
@@ -321,6 +330,8 @@ int ACA_Zeta_Programming::_create_zeta_group_entry(zeta_config *zeta_cfg)
         // add the static arp entries
         string static_arp_string = "arp -s " + hash_node->getKey().ip_addr +
                                    " " + hash_node->getKey().mac_addr;
+        string static_arp_remove_cmd = "arp -d " + hash_node->getKey().ip_addr;
+        remove_arp_commands.push_back(static_arp_remove_cmd);
         aca_net_config::Aca_Net_Config::get_instance().execute_system_command(static_arp_string);
 
         // fill zeta_gws
@@ -375,6 +386,8 @@ int ACA_Zeta_Programming::_update_zeta_group_entry(zeta_config *zeta_cfg)
         // add the static arp entries
         string static_arp_string = "arp -s " + hash_node->getKey().ip_addr +
                                    " " + hash_node->getKey().mac_addr;
+        string static_arp_remove_cmd = "arp -d " + hash_node->getKey().ip_addr;
+        remove_arp_commands.push_back(static_arp_remove_cmd);
         aca_net_config::Aca_Net_Config::get_instance().execute_system_command(static_arp_string);
 
         cmd += ",bucket=\"set_field:" + hash_node->getKey().ip_addr +
@@ -478,7 +491,8 @@ bool ACA_Zeta_Programming::group_rule_info_correct(uint group_id, string gws_ip,
   string opt1 = "group_id=" + to_string(group_id);
   const string tail = "-\\>tun_dst";
   const string tail_mac = "-\\>eth_dst";
-  string opt2 = "bucket=actions=set_field:" + gws_ip + tail +",set_field:" + gws_mac + tail_mac + " >/dev/null 2>&1";
+  string opt2 = "bucket=actions=set_field:" + gws_ip + tail +
+                ",set_field:" + gws_mac + tail_mac + " >/dev/null 2>&1";
   string cmd_string = dump_flows + " | grep " + opt1 + " | grep " + opt2;
   overall_rc = aca_net_config::Aca_Net_Config::get_instance().execute_system_command(cmd_string);
   if (overall_rc == EXIT_SUCCESS) {
