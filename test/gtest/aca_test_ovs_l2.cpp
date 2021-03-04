@@ -752,17 +752,6 @@ TEST(ovs_l2_test_cases, DISABLED_2_ports_CREATE_test_traffic_PARENT)
   // free the allocated configurations since we are done with it now
   new_neighbor_states->clear_configuration();
   new_subnet_states->clear_configuration();
-
-  // delete br-int and br-tun bridges
-  ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
-          "del-br br-int", not_care_culminative_time, overall_rc);
-  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
-  overall_rc = EXIT_SUCCESS;
-
-  ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
-          "del-br br-tun", not_care_culminative_time, overall_rc);
-  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
-  overall_rc = EXIT_SUCCESS;
 }
 
 TEST(ovs_l2_test_cases, DISABLED_2_ports_CREATE_test_traffic_CHILD)

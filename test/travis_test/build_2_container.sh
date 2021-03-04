@@ -49,7 +49,7 @@ elif [ "$1" == "2_port_test_traffic" ]; then
   docker exec aca_CHILD -c "/etc/init.d/openvswitch-switch restart && ovs-vswitchd --pidfile --detach" || true
   docker exec aca_PARENT -c "/etc/init.d/openvswitch-switch restart && ovs-vswitchd --pidfile --detach" || true
   # run DISABLED_2_ports_CREATE_test_traffic_PARENT and DISABLED_2_ports_CREATE_test_traffic_CHILD
-  docker exec aca_CHILD bash -c "cd /mnt/host/code && ./build/tests/aca_tests --gtest_also_run_disabled_tests --gtest_filter=*DISABLED_2_ports_CREATE_test_traffic_CHILD -p $parent_container_ip" &
+  docker exec -d aca_CHILD /bin/bash -c "cd /mnt/host/code && ./build/tests/aca_tests --gtest_also_run_disabled_tests --gtest_filter=*DISABLED_2_ports_CREATE_test_traffic_CHILD -p $parent_container_ip" &
   sleep 5
-  docker exec aca_PARENT bash -c "cd /mnt/host/code && ./build/tests/aca_tests --gtest_also_run_disabled_tests --gtest_filter=*DISABLED_2_ports_CREATE_test_traffic_PARENT -c $child_container_ip"
+  docker exec aca_PARENT /bin/bash -c "cd /mnt/host/code && ./build/tests/aca_tests --gtest_also_run_disabled_tests --gtest_filter=*DISABLED_2_ports_CREATE_test_traffic_PARENT -c $child_container_ip"
 fi
