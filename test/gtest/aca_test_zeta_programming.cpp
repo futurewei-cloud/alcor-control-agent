@@ -410,7 +410,7 @@ TEST(zeta_programming_test_cases, delete_zeta_config_valid)
   EXPECT_EQ(retcode, EXIT_SUCCESS);
 }
 
-TEST(zeta_programming_test_cases, create_auxgateway_test)
+TEST(zeta_programming_test_cases, DISABLED_create_auxgateway_test)
 {
   ulong not_care_culminative_time = 0;
   int overall_rc;
@@ -475,8 +475,6 @@ TEST(zeta_programming_test_cases, create_auxgateway_test)
 
   retcode = Aca_Comm_Manager::get_instance().update_goal_state(
           GoalState_builder, gsOperationalReply);
-
-  ACA_Zeta_Programming::get_instance().cleanup_arp_entries();
 
   EXPECT_EQ(retcode, EXIT_SUCCESS);
 }
