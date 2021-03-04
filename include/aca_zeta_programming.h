@@ -80,7 +80,7 @@ class ACA_Zeta_Programming {
                     alcor::schema::GatewayConfiguration current_AuxGateway);
 
   void clear_all_data();
-  void cleanup_arp_entries();
+
   int create_zeta_config(const alcor::schema::GatewayConfiguration current_AuxGateway,
                          uint tunnel_id);
 
