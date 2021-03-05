@@ -35,12 +35,13 @@ class GoalStateProvisionerImpl final : public GoalStateProvisioner::Service {
                                    GoalStateOperationReply *goalStateOperationReply) override;
 
   Status
-  PushNetworkResourceStatesStream(ServerContext *context,
-                                  ServerReaderWriter<GoalStateOperationReply, GoalState> *stream) override;
+  PushGoalStatesStream(ServerContext *context,
+                       ServerReaderWriter<GoalStateOperationReply, GoalStateV2> *stream) override;
 
   Status ShutDownServer();
-  
+
   void RunServer();
+
   private:
   std::unique_ptr<Server> server;
 };

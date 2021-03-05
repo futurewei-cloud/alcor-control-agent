@@ -25,9 +25,13 @@ class Aca_Comm_Manager {
   public:
   static Aca_Comm_Manager &get_instance();
 
-  int deserialize(const unsigned char *mq_buffer, size_t buffer_length, alcor::schema::GoalState &parsed_struct);
+  int deserialize(const unsigned char *mq_buffer, size_t buffer_length,
+                  alcor::schema::GoalState &parsed_struct);
 
   int update_goal_state(alcor::schema::GoalState &goal_state_message,
+                        alcor::schema::GoalStateOperationReply &gsOperationReply);
+
+  int update_goal_state(alcor::schema::GoalStateV2 &goal_state_message,
                         alcor::schema::GoalStateOperationReply &gsOperationReply);
 
   // compiler will flag error when below is called
