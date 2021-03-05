@@ -93,6 +93,7 @@ int Aca_Dhcp_State_Handler::update_dhcp_state_workitem(const DHCPState current_D
     break;
   default:
     ACA_LOG_ERROR("%s", "=====>wrong dhcp operation\n");
+    overall_rc = EXIT_FAILURE;
     break;
   }
 
@@ -116,9 +117,6 @@ int Aca_Dhcp_State_Handler::update_dhcp_states(GoalState &parsed_struct,
   int rc;
   int overall_rc = EXIT_SUCCESS;
 
-  // if (parsed_struct.dhcp_states_size() == 0)
-  //   overall_rc = EXIT_SUCCESS in the current logic
-
   for (int i = 0; i < parsed_struct.dhcp_states_size(); i++) {
     ACA_LOG_DEBUG("=====>parsing dhcp states #%d\n", i);
 
@@ -127,22 +125,107 @@ int Aca_Dhcp_State_Handler::update_dhcp_states(GoalState &parsed_struct,
     workitem_future.push_back(std::async(
             std::launch::async, &Aca_Dhcp_State_Handler::update_dhcp_state_workitem, this,
             current_DhcpState, std::ref(parsed_struct), std::ref(gsOperationReply)));
-
-    //workitem_future.push_back(std::async(
-    //        std::launch::async, &Aca_Dhcp_State_Handler::update_dhcp_state_workitem, this,
-    //        current_DhcpState, std::ref(parsed_struct), std::ref(gsOperationReply)));
-
-    // keeping below just in case if we want to call it serially
-    // rc = update_dhcp_state_workitem(current_DHCPState, parsed_struct, gsOperationReply);
-    // if (rc != EXIT_SUCCESS)
-    //   overall_rc = rc;
   } // for (int i = 0; i < parsed_struct.dhcp_states_size(); i++)
 
   for (int i = 0; i < parsed_struct.dhcp_states_size(); i++) {
     rc = workitem_future[i].get();
     if (rc != EXIT_SUCCESS)
       overall_rc = rc;
-  } // for (int i = 0; i < parsed_struct.port_states_size(); i++)
+  } // for (int i = 0; i < parsed_struct.dhcp_states_size(); i++)
+
+  return overall_rc;
+}
+
+int Aca_Dhcp_State_Handler::update_dhcp_state_workitem_v2(const DHCPState current_DhcpState,
+                                                          GoalStateV2 &parsed_struct,
+                                                          GoalStateOperationReply &gsOperationReply)
+{
+  dhcp_config stDhcpCfg;
+  int overall_rc = EXIT_SUCCESS;
+  ulong culminative_dataplane_programming_time = 0;
+  ulong culminative_network_configuration_time = 0;
+
+  auto operation_start = chrono::steady_clock::now();
+
+  DHCPConfiguration current_DhcpConfiguration = current_DhcpState.configuration();
+  stDhcpCfg.mac_address = current_DhcpConfiguration.mac_address();
+  stDhcpCfg.ipv4_address = current_DhcpConfiguration.ipv4_address();
+  stDhcpCfg.ipv6_address = current_DhcpConfiguration.ipv6_address();
+  stDhcpCfg.port_host_name = current_DhcpConfiguration.port_host_name();
+
+  string subnet_id = current_DhcpConfiguration.subnet_id();
+
+  auto subnetStateFound = parsed_struct.subnet_states().find(subnet_id);
+
+  if (subnetStateFound != parsed_struct.subnet_states().end()) {
+    SubnetState current_SubnetState = subnetStateFound->second;
+    SubnetConfiguration current_SubnetConfiguration = current_SubnetState.configuration();
+
+    stDhcpCfg.gateway_address = current_SubnetConfiguration.gateway().ip_address();
+    stDhcpCfg.subnet_mask =
+            aca_convert_cidr_to_netmask(current_SubnetConfiguration.cidr());
+    // handle dhcp dns entries
+    for (int j = 0; j < current_SubnetConfiguration.dns_entry_list_size() && j < DHCP_MSG_OPTS_DNS_LENGTH;
+         j++) {
+      stDhcpCfg.dns_addresses[j] = current_SubnetConfiguration.dns_entry_list(j).entry();
+    }
+  } else {
+    ACA_LOG_ERROR("Not able to find the info for DHCP with subnet ID: %s.\n",
+                  subnet_id.c_str());
+    overall_rc = EXIT_FAILURE;
+  }
+
+  if (overall_rc == EXIT_SUCCESS)
+  {
+    switch (current_DhcpState.operation_type()) {
+    case OperationType::CREATE:
+      overall_rc = this->dhcp_programming_if->add_dhcp_entry(&stDhcpCfg);
+      break;
+    case OperationType::UPDATE:
+      overall_rc = this->dhcp_programming_if->update_dhcp_entry(&stDhcpCfg);
+      break;
+    case OperationType::DELETE:
+      overall_rc = this->dhcp_programming_if->delete_dhcp_entry(&stDhcpCfg);
+      break;
+    default:
+      ACA_LOG_ERROR("%s", "=====>wrong dhcp operation\n");
+      overall_rc = EXIT_FAILURE;
+    }
+  }
+
+  auto operation_end = chrono::steady_clock::now();
+
+  auto operation_total_time =
+          cast_to_microseconds(operation_end - operation_start).count();
+
+  aca_goal_state_handler::Aca_Goal_State_Handler::get_instance().add_goal_state_operation_status(
+          gsOperationReply, "NA_ID", DHCP, current_DhcpState.operation_type(),
+          overall_rc, culminative_dataplane_programming_time,
+          culminative_network_configuration_time, operation_total_time);
+
+  return overall_rc;
+}
+
+int Aca_Dhcp_State_Handler::update_dhcp_states(GoalStateV2 &parsed_struct,
+                                               GoalStateOperationReply &gsOperationReply)
+{
+  std::vector<std::future<int> > workitem_future;
+  int rc;
+  int overall_rc = EXIT_SUCCESS;
+
+  for (auto &[dhcp_id, current_DhcpState] : parsed_struct.dhcp_states()) {
+    ACA_LOG_DEBUG("=====>parsing dhcp state: %s\n", dhcp_id.c_str());
+
+    workitem_future.push_back(std::async(
+            std::launch::async, &Aca_Dhcp_State_Handler::update_dhcp_state_workitem_v2, this,
+            current_DhcpState, std::ref(parsed_struct), std::ref(gsOperationReply)));
+  } // for (int i = 0; i < parsed_struct.dhcp_states_size(); i++)
+
+  for (int i = 0; i < parsed_struct.dhcp_states_size(); i++) {
+    rc = workitem_future[i].get();
+    if (rc != EXIT_SUCCESS)
+      overall_rc = rc;
+  } // for (int i = 0; i < parsed_struct.dhcp_states_size(); i++)
 
   return overall_rc;
 }

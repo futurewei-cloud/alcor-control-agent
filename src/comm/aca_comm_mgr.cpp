@@ -141,7 +141,81 @@ int Aca_Comm_Manager::update_goal_state(GoalState &goal_state_message,
   g_total_update_GS_time += message_total_operation_time;
 
   return rc;
-} // namespace aca_comm_manager
+}
+
+int Aca_Comm_Manager::update_goal_state(GoalStateV2 &goal_state_message,
+                                        GoalStateOperationReply &gsOperationReply)
+{
+  int exec_command_rc;
+  int rc = EXIT_SUCCESS;
+  auto start = chrono::steady_clock::now();
+
+  ACA_LOG_DEBUG("Starting to update goal state with format_version: %u\n",
+                goal_state_message.format_version());
+
+  ACA_LOG_INFO("[METRICS] Goal state message size is: %lu bytes\n",
+               goal_state_message.ByteSizeLong());
+
+  // TBD
+  // this->print_goal_state(goal_state_message);
+
+  if (goal_state_message.router_states_size() > 0) {
+    exec_command_rc = Aca_Goal_State_Handler::get_instance().update_router_states(
+            goal_state_message, gsOperationReply);
+    if (exec_command_rc == EXIT_SUCCESS) {
+      ACA_LOG_INFO("Successfully updated router states, rc: %d\n", exec_command_rc);
+    } else {
+      ACA_LOG_ERROR("Failed to update router states. rc: %d\n", exec_command_rc);
+      rc = exec_command_rc;
+    }
+  }
+
+  if (goal_state_message.port_states_size() > 0) {
+    exec_command_rc = Aca_Goal_State_Handler::get_instance().update_port_states(
+            goal_state_message, gsOperationReply);
+    if (exec_command_rc == EXIT_SUCCESS) {
+      ACA_LOG_INFO("Successfully updated port states, rc: %d\n", exec_command_rc);
+    } else if (exec_command_rc == EINPROGRESS) {
+      ACA_LOG_INFO("Update port states returned pending, rc: %d\n", exec_command_rc);
+      rc = exec_command_rc;
+    } else {
+      ACA_LOG_ERROR("Failed to update port states. rc: %d\n", exec_command_rc);
+      rc = exec_command_rc;
+    }
+  }
+
+  if (goal_state_message.neighbor_states_size() > 0) {
+    exec_command_rc = Aca_Goal_State_Handler::get_instance().update_neighbor_states(
+            goal_state_message, gsOperationReply);
+    if (exec_command_rc == EXIT_SUCCESS) {
+      ACA_LOG_INFO("Successfully updated neighbor states, rc: %d\n", exec_command_rc);
+    } else {
+      ACA_LOG_ERROR("Failed to update neighbor states. rc: %d\n", exec_command_rc);
+      rc = exec_command_rc;
+    }
+  }
+
+  exec_command_rc = Aca_Dhcp_State_Handler::get_instance().update_dhcp_states(
+          goal_state_message, gsOperationReply);
+  if (exec_command_rc != EXIT_SUCCESS) {
+    ACA_LOG_ERROR("Failed to update dhcp state. Failed with error code %d\n", exec_command_rc);
+    rc = exec_command_rc;
+  }
+
+  auto end = chrono::steady_clock::now();
+
+  auto message_total_operation_time = cast_to_microseconds(end - start).count();
+
+  ACA_LOG_INFO("[METRICS] Elapsed time for message total operation took: %ld microseconds or %ld milliseconds\n",
+               message_total_operation_time, us_to_ms(message_total_operation_time));
+
+  gsOperationReply.set_message_total_operation_time(
+          message_total_operation_time + gsOperationReply.message_total_operation_time());
+
+  g_total_update_GS_time += message_total_operation_time;
+
+  return rc;
+}
 
 void Aca_Comm_Manager::print_goal_state(GoalState parsed_struct)
 {

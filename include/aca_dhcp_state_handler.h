@@ -33,6 +33,15 @@ class Aca_Dhcp_State_Handler {
   int update_dhcp_states(alcor::schema::GoalState &parsed_struct,
                          alcor::schema::GoalStateOperationReply &gsOperationReply);
 
+  // process ONE DHCP state
+  int update_dhcp_state_workitem_v2(const alcor::schema::DHCPState current_DHCPState,
+                                    alcor::schema::GoalStateV2 &parsed_struct,
+                                    alcor::schema::GoalStateOperationReply &gsOperationReply);
+
+  // process 0 to N DHCP states
+  int update_dhcp_states(alcor::schema::GoalStateV2 &parsed_struct,
+                         alcor::schema::GoalStateOperationReply &gsOperationReply);
+
   private:
   // constructor and destructor marked as private so that noone can call it
   // for the singleton implementation
