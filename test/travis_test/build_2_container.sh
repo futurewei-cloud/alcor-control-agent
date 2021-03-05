@@ -46,8 +46,6 @@ elif [ "$1" == "2_port_test_traffic" ]; then
   child_container_ip=$(docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' aca_CHILD)
   echo "aca_PARENT ip: $parent_container_ip"
   echo "aca_CHILD ip: $child_container_ip"
-  docker exec aca_CHILD -c "/etc/init.d/openvswitch-switch restart && ovs-vswitchd --pidfile --detach" || true
-  docker exec aca_PARENT -c "/etc/init.d/openvswitch-switch restart && ovs-vswitchd --pidfile --detach" || true
   # run DISABLED_2_ports_CREATE_test_traffic_PARENT and DISABLED_2_ports_CREATE_test_traffic_CHILD
   docker exec -d aca_CHILD /bin/bash -c "cd /mnt/host/code && ./build/tests/aca_tests --gtest_also_run_disabled_tests --gtest_filter=*DISABLED_2_ports_CREATE_test_traffic_CHILD -p $parent_container_ip" &
   sleep 5
