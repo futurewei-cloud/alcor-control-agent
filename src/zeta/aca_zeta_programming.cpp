@@ -26,8 +26,6 @@ using namespace aca_ovs_control;
 using namespace aca_vlan_manager;
 using namespace aca_ovs_l2_programmer;
 
-
-
 namespace aca_zeta_programming
 {
 ACA_Zeta_Programming::ACA_Zeta_Programming()
@@ -321,6 +319,7 @@ int ACA_Zeta_Programming::_create_zeta_group_entry(zeta_config *zeta_cfg)
         // add the static arp entries
         string static_arp_string = "arp -s " + hash_node->getKey().ip_addr +
                                    " " + hash_node->getKey().mac_addr;
+
         aca_net_config::Aca_Net_Config::get_instance().execute_system_command(static_arp_string);
 
         // fill zeta_gws
@@ -375,6 +374,7 @@ int ACA_Zeta_Programming::_update_zeta_group_entry(zeta_config *zeta_cfg)
         // add the static arp entries
         string static_arp_string = "arp -s " + hash_node->getKey().ip_addr +
                                    " " + hash_node->getKey().mac_addr;
+
         aca_net_config::Aca_Net_Config::get_instance().execute_system_command(static_arp_string);
 
         cmd += ",bucket=\"set_field:" + hash_node->getKey().ip_addr +
@@ -478,7 +478,8 @@ bool ACA_Zeta_Programming::group_rule_info_correct(uint group_id, string gws_ip,
   string opt1 = "group_id=" + to_string(group_id);
   const string tail = "-\\>tun_dst";
   const string tail_mac = "-\\>eth_dst";
-  string opt2 = "bucket=actions=set_field:" + gws_ip + tail +",set_field:" + gws_mac + tail_mac + " >/dev/null 2>&1";
+  string opt2 = "bucket=actions=set_field:" + gws_ip + tail +
+                ",set_field:" + gws_mac + tail_mac + " >/dev/null 2>&1";
   string cmd_string = dump_flows + " | grep " + opt1 + " | grep " + opt2;
   overall_rc = aca_net_config::Aca_Net_Config::get_instance().execute_system_command(cmd_string);
   if (overall_rc == EXIT_SUCCESS) {

@@ -1,4 +1,4 @@
-FROM ubuntu:18.04
+FROM fwnetworking/ubuntu:18.04
 RUN echo "1--- installing common dependencies ---" && \
     apt-get update -y && apt-get install -y \
     rpcbind \
