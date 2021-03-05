@@ -103,8 +103,8 @@ int Aca_Dhcp_State_Handler::update_dhcp_state_workitem(const DHCPState current_D
           cast_to_microseconds(operation_end - operation_start).count();
 
   aca_goal_state_handler::Aca_Goal_State_Handler::get_instance().add_goal_state_operation_status(
-          gsOperationReply, "NA_ID", DHCP, current_DhcpState.operation_type(),
-          overall_rc, culminative_dataplane_programming_time,
+          gsOperationReply, current_DhcpConfiguration.id(), DHCP,
+          current_DhcpState.operation_type(), overall_rc, culminative_dataplane_programming_time,
           culminative_network_configuration_time, operation_total_time);
 
   return overall_rc;
@@ -175,8 +175,7 @@ int Aca_Dhcp_State_Handler::update_dhcp_state_workitem_v2(const DHCPState curren
     overall_rc = EXIT_FAILURE;
   }
 
-  if (overall_rc == EXIT_SUCCESS)
-  {
+  if (overall_rc == EXIT_SUCCESS) {
     switch (current_DhcpState.operation_type()) {
     case OperationType::CREATE:
       overall_rc = this->dhcp_programming_if->add_dhcp_entry(&stDhcpCfg);
@@ -199,8 +198,8 @@ int Aca_Dhcp_State_Handler::update_dhcp_state_workitem_v2(const DHCPState curren
           cast_to_microseconds(operation_end - operation_start).count();
 
   aca_goal_state_handler::Aca_Goal_State_Handler::get_instance().add_goal_state_operation_status(
-          gsOperationReply, "NA_ID", DHCP, current_DhcpState.operation_type(),
-          overall_rc, culminative_dataplane_programming_time,
+          gsOperationReply, current_DhcpConfiguration.id(), DHCP,
+          current_DhcpState.operation_type(), overall_rc, culminative_dataplane_programming_time,
           culminative_network_configuration_time, operation_total_time);
 
   return overall_rc;
