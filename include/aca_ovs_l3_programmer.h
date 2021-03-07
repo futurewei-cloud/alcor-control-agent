@@ -67,6 +67,10 @@ class ACA_OVS_L3_Programmer {
                               GoalState &parsed_struct,
                               ulong &culminative_time_dataplane_programming_time);
 
+  int create_or_update_router(RouterConfiguration &current_RouterConfiguration,
+                              GoalStateV2 &parsed_struct,
+                              ulong &culminative_time_dataplane_programming_time);
+
   int delete_router(RouterConfiguration &current_RouterConfiguration,
                     ulong &culminative_time_dataplane_programming_time);
 

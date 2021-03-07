@@ -164,6 +164,8 @@ int Aca_Goal_State_Handler::update_port_states(GoalState &parsed_struct,
   return overall_rc;
 }
 
+// function overloading doesn't work when called by function pointer in update_port_states
+// therefore, naming this function as "v2"
 int Aca_Goal_State_Handler::update_port_state_workitem_v2(const PortState current_PortState,
                                                           GoalStateV2 &parsed_struct,
                                                           GoalStateOperationReply &gsOperationReply)
@@ -179,6 +181,7 @@ int Aca_Goal_State_Handler::update_port_states(GoalStateV2 &parsed_struct,
   int rc;
   int overall_rc = EXIT_SUCCESS;
 
+  // below is a c++ 17 feature
   for (auto &[port_id, current_PortState] : parsed_struct.port_states()) {
     ACA_LOG_DEBUG("=====>parsing port state: %s\n", port_id.c_str());
 
