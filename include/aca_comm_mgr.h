@@ -45,6 +45,8 @@ class Aca_Comm_Manager {
   ~Aca_Comm_Manager(){};
 
   void print_goal_state(alcor::schema::GoalState parsed_struct);
+
+  void print_goal_state(alcor::schema::GoalStateV2 parsed_struct);
 };
 } // namespace aca_comm_manager
 #endif
