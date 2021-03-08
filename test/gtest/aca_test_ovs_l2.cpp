@@ -67,13 +67,20 @@ extern bool g_demo_mode;
 extern uint neighbors_to_create;
 extern thread *ovs_monitor_thread;
 
+extern void aca_test_reset_environment();
 extern void aca_test_create_default_port_state(PortState *new_port_states);
 extern void aca_test_create_default_subnet_state(SubnetState *new_subnet_states);
 extern void aca_test_1_neighbor_CREATE_DELETE(NeighborType input_neighbor_type);
+extern void aca_test_1_neighbor_CREATE_DELETE_V2(NeighborType input_neighbor_type);
 extern void aca_test_1_port_CREATE_plus_neighbor_CREATE(NeighborType input_neighbor_type);
+extern void aca_test_1_port_CREATE_plus_neighbor_CREATE_V2(NeighborType input_neighbor_type);
 extern void aca_test_10_neighbor_CREATE(NeighborType input_neighbor_type);
+extern void aca_test_10_neighbor_CREATE_V2(NeighborType input_neighbor_type);
 extern void aca_test_1_port_CREATE_plus_N_neighbors_CREATE(NeighborType input_neighbor_type,
                                                            uint neighbors_to_create);
+extern void
+aca_test_1_port_CREATE_plus_N_neighbors_CREATE_V2(NeighborType input_neighbor_type,
+                                                  uint neighbors_to_create);
 
 // TODO: setup bridge when br-int is up and br-tun is gone
 
@@ -278,6 +285,81 @@ TEST(ovs_l2_test_cases, 1_port_CREATE_DELETE)
   // free the allocated configurations since we are done with it now
   new_port_states->clear_configuration();
   new_subnet_states->clear_configuration();
+
+  // delete br-int and br-tun bridges
+  ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
+          "del-br br-int", not_care_culminative_time, overall_rc);
+  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
+
+  ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
+          "del-br br-tun", not_care_culminative_time, overall_rc);
+  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
+}
+
+TEST(ovs_l2_test_cases, 1_port_CREATE_DELETE_V2)
+{
+  ulong not_care_culminative_time = 0;
+  string cmd_string;
+  int overall_rc;
+
+  aca_test_reset_environment();
+
+  GoalStateV2 GoalState_builder;
+  PortState new_port_states;
+  SubnetState new_subnet_states;
+
+  // fill in port state structs
+  aca_test_create_default_port_state(&new_port_states);
+  auto &port_states_map = *GoalState_builder.mutable_port_states();
+  port_states_map[port_id_1] = new_port_states;
+
+  // fill in subnet state structs
+  aca_test_create_default_subnet_state(&new_subnet_states);
+  auto &subnet_states_map = *GoalState_builder.mutable_subnet_states();
+  subnet_states_map[subnet_id_1] = new_subnet_states;
+
+  // set demo mode
+  bool previous_demo_mode = g_demo_mode;
+  g_demo_mode = true;
+
+  // create a new port in demo mode
+  GoalStateOperationReply gsOperationalReply;
+
+  overall_rc = Aca_Comm_Manager::get_instance().update_goal_state(
+          GoalState_builder, gsOperationalReply);
+  ASSERT_EQ(overall_rc, EXIT_SUCCESS);
+
+  // check to ensure the demo port is created and setup correctly
+  ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
+          "get Interface " + port_name_1 + " ofport", not_care_culminative_time, overall_rc);
+  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
+
+  // delete the port
+  new_port_states.set_operation_type(OperationType::DELETE);
+  GoalState_builder.clear_port_states();
+  port_states_map[port_id_1] = new_port_states;
+
+  overall_rc = Aca_Comm_Manager::get_instance().update_goal_state(
+          GoalState_builder, gsOperationalReply);
+  ASSERT_EQ(overall_rc, EXIT_SUCCESS);
+
+  // restore demo mode
+  g_demo_mode = previous_demo_mode;
+
+  // check to ensure the demo port is deleted
+  ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
+          "get Interface " + port_name_1 + " ofport", not_care_culminative_time, overall_rc);
+  EXPECT_NE(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
+
+  // clean up
+
+  // free the allocated configurations since we are done with it now
+  new_port_states.clear_configuration();
+  new_subnet_states.clear_configuration();
 
   // delete br-int and br-tun bridges
   ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
@@ -703,6 +785,11 @@ TEST(ovs_l2_test_cases, 10_ports_CREATE_V2)
 TEST(ovs_l2_test_cases, 1_l2_neighbor_CREATE_DELETE)
 {
   aca_test_1_neighbor_CREATE_DELETE(NeighborType::L2);
+}
+
+TEST(ovs_l2_test_cases, 1_l2_neighbor_CREATE_DELETE_V2)
+{
+  aca_test_1_neighbor_CREATE_DELETE_V2(NeighborType::L2);
 }
 
 TEST(ovs_l2_test_cases, 1_port_CREATE_plus_l2_neighbor_CREATE)
@@ -1145,6 +1232,470 @@ TEST(ovs_l2_test_cases, DISABLED_2_ports_CREATE_test_traffic_CHILD)
   new_port_states->clear_configuration();
   new_neighbor_states->clear_configuration();
   new_subnet_states->clear_configuration();
+
+  // wait for parent to ping child
+  ovs_monitor_thread->join();
+
+  // not deleting br-int and br-tun bridges so that parent can ping the two new ports
+}
+
+TEST(ovs_l2_test_cases, DISABLED_2_ports_CREATE_test_traffic_PARENT_V2)
+{
+  string two_port_vmac_address_1 = "fa:16:3e:d7:f2:6a";
+  string two_port_vmac_address_2 = "fa:16:3e:d7:f2:6b";
+  string two_port_vmac_address_3 = "fa:16:3e:d7:f2:6c";
+  string two_port_vmac_address_4 = "fa:16:3e:d7:f2:6d";
+
+  string two_port_vip_address_1 = "11.0.0.105";
+  string two_port_vip_address_2 = "11.0.1.106";
+  string two_port_vip_address_3 = "11.0.0.107";
+  string two_port_vip_address_4 = "11.0.1.108";
+
+  string two_port_vpc_id_1 = "2b08a5bc-b718-11ea-b3de-111111111112";
+  string two_port_vpc_id_2 = "2b08a5bc-b718-11ea-b3de-222222222223";
+
+  string two_port_port_id_1 = "11111111-b718-11ea-b3de-111111111112";
+  string two_port_port_id_2 = "12222222-b718-11ea-b3de-111111111113";
+  string two_port_port_id_3 = "13333333-b718-11ea-b3de-111111111114";
+  string two_port_port_id_4 = "14444444-b718-11ea-b3de-111111111115";
+
+  string two_port_port_name_1 = aca_get_port_name(two_port_port_id_1);
+  string two_port_port_name_2 = aca_get_port_name(two_port_port_id_2);
+  string two_port_port_name_3 = aca_get_port_name(two_port_port_id_3);
+  string two_port_port_name_4 = aca_get_port_name(two_port_port_id_4);
+
+  string two_port_subnet_id_1 = "27330ae4-b718-11ea-b3df-111111111113";
+  string two_port_subnet_id_2 = "27330ae4-b718-11ea-b3df-222222222224";
+
+  ulong not_care_culminative_time = 0;
+  string cmd_string;
+  int overall_rc;
+
+  ACA_Vlan_Manager::get_instance().clear_all_data();
+
+  // delete br-int and br-tun bridges
+  ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
+          "del-br br-int", not_care_culminative_time, overall_rc);
+
+  ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
+          "del-br br-tun", not_care_culminative_time, overall_rc);
+
+  // create and setup br-int and br-tun bridges, and their patch ports
+  overall_rc = ACA_OVS_L2_Programmer::get_instance().setup_ovs_bridges_if_need();
+  ASSERT_EQ(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
+
+  // monitor br-tun for arp request message
+  ovs_monitor_thread =
+          new thread(bind(&ACA_OVS_Control::monitor,
+                          &ACA_OVS_Control::get_instance(), "br-tun", "resume"));
+  ovs_monitor_thread->detach();
+
+  GoalStateV2 GoalState_builder;
+  PortState new_port_states;
+  SubnetState new_subnet_states;
+
+  new_port_states.set_operation_type(OperationType::CREATE);
+
+  // fill in port state structs for port 1
+  PortConfiguration *PortConfiguration_builder = new_port_states.mutable_configuration();
+  PortConfiguration_builder->set_revision_number(2);
+  PortConfiguration_builder->set_update_type(UpdateType::FULL);
+  PortConfiguration_builder->set_id(two_port_port_id_1);
+
+  PortConfiguration_builder->set_vpc_id(two_port_vpc_id_1);
+  PortConfiguration_builder->set_name(two_port_port_name_1);
+  PortConfiguration_builder->set_mac_address(two_port_vmac_address_1);
+  PortConfiguration_builder->set_admin_state_up(true);
+
+  PortConfiguration_FixedIp *FixedIp_builder = PortConfiguration_builder->add_fixed_ips();
+  FixedIp_builder->set_subnet_id(two_port_subnet_id_1);
+  FixedIp_builder->set_ip_address(two_port_vip_address_1);
+
+  PortConfiguration_SecurityGroupId *SecurityGroup_builder =
+          PortConfiguration_builder->add_security_group_ids();
+  SecurityGroup_builder->set_id("2");
+
+  auto &port_states_map = *GoalState_builder.mutable_port_states();
+  port_states_map[two_port_port_id_1] = new_port_states;
+
+  // fill in subnet state structs
+  new_subnet_states.set_operation_type(OperationType::INFO);
+
+  SubnetConfiguration *SubnetConiguration_builder =
+          new_subnet_states.mutable_configuration();
+  SubnetConiguration_builder->set_revision_number(2);
+  SubnetConiguration_builder->set_vpc_id(two_port_vpc_id_1);
+  SubnetConiguration_builder->set_id(two_port_subnet_id_1);
+  SubnetConiguration_builder->set_cidr("11.0.0.0/24");
+  SubnetConiguration_builder->set_tunnel_id(21);
+
+  auto &subnet_states_map = *GoalState_builder.mutable_subnet_states();
+  subnet_states_map[two_port_subnet_id_1] = new_subnet_states;
+
+  // add a new neighbor state with CREATE
+  NeighborState new_neighbor_states;
+  new_neighbor_states.set_operation_type(OperationType::CREATE);
+
+  // fill in neighbor state structs for port 3
+  NeighborConfiguration *NeighborConfiguration_builder =
+          new_neighbor_states.mutable_configuration();
+  NeighborConfiguration_builder->set_revision_number(2);
+
+  NeighborConfiguration_builder->set_vpc_id(two_port_vpc_id_1);
+  NeighborConfiguration_builder->set_id(two_port_port_id_3);
+  NeighborConfiguration_builder->set_mac_address(two_port_vmac_address_3);
+  NeighborConfiguration_builder->set_host_ip_address(remote_ip_2);
+
+  NeighborConfiguration_FixedIp *FixedIp_builder2 =
+          NeighborConfiguration_builder->add_fixed_ips();
+  FixedIp_builder2->set_neighbor_type(NeighborType::L2);
+  FixedIp_builder2->set_subnet_id(two_port_subnet_id_1);
+  FixedIp_builder2->set_ip_address(two_port_vip_address_3);
+
+  auto &neighbor_states_map = *GoalState_builder.mutable_neighbor_states();
+  neighbor_states_map[two_port_port_id_3] = new_neighbor_states;
+
+  // set demo mode
+  bool previous_demo_mode = g_demo_mode;
+  g_demo_mode = true;
+
+  // create a new port 1 + port 3 neighbor in demo mode
+  GoalStateOperationReply gsOperationalReply;
+
+  overall_rc = Aca_Comm_Manager::get_instance().update_goal_state(
+          GoalState_builder, gsOperationalReply);
+  ASSERT_EQ(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
+
+  // check to ensure the port 1 is created and setup correctly
+  ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
+          "get Interface " + two_port_port_name_1 + " ofport",
+          not_care_culminative_time, overall_rc);
+  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
+
+  // setup the configuration for port 2
+  PortConfiguration_builder->set_id(two_port_port_id_2);
+  PortConfiguration_builder->set_vpc_id(two_port_vpc_id_2);
+  PortConfiguration_builder->set_name(two_port_port_name_2);
+  PortConfiguration_builder->set_mac_address(two_port_vmac_address_2);
+  FixedIp_builder->set_ip_address(two_port_vip_address_2);
+  FixedIp_builder->set_subnet_id(two_port_subnet_id_2);
+
+  GoalState_builder.clear_port_states();
+  port_states_map[two_port_port_id_2] = new_port_states;
+
+  // fill in subnet state structs
+  SubnetConiguration_builder->set_vpc_id(two_port_vpc_id_2);
+  SubnetConiguration_builder->set_id(two_port_subnet_id_2);
+  SubnetConiguration_builder->set_cidr("11.0.1.0/24");
+  SubnetConiguration_builder->set_tunnel_id(31);
+
+  GoalState_builder.clear_subnet_states();
+  subnet_states_map[two_port_subnet_id_2] = new_subnet_states;
+
+  // fill in neighbor state structs for port 4
+  NeighborConfiguration_builder->set_vpc_id(two_port_vpc_id_2);
+  NeighborConfiguration_builder->set_id(two_port_port_id_4);
+  NeighborConfiguration_builder->set_mac_address(two_port_vmac_address_4);
+  FixedIp_builder2->set_subnet_id(two_port_subnet_id_2);
+  FixedIp_builder2->set_ip_address(two_port_vip_address_4);
+
+  GoalState_builder.clear_neighbor_states();
+  neighbor_states_map[two_port_port_id_4] = new_neighbor_states;
+
+  // create a new port 2 + port 4 neighbor in demo mode
+  overall_rc = Aca_Comm_Manager::get_instance().update_goal_state(
+          GoalState_builder, gsOperationalReply);
+  ASSERT_EQ(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
+
+  // restore demo mode
+  g_demo_mode = previous_demo_mode;
+
+  // check to ensure the port 2 is created and setup correctly
+  ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
+          "get Interface " + two_port_port_name_2 + " ofport",
+          not_care_culminative_time, overall_rc);
+  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
+
+  ACA_LOG_INFO("-------- After setting up, printout ifconfig: %d -------------\n", overall_rc);
+
+  overall_rc = Aca_Net_Config::get_instance().execute_system_command("ifconfig");
+
+  // test traffic between the two newly created ports
+  cmd_string = "ping -I " + two_port_vip_address_1 + " -c1 " + two_port_vip_address_2;
+  overall_rc = Aca_Net_Config::get_instance().execute_system_command(cmd_string);
+  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
+
+  cmd_string = "ping -I " + two_port_vip_address_2 + " -c1 " + two_port_vip_address_1;
+  overall_rc = Aca_Net_Config::get_instance().execute_system_command(cmd_string);
+  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
+
+  // test valid traffic from parent to child
+  cmd_string = "ping -I " + two_port_vip_address_1 + " -c1 " + two_port_vip_address_3;
+  overall_rc = Aca_Net_Config::get_instance().execute_system_command(cmd_string);
+  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
+
+  cmd_string = "ping -I " + two_port_vip_address_2 + " -c1 " + two_port_vip_address_4;
+  overall_rc = Aca_Net_Config::get_instance().execute_system_command(cmd_string);
+  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
+
+  // test invalid traffic from parent to child with different subnets
+  cmd_string = "ping -I " + two_port_vip_address_1 + " -c1 " + two_port_vip_address_4;
+  overall_rc = Aca_Net_Config::get_instance().execute_system_command(cmd_string);
+  EXPECT_NE(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
+
+  cmd_string = "ping -I " + two_port_vip_address_2 + " -c1 " + two_port_vip_address_3;
+  overall_rc = Aca_Net_Config::get_instance().execute_system_command(cmd_string);
+  EXPECT_NE(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
+
+  // just clearing the port states and reuse the rest GoalState_builder
+  new_port_states.clear_configuration();
+  GoalState_builder.clear_port_states();
+
+  // delete port 4 as L2 neighbor
+  new_neighbor_states.set_operation_type(OperationType::DELETE);
+  GoalState_builder.clear_neighbor_states();
+  neighbor_states_map[two_port_port_id_4] = new_neighbor_states;
+
+  overall_rc = Aca_Comm_Manager::get_instance().update_goal_state(
+          GoalState_builder, gsOperationalReply);
+  ASSERT_EQ(overall_rc, EXIT_SUCCESS);
+  ACA_LOG_INFO("-------- Delete port 4 was succcessful: %d -------------\n", overall_rc);
+
+  ACA_LOG_INFO("-------- After deleting port 4, printout ifconfig: %d -------------\n",
+               overall_rc);
+
+  overall_rc = Aca_Net_Config::get_instance().execute_system_command("ifconfig");
+
+  overall_rc = EXIT_SUCCESS;
+
+  // should not be able to ping port 4 anymore
+  cmd_string = "ping -I " + two_port_vip_address_2 + " -c1 " + two_port_vip_address_4;
+  overall_rc = Aca_Net_Config::get_instance().execute_system_command(cmd_string);
+  EXPECT_NE(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
+
+  // but still have to ping port 3 since it is not deleted
+  cmd_string = "ping -I " + two_port_vip_address_1 + " -c1 " + two_port_vip_address_3;
+  overall_rc = Aca_Net_Config::get_instance().execute_system_command(cmd_string);
+  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
+
+  // clean up
+
+  // free the allocated configurations since we are done with it now
+  new_neighbor_states.clear_configuration();
+  new_subnet_states.clear_configuration();
+}
+
+TEST(ovs_l2_test_cases, DISABLED_2_ports_CREATE_test_traffic_CHILD_V2)
+{
+  string two_port_vmac_address_1 = "fa:16:3e:d7:f2:6a";
+  string two_port_vmac_address_2 = "fa:16:3e:d7:f2:6b";
+  string two_port_vmac_address_3 = "fa:16:3e:d7:f2:6c";
+  string two_port_vmac_address_4 = "fa:16:3e:d7:f2:6d";
+
+  string two_port_vip_address_1 = "11.0.0.105";
+  string two_port_vip_address_2 = "11.0.1.106";
+  string two_port_vip_address_3 = "11.0.0.107";
+  string two_port_vip_address_4 = "11.0.1.108";
+
+  string two_port_vpc_id_1 = "2b08a5bc-b718-11ea-b3de-111111111112";
+  string two_port_vpc_id_2 = "2b08a5bc-b718-11ea-b3de-222222222223";
+
+  string two_port_port_id_1 = "11111111-b718-11ea-b3de-111111111112";
+  string two_port_port_id_2 = "12222222-b718-11ea-b3de-111111111113";
+  string two_port_port_id_3 = "13333333-b718-11ea-b3de-111111111114";
+  string two_port_port_id_4 = "14444444-b718-11ea-b3de-111111111115";
+
+  string two_port_port_name_1 = aca_get_port_name(two_port_port_id_1);
+  string two_port_port_name_2 = aca_get_port_name(two_port_port_id_2);
+  string two_port_port_name_3 = aca_get_port_name(two_port_port_id_3);
+  string two_port_port_name_4 = aca_get_port_name(two_port_port_id_4);
+
+  string two_port_subnet_id_1 = "27330ae4-b718-11ea-b3df-111111111113";
+  string two_port_subnet_id_2 = "27330ae4-b718-11ea-b3df-222222222224";
+
+  ulong not_care_culminative_time = 0;
+  string cmd_string;
+  int overall_rc;
+
+  ACA_Vlan_Manager::get_instance().clear_all_data();
+
+  // delete br-int and br-tun bridges
+  ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
+          "del-br br-int", not_care_culminative_time, overall_rc);
+
+  ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
+          "del-br br-tun", not_care_culminative_time, overall_rc);
+
+  // create and setup br-int and br-tun bridges, and their patch ports
+  overall_rc = ACA_OVS_L2_Programmer::get_instance().setup_ovs_bridges_if_need();
+  ASSERT_EQ(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
+
+  // monitor br-tun for arp request message
+  ovs_monitor_thread =
+          new thread(bind(&ACA_OVS_Control::monitor,
+                          &ACA_OVS_Control::get_instance(), "br-tun", "resume"));
+
+  GoalStateV2 GoalState_builder;
+  PortState new_port_states;
+  SubnetState new_subnet_states;
+
+  new_port_states.set_operation_type(OperationType::CREATE);
+
+  // fill in port state structs for port 3
+  PortConfiguration *PortConfiguration_builder = new_port_states.mutable_configuration();
+  PortConfiguration_builder->set_revision_number(2);
+  PortConfiguration_builder->set_update_type(UpdateType::FULL);
+  PortConfiguration_builder->set_id(two_port_port_id_3);
+
+  PortConfiguration_builder->set_vpc_id(two_port_vpc_id_1);
+  PortConfiguration_builder->set_name(two_port_port_name_3);
+  PortConfiguration_builder->set_mac_address(two_port_vmac_address_3);
+  PortConfiguration_builder->set_admin_state_up(true);
+
+  PortConfiguration_FixedIp *FixedIp_builder = PortConfiguration_builder->add_fixed_ips();
+  FixedIp_builder->set_subnet_id(two_port_subnet_id_1);
+  FixedIp_builder->set_ip_address(two_port_vip_address_3);
+
+  PortConfiguration_SecurityGroupId *SecurityGroup_builder =
+          PortConfiguration_builder->add_security_group_ids();
+  SecurityGroup_builder->set_id("2");
+
+  auto &port_states_map = *GoalState_builder.mutable_port_states();
+  port_states_map[two_port_port_id_3] = new_port_states;
+
+  // fill in subnet state structs
+  new_subnet_states.set_operation_type(OperationType::INFO);
+
+  SubnetConfiguration *SubnetConiguration_builder =
+          new_subnet_states.mutable_configuration();
+  SubnetConiguration_builder->set_revision_number(2);
+  SubnetConiguration_builder->set_vpc_id(two_port_vpc_id_1);
+  SubnetConiguration_builder->set_id(two_port_subnet_id_1);
+  SubnetConiguration_builder->set_cidr("11.0.0.0/24");
+  SubnetConiguration_builder->set_tunnel_id(21);
+
+  auto &subnet_states_map = *GoalState_builder.mutable_subnet_states();
+  subnet_states_map[two_port_subnet_id_1] = new_subnet_states;
+
+  // add a new neighbor state with CREATE
+  NeighborState new_neighbor_states;
+  new_neighbor_states.set_operation_type(OperationType::CREATE);
+
+  // fill in neighbor state structs for port 1
+  NeighborConfiguration *NeighborConfiguration_builder =
+          new_neighbor_states.mutable_configuration();
+  NeighborConfiguration_builder->set_revision_number(2);
+
+  NeighborConfiguration_builder->set_vpc_id(two_port_vpc_id_1);
+  NeighborConfiguration_builder->set_id(two_port_port_id_1);
+  NeighborConfiguration_builder->set_mac_address(two_port_vmac_address_1);
+  NeighborConfiguration_builder->set_host_ip_address(remote_ip_1);
+
+  NeighborConfiguration_FixedIp *FixedIp_builder2 =
+          NeighborConfiguration_builder->add_fixed_ips();
+  FixedIp_builder2->set_neighbor_type(NeighborType::L2);
+  FixedIp_builder2->set_subnet_id(two_port_subnet_id_1);
+  FixedIp_builder2->set_ip_address(two_port_vip_address_1);
+
+  auto &neighbor_states_map = *GoalState_builder.mutable_neighbor_states();
+  neighbor_states_map[two_port_port_id_1] = new_neighbor_states;
+
+  // set demo mode
+  bool previous_demo_mode = g_demo_mode;
+  g_demo_mode = true;
+
+  // create a new port 3 + port 1 neighbor in demo mode
+  GoalStateOperationReply gsOperationalReply;
+
+  overall_rc = Aca_Comm_Manager::get_instance().update_goal_state(
+          GoalState_builder, gsOperationalReply);
+  ASSERT_EQ(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
+
+  // check to ensure the port 3 is created and setup correctly
+  ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
+          "get Interface " + two_port_port_name_3 + " ofport",
+          not_care_culminative_time, overall_rc);
+  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
+
+  // setup the configuration for port 4
+  PortConfiguration_builder->set_id(two_port_port_id_4);
+  PortConfiguration_builder->set_vpc_id(two_port_vpc_id_2);
+  PortConfiguration_builder->set_name(two_port_port_name_4);
+  PortConfiguration_builder->set_mac_address(two_port_vmac_address_4);
+  FixedIp_builder->set_ip_address(two_port_vip_address_4);
+  FixedIp_builder->set_subnet_id(two_port_subnet_id_2);
+
+  GoalState_builder.clear_port_states();
+  port_states_map[two_port_port_id_4] = new_port_states;
+
+  // fill in subnet state structs
+  SubnetConiguration_builder->set_vpc_id(two_port_vpc_id_2);
+  SubnetConiguration_builder->set_id(two_port_subnet_id_2);
+  SubnetConiguration_builder->set_cidr("11.0.1.0/24");
+  SubnetConiguration_builder->set_tunnel_id(31);
+
+  GoalState_builder.clear_subnet_states();
+  subnet_states_map[two_port_subnet_id_2] = new_subnet_states;
+
+  // fill in port state structs for NEIGHBOR_CREATE_UPDATE for port 2
+  NeighborConfiguration_builder->set_vpc_id(two_port_vpc_id_2);
+  NeighborConfiguration_builder->set_id(two_port_port_id_2);
+  NeighborConfiguration_builder->set_mac_address(two_port_vmac_address_2);
+  FixedIp_builder2->set_subnet_id(two_port_subnet_id_2);
+  FixedIp_builder2->set_ip_address(two_port_vip_address_2);
+
+  GoalState_builder.clear_neighbor_states();
+  neighbor_states_map[two_port_port_id_2] = new_neighbor_states;
+
+  // create a new port 4 + port 2 neighbor in demo mode
+  overall_rc = Aca_Comm_Manager::get_instance().update_goal_state(
+          GoalState_builder, gsOperationalReply);
+  ASSERT_EQ(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
+
+  // restore demo mode
+  g_demo_mode = previous_demo_mode;
+
+  // check to ensure the port 4 is created and setup correctly
+  ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
+          "get Interface " + two_port_port_name_4 + " ofport",
+          not_care_culminative_time, overall_rc);
+  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
+
+  // test traffic between the two newly created ports
+  cmd_string = "ping -I " + two_port_vip_address_3 + " -c1 " + two_port_vip_address_4;
+  overall_rc = Aca_Net_Config::get_instance().execute_system_command(cmd_string);
+  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
+
+  cmd_string = "ping -I " + two_port_vip_address_4 + " -c1 " + two_port_vip_address_3;
+  overall_rc = Aca_Net_Config::get_instance().execute_system_command(cmd_string);
+  EXPECT_EQ(overall_rc, EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
+
+  // clean up
+
+  // free the allocated configurations since we are done with it now
+  new_port_states.clear_configuration();
+  new_neighbor_states.clear_configuration();
+  new_subnet_states.clear_configuration();
 
   // wait for parent to ping child
   ovs_monitor_thread->join();
