@@ -283,161 +283,126 @@ class GoalStateProvisionerClient {
 
     ACA_LOG_INFO("[***METRICS***] Total GRPC latency/usage for sync call: %ld microseconds or %ld milliseconds\n",
                  send_goalstate_time - g_total_ACA_Message_time.load(),
-                 (send_goalstate_time - us_to_ms(g_total_ACA_Message_time.load())));
+                 us_to_ms((send_goalstate_time - g_total_ACA_Message_time.load())));
   }
 
-  //   int send_goalstate_stream_one(GoalState &goalState, GoalStateOperationReply &gsOperationReply)
-  //   {
-  //     ClientContext context;
+  // working ip prefix = 1-254
+  void send_goalstate_stream(uint states_to_create, string ip_prefix)
+  {
+    ClientContext context;
 
-  //     auto before_stream_create = std::chrono::steady_clock::now();
+    g_total_ACA_Message_time = 0;
 
-  //     std::shared_ptr<ClientReaderWriter<GoalState, GoalStateOperationReply> > stream(
-  //             stub_->PushNetworkResourceStatesStream(&context));
+    auto before_send_goalstate = std::chrono::steady_clock::now();
 
-  //     auto after_stream_create = std::chrono::steady_clock::now();
+    auto before_stream_create = std::chrono::steady_clock::now();
 
-  //     auto stream_create_time =
-  //             cast_to_microseconds(after_stream_create - before_stream_create).count();
+    std::shared_ptr<ClientReaderWriter<GoalStateV2, GoalStateOperationReply> > stream(
+            stub_->PushGoalStatesStream(&context));
 
-  //     ACA_LOG_INFO("[METRICS] stream_create call took: %ld microseconds or %ld milliseconds\n",
-  //                  stream_create_time, us_to_ms(stream_create_time));
+    auto after_stream_create = std::chrono::steady_clock::now();
 
-  //     std::thread writer([stream, goalState]() {
-  //       stream->Write(goalState);
-  //       stream->WritesDone();
-  //     });
+    auto stream_create_time =
+            cast_to_microseconds(after_stream_create - before_stream_create).count();
 
-  //     auto after_write_done = std::chrono::steady_clock::now();
+    ACA_LOG_INFO("[METRICS] stream_create call took: %ld microseconds or %ld milliseconds\n",
+                 stream_create_time, us_to_ms(stream_create_time));
 
-  //     auto write_done_time =
-  //             cast_to_microseconds(after_write_done - after_stream_create).count();
+    std::thread writer([stream, states_to_create, ip_prefix]() {
+      GoalStateV2 GoalState_builder;
 
-  //     ACA_LOG_INFO("[METRICS] write_done call took: %ld microseconds or %ld milliseconds\n",
-  //                  write_done_time, us_to_ms(write_done_time));
+      SubnetState new_subnet_states;
+      new_subnet_states.set_operation_type(OperationType::INFO);
 
-  //     while (stream->Read(&gsOperationReply)) {
-  //       ACA_LOG_INFO("%s", "Received one streaming GoalStateOperationReply\n");
-  //     }
+      SubnetConfiguration *SubnetConiguration_builder =
+              new_subnet_states.mutable_configuration();
+      SubnetConiguration_builder->set_revision_number(1);
+      SubnetConiguration_builder->set_vpc_id(vpc_id_1);
+      SubnetConiguration_builder->set_id(subnet_id_1);
+      SubnetConiguration_builder->set_cidr("10.0.0.0/24");
+      SubnetConiguration_builder->set_tunnel_id(states_to_create);
 
-  //     writer.join();
-  //     Status status = stream->Finish();
+      auto *subnetConfig_GatewayBuilder(new SubnetConfiguration_Gateway);
+      subnetConfig_GatewayBuilder->set_ip_address(subnet1_gw_ip);
+      subnetConfig_GatewayBuilder->set_mac_address(subnet1_gw_mac);
+      SubnetConiguration_builder->set_allocated_gateway(subnetConfig_GatewayBuilder);
 
-  //     if (status.ok()) {
-  //       return EXIT_SUCCESS;
-  //     } else {
-  //       return EXIT_FAILURE;
-  //     }
-  //   }
+      auto &subnet_states_map = *GoalState_builder.mutable_subnet_states();
+      subnet_states_map[subnet_id_1] = new_subnet_states;
 
-  //   // working ip prefix = 1-254
-  //   void send_goalstate_stream(uint states_to_create, string ip_prefix)
-  //   {
-  //     ClientContext context;
+      NeighborState new_neighbor_states;
+      new_neighbor_states.set_operation_type(OperationType::CREATE);
+      NeighborConfiguration *NeighborConfiguration_builder =
+              new_neighbor_states.mutable_configuration();
+      NeighborConfiguration_builder->set_revision_number(1);
 
-  //     g_total_ACA_Message_time = 0;
+      NeighborConfiguration_builder->set_vpc_id(vpc_id_1);
+      NeighborConfiguration_builder->set_mac_address(vmac_address_1);
 
-  //     auto before_send_goalstate = std::chrono::steady_clock::now();
+      NeighborConfiguration_FixedIp *FixedIp_builder =
+              NeighborConfiguration_builder->add_fixed_ips();
+      FixedIp_builder->set_neighbor_type(NeighborType::L2);
+      FixedIp_builder->set_subnet_id(subnet_id_1);
 
-  //     auto before_stream_create = std::chrono::steady_clock::now();
+      auto &neighbor_states_map = *GoalState_builder.mutable_neighbor_states();
 
-  //     std::shared_ptr<ClientReaderWriter<GoalState, GoalStateOperationReply> > stream(
-  //             stub_->PushNetworkResourceStatesStream(&context));
+      for (uint i = 0; i < states_to_create; i++) {
+        string i_string = std::to_string(i);
+        string port_name = ip_prefix + "-port-" + i_string;
+        GoalStateOperationReply reply;
 
-  //     auto after_stream_create = std::chrono::steady_clock::now();
+        NeighborConfiguration_builder->set_id(port_name);
+        NeighborConfiguration_builder->set_name(port_name);
+        NeighborConfiguration_builder->set_host_ip_address(ip_prefix + ".0.0." + i_string);
 
-  //     auto stream_create_time =
-  //             cast_to_microseconds(after_stream_create - before_stream_create).count();
+        FixedIp_builder->set_ip_address(ip_prefix + ".0.0." + i_string);
 
-  //     ACA_LOG_INFO("[METRICS] stream_create call took: %ld microseconds or %ld milliseconds\n",
-  //                  stream_create_time, us_to_ms(stream_create_time));
+        GoalState_builder.clear_neighbor_states();
+        neighbor_states_map[port_name] = new_neighbor_states;
 
-  //     std::thread writer([stream, states_to_create, ip_prefix]() {
-  //       GoalState GoalState_builder;
+        stream->Write(GoalState_builder);
+      }
 
-  //       SubnetState *new_subnet_states = GoalState_builder.add_subnet_states();
-  //       new_subnet_states->set_operation_type(OperationType::INFO);
+      stream->WritesDone();
+    });
 
-  //       SubnetConfiguration *SubnetConiguration_builder =
-  //               new_subnet_states->mutable_configuration();
-  //       SubnetConiguration_builder->set_revision_number(1);
-  //       SubnetConiguration_builder->set_vpc_id(vpc_id_1);
-  //       SubnetConiguration_builder->set_id(subnet_id_1);
-  //       SubnetConiguration_builder->set_cidr("10.0.0.0/24");
-  //       SubnetConiguration_builder->set_tunnel_id(states_to_create);
+    auto after_write_done = std::chrono::steady_clock::now();
 
-  //       auto *subnetConfig_GatewayBuilder(new SubnetConfiguration_Gateway);
-  //       subnetConfig_GatewayBuilder->set_ip_address(subnet1_gw_ip);
-  //       subnetConfig_GatewayBuilder->set_mac_address(subnet1_gw_mac);
-  //       SubnetConiguration_builder->set_allocated_gateway(subnetConfig_GatewayBuilder);
+    auto write_done_time =
+            cast_to_microseconds(after_write_done - after_stream_create).count();
 
-  //       NeighborState *new_neighbor_states = GoalState_builder.add_neighbor_states();
-  //       new_neighbor_states->set_operation_type(OperationType::CREATE);
-  //       NeighborConfiguration *NeighborConfiguration_builder =
-  //               new_neighbor_states->mutable_configuration();
-  //       NeighborConfiguration_builder->set_revision_number(1);
+    ACA_LOG_INFO("[METRICS] write_done call took: %ld microseconds or %ld milliseconds\n",
+                 write_done_time, us_to_ms(write_done_time));
 
-  //       NeighborConfiguration_builder->set_vpc_id(vpc_id_1);
-  //       NeighborConfiguration_builder->set_mac_address(vmac_address_1);
+    GoalStateOperationReply gsOperationReply;
+    while (stream->Read(&gsOperationReply)) {
+      // ACA_LOG_INFO("Received one streaming GoalStateOperationReply\n");
+      print_goalstateReply(gsOperationReply);
+    }
 
-  //       NeighborConfiguration_FixedIp *FixedIp_builder =
-  //               NeighborConfiguration_builder->add_fixed_ips();
-  //       FixedIp_builder->set_neighbor_type(NeighborType::L2);
-  //       FixedIp_builder->set_subnet_id(subnet_id_1);
+    writer.join();
+    Status status = stream->Finish();
 
-  //       for (uint i = 0; i < states_to_create; i++) {
-  //         string i_string = std::to_string(i);
-  //         string port_name = ip_prefix + "-port-" + i_string;
-  //         GoalStateOperationReply reply;
+    auto after_send_goalstate = std::chrono::steady_clock::now();
 
-  //         NeighborConfiguration_builder->set_name(port_name);
-  //         NeighborConfiguration_builder->set_host_ip_address(ip_prefix + ".0.0." + i_string);
+    auto send_goalstate_time =
+            cast_to_microseconds(after_send_goalstate - before_send_goalstate).count();
 
-  //         FixedIp_builder->set_ip_address(ip_prefix + ".0.0." + i_string);
+    ACA_LOG_INFO("[***METRICS***] Grand ACA message_total_operation_time: %lu microseconds or %lu milliseconds\n",
+                 g_total_ACA_Message_time.load(),
+                 us_to_ms(g_total_ACA_Message_time.load()));
 
-  //         stream->Write(GoalState_builder);
-  //       }
+    ACA_LOG_INFO("[***METRICS***] Grand send_goalstate_sync call took: %ld microseconds or %ld milliseconds\n",
+                 send_goalstate_time, us_to_ms(send_goalstate_time));
 
-  //       stream->WritesDone();
-  //     });
+    ACA_LOG_INFO("[***METRICS***] Total GRPC latency/usage for stream call: %ld microseconds or %ld milliseconds\n",
+                 send_goalstate_time - g_total_ACA_Message_time.load(),
+                 us_to_ms((send_goalstate_time - g_total_ACA_Message_time.load())));
 
-  //     auto after_write_done = std::chrono::steady_clock::now();
-
-  //     auto write_done_time =
-  //             cast_to_microseconds(after_write_done - after_stream_create).count();
-
-  //     ACA_LOG_INFO("[METRICS] write_done call took: %ld microseconds or %ld milliseconds\n",
-  //                  write_done_time, us_to_ms(write_done_time));
-
-  //     GoalStateOperationReply gsOperationReply;
-  //     while (stream->Read(&gsOperationReply)) {
-  //       // ACA_LOG_INFO("Received one streaming GoalStateOperationReply\n");
-  //       print_goalstateReply(gsOperationReply);
-  //     }
-
-  //     writer.join();
-  //     Status status = stream->Finish();
-
-  //     auto after_send_goalstate = std::chrono::steady_clock::now();
-
-  //     auto send_goalstate_time =
-  //             cast_to_microseconds(after_send_goalstate - before_send_goalstate).count();
-
-  //     ACA_LOG_INFO("[***METRICS***] Grand ACA message_total_operation_time: %lu microseconds or %lu milliseconds\n",
-  //                  g_total_ACA_Message_time.load(),
-  //                  us_to_ms(g_total_ACA_Message_time.load()));
-
-  //     ACA_LOG_INFO("[***METRICS***] Grand send_goalstate_sync call took: %ld microseconds or %ld milliseconds\n",
-  //                  send_goalstate_time, us_to_ms(send_goalstate_time));
-
-  //     ACA_LOG_INFO("[***METRICS***] Total GRPC latency/usage for stream call: %ld microseconds or %ld milliseconds\n",
-  //                  send_goalstate_time - g_total_ACA_Message_time.load(),
-  //                  (send_goalstate_time - us_to_ms(g_total_ACA_Message_time.load())));
-
-  //     if (!status.ok()) {
-  //       ACA_LOG_ERROR("%s", "RPC call failed\n");
-  //     }
-  //   }
+    if (!status.ok()) {
+      ACA_LOG_ERROR("%s", "RPC call failed\n");
+    }
+  }
 
   private:
   std::unique_ptr<GoalStateProvisioner::Stub> stub_;
@@ -732,37 +697,13 @@ int main(int argc, char *argv[])
 
     grpc_client.send_goalstate_sync(10, "22");
 
-    // ACA_LOG_INFO("%s", "-------------- sending 1 goal state stream --------------\n");
+    ACA_LOG_INFO("%s", "-------------- sending 1 goal state stream --------------\n");
 
-    // NeighborConfiguration_builder->set_name("portname3");
-    // NeighborConfiguration_builder->set_host_ip_address("223.0.0.33");
-    // FixedIp_builder->set_ip_address("33.0.0.33");
+    grpc_client.send_goalstate_stream(1, "31");
 
-    // GoalStateOperationReply stream_reply;
+    ACA_LOG_INFO("%s", "-------------- sending 10 goal state stream --------------\n");
 
-    // before_send_goalstate = std::chrono::steady_clock::now();
-
-    // rc = grpc_client.send_goalstate_stream_one(GoalState_builder, stream_reply);
-
-    // after_send_goalstate = std::chrono::steady_clock::now();
-
-    // send_goalstate_time =
-    //         cast_to_microseconds(after_send_goalstate - before_send_goalstate).count();
-
-    // ACA_LOG_INFO("[***METRICS***] send_goalstate_stream_one call took: %ld microseconds or %ld milliseconds\n",
-    //              send_goalstate_time, us_to_ms(send_goalstate_time));
-
-    // print_goalstateReply(stream_reply);
-
-    // if (rc == EXIT_SUCCESS) {
-    //   ACA_LOG_INFO("%s", "1 goal state stream grpc call succeed\n");
-    // } else {
-    //   ACA_LOG_INFO("%s", "1 goal state stream grpc call failed!!!\n");
-    // }
-
-    // ACA_LOG_INFO("%s", "-------------- sending 10 goal state stream --------------\n");
-
-    // grpc_client.send_goalstate_stream(10, "32");
+    grpc_client.send_goalstate_stream(10, "32");
   }
 
   aca_cleanup();
