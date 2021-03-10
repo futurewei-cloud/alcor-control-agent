@@ -242,14 +242,14 @@ void ACA_ARP_Responder::arp_xmit(uint32_t in_port, void *vlanmsg, void *message,
   }
   if (is_found) {
     options = inport + whitespace + packetpre + packet + whitespace + action;
+    //delete the constructed arp reply
+    delete arpmsg;
   } else {
     options = inport + whitespace + packetpre + packet + whitespace + rs_action;
   }
 
   aca_ovs_control::ACA_OVS_Control::get_instance().packet_out(bridge.c_str(),
                                                               options.c_str());
-
-  delete arpmsg;
 }
 
 void ACA_ARP_Responder::_parse_arp_request(uint32_t in_port, vlan_message *vlanmsg,
