@@ -35,9 +35,10 @@ extern string g_grpc_server_port;
 using namespace alcor::schema;
 using aca_comm_manager::Aca_Comm_Manager;
 
-Status GoalStateProvisionerImpl::PushNetworkResourceStates(ServerContext* /* context */ ,
-                                                           const GoalState *goalState,
-                                                           GoalStateOperationReply *goalStateOperationReply)
+Status
+GoalStateProvisionerImpl::PushNetworkResourceStates(ServerContext * /* context */,
+                                                    const GoalState *goalState,
+                                                    GoalStateOperationReply *goalStateOperationReply)
 {
   GoalState received_goal_state = *goalState;
 
@@ -57,15 +58,16 @@ Status GoalStateProvisionerImpl::PushNetworkResourceStates(ServerContext* /* con
   return Status::OK;
 }
 
-Status GoalStateProvisionerImpl::PushNetworkResourceStatesStream(
-        ServerContext* /* context */ , ServerReaderWriter<GoalStateOperationReply, GoalState> *stream)
+Status GoalStateProvisionerImpl::PushGoalStatesStream(
+        ServerContext * /* context */,
+        ServerReaderWriter<GoalStateOperationReply, GoalStateV2> *stream)
 {
-  GoalState goalState;
+  GoalStateV2 goalStateV2;
   GoalStateOperationReply gsOperationReply;
   int rc = EXIT_FAILURE;
 
-  while (stream->Read(&goalState)) {
-    rc = Aca_Comm_Manager::get_instance().update_goal_state(goalState, gsOperationReply);
+  while (stream->Read(&goalStateV2)) {
+    rc = Aca_Comm_Manager::get_instance().update_goal_state(goalStateV2, gsOperationReply);
     if (rc == EXIT_SUCCESS) {
       ACA_LOG_INFO("Control Fast Path streaming - Successfully updated host with latest goal state %d.\n",
                    rc);

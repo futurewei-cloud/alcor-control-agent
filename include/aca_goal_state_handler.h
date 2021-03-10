@@ -49,6 +49,15 @@ class Aca_Goal_State_Handler {
   int update_port_states(alcor::schema::GoalState &parsed_struct,
                          alcor::schema::GoalStateOperationReply &gsOperationReply);
 
+  // process ONE port state for GoalStateV2
+  int update_port_state_workitem_v2(const alcor::schema::PortState current_PortState,
+                                    alcor::schema::GoalStateV2 &parsed_struct,
+                                    alcor::schema::GoalStateOperationReply &gsOperationReply);
+
+  // process 0 to N port states for GoalStateV2
+  int update_port_states(alcor::schema::GoalStateV2 &parsed_struct,
+                         alcor::schema::GoalStateOperationReply &gsOperationReply);
+
   // process ONE neighbor state
   int update_neighbor_state_workitem(const alcor::schema::NeighborState current_NeighborState,
                                      alcor::schema::GoalState &parsed_struct,
@@ -56,6 +65,15 @@ class Aca_Goal_State_Handler {
 
   // process 0 to N neighbor states
   int update_neighbor_states(alcor::schema::GoalState &parsed_struct,
+                             alcor::schema::GoalStateOperationReply &gsOperationReply);
+
+  // process ONE neighbor state for GoalStateV2
+  int update_neighbor_state_workitem_v2(const alcor::schema::NeighborState current_NeighborState,
+                                        alcor::schema::GoalStateV2 &parsed_struct,
+                                        alcor::schema::GoalStateOperationReply &gsOperationReply);
+
+  // process 0 to N neighbor states for GoalStateV2
+  int update_neighbor_states(alcor::schema::GoalStateV2 &parsed_struct,
                              alcor::schema::GoalStateOperationReply &gsOperationReply);
 
   // process ONE router state
@@ -67,8 +85,14 @@ class Aca_Goal_State_Handler {
   int update_router_states(alcor::schema::GoalState &parsed_struct,
                            alcor::schema::GoalStateOperationReply &gsOperationReply);
 
-  int update_goal_state(alcor::schema::GoalState &parsed_struct,
-                        alcor::schema::GoalStateOperationReply &gsOperationReply);
+  // process ONE router state for GoalStateV2
+  int update_router_state_workitem_v2(const alcor::schema::RouterState current_RouterState,
+                                      alcor::schema::GoalStateV2 &parsed_struct,
+                                      alcor::schema::GoalStateOperationReply &gsOperationReply);
+
+  // process 0 to N router states for GoalStateV2
+  int update_router_states(alcor::schema::GoalStateV2 &parsed_struct,
+                           alcor::schema::GoalStateOperationReply &gsOperationReply);
 
   void add_goal_state_operation_status(
           alcor::schema::GoalStateOperationReply &gsOperationReply, std::string id,

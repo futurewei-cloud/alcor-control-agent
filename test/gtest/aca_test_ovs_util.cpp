@@ -229,6 +229,82 @@ void aca_test_create_default_router_goal_state(GoalState *goalState_builder)
   SubnetConiguration_builder2->set_allocated_gateway(subnetConfig_GatewayBuilder2);
 }
 
+void aca_test_create_default_router_goal_state(GoalStateV2 *goalState_builder)
+{
+  RouterState new_router_states;
+  SubnetState new_subnet_states1;
+  SubnetState new_subnet_states2;
+
+  new_router_states.set_operation_type(OperationType::CREATE);
+
+  // fill in router state structs
+  RouterConfiguration *RouterConfiguration_builder =
+          new_router_states.mutable_configuration();
+  RouterConfiguration_builder->set_revision_number(1);
+
+  RouterConfiguration_builder->set_id("router_id1");
+  RouterConfiguration_builder->set_host_dvr_mac_address("fa:16:3e:d7:f2:02");
+
+  auto *RouterConfiguration_SubnetRoutingTable_builder1 =
+          RouterConfiguration_builder->add_subnet_routing_tables();
+  RouterConfiguration_SubnetRoutingTable_builder1->set_subnet_id(subnet_id_1);
+  auto *RouterConfiguration_SubnetRoutingRule_builder1 =
+          RouterConfiguration_SubnetRoutingTable_builder1->add_routing_rules();
+  RouterConfiguration_SubnetRoutingRule_builder1->set_operation_type(OperationType::CREATE);
+  RouterConfiguration_SubnetRoutingRule_builder1->set_id("12345");
+  RouterConfiguration_SubnetRoutingRule_builder1->set_name("routing_rule_1");
+  RouterConfiguration_SubnetRoutingRule_builder1->set_destination("154.12.42.24/32");
+  RouterConfiguration_SubnetRoutingRule_builder1->set_next_hop_ip("154.12.42.101");
+  auto *routerConfiguration_RoutingRuleExtraInfo_builder1(new RouterConfiguration_RoutingRuleExtraInfo);
+  routerConfiguration_RoutingRuleExtraInfo_builder1->set_destination_type(
+          DestinationType::INTERNET);
+  routerConfiguration_RoutingRuleExtraInfo_builder1->set_next_hop_mac("fa:16:3e:d7:aa:02");
+  RouterConfiguration_SubnetRoutingRule_builder1->set_allocated_routing_rule_extra_info(
+          routerConfiguration_RoutingRuleExtraInfo_builder1);
+
+  auto *RouterConfiguration_SubnetRoutingTable_builder2 =
+          RouterConfiguration_builder->add_subnet_routing_tables();
+  RouterConfiguration_SubnetRoutingTable_builder2->set_subnet_id(subnet_id_2);
+  auto *RouterConfiguration_SubnetRoutingRule_builder2 =
+          RouterConfiguration_SubnetRoutingTable_builder2->add_routing_rules();
+  RouterConfiguration_SubnetRoutingRule_builder2->set_operation_type(OperationType::UPDATE);
+  RouterConfiguration_SubnetRoutingRule_builder2->set_id("23456");
+  RouterConfiguration_SubnetRoutingRule_builder2->set_name("routing_rule_2");
+  RouterConfiguration_SubnetRoutingRule_builder2->set_destination("154.12.54.24/32");
+  RouterConfiguration_SubnetRoutingRule_builder2->set_next_hop_ip("154.12.54.101");
+  auto *routerConfiguration_RoutingRuleExtraInfo_builder2(new RouterConfiguration_RoutingRuleExtraInfo);
+  routerConfiguration_RoutingRuleExtraInfo_builder2->set_destination_type(DestinationType::VPC_GW);
+  routerConfiguration_RoutingRuleExtraInfo_builder2->set_next_hop_mac("fa:16:3e:d7:bb:02");
+  RouterConfiguration_SubnetRoutingRule_builder2->set_allocated_routing_rule_extra_info(
+          routerConfiguration_RoutingRuleExtraInfo_builder2);
+
+  auto &router_states_map = *goalState_builder->mutable_router_states();
+  router_states_map["router_id1"] = new_router_states;
+
+  // fill in subnet state1 structs
+  aca_test_create_default_subnet_state(&new_subnet_states1);
+  auto &subnet_states_map = *goalState_builder->mutable_subnet_states();
+  subnet_states_map[subnet_id_1] = new_subnet_states1;
+
+  // fill in subnet state2 structs
+  new_subnet_states2.set_operation_type(OperationType::INFO);
+
+  SubnetConfiguration *SubnetConiguration_builder2 =
+          new_subnet_states2.mutable_configuration();
+  SubnetConiguration_builder2->set_revision_number(1);
+  SubnetConiguration_builder2->set_vpc_id(vpc_id_2);
+  SubnetConiguration_builder2->set_id(subnet_id_2);
+  SubnetConiguration_builder2->set_cidr("10.10.1.0/24");
+  SubnetConiguration_builder2->set_tunnel_id(30);
+
+  auto *subnetConfig_GatewayBuilder2(new SubnetConfiguration_Gateway);
+  subnetConfig_GatewayBuilder2->set_ip_address(subnet2_gw_ip);
+  subnetConfig_GatewayBuilder2->set_mac_address(subnet2_gw_mac);
+  SubnetConiguration_builder2->set_allocated_gateway(subnetConfig_GatewayBuilder2);
+
+  subnet_states_map[subnet_id_2] = new_subnet_states2;
+}
+
 void aca_test_1_neighbor_CREATE_DELETE(NeighborType input_neighbor_type)
 {
   string cmd_string;
@@ -294,6 +370,82 @@ void aca_test_1_neighbor_CREATE_DELETE(NeighborType input_neighbor_type)
 
   // free the allocated configurations since we are done with it now
   new_neighbor_states->clear_configuration();
+}
+
+void aca_test_1_neighbor_CREATE_DELETE_V2(NeighborType input_neighbor_type)
+{
+  SubnetState new_subnet_states;
+  string cmd_string;
+  int overall_rc;
+
+  aca_test_reset_environment();
+
+  GoalStateV2 GoalState_builder;
+
+  if (input_neighbor_type == NeighborType::L3) {
+    aca_test_create_default_router_goal_state(&GoalState_builder);
+  } else {
+    // fill in subnet state structs for L2 path only
+    // because the L3 path above already added it
+
+    aca_test_create_default_subnet_state(&new_subnet_states);
+    auto &subnet_states_map = *GoalState_builder.mutable_subnet_states();
+    subnet_states_map[subnet_id_1] = new_subnet_states;
+  }
+
+  NeighborState new_neighbor_states;
+
+  new_neighbor_states.set_operation_type(OperationType::CREATE);
+
+  // fill in neighbor state structs
+  NeighborConfiguration *NeighborConfiguration_builder =
+          new_neighbor_states.mutable_configuration();
+  NeighborConfiguration_builder->set_revision_number(1);
+
+  NeighborConfiguration_builder->set_vpc_id(vpc_id_1);
+  NeighborConfiguration_builder->set_id(port_id_3);
+  NeighborConfiguration_builder->set_mac_address(vmac_address_3);
+  NeighborConfiguration_builder->set_host_ip_address("172.17.111.222");
+
+  NeighborConfiguration_FixedIp *FixedIp_builder =
+          NeighborConfiguration_builder->add_fixed_ips();
+  FixedIp_builder->set_neighbor_type(input_neighbor_type);
+  FixedIp_builder->set_subnet_id(subnet_id_1);
+  FixedIp_builder->set_ip_address(vip_address_3);
+
+  auto &neighbor_states_map = *GoalState_builder.mutable_neighbor_states();
+  neighbor_states_map[port_id_3] = new_neighbor_states;
+
+  GoalStateOperationReply gsOperationalReply;
+
+  overall_rc = Aca_Comm_Manager::get_instance().update_goal_state(
+          GoalState_builder, gsOperationalReply);
+  ASSERT_EQ(overall_rc, EXIT_SUCCESS);
+
+  // check if the neighbor rules has been created on br-tun
+  string neighbor_opt = "table=20,dl_dst:" + vmac_address_3;
+  overall_rc = ACA_OVS_Control::get_instance().flow_exists(
+          "br-tun", neighbor_opt.c_str());
+  ASSERT_EQ(overall_rc, EXIT_SUCCESS);
+
+  // delete neighbor info
+  new_neighbor_states.set_operation_type(OperationType::DELETE);
+  GoalState_builder.clear_neighbor_states();
+  neighbor_states_map[port_id_3] = new_neighbor_states;
+
+  overall_rc = Aca_Comm_Manager::get_instance().update_goal_state(
+          GoalState_builder, gsOperationalReply);
+  ASSERT_EQ(overall_rc, EXIT_SUCCESS);
+
+  // check if the neighbor rules has been deleted on br-tun
+  overall_rc = ACA_OVS_Control::get_instance().flow_exists(
+          "br-tun", neighbor_opt.c_str());
+  EXPECT_NE(overall_rc, EXIT_SUCCESS);
+
+  // clean up
+
+  // free the allocated configurations since we are done with it now
+  new_neighbor_states.clear_configuration();
 }
 
 void aca_test_1_port_CREATE_plus_neighbor_CREATE(NeighborType input_neighbor_type)

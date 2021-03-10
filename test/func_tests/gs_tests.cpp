@@ -283,51 +283,7 @@ class GoalStateProvisionerClient {
 
     ACA_LOG_INFO("[***METRICS***] Total GRPC latency/usage for sync call: %ld microseconds or %ld milliseconds\n",
                  send_goalstate_time - g_total_ACA_Message_time.load(),
-                 (send_goalstate_time - us_to_ms(g_total_ACA_Message_time.load())));
-  }
-
-  int send_goalstate_stream_one(GoalState &goalState, GoalStateOperationReply &gsOperationReply)
-  {
-    ClientContext context;
-
-    auto before_stream_create = std::chrono::steady_clock::now();
-
-    std::shared_ptr<ClientReaderWriter<GoalState, GoalStateOperationReply> > stream(
-            stub_->PushNetworkResourceStatesStream(&context));
-
-    auto after_stream_create = std::chrono::steady_clock::now();
-
-    auto stream_create_time =
-            cast_to_microseconds(after_stream_create - before_stream_create).count();
-
-    ACA_LOG_INFO("[METRICS] stream_create call took: %ld microseconds or %ld milliseconds\n",
-                 stream_create_time, us_to_ms(stream_create_time));
-
-    std::thread writer([stream, goalState]() {
-      stream->Write(goalState);
-      stream->WritesDone();
-    });
-
-    auto after_write_done = std::chrono::steady_clock::now();
-
-    auto write_done_time =
-            cast_to_microseconds(after_write_done - after_stream_create).count();
-
-    ACA_LOG_INFO("[METRICS] write_done call took: %ld microseconds or %ld milliseconds\n",
-                 write_done_time, us_to_ms(write_done_time));
-
-    while (stream->Read(&gsOperationReply)) {
-      ACA_LOG_INFO("%s", "Received one streaming GoalStateOperationReply\n");
-    }
-
-    writer.join();
-    Status status = stream->Finish();
-
-    if (status.ok()) {
-      return EXIT_SUCCESS;
-    } else {
-      return EXIT_FAILURE;
-    }
+                 us_to_ms((send_goalstate_time - g_total_ACA_Message_time.load())));
   }
 
   // working ip prefix = 1-254
@@ -341,8 +297,8 @@ class GoalStateProvisionerClient {
 
     auto before_stream_create = std::chrono::steady_clock::now();
 
-    std::shared_ptr<ClientReaderWriter<GoalState, GoalStateOperationReply> > stream(
-            stub_->PushNetworkResourceStatesStream(&context));
+    std::shared_ptr<ClientReaderWriter<GoalStateV2, GoalStateOperationReply> > stream(
+            stub_->PushGoalStatesStream(&context));
 
     auto after_stream_create = std::chrono::steady_clock::now();
 
@@ -353,13 +309,13 @@ class GoalStateProvisionerClient {
                  stream_create_time, us_to_ms(stream_create_time));
 
     std::thread writer([stream, states_to_create, ip_prefix]() {
-      GoalState GoalState_builder;
+      GoalStateV2 GoalState_builder;
 
-      SubnetState *new_subnet_states = GoalState_builder.add_subnet_states();
-      new_subnet_states->set_operation_type(OperationType::INFO);
+      SubnetState new_subnet_states;
+      new_subnet_states.set_operation_type(OperationType::INFO);
 
       SubnetConfiguration *SubnetConiguration_builder =
-              new_subnet_states->mutable_configuration();
+              new_subnet_states.mutable_configuration();
       SubnetConiguration_builder->set_revision_number(1);
       SubnetConiguration_builder->set_vpc_id(vpc_id_1);
       SubnetConiguration_builder->set_id(subnet_id_1);
@@ -371,10 +327,13 @@ class GoalStateProvisionerClient {
       subnetConfig_GatewayBuilder->set_mac_address(subnet1_gw_mac);
       SubnetConiguration_builder->set_allocated_gateway(subnetConfig_GatewayBuilder);
 
-      NeighborState *new_neighbor_states = GoalState_builder.add_neighbor_states();
-      new_neighbor_states->set_operation_type(OperationType::CREATE);
+      auto &subnet_states_map = *GoalState_builder.mutable_subnet_states();
+      subnet_states_map[subnet_id_1] = new_subnet_states;
+
+      NeighborState new_neighbor_states;
+      new_neighbor_states.set_operation_type(OperationType::CREATE);
       NeighborConfiguration *NeighborConfiguration_builder =
-              new_neighbor_states->mutable_configuration();
+              new_neighbor_states.mutable_configuration();
       NeighborConfiguration_builder->set_revision_number(1);
 
       NeighborConfiguration_builder->set_vpc_id(vpc_id_1);
@@ -385,15 +344,21 @@ class GoalStateProvisionerClient {
       FixedIp_builder->set_neighbor_type(NeighborType::L2);
       FixedIp_builder->set_subnet_id(subnet_id_1);
 
+      auto &neighbor_states_map = *GoalState_builder.mutable_neighbor_states();
+
       for (uint i = 0; i < states_to_create; i++) {
         string i_string = std::to_string(i);
         string port_name = ip_prefix + "-port-" + i_string;
         GoalStateOperationReply reply;
 
+        NeighborConfiguration_builder->set_id(port_name);
         NeighborConfiguration_builder->set_name(port_name);
         NeighborConfiguration_builder->set_host_ip_address(ip_prefix + ".0.0." + i_string);
 
         FixedIp_builder->set_ip_address(ip_prefix + ".0.0." + i_string);
+
+        GoalState_builder.clear_neighbor_states();
+        neighbor_states_map[port_name] = new_neighbor_states;
 
         stream->Write(GoalState_builder);
       }
@@ -432,7 +397,7 @@ class GoalStateProvisionerClient {
 
     ACA_LOG_INFO("[***METRICS***] Total GRPC latency/usage for stream call: %ld microseconds or %ld milliseconds\n",
                  send_goalstate_time - g_total_ACA_Message_time.load(),
-                 (send_goalstate_time - us_to_ms(g_total_ACA_Message_time.load())));
+                 us_to_ms((send_goalstate_time - g_total_ACA_Message_time.load())));
 
     if (!status.ok()) {
       ACA_LOG_ERROR("%s", "RPC call failed\n");
@@ -559,7 +524,6 @@ void parse_goalstate(GoalState parsed_struct, GoalState GoalState_builder)
 
     assert(parsed_struct.vpc_states(i).configuration().tunnel_id() ==
            GoalState_builder.vpc_states(i).configuration().tunnel_id());
-
   }
 
   fprintf(stdout, "All content matched!\n");
@@ -735,31 +699,7 @@ int main(int argc, char *argv[])
 
     ACA_LOG_INFO("%s", "-------------- sending 1 goal state stream --------------\n");
 
-    NeighborConfiguration_builder->set_name("portname3");
-    NeighborConfiguration_builder->set_host_ip_address("223.0.0.33");
-    FixedIp_builder->set_ip_address("33.0.0.33");
-
-    GoalStateOperationReply stream_reply;
-
-    before_send_goalstate = std::chrono::steady_clock::now();
-
-    rc = grpc_client.send_goalstate_stream_one(GoalState_builder, stream_reply);
-
-    after_send_goalstate = std::chrono::steady_clock::now();
-
-    send_goalstate_time =
-            cast_to_microseconds(after_send_goalstate - before_send_goalstate).count();
-
-    ACA_LOG_INFO("[***METRICS***] send_goalstate_stream_one call took: %ld microseconds or %ld milliseconds\n",
-                 send_goalstate_time, us_to_ms(send_goalstate_time));
-
-    print_goalstateReply(stream_reply);
-
-    if (rc == EXIT_SUCCESS) {
-      ACA_LOG_INFO("%s", "1 goal state stream grpc call succeed\n");
-    } else {
-      ACA_LOG_INFO("%s", "1 goal state stream grpc call failed!!!\n");
-    }
+    grpc_client.send_goalstate_stream(1, "31");
 
     ACA_LOG_INFO("%s", "-------------- sending 10 goal state stream --------------\n");
 
