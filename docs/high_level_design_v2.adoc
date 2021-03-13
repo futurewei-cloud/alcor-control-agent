@@ -80,7 +80,7 @@ Incoming unknown packet handling (when we enable SG):
 . ACA_On_Demand_Engine::unknown_recv will do the followings:
 .. generate a unique UUID from aca as the request ID to use below
 .. craft a HostRequest message based on the unknown packet's tunnel id, source/destination IP, source/destination port, ethertype and protocol
-.. call RequestGoalStates in NCM synchronously and wait for HostRequestReply with the matching request ID
+.. call GoalStateProvisionerImpl::RequestGoalStates to call NCM synchronously and wait for HostRequestReply with the matching request ID
 ... if NCM reply with operation_status = SUCCESS(ROUTABLE), then releasing the unknown packet to OVS
 ... if NCM reply with operation_status = FAILURE(NOT_ROUTABLE), then log and drop unknown packet
 ... if ACA timed out waiting for port configuration from NCM, then log and drop unknown packet, may do retry
@@ -93,5 +93,5 @@ Incoming unknown packet handling (when we enable SG):
 
 . update ACA input parameter for input of NCM IP and port for GRPC communication (aca_main.cpp)
 . update ACA grpc implementation aca_grpc.cpp to connect to NCM either in the constructor or GoalStateProvisionerImpl::RunServer function
-. add new function in aca_grpc.cpp to handle RequestGoalStates call to NCM, this will be called by ACA_On_Demand_Engine::unknown_recv
+. add new function (e.g. GoalStateProvisionerImpl::RequestGoalStates) in aca_grpc.cpp to handle RequestGoalStates grpc call to NCM, this will be called by ACA_On_Demand_Engine::unknown_recv
 . add the corresponding test case in aca_tests, start with a new test file named aca_test_on_demand.cpp to test the new GRPC client. Then add GRPC server code in gs_tests.cpp since it already have grpc client there. gs_tests will pretent to be NCM
