@@ -52,6 +52,8 @@ string g_grpc_server_port = EMPTY_STRING;
 string g_ofctl_command = EMPTY_STRING;
 string g_ofctl_target = EMPTY_STRING;
 string g_ofctl_options = EMPTY_STRING;
+string NCM_ADDRESS = EMPTY_STRING;
+string NCM_PORT = EMPTY_STRING;
 
 // total time for execute_system_command in microseconds
 std::atomic_ulong g_total_execute_system_time(0);
@@ -139,8 +141,14 @@ int main(int argc, char *argv[])
   signal(SIGINT, aca_signal_handler);
   signal(SIGTERM, aca_signal_handler);
 
-  while ((option = getopt(argc, argv, "b:h:g:s:p:c:t:o:md")) != -1) {
+  while ((option = getopt(argc, argv, "a:i:b:h:g:s:p:c:t:o:md")) != -1) {
     switch (option) {
+    case 'a':
+      NCM_ADDRESS = optarg;
+      break;
+    case 'i':
+      NCM_PORT = optarg;
+      break;
     case 'b':
       g_broker_list = optarg;
       break;
@@ -171,6 +179,8 @@ int main(int argc, char *argv[])
     default: /* the '?' case when the option is not recognized */
       fprintf(stderr,
               "Usage: %s\n"
+              "\t\t[-a NCM IP Address]\n"
+              "\t\t[-i NCM Port]\n"
               "\t\t[-b pulsar broker list]\n"
               "\t\t[-h pulsar host topic to listen]\n"
               "\t\t[-g pulsar subscription name]\n"
@@ -210,7 +220,6 @@ int main(int argc, char *argv[])
 
   aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().setup_ovs_bridges_if_need();
 
-
   // monitor br-int for dhcp request message
   ovs_monitor_brint_thread =
           new thread(bind(&ACA_OVS_Control::monitor,
@@ -218,7 +227,7 @@ int main(int argc, char *argv[])
   ovs_monitor_brint_thread->detach();
 
   // monitor br-tun for arp request message
-  ACA_OVS_Control::get_instance().monitor("br-tun","resume");
+  ACA_OVS_Control::get_instance().monitor("br-tun", "resume");
 
   ACA_Message_Pulsar_Consumer network_config_consumer(g_broker_list, g_pulsar_subsription_name);
   rc = network_config_consumer.consumeDispatched(g_pulsar_topic);

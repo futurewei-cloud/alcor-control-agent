@@ -31,9 +31,19 @@
 #include "aca_grpc.h"
 
 extern string g_grpc_server_port;
+extern string NCM_ADDRESS;
+extern string NCM_PORT;
 
 using namespace alcor::schema;
 using aca_comm_manager::Aca_Comm_Manager;
+
+HostRequestReply GoalStateProvisionerImpl::RequestGoalStates(HostRequest *request)
+{
+  grpc::ClientContext ctx;
+  alcor::schema::HostRequestReply reply;
+  stub_->RequestGoalStates(&ctx, *request, &reply);
+  return reply;
+}
 
 Status
 GoalStateProvisionerImpl::PushNetworkResourceStates(ServerContext * /* context */,
@@ -102,4 +112,12 @@ void GoalStateProvisionerImpl::RunServer()
   ACA_LOG_INFO("Streaming capable GRPC server listening on %s\n",
                GRPC_SERVER_ADDRESS.c_str());
   server->Wait();
+  ACA_LOG_INFO("%s\n", "Trying to init a new sub to connect to the NCM");
+  // grpc::ChannelArguments args;
+  // args.SetChannelArgs();
+  // grpc::CreateCustomChannel(NCM_ADDRESS + ":" + NCM_PORT,
+  //                           grpc::InsecureChannelCredentials(), );
+  stub_ = GoalStateProvisioner::NewStub(grpc::CreateChannel(
+          NCM_ADDRESS + ":" + NCM_PORT, grpc::InsecureChannelCredentials()));
+  ACA_LOG_INFO("%s\n", "After initing a new sub to connect to the NCM");
 }
