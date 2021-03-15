@@ -31,8 +31,8 @@
 #include "aca_grpc.h"
 
 extern string g_grpc_server_port;
-extern string g_NCM_ADDRESS;
-extern string g_NCM_PORT;
+extern string g_ncm_address;
+extern string g_ncm_port;
 
 using namespace alcor::schema;
 using aca_comm_manager::Aca_Comm_Manager;
@@ -116,7 +116,7 @@ void GoalStateProvisionerImpl::RunServer()
   args.SetInt(GRPC_ARG_KEEPALIVE_PERMIT_WITHOUT_CALLS, 1);
 
   stub_ = GoalStateProvisioner::NewStub(grpc::CreateCustomChannel(
-          g_NCM_ADDRESS + ":" + g_NCM_PORT, grpc::InsecureChannelCredentials(), args));
+          g_ncm_address + ":" + g_ncm_port, grpc::InsecureChannelCredentials(), args));
 
   ACA_LOG_INFO("%s\n", "After initing a new sub to connect to the NCM");
 

@@ -52,8 +52,8 @@ string g_grpc_server_port = EMPTY_STRING;
 string g_ofctl_command = EMPTY_STRING;
 string g_ofctl_target = EMPTY_STRING;
 string g_ofctl_options = EMPTY_STRING;
-string g_NCM_ADDRESS = EMPTY_STRING;
-string g_NCM_PORT = EMPTY_STRING;
+string g_ncm_address = EMPTY_STRING;
+string g_ncm_port = EMPTY_STRING;
 
 // total time for execute_system_command in microseconds
 std::atomic_ulong g_total_execute_system_time(0);
@@ -141,13 +141,13 @@ int main(int argc, char *argv[])
   signal(SIGINT, aca_signal_handler);
   signal(SIGTERM, aca_signal_handler);
 
-  while ((option = getopt(argc, argv, "a:b:h:g:s:p:c:t:o:md")) != -1) {
+  while ((option = getopt(argc, argv, "a:p:b:h:g:s:c:t:o:md")) != -1) {
     switch (option) {
     case 'a':
-      g_NCM_ADDRESS = optarg;
+      g_ncm_address = optarg;
       break;
     case 'p':
-      g_NCM_PORT = optarg;
+      g_ncm_port = optarg;
       break;
     case 'b':
       g_broker_list = optarg;
