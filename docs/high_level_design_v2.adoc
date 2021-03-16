@@ -55,9 +55,9 @@ On-Demand Engine is responsible to deal with DHCP and ARP requests, also future 
 
 This session list the proposed code change location and details to support the new on demand handling of unknown packets:
 
-=== OVS tables update (Eric?)
+=== OVS tables update (Eric)
 
-Outgoing unknown packet handling:
+Outgoing unknown packet handling (implemented):
 . replace [table=20(unicast), priority=1 actions=resubmit(,22)]
 . to [table=20, priority=1(low),actions=CONTROLLER] in ACA_OVS_L2_Programmer::setup_ovs_bridges_if_need function. 
 . This is the punt rule to send the outgoing unknown packet for ACA for on demand processing.
