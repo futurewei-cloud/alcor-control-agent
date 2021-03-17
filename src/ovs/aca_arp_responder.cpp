@@ -19,6 +19,7 @@
 #include "aca_util.h"
 #include <shared_mutex>
 #include <arpa/inet.h>
+#include <errno.h>
 
 using namespace std;
 
@@ -48,12 +49,12 @@ void ACA_ARP_Responder::_deinit_arp_db()
 
 void ACA_ARP_Responder::_init_arp_ofp()
 {
-  int overall_rc = EXIT_SUCCESS;
-  unsigned long not_care_culminative_time;
-
-  aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
-          "add-flow br-tun \"table=0,priority=50,arp,arp_op=1, actions=CONTROLLER\"",
-          not_care_culminative_time, overall_rc);
+  // int overall_rc = EXIT_SUCCESS;
+  // unsigned long not_care_culminative_time;
+  // remove the following 
+  // aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
+  //         "add-flow br-tun \"table=0,priority=50,arp,arp_op=1, actions=CONTROLLER\"",
+  //         not_care_culminative_time, overall_rc);
   return;
 }
 
@@ -194,7 +195,7 @@ int ACA_ARP_Responder::_validate_arp_entry(arp_config *arp_cfg_in)
 
 /************* Operation and procedure for dataplane *******************/
 
-void ACA_ARP_Responder::arp_recv(uint32_t in_port, void *vlan_hdr, void *message)
+int ACA_ARP_Responder::arp_recv(uint32_t in_port, void *vlan_hdr, void *message)
 {
   arp_message *arpmsg = nullptr;
   vlan_message *vlanmsg = nullptr;
@@ -202,7 +203,7 @@ void ACA_ARP_Responder::arp_recv(uint32_t in_port, void *vlan_hdr, void *message
   ACA_LOG_DEBUG("Receiving arp message from inport=%u\n", in_port);
   if (!message) {
     ACA_LOG_ERROR("%s", "ARP message is null!\n");
-    return;
+    return EXIT_FAILURE;
   }
 
   vlanmsg = (vlan_message *)vlan_hdr;
@@ -210,13 +211,12 @@ void ACA_ARP_Responder::arp_recv(uint32_t in_port, void *vlan_hdr, void *message
 
   if (_validate_arp_message(arpmsg)) {
     ACA_LOG_ERROR("%s", "Invalid APR message!\n");
-    return;
+    return EXIT_FAILURE;
   }
 
-  _parse_arp_request(in_port, vlanmsg, arpmsg);
-
-  return;
+  return _parse_arp_request(in_port, vlanmsg, arpmsg);
 }
+
 void ACA_ARP_Responder::arp_xmit(uint32_t in_port, void *vlanmsg, void *message, int is_found)
 {
   arp_message *arpmsg = nullptr;
@@ -252,7 +252,7 @@ void ACA_ARP_Responder::arp_xmit(uint32_t in_port, void *vlanmsg, void *message,
                                                               options.c_str());
 }
 
-void ACA_ARP_Responder::_parse_arp_request(uint32_t in_port, vlan_message *vlanmsg,
+int ACA_ARP_Responder::_parse_arp_request(uint32_t in_port, vlan_message *vlanmsg,
                                            arp_message *arpmsg)
 {
   arp_entry_data stData;
@@ -274,14 +274,16 @@ void ACA_ARP_Responder::_parse_arp_request(uint32_t in_port, vlan_message *vlanm
   if (!_arp_db.find(stData, current_arp_data)) {
     ACA_LOG_DEBUG("ARP entry does not exist! (ip = %s and vlan id = %u)\n",
                   stData.ipv4_address.c_str(), stData.vlan_id);
-    arp_xmit(in_port, vlanmsg, arpmsg, 0);
-    return;
+    // arp_xmit(in_port, vlanmsg, arpmsg, 0);
+    // call unknow_recv(); 
+    return ENOTSUP;
   } else {
     ACA_LOG_DEBUG("ARP entry exist (ip = %s and vlan id = %u) with mac = %s\n",
                   stData.ipv4_address.c_str(), stData.vlan_id,
                   current_arp_data->mac_address.c_str());
     arpreply = _pack_arp_reply(arpmsg, current_arp_data->mac_address);
     arp_xmit(in_port, vlanmsg, arpreply, 1);
+    return EXIT_SUCCESS;
   }
 }
 

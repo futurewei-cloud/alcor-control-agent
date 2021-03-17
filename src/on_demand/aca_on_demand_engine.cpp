@@ -48,6 +48,7 @@ using namespace alcor::schema;
 
 extern std::atomic_ulong g_total_execute_system_time;
 extern bool g_demo_mode;
+extern string g_ncm_address, g_ncm_port;
 extern GoalStateProvisionerImpl *g_grpc_server;
 
 namespace aca_on_demand_engine
@@ -66,7 +67,7 @@ OperationStatus ACA_On_Demand_Engine::unknown_recv(uint16_t vlan_id, string ip_s
   HostRequest_ResourceStateRequest *new_state_requests = HostRequest_builder.add_state_requests();
   HostRequestReply hostRequestReply;
   HostRequestReply_HostRequestOperationStatus hostOperationStatus;
-  OperationStatus replyStatus = OperationStatus::FAILURE;
+  OperationStatus replyStatus;
   
   uuid_t uuid;
   uuid_generate_time(uuid);
@@ -81,12 +82,14 @@ OperationStatus ACA_On_Demand_Engine::unknown_recv(uint16_t vlan_id, string ip_s
   new_state_requests->set_destination_port(port_dest);
   new_state_requests->set_protocol(protocol);
   new_state_requests->set_ethertype(EtherType::IPV4);
-  
+
+  ACA_LOG_INFO("Calling NCM for %s:%s", g_ncm_address.c_str(), g_ncm_port.c_str());
   hostRequestReply = g_grpc_server->RequestGoalStates(&HostRequest_builder);
   for (int i = 0; i < hostRequestReply.operation_statuses_size(); i++) {
     hostOperationStatus = hostRequestReply.operation_statuses(i);
     replyStatus = hostOperationStatus.operation_status();
   }
+  ACA_LOG_INFO("Return from NCM - Reply Status: %s", to_string(replyStatus).c_str());
   return replyStatus;
 }
 
@@ -139,7 +142,7 @@ void ACA_On_Demand_Engine::parse_packet(uint32_t in_port, void *packet)
   vlan_message *vlanmsg = nullptr;
   string ip_src, ip_dest;
   int port_src, port_dest;
-  Protocol _protocol = Protocol::TCP;
+  Protocol _protocol = Protocol::Protocol_INT_MAX_SENTINEL_DO_NOT_USE_;
   OperationStatus on_demand_reply;
 
   uint16_t ether_type = ntohs(*(uint16_t *)(base + 12));
@@ -163,7 +166,8 @@ void ACA_On_Demand_Engine::parse_packet(uint32_t in_port, void *packet)
     unsigned char *arp_hdr= (unsigned char *)(base + SIZE_ETHERNET + vlan_len);
     /* arp request procedure,type = 1 */
     if(ntohs(*(uint16_t *)(arp_hdr + 6)) == 0x0001){
-      aca_arp_responder::ACA_ARP_Responder::get_instance().arp_recv(in_port,vlan_hdr,arp_hdr);
+      if (aca_arp_responder::ACA_ARP_Responder::get_instance().arp_recv(in_port,vlan_hdr,arp_hdr) == ENOTSUP)
+          _protocol = Protocol::ARP;
     }
   } else if (ether_type == ETHERTYPE_IP) {
     ACA_LOG_INFO("%s", "Ethernet Type: IP (0x0800) \n");
@@ -280,8 +284,10 @@ void ACA_On_Demand_Engine::parse_packet(uint32_t in_port, void *packet)
     _protocol = Protocol::ICMP;
   }
   
-  on_demand_reply = unknown_recv(vlan_id, ip_src, ip_dest, port_src, port_dest, _protocol);
-  on_demand(on_demand_reply, in_port, packet, SIZE_ETHERNET + vlan_len + size_ip + 4);
+  if (_protocol != Protocol::Protocol_INT_MAX_SENTINEL_DO_NOT_USE_) {
+    on_demand_reply = unknown_recv(vlan_id, ip_src, ip_dest, port_src, port_dest, _protocol);
+    on_demand(on_demand_reply, in_port, packet, SIZE_ETHERNET + vlan_len + size_ip + 4);
+  }
 }
 
 /*
