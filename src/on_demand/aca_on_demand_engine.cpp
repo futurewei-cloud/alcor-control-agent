@@ -111,6 +111,7 @@ void ACA_On_Demand_Engine::on_demand(OperationStatus status, uint32_t in_port, v
     }
     options = inport + whitespace + packetpre + serialized_packet + whitespace + action;
     aca_ovs_control::ACA_OVS_Control::get_instance().packet_out(bridge.c_str(), options.c_str());
+    ACA_LOG_INFO("On-demand packet sent to ovs: %s\n", options.c_str());
   } else {
     ACA_LOG_ERROR("Packet dropped from %s to %s\n", ether_ntoa((ether_addr *)&eth_header->ether_shost),
                                                     ether_ntoa((ether_addr *)&eth_header->ether_dhost));
@@ -139,7 +140,7 @@ void ACA_On_Demand_Engine::parse_packet(uint32_t in_port, void *packet)
   string ip_src, ip_dest;
   int port_src, port_dest;
   Protocol _protocol = Protocol::TCP;
-  OperationStatus on_demand_reply = OperationStatus::FAILURE;
+  OperationStatus on_demand_reply;
 
   uint16_t ether_type = ntohs(*(uint16_t *)(base + 12));
   if (ether_type == ETHERTYPE_VLAN) {
