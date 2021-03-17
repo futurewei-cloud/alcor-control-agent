@@ -336,14 +336,14 @@ bool ACA_Vlan_Manager::is_exist_zeta_gateway(string zeta_gateway_id)
     }
   }
 
-  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::get_aux_gateway_id <--- Entering\n");
+  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::get_aux_gateway_id <--- Exiting\n");
 
   return zeta_gateway_id_found;
 }
 
 uint ACA_Vlan_Manager::get_tunnelId_by_vlanId(uint vlan_id)
 {
-  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::get_tunnelId_by_vlanId ---> Exiting\n");
+  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::get_tunnelId_by_vlanId ---> Entering\n");
   bool vlan_id_found = false;
   uint tunnel_id = 0;
 
@@ -378,7 +378,7 @@ uint ACA_Vlan_Manager::get_tunnelId_by_vlanId(uint vlan_id)
     }
   }
 
-  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::get_tunnelId_by_vlanId <--- Entering\n");
+  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::get_tunnelId_by_vlanId <--- Exiting\n");
 
   return tunnel_id;
 }
