@@ -16,6 +16,7 @@
 #include "aca_net_config.h"
 #include "aca_on_demand_engine.h"
 #include "aca_vlan_manager.h"
+#include "aca_ovs_control.h"
 #include "aca_grpc.h"
 #include "aca_log.h"
 #include "aca_util.h"
@@ -59,12 +60,14 @@ ACA_On_Demand_Engine &ACA_On_Demand_Engine::get_instance()
   return instance;
 }
 
-void ACA_On_Demand_Engine::unknown_recv(uint16_t vlan_id, string ip_src, string ip_dest,
+OperationStatus ACA_On_Demand_Engine::unknown_recv(uint16_t vlan_id, string ip_src, string ip_dest,
                                         int port_src, int port_dest, Protocol protocol) {
   HostRequest HostRequest_builder;
   HostRequest_ResourceStateRequest *new_state_requests = HostRequest_builder.add_state_requests();
   HostRequestReply hostRequestReply;
-
+  HostRequestReply_HostRequestOperationStatus hostOperationStatus;
+  OperationStatus replyStatus = OperationStatus::FAILURE;
+  
   uuid_t uuid;
   uuid_generate_time(uuid);
   char uuid_str[37];
@@ -80,9 +83,38 @@ void ACA_On_Demand_Engine::unknown_recv(uint16_t vlan_id, string ip_src, string 
   new_state_requests->set_ethertype(EtherType::IPV4);
   
   hostRequestReply = g_grpc_server->RequestGoalStates(&HostRequest_builder);
+  for (int i = 0; i < hostRequestReply.operation_statuses_size(); i++) {
+    hostOperationStatus = hostRequestReply.operation_statuses(i);
+    replyStatus = hostOperationStatus.operation_status();
+  }
+  return replyStatus;
+}
 
-  hostRequestReply.operation_status()
-
+void ACA_On_Demand_Engine::on_demand(OperationStatus status, uint32_t in_port, void *packet, int packet_size) 
+{
+  string bridge = "br-tun";
+  string inport = "in_port=controller";
+  string whitespace = " ";
+  string action = "actions=output:" + to_string(in_port);
+  string rs_action = "actions=resubmit(,20)";
+  string packetpre = "packet=";
+  string options;
+  string serialized_packet = "";  
+  const struct ether_header *eth_header = (struct ether_header *)packet;
+  const u_char *ch = (const u_char *) packet;
+  char str[10];
+  
+  if (status == OperationStatus::SUCCESS) {
+    for (int i = 0; i < packet_size; i++) {
+      sprintf(str, "%02x", *ch);
+      serialized_packet.append(str);
+    }
+    options = inport + whitespace + packetpre + serialized_packet + whitespace + action;
+    aca_ovs_control::ACA_OVS_Control::get_instance().packet_out(bridge.c_str(), options.c_str());
+  } else {
+    ACA_LOG_ERROR("Packet dropped from %s to %s\n", ether_ntoa((ether_addr *)&eth_header->ether_shost),
+                                                    ether_ntoa((ether_addr *)&eth_header->ether_dhost));
+  }
 }
 
 void ACA_On_Demand_Engine::parse_packet(uint32_t in_port, void *packet)
@@ -107,6 +139,7 @@ void ACA_On_Demand_Engine::parse_packet(uint32_t in_port, void *packet)
   string ip_src, ip_dest;
   int port_src, port_dest;
   Protocol _protocol = Protocol::TCP;
+  OperationStatus on_demand_reply = OperationStatus::FAILURE;
 
   uint16_t ether_type = ntohs(*(uint16_t *)(base + 12));
   if (ether_type == ETHERTYPE_VLAN) {
@@ -245,7 +278,9 @@ void ACA_On_Demand_Engine::parse_packet(uint32_t in_port, void *packet)
   } else if (ip->ip_p == IPPROTO_ICMP) {
     _protocol = Protocol::ICMP;
   }
-  unknown_recv(vlan_id, ip_src, ip_dest, port_src, port_dest, _protocol);
+  
+  on_demand_reply = unknown_recv(vlan_id, ip_src, ip_dest, port_src, port_dest, _protocol);
+  on_demand(on_demand_reply, in_port, packet, SIZE_ETHERNET + vlan_len + size_ip + 4);
 }
 
 /*
