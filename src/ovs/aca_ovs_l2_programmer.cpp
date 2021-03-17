@@ -122,6 +122,7 @@ int ACA_OVS_L2_Programmer::setup_ovs_bridges_if_need()
                           not_care_culminative_time, overall_rc);
 
     // adding default flows
+    // details at: https://github.com/futurewei-cloud/alcor-control-agent/wiki/Openflow-Tables-Explain
     execute_openflow_command("add-flow br-tun \"table=0,priority=1,in_port=\"patch-int\" actions=resubmit(,2)\"",
                              not_care_culminative_time, overall_rc);
 
@@ -131,7 +132,7 @@ int ACA_OVS_L2_Programmer::setup_ovs_bridges_if_need()
     execute_openflow_command("add-flow br-tun \"table=2,priority=1,dl_dst=01:00:00:00:00:00/01:00:00:00:00:00 actions=resubmit(,22)\"",
                              not_care_culminative_time, overall_rc);
 
-    execute_openflow_command("add-flow br-tun \"table=20,priority=1 actions=resubmit(,22)\"",
+    execute_openflow_command("add-flow br-tun \"table=20,priority=1 actions=CONTROLLER\"",
                              not_care_culminative_time, overall_rc);
 
     execute_openflow_command("add-flow br-tun \"table=2,priority=25,icmp,icmp_type=8,in_port=\"patch-int\" actions=resubmit(,52)\"",

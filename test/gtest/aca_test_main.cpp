@@ -16,8 +16,10 @@
 #include "aca_util.h"
 #include "gtest/gtest.h"
 #include "goalstate.pb.h"
+#include "aca_grpc.h"
 #include "aca_message_pulsar_producer.h"
 #include <unistd.h> /* for getopt */
+#include <grpcpp/grpcpp.h>
 
 using namespace std;
 using namespace aca_message_pulsar;
@@ -29,6 +31,10 @@ static char EMPTY_STRING[] = "";
 string g_ofctl_command = EMPTY_STRING;
 string g_ofctl_target = EMPTY_STRING;
 string g_ofctl_options = EMPTY_STRING;
+string g_ncm_address = EMPTY_STRING;
+string g_ncm_port = EMPTY_STRING;
+string g_grpc_server_port = EMPTY_STRING;
+GoalStateProvisionerImpl *g_grpc_server = NULL;
 
 // total time for execute_system_command in microseconds
 std::atomic_ulong g_initialize_execute_system_time(0);
