@@ -83,13 +83,13 @@ OperationStatus ACA_On_Demand_Engine::unknown_recv(uint16_t vlan_id, string ip_s
   new_state_requests->set_protocol(protocol);
   new_state_requests->set_ethertype(EtherType::IPV4);
 
-  ACA_LOG_INFO("Calling NCM for %s:%s", g_ncm_address.c_str(), g_ncm_port.c_str());
+  ACA_LOG_INFO("Calling NCM for %s:%s\n", g_ncm_address.c_str(), g_ncm_port.c_str());
   hostRequestReply = g_grpc_server->RequestGoalStates(&HostRequest_builder);
   for (int i = 0; i < hostRequestReply.operation_statuses_size(); i++) {
     hostOperationStatus = hostRequestReply.operation_statuses(i);
     replyStatus = hostOperationStatus.operation_status();
   }
-  ACA_LOG_INFO("Return from NCM - Reply Status: %s", to_string(replyStatus).c_str());
+  ACA_LOG_INFO("Return from NCM - Reply Status: %s\n", to_string(replyStatus).c_str());
   return replyStatus;
 }
 
