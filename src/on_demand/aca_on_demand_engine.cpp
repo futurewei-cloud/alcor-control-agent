@@ -111,6 +111,7 @@ void ACA_On_Demand_Engine::on_demand(OperationStatus status, uint32_t in_port, v
     for (int i = 0; i < packet_size; i++) {
       sprintf(str, "%02x", *ch);
       serialized_packet.append(str);
+      ch++;
     }
     options = inport + whitespace + packetpre + serialized_packet + whitespace + action;
     aca_ovs_control::ACA_OVS_Control::get_instance().packet_out(bridge.c_str(), options.c_str());
