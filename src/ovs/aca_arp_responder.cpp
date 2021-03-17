@@ -341,6 +341,21 @@ string ACA_ARP_Responder::_get_requested_ip(arp_message *arpmsg)
   return requested_ip;
 }
 
+string ACA_ARP_Responder::_get_source_ip(arp_message *arpmsg)
+{
+  string source_ip;
+  struct in_addr inaddr;
+  if (!arpmsg) {
+    ACA_LOG_ERROR("%s", "ARP message is null!\n");
+    return string();
+  }
+
+  inaddr.s_addr = arpmsg->spa;
+  source_ip = inet_ntoa(inaddr);
+
+  return source_ip;
+}
+
 string ACA_ARP_Responder::_serialize_arp_message(vlan_message *vlanmsg, arp_message *arpmsg)
 {
   string packet;

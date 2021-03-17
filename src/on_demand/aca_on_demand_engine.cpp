@@ -141,7 +141,7 @@ void ACA_On_Demand_Engine::parse_packet(uint32_t in_port, void *packet)
   uint16_t vlan_id = 0;
   vlan_message *vlanmsg = nullptr;
   string ip_src, ip_dest;
-  int port_src, port_dest;
+  int port_src, port_dest, packet_size;
   Protocol _protocol = Protocol::Protocol_INT_MAX_SENTINEL_DO_NOT_USE_;
   OperationStatus on_demand_reply;
 
@@ -166,127 +166,136 @@ void ACA_On_Demand_Engine::parse_packet(uint32_t in_port, void *packet)
     unsigned char *arp_hdr= (unsigned char *)(base + SIZE_ETHERNET + vlan_len);
     /* arp request procedure,type = 1 */
     if(ntohs(*(uint16_t *)(arp_hdr + 6)) == 0x0001){
-      if (aca_arp_responder::ACA_ARP_Responder::get_instance().arp_recv(in_port,vlan_hdr,arp_hdr) == ENOTSUP)
+      if (aca_arp_responder::ACA_ARP_Responder::get_instance().arp_recv(in_port,vlan_hdr,arp_hdr) == ENOTSUP) {
           _protocol = Protocol::ARP;
+          arp_message *arpmsg = (arp_message *)arp_hdr;
+          ip_src = aca_arp_responder::ACA_ARP_Responder::get_instance()._get_source_ip(arpmsg);
+          ip_dest = aca_arp_responder::ACA_ARP_Responder::get_instance()._get_requested_ip(arpmsg);
+          packet_size = SIZE_ETHERNET + vlan_len + 28;
+          port_src = 0;
+          port_dest = 0;
+      }
     }
   } else if (ether_type == ETHERTYPE_IP) {
-    ACA_LOG_INFO("%s", "Ethernet Type: IP (0x0800) \n");
-  } else if (ether_type == ETHERTYPE_REVARP) {
-    ACA_LOG_INFO("%s", "Ethernet Type: REVARP (0x8035) \n");
-  } else {
-    ACA_LOG_INFO("%s", "Ethernet Type: Cannot Tell!\n");
-    return;
-  }
+  //   ACA_LOG_INFO("%s", "Ethernet Type: IP (0x0800) \n");
+  // } else if (ether_type == ETHERTYPE_REVARP) {
+  //   ACA_LOG_INFO("%s", "Ethernet Type: REVARP (0x8035) \n");
+  // } else {
+  //   ACA_LOG_INFO("%s", "Ethernet Type: Cannot Tell!\n");
+  //   return;
+  // }
 
-  /* define/compute ip header offset */
-  const struct sniff_ip *ip = (struct sniff_ip *)(base + SIZE_ETHERNET + vlan_len);
-  int size_ip = IP_HL(ip) * 4;
+    /* define/compute ip header offset */
+    const struct sniff_ip *ip = (struct sniff_ip *)(base + SIZE_ETHERNET + vlan_len);
+    int size_ip = IP_HL(ip) * 4;
 
-  if (size_ip < 20) {
-    ACA_LOG_ERROR("size_udp < 20: %d bytes\n", size_ip);
-    return;
-  } else {
-    ip_src = string(inet_ntoa(ip->ip_src));
-    ip_dest = string(inet_ntoa(ip->ip_dst));
-
-    /* print source and destination IP addresses */
-    ACA_LOG_INFO("       From: %s\n", inet_ntoa(ip->ip_src));
-    ACA_LOG_INFO("         To: %s\n", inet_ntoa(ip->ip_dst));
-
-    /* determine protocol */
-    switch (ip->ip_p) {
-    case IPPROTO_TCP:
-      ACA_LOG_INFO("%s", "   Protocol: TCP\n");
-      break;
-    case IPPROTO_UDP:
-      ACA_LOG_INFO("%s", "   Protocol: UDP\n");
-      break;
-    case IPPROTO_ICMP:
-      ACA_LOG_INFO("%s", "   Protocol: ICMP\n");
-      break;
-    case IPPROTO_IP:
-      ACA_LOG_INFO("%s", "   Protocol: IP\n");
-      break;
-    default:
-      ACA_LOG_INFO("%s", "   Protocol: unknown\n");
-    }
-  }
-
-  if (ip->ip_p == IPPROTO_TCP) {
-    /* define/compute tcp header offset */
-    const struct sniff_tcp *tcp =
-            (struct sniff_tcp *)(base + SIZE_ETHERNET + vlan_len + size_ip);
-    //const unsigned char *payload;
-    int size_payload;
-    int size_tcp = TH_OFF(tcp) * 4;
-    _protocol = Protocol::TCP;
-
-    if (size_tcp < 20) {
-      ACA_LOG_ERROR("size_tcp < 20: %d bytes \n", size_tcp);
+    if (size_ip < 20) {
+      ACA_LOG_ERROR("size_udp < 20: %d bytes\n", size_ip);
       return;
     } else {
-      port_src = ntohs(tcp->th_sport);
-      port_dest = ntohs(tcp->th_dport);
+      ip_src = string(inet_ntoa(ip->ip_src));
+      ip_dest = string(inet_ntoa(ip->ip_dst));
+      packet_size = SIZE_ETHERNET + vlan_len + size_ip;
 
-      ACA_LOG_INFO("   Src port: %d\n", ntohs(tcp->th_sport));
-      ACA_LOG_INFO("   Dst port: %d\n", ntohs(tcp->th_dport));
+      /* print source and destination IP addresses */
+      ACA_LOG_INFO("       From: %s\n", inet_ntoa(ip->ip_src));
+      ACA_LOG_INFO("         To: %s\n", inet_ntoa(ip->ip_dst));
 
-      /* define/compute tcp payload (segment) offset */
-      //payload = (u_char *)(base + SIZE_ETHERNET + vlan_len + size_ip + size_tcp);
-
-      /* compute tcp payload (segment) size */
-      size_payload = ntohs(ip->ip_len) - (size_ip + size_tcp);
-
-      /* Print payload data; */
-      if (size_payload > 0) {
-        ACA_LOG_INFO("   Payload (%d bytes):\n", size_payload);
-        // print_payload(payload, size_payload);
+      /* determine protocol */
+      switch (ip->ip_p) {
+      case IPPROTO_TCP:
+        ACA_LOG_INFO("%s", "   Protocol: TCP\n");
+        break;
+      case IPPROTO_UDP:
+        ACA_LOG_INFO("%s", "   Protocol: UDP\n");
+        break;
+      case IPPROTO_ICMP:
+        ACA_LOG_INFO("%s", "   Protocol: ICMP\n");
+        break;
+      case IPPROTO_IP:
+        ACA_LOG_INFO("%s", "   Protocol: IP\n");
+        break;
+      default:
+        ACA_LOG_INFO("%s", "   Protocol: unknown\n");
       }
     }
-  } else if (ip->ip_p == IPPROTO_UDP) {
-    /* define/compute udp header offset */
-    const struct sniff_udp *udp =
-            (struct sniff_udp *)(base + SIZE_ETHERNET + vlan_len + size_ip);
-    const unsigned char *payload;
-    int size_payload;
-    int size_udp = ntohs(udp->uh_ulen);
-    _protocol = Protocol::UDP;
 
-    if (size_udp < 20) {
-      ACA_LOG_ERROR("size_udp < 20: %d bytes \n", size_udp);
-      return;
-    } else {
-      port_src = ntohs(udp->uh_sport);
-      port_dest = ntohs(udp->uh_dport);
-      ACA_LOG_INFO("   Src port: %d\n", port_src);
-      ACA_LOG_INFO("   Dst port: %d\n", port_dest);
+    if (ip->ip_p == IPPROTO_TCP) {
+      /* define/compute tcp header offset */
+      const struct sniff_tcp *tcp =
+              (struct sniff_tcp *)(base + SIZE_ETHERNET + vlan_len + size_ip);
+      //const unsigned char *payload;
+      int size_payload;
+      int size_tcp = TH_OFF(tcp) * 4;
+      _protocol = Protocol::TCP;
 
-      /* define/compute udp payload (daragram) offset */
-      payload = (u_char *)(base + SIZE_ETHERNET + vlan_len + size_ip + 8);
+      if (size_tcp < 20) {
+        ACA_LOG_ERROR("size_tcp < 20: %d bytes \n", size_tcp);
+        return;
+      } else {
+        port_src = ntohs(tcp->th_sport);
+        port_dest = ntohs(tcp->th_dport);
 
-      /* compute udp payload (datagram) size */
-      size_payload = ntohs(ip->ip_len) - (size_ip + 8);
+        ACA_LOG_INFO("   Src port: %d\n", ntohs(tcp->th_sport));
+        ACA_LOG_INFO("   Dst port: %d\n", ntohs(tcp->th_dport));
 
-      /* Print payload data. */
-      if (size_payload > 0) {
-        ACA_LOG_INFO("   Payload (%d bytes):\n", size_payload);
-        //print_payload(payload, size_payload);
+        /* define/compute tcp payload (segment) offset */
+        //payload = (u_char *)(base + SIZE_ETHERNET + vlan_len + size_ip + size_tcp);
+
+        /* compute tcp payload (segment) size */
+        size_payload = ntohs(ip->ip_len) - (size_ip + size_tcp);
+
+        /* Print payload data; */
+        if (size_payload > 0) {
+          ACA_LOG_INFO("   Payload (%d bytes):\n", size_payload);
+          // print_payload(payload, size_payload);
+        }
       }
+    } else if (ip->ip_p == IPPROTO_UDP) {
+      /* define/compute udp header offset */
+      const struct sniff_udp *udp =
+              (struct sniff_udp *)(base + SIZE_ETHERNET + vlan_len + size_ip);
+      const unsigned char *payload;
+      int size_payload;
+      int size_udp = ntohs(udp->uh_ulen);
+      _protocol = Protocol::UDP;
 
-      /* dhcp message procedure */
-      if (port_src == 68 && port_dest == 67) {
-        ACA_LOG_INFO("%s", "   Message Type: DHCP\n");
-        aca_dhcp_server::ACA_Dhcp_Server::get_instance().dhcps_recv(
-                in_port, const_cast<unsigned char *>(payload));
+      if (size_udp < 20) {
+        ACA_LOG_ERROR("size_udp < 20: %d bytes \n", size_udp);
+        return;
+      } else {
+        port_src = ntohs(udp->uh_sport);
+        port_dest = ntohs(udp->uh_dport);
+        ACA_LOG_INFO("   Src port: %d\n", port_src);
+        ACA_LOG_INFO("   Dst port: %d\n", port_dest);
+
+        /* define/compute udp payload (daragram) offset */
+        payload = (u_char *)(base + SIZE_ETHERNET + vlan_len + size_ip + 8);
+
+        /* compute udp payload (datagram) size */
+        size_payload = ntohs(ip->ip_len) - (size_ip + 8);
+
+        /* Print payload data. */
+        if (size_payload > 0) {
+          ACA_LOG_INFO("   Payload (%d bytes):\n", size_payload);
+          //print_payload(payload, size_payload);
+        }
+
+        /* dhcp message procedure */
+        if (port_src == 68 && port_dest == 67) {
+          ACA_LOG_INFO("%s", "   Message Type: DHCP\n");
+          aca_dhcp_server::ACA_Dhcp_Server::get_instance().dhcps_recv(
+                  in_port, const_cast<unsigned char *>(payload));
+        }
       }
+    } else if (ip->ip_p == IPPROTO_ICMP) {
+      _protocol = Protocol::ICMP;
     }
-  } else if (ip->ip_p == IPPROTO_ICMP) {
-    _protocol = Protocol::ICMP;
   }
-  
+
   if (_protocol != Protocol::Protocol_INT_MAX_SENTINEL_DO_NOT_USE_) {
     on_demand_reply = unknown_recv(vlan_id, ip_src, ip_dest, port_src, port_dest, _protocol);
-    on_demand(on_demand_reply, in_port, packet, SIZE_ETHERNET + vlan_len + size_ip + 4);
+    on_demand(on_demand_reply, in_port, packet, SIZE_ETHERNET + vlan_len + packet_size);
   }
 }
 
