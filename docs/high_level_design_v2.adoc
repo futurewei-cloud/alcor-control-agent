@@ -85,7 +85,7 @@ Incoming unknown packet handling (when we enable SG):
 ... if NCM reply with operation_status = FAILURE(NOT_ROUTABLE), then log and drop unknown packet
 ... if ACA timed out waiting for port configuration from NCM, then log and drop unknown packet, may do retry
 
-=== ARP responder update to handle unknown ARP request (Easy) - James
+=== ARP responder update to handle unknown ARP request (Not so Easy) - James
 
 . ACA_ARP_Responder::_parse_arp_request, if ARP entry does not exist, call ACA_On_Demand_Engine::unknown_recv(vlan_id, source port IP, destination IP, source/destination port, protocol=ARP, EtherType=IPv4)
 
