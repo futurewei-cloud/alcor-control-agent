@@ -53,7 +53,8 @@ class ACA_On_Demand_Engine {
    */
   void print_payload(const u_char *payload, int len);
   void print_hex_ascii_line(const u_char *payload, int len, int offset);
-  void on_demand(OperationStatus status, uint32_t in_port, void *packet, int packet_size);
+  void on_demand(OperationStatus status, uint32_t in_port, void *packet, 
+                 int packet_size, Protocol protocol);
   OperationStatus unknown_recv(uint16_t vlan_id, string ip_src, string ip_dest,
                                 int port_src, int port_dest, Protocol protocol);
 

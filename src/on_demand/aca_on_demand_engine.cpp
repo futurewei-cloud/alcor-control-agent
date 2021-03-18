@@ -37,6 +37,7 @@
 #include <netinet/ip.h>
 #include <arpa/inet.h>
 #include <uuid/uuid.h>
+#include <unistd.h>
 #include "goalstateprovisioner.pb.h"
 #include "aca_dhcp_server.h"
 #include "aca_arp_responder.h"
@@ -68,6 +69,7 @@ OperationStatus ACA_On_Demand_Engine::unknown_recv(uint16_t vlan_id, string ip_s
   HostRequestReply hostRequestReply;
   HostRequestReply_HostRequestOperationStatus hostOperationStatus;
   OperationStatus replyStatus;
+  unsigned int microseconds = 100;
   
   uuid_t uuid;
   uuid_generate_time(uuid);
@@ -90,10 +92,12 @@ OperationStatus ACA_On_Demand_Engine::unknown_recv(uint16_t vlan_id, string ip_s
     replyStatus = hostOperationStatus.operation_status();
   }
   ACA_LOG_DEBUG("Return from NCM - Reply Status: %s\n", to_string(replyStatus).c_str());
+  usleep(microseconds);
   return replyStatus;
 }
 
-void ACA_On_Demand_Engine::on_demand(OperationStatus status, uint32_t in_port, void *packet, int packet_size) 
+void ACA_On_Demand_Engine::on_demand(OperationStatus status, uint32_t in_port, void *packet, 
+                                     int packet_size, Protocol protocol) 
 {
   string bridge = "br-tun";
   string inport = "in_port=controller";
@@ -101,21 +105,31 @@ void ACA_On_Demand_Engine::on_demand(OperationStatus status, uint32_t in_port, v
   string action = "actions=output:" + to_string(in_port);
   string rs_action = "actions=resubmit(,20)";
   string packetpre = "packet=";
-  string options;
+  string options = "";
   string serialized_packet = "";  
   const struct ether_header *eth_header = (struct ether_header *)packet;
   const u_char *ch = (const u_char *) packet;
   char str[10];
   
   if (status == OperationStatus::SUCCESS) {
-    for (int i = 0; i < packet_size; i++) {
-      sprintf(str, "%02x", *ch);
-      serialized_packet.append(str);
-      ch++;
+    if (protocol == Protocol::ARP) {
+      char *base = (char *)packet;
+      unsigned char *vlan_hdr = (unsigned char *)(base + 12);
+      vlan_message *vlanmsg = (vlan_message *)vlan_hdr;
+      unsigned char *arp_hdr = (unsigned char *)(base + SIZE_ETHERNET + 4);
+      arp_message *arpmsg = (arp_message *) arp_hdr;
+      aca_arp_responder::ACA_ARP_Responder::get_instance()._parse_arp_request(in_port, vlanmsg, arpmsg);
+      ACA_LOG_DEBUG("%s", "On-demand arp request packet sent to arp_responder.\n");
+    } else {
+      for (int i = 0; i < packet_size; i++) {
+        sprintf(str, "%02x", *ch);
+        serialized_packet.append(str);
+        ch++;
+      }
+      options = inport + whitespace + packetpre + serialized_packet + whitespace + action;      
+      aca_ovs_control::ACA_OVS_Control::get_instance().packet_out(bridge.c_str(), options.c_str());
+      ACA_LOG_DEBUG("On-demand packet sent to ovs: %s\n", options.c_str());
     }
-    options = inport + whitespace + packetpre + serialized_packet + whitespace + action;
-    aca_ovs_control::ACA_OVS_Control::get_instance().packet_out(bridge.c_str(), options.c_str());
-    ACA_LOG_DEBUG("On-demand packet sent to ovs: %s\n", options.c_str());
   } else {
     ACA_LOG_ERROR("Packet dropped from %s to %s\n", ether_ntoa((ether_addr *)&eth_header->ether_shost),
                                                     ether_ntoa((ether_addr *)&eth_header->ether_dhost));
@@ -134,7 +148,7 @@ void ACA_On_Demand_Engine::parse_packet(uint32_t in_port, void *packet)
     lengths though, but the ethernet header is always the same (14 bytes) */
   eth_header = (struct ether_header *)packet;
 
-  ACA_LOG_INFO("Source Mac: %s\n", ether_ntoa((ether_addr *)&eth_header->ether_shost));
+  ACA_LOG_DEBUG("Source Mac: %s\n", ether_ntoa((ether_addr *)&eth_header->ether_shost));
 
   int vlan_len = 0;
   unsigned char *vlan_hdr = nullptr;
@@ -160,9 +174,9 @@ void ACA_On_Demand_Engine::parse_packet(uint32_t in_port, void *packet)
   }
 
   if (ether_type == ETHERTYPE_ARP) {
-    ACA_LOG_INFO("%s", "Ethernet Type: ARP (0x0806) \n");
-    ACA_LOG_INFO("   From: %s\n", inet_ntoa(*(in_addr *)(base + 14 + vlan_len + 14)));
-    ACA_LOG_INFO("     to: %s\n", inet_ntoa(*(in_addr *)(base + 14 + vlan_len + 14 + 10)));
+    ACA_LOG_DEBUG("%s", "Ethernet Type: ARP (0x0806) \n");
+    ACA_LOG_DEBUG("   From: %s\n", inet_ntoa(*(in_addr *)(base + 14 + vlan_len + 14)));
+    ACA_LOG_DEBUG("     to: %s\n", inet_ntoa(*(in_addr *)(base + 14 + vlan_len + 14 + 10)));
     /* compute arp message offset */
     unsigned char *arp_hdr= (unsigned char *)(base + SIZE_ETHERNET + vlan_len);
     /* arp request procedure,type = 1 */
@@ -178,13 +192,7 @@ void ACA_On_Demand_Engine::parse_packet(uint32_t in_port, void *packet)
       }
     }
   } else if (ether_type == ETHERTYPE_IP) {
-  //   ACA_LOG_INFO("%s", "Ethernet Type: IP (0x0800) \n");
-  // } else if (ether_type == ETHERTYPE_REVARP) {
-  //   ACA_LOG_INFO("%s", "Ethernet Type: REVARP (0x8035) \n");
-  // } else {
-  //   ACA_LOG_INFO("%s", "Ethernet Type: Cannot Tell!\n");
-  //   return;
-  // }
+    ACA_LOG_DEBUG("%s", "Ethernet Type: IP (0x0800) \n");
 
     /* define/compute ip header offset */
     const struct sniff_ip *ip = (struct sniff_ip *)(base + SIZE_ETHERNET + vlan_len);
@@ -199,25 +207,25 @@ void ACA_On_Demand_Engine::parse_packet(uint32_t in_port, void *packet)
       packet_size = SIZE_ETHERNET + vlan_len + size_ip;
 
       /* print source and destination IP addresses */
-      ACA_LOG_INFO("       From: %s\n", inet_ntoa(ip->ip_src));
-      ACA_LOG_INFO("         To: %s\n", inet_ntoa(ip->ip_dst));
+      ACA_LOG_DEBUG("       From: %s\n", inet_ntoa(ip->ip_src));
+      ACA_LOG_DEBUG("         To: %s\n", inet_ntoa(ip->ip_dst));
 
       /* determine protocol */
       switch (ip->ip_p) {
       case IPPROTO_TCP:
-        ACA_LOG_INFO("%s", "   Protocol: TCP\n");
+        ACA_LOG_DEBUG("%s", "   Protocol: TCP\n");
         break;
       case IPPROTO_UDP:
-        ACA_LOG_INFO("%s", "   Protocol: UDP\n");
+        ACA_LOG_DEBUG("%s", "   Protocol: UDP\n");
         break;
       case IPPROTO_ICMP:
-        ACA_LOG_INFO("%s", "   Protocol: ICMP\n");
+        ACA_LOG_DEBUG("%s", "   Protocol: ICMP\n");
         break;
       case IPPROTO_IP:
-        ACA_LOG_INFO("%s", "   Protocol: IP\n");
+        ACA_LOG_DEBUG("%s", "   Protocol: IP\n");
         break;
       default:
-        ACA_LOG_INFO("%s", "   Protocol: unknown\n");
+        ACA_LOG_DEBUG("%s", "   Protocol: unknown\n");
       }
     }
 
@@ -237,8 +245,8 @@ void ACA_On_Demand_Engine::parse_packet(uint32_t in_port, void *packet)
         port_src = ntohs(tcp->th_sport);
         port_dest = ntohs(tcp->th_dport);
 
-        ACA_LOG_INFO("   Src port: %d\n", ntohs(tcp->th_sport));
-        ACA_LOG_INFO("   Dst port: %d\n", ntohs(tcp->th_dport));
+        ACA_LOG_DEBUG("   Src port: %d\n", ntohs(tcp->th_sport));
+        ACA_LOG_DEBUG("   Dst port: %d\n", ntohs(tcp->th_dport));
 
         /* define/compute tcp payload (segment) offset */
         //payload = (u_char *)(base + SIZE_ETHERNET + vlan_len + size_ip + size_tcp);
@@ -248,7 +256,7 @@ void ACA_On_Demand_Engine::parse_packet(uint32_t in_port, void *packet)
 
         /* Print payload data; */
         if (size_payload > 0) {
-          ACA_LOG_INFO("   Payload (%d bytes):\n", size_payload);
+          ACA_LOG_DEBUG("   Payload (%d bytes):\n", size_payload);
           // print_payload(payload, size_payload);
         }
       }
@@ -267,8 +275,8 @@ void ACA_On_Demand_Engine::parse_packet(uint32_t in_port, void *packet)
       } else {
         port_src = ntohs(udp->uh_sport);
         port_dest = ntohs(udp->uh_dport);
-        ACA_LOG_INFO("   Src port: %d\n", port_src);
-        ACA_LOG_INFO("   Dst port: %d\n", port_dest);
+        ACA_LOG_DEBUG("   Src port: %d\n", port_src);
+        ACA_LOG_DEBUG("   Dst port: %d\n", port_dest);
 
         /* define/compute udp payload (daragram) offset */
         payload = (u_char *)(base + SIZE_ETHERNET + vlan_len + size_ip + 8);
@@ -278,25 +286,31 @@ void ACA_On_Demand_Engine::parse_packet(uint32_t in_port, void *packet)
 
         /* Print payload data. */
         if (size_payload > 0) {
-          ACA_LOG_INFO("   Payload (%d bytes):\n", size_payload);
+          ACA_LOG_DEBUG("   Payload (%d bytes):\n", size_payload);
           //print_payload(payload, size_payload);
         }
 
         /* dhcp message procedure */
         if (port_src == 68 && port_dest == 67) {
-          ACA_LOG_INFO("%s", "   Message Type: DHCP\n");
+          ACA_LOG_DEBUG("%s", "   Message Type: DHCP\n");
           aca_dhcp_server::ACA_Dhcp_Server::get_instance().dhcps_recv(
                   in_port, const_cast<unsigned char *>(payload));
+          _protocol = Protocol::Protocol_INT_MAX_SENTINEL_DO_NOT_USE_;
         }
       }
     } else if (ip->ip_p == IPPROTO_ICMP) {
       _protocol = Protocol::ICMP;
     }
+  } else if (ether_type == ETHERTYPE_REVARP) {
+    ACA_LOG_DEBUG("%s", "Ethernet Type: REVARP (0x8035) \n");
+  } else {
+    ACA_LOG_DEBUG("%s", "Ethernet Type: Cannot Tell!\n");
+    return;
   }
 
   if (_protocol != Protocol::Protocol_INT_MAX_SENTINEL_DO_NOT_USE_) {
     on_demand_reply = unknown_recv(vlan_id, ip_src, ip_dest, port_src, port_dest, _protocol);
-    on_demand(on_demand_reply, in_port, packet, SIZE_ETHERNET + vlan_len + packet_size);
+    on_demand(on_demand_reply, in_port, packet, SIZE_ETHERNET + vlan_len + packet_size, _protocol);
   }
 }
 
