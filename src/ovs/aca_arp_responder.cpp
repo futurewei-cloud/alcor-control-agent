@@ -248,6 +248,7 @@ void ACA_ARP_Responder::arp_xmit(uint32_t in_port, void *vlanmsg, void *message,
     options = inport + whitespace + packetpre + packet + whitespace + rs_action;
   }
 
+  ACA_LOG_DEBUG("ACA_ARP_Responder sent arp packet to ovs: %s\n", options.c_str());
   aca_ovs_control::ACA_OVS_Control::get_instance().packet_out(bridge.c_str(),
                                                               options.c_str());
 }

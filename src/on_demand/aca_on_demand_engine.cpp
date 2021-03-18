@@ -83,13 +83,13 @@ OperationStatus ACA_On_Demand_Engine::unknown_recv(uint16_t vlan_id, string ip_s
   new_state_requests->set_protocol(protocol);
   new_state_requests->set_ethertype(EtherType::IPV4);
 
-  ACA_LOG_INFO("Calling NCM for %s:%s\n", g_ncm_address.c_str(), g_ncm_port.c_str());
+  ACA_LOG_DEBUG("Calling NCM for %s:%s\n", g_ncm_address.c_str(), g_ncm_port.c_str());
   hostRequestReply = g_grpc_server->RequestGoalStates(&HostRequest_builder);
   for (int i = 0; i < hostRequestReply.operation_statuses_size(); i++) {
     hostOperationStatus = hostRequestReply.operation_statuses(i);
     replyStatus = hostOperationStatus.operation_status();
   }
-  ACA_LOG_INFO("Return from NCM - Reply Status: %s\n", to_string(replyStatus).c_str());
+  ACA_LOG_DEBUG("Return from NCM - Reply Status: %s\n", to_string(replyStatus).c_str());
   return replyStatus;
 }
 
@@ -115,7 +115,7 @@ void ACA_On_Demand_Engine::on_demand(OperationStatus status, uint32_t in_port, v
     }
     options = inport + whitespace + packetpre + serialized_packet + whitespace + action;
     aca_ovs_control::ACA_OVS_Control::get_instance().packet_out(bridge.c_str(), options.c_str());
-    ACA_LOG_INFO("On-demand packet sent to ovs: %s\n", options.c_str());
+    ACA_LOG_DEBUG("On-demand packet sent to ovs: %s\n", options.c_str());
   } else {
     ACA_LOG_ERROR("Packet dropped from %s to %s\n", ether_ntoa((ether_addr *)&eth_header->ether_shost),
                                                     ether_ntoa((ether_addr *)&eth_header->ether_dhost));
