@@ -20,6 +20,7 @@
 #include "aca_grpc.h"
 #include "aca_log.h"
 #include "aca_util.h"
+#include "aca_config.h"
 #include <iostream>
 #include <vector>
 #include <unordered_map>
@@ -69,7 +70,6 @@ OperationStatus ACA_On_Demand_Engine::unknown_recv(uint16_t vlan_id, string ip_s
   HostRequestReply hostRequestReply;
   HostRequestReply_HostRequestOperationStatus hostOperationStatus;
   OperationStatus replyStatus;
-  unsigned int microseconds = 100;
   
   uuid_t uuid;
   uuid_generate_time(uuid);
@@ -92,7 +92,7 @@ OperationStatus ACA_On_Demand_Engine::unknown_recv(uint16_t vlan_id, string ip_s
     replyStatus = hostOperationStatus.operation_status();
   }
   ACA_LOG_DEBUG("Return from NCM - Reply Status: %s\n", to_string(replyStatus).c_str());
-  usleep(microseconds);
+  usleep(USLEEPTIME_IN_MICROSECONDS);
   return replyStatus;
 }
 
