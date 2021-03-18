@@ -275,8 +275,6 @@ int ACA_ARP_Responder::_parse_arp_request(uint32_t in_port, vlan_message *vlanms
   if (!_arp_db.find(stData, current_arp_data)) {
     ACA_LOG_DEBUG("ARP entry does not exist! (ip = %s and vlan id = %u)\n",
                   stData.ipv4_address.c_str(), stData.vlan_id);
-    // arp_xmit(in_port, vlanmsg, arpmsg, 0);
-    // call unknow_recv(); 
     return ENOTSUP;
   } else {
     ACA_LOG_DEBUG("ARP entry exist (ip = %s and vlan id = %u) with mac = %s\n",
