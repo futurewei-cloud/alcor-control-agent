@@ -42,6 +42,10 @@ HostRequestReply GoalStateProvisionerImpl::RequestGoalStates(HostRequest *reques
   grpc::ClientContext ctx;
   alcor::schema::HostRequestReply reply;
   stub_->RequestGoalStates(&ctx, *request, &reply);
+  if (chan_->GetState(false) != grpc_connectivity_state::GRPC_CHANNEL_READY) {
+    ACA_LOG_INFO("%s, it is: [%d]\n", "Channel state is not READY", chan_->GetState(false));
+    reply.mutable_operation_statuses()->at(0).set_operation_status(OperationStatus::FAILURE);
+  }
   return reply;
 }
 
@@ -114,8 +118,9 @@ void GoalStateProvisionerImpl::RunServer()
   // Allow keep alive ping even if there are no calls in flight
   args.SetInt(GRPC_ARG_KEEPALIVE_PERMIT_WITHOUT_CALLS, 1);
 
-  stub_ = GoalStateProvisioner::NewStub(grpc::CreateCustomChannel(
-          g_ncm_address + ":" + g_ncm_port, grpc::InsecureChannelCredentials(), args));
+  chan_ = grpc::CreateCustomChannel(g_ncm_address + ":" + g_ncm_port,
+                                    grpc::InsecureChannelCredentials(), args);
+  stub_ = GoalStateProvisioner::NewStub(chan_);
 
   ACA_LOG_INFO("%s\n", "After initing a new sub to connect to the NCM");
 
