@@ -303,6 +303,7 @@ void ACA_On_Demand_Engine::parse_packet(uint32_t in_port, void *packet)
     }
   } else if (ether_type == ETHERTYPE_REVARP) {
     ACA_LOG_DEBUG("%s", "Ethernet Type: REVARP (0x8035) \n");
+    _protocol = Protocol::Protocol_INT_MAX_SENTINEL_DO_NOT_USE_;
   } else {
     ACA_LOG_DEBUG("%s", "Ethernet Type: Cannot Tell!\n");
     return;
