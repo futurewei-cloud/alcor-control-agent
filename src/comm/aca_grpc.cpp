@@ -31,9 +31,26 @@
 #include "aca_grpc.h"
 
 extern string g_grpc_server_port;
+extern string g_ncm_address;
+extern string g_ncm_port;
 
 using namespace alcor::schema;
 using aca_comm_manager::Aca_Comm_Manager;
+
+HostRequestReply GoalStateProvisionerImpl::RequestGoalStates(HostRequest *request)
+{
+  grpc::ClientContext ctx;
+  alcor::schema::HostRequestReply reply;
+  
+  if (chan_->GetState(false) != grpc_connectivity_state::GRPC_CHANNEL_READY) {
+    ACA_LOG_INFO("%s, it is: [%d]\n", "Channel state is not READY", chan_->GetState(false));
+    reply.mutable_operation_statuses()->Add();
+    reply.mutable_operation_statuses()->at(0).set_operation_status(OperationStatus::FAILURE);
+    return reply;
+  }
+  stub_->RequestGoalStates(&ctx, *request, &reply);
+  return reply;
+}
 
 Status
 GoalStateProvisionerImpl::PushNetworkResourceStates(ServerContext * /* context */,
@@ -94,6 +111,22 @@ Status GoalStateProvisionerImpl::ShutDownServer()
 
 void GoalStateProvisionerImpl::RunServer()
 {
+  ACA_LOG_INFO("%s\n", "Trying to init a new sub to connect to the NCM");
+  grpc::ChannelArguments args;
+  // Channel does a keep alive ping every 10 seconds;
+  args.SetInt(GRPC_ARG_KEEPALIVE_TIME_MS, 10000);
+  // If the channel does receive the keep alive ping result in 20 seconds, it closes the connection
+  args.SetInt(GRPC_ARG_KEEPALIVE_TIMEOUT_MS, 20000);
+
+  // Allow keep alive ping even if there are no calls in flight
+  args.SetInt(GRPC_ARG_KEEPALIVE_PERMIT_WITHOUT_CALLS, 1);
+
+  chan_ = grpc::CreateCustomChannel(g_ncm_address + ":" + g_ncm_port,
+                                    grpc::InsecureChannelCredentials(), args);
+  stub_ = GoalStateProvisioner::NewStub(chan_);
+
+  ACA_LOG_INFO("%s\n", "After initing a new sub to connect to the NCM");
+
   ServerBuilder builder;
   string GRPC_SERVER_ADDRESS = "0.0.0.0:" + g_grpc_server_port;
   builder.AddListeningPort(GRPC_SERVER_ADDRESS, grpc::InsecureServerCredentials());

@@ -29,6 +29,10 @@ using grpc::Status;
 
 class GoalStateProvisionerImpl final : public GoalStateProvisioner::Service {
   public:
+  std::unique_ptr<GoalStateProvisioner::Stub> stub_;
+  std::shared_ptr<grpc_impl::Channel> chan_;
+  HostRequestReply RequestGoalStates(HostRequest *request);
+  
   // ~GoalStateProvisionerImpl();
   explicit GoalStateProvisionerImpl(){};
   Status PushNetworkResourceStates(ServerContext *context, const GoalState *goalState,

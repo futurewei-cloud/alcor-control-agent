@@ -16,6 +16,7 @@
 #include "aca_log.h"
 #include "aca_util.h"
 #include "aca_comm_mgr.h"
+#include "aca_grpc.h"
 #include "goalstateprovisioner.grpc.pb.h"
 #include "goalstate.pb.h"
 #include "cppkafka/buffer.h"
@@ -41,11 +42,15 @@ using namespace alcor::schema;
 using aca_comm_manager::Aca_Comm_Manager;
 
 // Global variables
-string g_grpc_server = EMPTY_STRING;
+string g_grpc_server_ip = EMPTY_STRING;
 string g_grpc_port = EMPTY_STRING;
 string g_ofctl_command = EMPTY_STRING;
 string g_ofctl_target = EMPTY_STRING;
 string g_ofctl_options = EMPTY_STRING;
+string g_ncm_address = EMPTY_STRING;
+string g_ncm_port = EMPTY_STRING;
+string g_grpc_server_port = EMPTY_STRING;
+GoalStateProvisionerImpl *g_grpc_server = NULL;
 
 // total time for execute_system_command in microseconds
 std::atomic_ulong g_total_execute_system_time(0);
@@ -542,7 +547,7 @@ int main(int argc, char *argv[])
   while ((option = getopt(argc, argv, "s:p:d")) != -1) {
     switch (option) {
     case 's':
-      g_grpc_server = optarg;
+      g_grpc_server_ip = optarg;
       break;
     case 'p':
       g_grpc_port = optarg;
@@ -563,8 +568,8 @@ int main(int argc, char *argv[])
 
   // fill in the grpc server and protocol if it is not provided in
   // command line arg
-  if (g_grpc_server == EMPTY_STRING) {
-    g_grpc_server = LOCALHOST;
+  if (g_grpc_server_ip == EMPTY_STRING) {
+    g_grpc_server_ip = LOCALHOST;
   }
   if (g_grpc_port == EMPTY_STRING) {
     g_grpc_port = GRPC_PORT;
@@ -650,7 +655,7 @@ int main(int argc, char *argv[])
   auto before_grpc_client = std::chrono::steady_clock::now();
 
   GoalStateProvisionerClient grpc_client(grpc::CreateChannel(
-          g_grpc_server + ":" + g_grpc_port, grpc::InsecureChannelCredentials()));
+          g_grpc_server_ip + ":" + g_grpc_port, grpc::InsecureChannelCredentials()));
 
   auto after_grpc_client = std::chrono::steady_clock::now();
 

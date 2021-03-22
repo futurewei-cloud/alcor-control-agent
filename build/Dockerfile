@@ -33,6 +33,7 @@ RUN echo "1--- installing common dependencies ---" && \
     pkg-config \
     libtool \
     wget \
+    uuid-dev \
     openvswitch-switch
 
 RUN pip3 install httpserver netaddr

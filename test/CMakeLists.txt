@@ -56,6 +56,8 @@ target_link_libraries(aca_tests pulsar)
 #target_link_libraries(aca_tests openvswitch)
 target_link_libraries(aca_tests AlcorControlAgentLib)
 target_link_libraries(aca_tests proto)
+target_link_libraries(aca_tests grpc)
+target_link_libraries(aca_tests ${_GRPC_GRPCPP_UNSECURE})
 target_link_libraries(aca_tests ${PROTOBUF_LIBRARY})
 target_link_libraries(aca_tests Threads::Threads)
 
