@@ -128,7 +128,7 @@ void ACA_On_Demand_Engine::on_demand(OperationStatus status, uint32_t in_port, v
       }
       options = inport + whitespace + packetpre + serialized_packet + whitespace + action;      
       aca_ovs_control::ACA_OVS_Control::get_instance().packet_out(bridge.c_str(), options.c_str());
-      ACA_LOG_DEBUG("On-demand packet sent to ovs: %s\n", options.c_str());
+      ACA_LOG_DEBUG("On-demand packet with protocol %d sent to ovs: %s\n", protocol, options.c_str());
     }
   } else {
     ACA_LOG_ERROR("Packet dropped from %s to %s\n", ether_ntoa((ether_addr *)&eth_header->ether_shost),
