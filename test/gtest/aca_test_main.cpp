@@ -20,6 +20,7 @@
 #include "aca_message_pulsar_producer.h"
 #include <unistd.h> /* for getopt */
 #include <grpcpp/grpcpp.h>
+#include <thread>
 
 using namespace std;
 using namespace aca_message_pulsar;
@@ -34,6 +35,7 @@ string g_ofctl_options = EMPTY_STRING;
 string g_ncm_address = EMPTY_STRING;
 string g_ncm_port = EMPTY_STRING;
 string g_grpc_server_port = EMPTY_STRING;
+std::thread *g_grpc_server_thread = NULL;
 GoalStateProvisionerImpl *g_grpc_server = NULL;
 
 // total time for execute_system_command in microseconds
@@ -164,6 +166,10 @@ int main(int argc, char **argv)
     }
   }
 
+  g_grpc_server = new GoalStateProvisionerImpl();
+  g_grpc_server_thread = new std::thread(std::bind(&GoalStateProvisionerImpl::RunServer, g_grpc_server));
+  g_grpc_server_thread->detach();
+  
   int rc = RUN_ALL_TESTS();
 
   aca_cleanup();
