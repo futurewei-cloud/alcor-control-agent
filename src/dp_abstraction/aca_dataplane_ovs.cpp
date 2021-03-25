@@ -269,7 +269,7 @@ int ACA_Dataplane_OVS::update_port_state_workitem(const PortState current_PortSt
       // only delete scenario is supported now
       // VM was created with port specified, then delete the VM
       // ACA will receive update with no device_id and device_owner
-      ACA_LOG_INFO("%s", "Port update is not yet supported.\n");
+      ACA_LOG_INFO("%s", "Port update is not yet supported. \n");
       break;
       // [[fallthrough]];
     case OperationType::DELETE:
