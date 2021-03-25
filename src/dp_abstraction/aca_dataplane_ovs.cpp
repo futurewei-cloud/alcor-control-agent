@@ -214,8 +214,18 @@ int ACA_Dataplane_OVS::update_port_state_workitem(const PortState current_PortSt
       ACA_LOG_WARN("Not able to find auxgateway info for port with vpc ID: %s.\n",
                    current_PortConfiguration.vpc_id().c_str());
     }
-
-    switch (current_PortState.operation_type()) {
+    alcor::schema::OperationType current_operation_type =
+            current_PortState.operation_type();
+    if (current_PortState.operation_type() == UPDATE) {
+      if (!current_PortConfiguration.device_id().empty() &&
+          !current_PortConfiguration.device_owner().empty()) {
+        current_operation_type = OperationType::CREATE;
+      } else if (current_PortConfiguration.device_id().empty() &&
+                 current_PortConfiguration.device_owner().empty()) {
+        current_operation_type = OperationType::DELETE;
+      }
+    }
+    switch (current_operation_type) {
     case OperationType::CREATE:
       if (current_PortConfiguration.update_type() != UpdateType::FULL) {
         throw std::invalid_argument("current_PortConfiguration.update_type should be UpdateType::FULL");
@@ -255,16 +265,13 @@ int ACA_Dataplane_OVS::update_port_state_workitem(const PortState current_PortSt
       }
 
       break;
-
     case OperationType::UPDATE:
       // only delete scenario is supported now
       // VM was created with port specified, then delete the VM
       // ACA will receive update with no device_id and device_owner
-      if (!current_PortConfiguration.device_id().empty() ||
-          !current_PortConfiguration.device_owner().empty()) {
-        throw std::invalid_argument("Port Operation: update but device_id or device_owner not empty");
-      }
-      [[fallthrough]];
+      ACA_LOG_INFO("%s", "Port update is not yet supported.\n");
+      break;
+      // [[fallthrough]];
     case OperationType::DELETE:
       // another delete scenario is supported here
       // VM was created with without port specified, then delete the VM
