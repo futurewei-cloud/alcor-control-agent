@@ -216,7 +216,7 @@ int ACA_Dataplane_OVS::update_port_state_workitem(const PortState current_PortSt
     }
     alcor::schema::OperationType current_operation_type =
             current_PortState.operation_type();
-    if (current_PortState.operation_type() == UPDATE) {
+    if (current_PortState.operation_type() == OperationType::UPDATE) {
       if (!current_PortConfiguration.device_id().empty() &&
           !current_PortConfiguration.device_owner().empty()) {
         current_operation_type = OperationType::CREATE;
