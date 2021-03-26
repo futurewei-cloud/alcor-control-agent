@@ -114,19 +114,6 @@ int Aca_Dhcp_State_Handler::update_dhcp_state_workitem(const DHCPState current_D
   return overall_rc;
 }
 
-auto operation_end = chrono::steady_clock::now();
-
-auto operation_total_time =
-        cast_to_microseconds(operation_end - operation_start).count();
-
-aca_goal_state_handler::Aca_Goal_State_Handler::get_instance().add_goal_state_operation_status(
-        gsOperationReply, current_DhcpConfiguration.id(), DHCP,
-        current_DhcpState.operation_type(), overall_rc, culminative_dataplane_programming_time,
-        culminative_network_configuration_time, operation_total_time);
-
-return overall_rc;
-}
-
 int Aca_Dhcp_State_Handler::update_dhcp_states(GoalState &parsed_struct,
                                                GoalStateOperationReply &gsOperationReply)
 {
