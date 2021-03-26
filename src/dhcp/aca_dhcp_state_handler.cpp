@@ -78,13 +78,13 @@ int Aca_Dhcp_State_Handler::update_dhcp_state_workitem(const DHCPState current_D
   }
   alcor::schema::OperationType current_operation_type =
           current_DhcpState.operation_type();
-  ACA_LOG_INFO("%s, port_states size: %d", "Searching in port states\n",
+  ACA_LOG_INFO("%s, port_states size: %d\n", "Searching in port states\n",
                parsed_struct.port_states().size());
 
   if (current_operation_type == alcor::schema::OperationType::UPDATE) {
     for (int i = 0; i < parsed_struct.port_states().size(); i++) {
       ACA_LOG_INFO(
-              "Port %d MAC: %s, device_ID: %s, device_owner: %s", i,
+              "Port %d MAC: %s, device_ID: %s, device_owner: %s\n", i,
               (parsed_struct.port_states().at(i).configuration().mac_address()).c_str(),
               (parsed_struct.port_states().at(i).configuration().device_id()).c_str(),
               (parsed_struct.port_states().at(i).configuration().device_owner()).c_str());
