@@ -18,6 +18,7 @@
 #include "aca_log.h"
 #include "aca_vlan_manager.h"
 #include "aca_ovs_control.h"
+#include "aca_on_demand_engine.h"
 #include "aca_zeta_oam_server.h"
 #include <thread>
 
@@ -25,6 +26,7 @@ using namespace alcor::schema;
 using namespace aca_ovs_control;
 using namespace aca_vlan_manager;
 using namespace aca_ovs_l2_programmer;
+using namespace aca_on_demand_engine;
 
 namespace aca_zeta_programming
 {
@@ -175,7 +177,7 @@ void start_upd_listener(uint oam_port_number)
     }
     ACA_LOG_INFO("Packet length is %d\n", packet_length);
     ACA_LOG_INFO("Got this udp packet when listening to port %d\n", oam_port_number);
-    ACA_OVS_Control::get_instance().print_payload(
+    ACA_On_Demand_Engine::get_instance().print_payload(
             reinterpret_cast<const unsigned char *>(packet_content), packet_length);
     aca_zeta_oam_server::ACA_Zeta_Oam_Server::get_instance().oams_recv(
             (uint32_t)oam_port_number, packet_content);

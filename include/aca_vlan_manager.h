@@ -67,6 +67,8 @@ class ACA_Vlan_Manager {
 
   bool is_exist_zeta_gateway(const string auxGateway_id);
 
+  uint get_tunnelId_by_vlanId(uint vlan_id);
+
   // compiler will flag error when below is called
   ACA_Vlan_Manager(ACA_Vlan_Manager const &) = delete;
   void operator=(ACA_Vlan_Manager const &) = delete;

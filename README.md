@@ -1,3 +1,8 @@
+[![Build Status](https://travis-ci.org/futurewei-cloud/alcor-control-agent.svg?branch=master)](https://travis-ci.org/github/futurewei-cloud/alcor-control-agent)
+[![License: GPL v2](https://img.shields.io/badge/License-GPL%20v2-blue.svg)](https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html)
+[![Percentage of issues still open](http://isitmaintained.com/badge/open/futurewei-cloud/alcor-control-agent.svg)](http://isitmaintained.com/project/futurewei-cloud/alcor-control-agent "Percentage of issues still open")
+[![Average time to resolve an issue](http://isitmaintained.com/badge/resolution/futurewei-cloud/alcor-control-agent.svg)](http://isitmaintained.com/project/futurewei-cloud/alcor-control-agent "Average time to resolve an issue")
+
 # Alcor Control Agent
 Next-gen networking control plane - Alcor Control Agent
 
@@ -16,7 +21,7 @@ In this README:
 
 The Cloud Fabric Alcor Control Agent (ACA) runs on each host machine. It serves as a stateless proxy between Alcor controller and host machine networking components for control plane operations. Below are the highlevel Agent components.
 
-![Agent Components](docs/images/Agent_components.jpg)
+![Agent Components](docs/images/Agent_V2.jpg)
 
 ## Repositories
 The Alcor project is divided across a few GitHub repositories.

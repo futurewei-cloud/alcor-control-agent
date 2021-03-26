@@ -336,9 +336,51 @@ bool ACA_Vlan_Manager::is_exist_zeta_gateway(string zeta_gateway_id)
     }
   }
 
-  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::get_aux_gateway_id <--- Entering\n");
+  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::get_aux_gateway_id <--- Exiting\n");
 
   return zeta_gateway_id_found;
+}
+
+uint ACA_Vlan_Manager::get_tunnelId_by_vlanId(uint vlan_id)
+{
+  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::get_tunnelId_by_vlanId ---> Entering\n");
+  bool vlan_id_found = false;
+  uint tunnel_id = 0;
+
+  for (size_t i = 0; i < _vpcs_table.hashSize; i++) {
+    auto hash_node = (_vpcs_table.hashTable[i]).head;
+    if (hash_node == nullptr) {
+      // no entry for this hashtable bucket, go look at the next bucket
+      continue;
+    } else {
+      // found entry in this hashtable bucket, need to look into the list of hash_nodes
+      //-----Start share lock to enable mutiple concurrent reads-----
+      std::shared_lock<std::shared_timed_mutex> hash_bucket_lock(
+              (_vpcs_table.hashTable[i]).mutex_);
+
+      while (hash_node != nullptr) {
+        if (hash_node->getValue()->vlan_id == vlan_id) {
+          vlan_id_found = true;
+          tunnel_id = hash_node->getKey();
+          break;
+        }
+
+        if (vlan_id_found) {
+          break; // break out of for loop on _vpcs_table
+        } else {
+          // zeta_gateway_id not found yet, look at the next hash_node
+          hash_node = hash_node->next;
+        }
+      }
+
+      hash_bucket_lock.unlock();
+      //-----End share lock to enable mutiple concurrent reads-----
+    }
+  }
+
+  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::get_tunnelId_by_vlanId <--- Exiting\n");
+
+  return tunnel_id;
 }
 
 } // namespace aca_vlan_manager

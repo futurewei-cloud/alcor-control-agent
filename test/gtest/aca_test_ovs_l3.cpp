@@ -636,7 +636,7 @@ TEST(ovs_l3_test_cases, DISABLED_2_ports_ROUTING_test_traffic_one_machine_V2)
   FixedIp_builder3->set_subnet_id(subnet_id_1);
   FixedIp_builder3->set_ip_address(vip_address_3);
 
-  auto &neighbor_states_map = *GoalState_builder.mutable_neighbor_states();
+  auto &neighbor_states_map = *GoalState_builder2.mutable_neighbor_states();
   neighbor_states_map[port_id_3] = new_neighbor_states3;
 
   // fill in neighbor state structs for port 4
