@@ -85,18 +85,24 @@ int Aca_Dhcp_State_Handler::update_dhcp_state_workitem(const DHCPState current_D
     for (int i = 0; i < parsed_struct.port_states().size(); i++) {
       ACA_LOG_INFO(
               "Port %d MAC: %s, device_ID: %s, device_owner: %s\n", i,
-              (parsed_struct.port_states().at(i).configuration().mac_address()).c_str(),
-              (parsed_struct.port_states().at(i).configuration().device_id()).c_str(),
-              (parsed_struct.port_states().at(i).configuration().device_owner()).c_str());
-      if (parsed_struct.port_states().at(i).configuration().mac_address() ==
+              (parsed_struct.port_states(i).configuration().mac_address()).c_str(),
+              (parsed_struct.port_states(i).configuration().device_id()).c_str(),
+              (parsed_struct.port_states(i).configuration().device_owner()).c_str());
+      if (parsed_struct.port_states(i).configuration().mac_address() ==
                   current_DhcpConfiguration.mac_address() &&
-          !parsed_struct.port_states().at(i).configuration().device_id().empty() &&
-          !parsed_struct.port_states().at(i).configuration().device_owner().empty()) {
+          !parsed_struct.port_states(i).configuration().device_id().empty() &&
+          !parsed_struct.port_states(i).configuration().device_owner().empty()) {
         current_operation_type = alcor::schema::OperationType::CREATE;
         break;
       }
     }
   }
+  /*
+    In the current test environment, Nova may send DHCP UPDATE, when it tries to 
+    CREATE a new port, we are now adding this logic to the ACA as a temporary 
+    fix, if this logic is proved to be successful, this logic may be moved to the 
+    Port Manger/Dataplane Manager.
+  */
   switch (current_operation_type) {
   case OperationType::CREATE:
     overall_rc = this->dhcp_programming_if->add_dhcp_entry(&stDhcpCfg);
@@ -182,17 +188,21 @@ int Aca_Dhcp_State_Handler::update_dhcp_state_workitem_v2(const DHCPState curren
   }
   alcor::schema::OperationType current_operation_type =
           current_DhcpState.operation_type();
+  /*
+    In the current test environment, Nova may send DHCP UPDATE, when it tries to 
+    CREATE a new port, we are now adding this logic to the ACA as a temporary 
+    fix, if this logic is proved to be successful, this logic may be moved to the 
+    Port Manger/Dataplane Manager.
+  */
   if (current_operation_type == alcor::schema::OperationType::UPDATE) {
-    for (auto &port_state : parsed_struct.port_states()) {
-      // port_state.first is the key (resource_id)
-      // port_state.second is the value (PortState)
-      if (port_state.second.configuration().mac_address() ==
-                  current_DhcpConfiguration.mac_address() &&
-          !port_state.second.configuration().device_id().empty() &&
-          !port_state.second.configuration().device_owner().empty()) {
-        current_operation_type = alcor::schema::OperationType::CREATE;
-        break;
-      }
+    auto target_port_state =
+            parsed_struct.port_states().find(current_DhcpConfiguration.mac_address());
+    // target_port_state.first is the key (resource_id)
+    // target_port_state.second is the value (PortState)
+    if (target_port_state != parsed_struct.port_states().end() &&
+        !target_port_state->second.configuration().device_id().empty() &&
+        !target_port_state->second.configuration().device_owner().empty()) {
+      current_operation_type = alcor::schema::OperationType::CREATE;
     }
   }
   if (overall_rc == EXIT_SUCCESS) {
