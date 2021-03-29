@@ -216,6 +216,12 @@ int ACA_Dataplane_OVS::update_port_state_workitem(const PortState current_PortSt
     }
     alcor::schema::OperationType current_operation_type =
             current_PortState.operation_type();
+    /*
+    In the current test environment, Nova may send PORT UPDATE, when it tries to 
+    CREATE a new port, when the device_id and device_owner are not empty, we are 
+    now adding this logic to the ACA as a temporary fix, if this logic is proved 
+    to be successful, this logic may be moved to the Port Manger/Dataplane Manager.
+    */
     if (current_PortState.operation_type() == OperationType::UPDATE) {
       if (!current_PortConfiguration.device_id().empty() &&
           !current_PortConfiguration.device_owner().empty()) {

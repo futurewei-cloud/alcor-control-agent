@@ -53,20 +53,16 @@ int Aca_Dhcp_State_Handler::update_dhcp_state_workitem(const DHCPState current_D
   int overall_rc = EXIT_SUCCESS;
   ulong culminative_dataplane_programming_time = 0;
   ulong culminative_network_configuration_time = 0;
-
   auto operation_start = chrono::steady_clock::now();
-
   DHCPConfiguration current_DhcpConfiguration = current_DhcpState.configuration();
   stDhcpCfg.mac_address = current_DhcpConfiguration.mac_address();
   stDhcpCfg.ipv4_address = current_DhcpConfiguration.ipv4_address();
   stDhcpCfg.ipv6_address = current_DhcpConfiguration.ipv6_address();
   stDhcpCfg.port_host_name = current_DhcpConfiguration.port_host_name();
-
   string subnet_id = current_DhcpConfiguration.subnet_id();
   for (int i = 0; i < parsed_struct.subnet_states_size(); i++) {
     SubnetState current_SubnetState = parsed_struct.subnet_states(i);
     SubnetConfiguration current_SubnetConfiguration = current_SubnetState.configuration();
-
     if (subnet_id == current_SubnetConfiguration.id()) {
       stDhcpCfg.gateway_address = current_SubnetConfiguration.gateway().ip_address();
       stDhcpCfg.subnet_mask =
@@ -80,8 +76,34 @@ int Aca_Dhcp_State_Handler::update_dhcp_state_workitem(const DHCPState current_D
       break;
     }
   }
+  alcor::schema::OperationType current_operation_type =
+          current_DhcpState.operation_type();
+  ACA_LOG_INFO("%s, port_states size: %d\n", "Searching in port states\n",
+               parsed_struct.port_states().size());
 
-  switch (current_DhcpState.operation_type()) {
+  if (current_operation_type == alcor::schema::OperationType::UPDATE) {
+    for (int i = 0; i < parsed_struct.port_states().size(); i++) {
+      ACA_LOG_INFO(
+              "Port %d MAC: %s, device_ID: %s, device_owner: %s\n", i,
+              (parsed_struct.port_states(i).configuration().mac_address()).c_str(),
+              (parsed_struct.port_states(i).configuration().device_id()).c_str(),
+              (parsed_struct.port_states(i).configuration().device_owner()).c_str());
+      if (parsed_struct.port_states(i).configuration().mac_address() ==
+                  current_DhcpConfiguration.mac_address() &&
+          !parsed_struct.port_states(i).configuration().device_id().empty() &&
+          !parsed_struct.port_states(i).configuration().device_owner().empty()) {
+        current_operation_type = alcor::schema::OperationType::CREATE;
+        break;
+      }
+    }
+  }
+  /*
+    In the current test environment, Nova may send DHCP UPDATE, when it tries to 
+    CREATE a new port, we are now adding this logic to the ACA as a temporary 
+    fix, if this logic is proved to be successful, this logic may be moved to the 
+    Port Manger/Dataplane Manager.
+  */
+  switch (current_operation_type) {
   case OperationType::CREATE:
     overall_rc = this->dhcp_programming_if->add_dhcp_entry(&stDhcpCfg);
     break;
@@ -96,17 +118,13 @@ int Aca_Dhcp_State_Handler::update_dhcp_state_workitem(const DHCPState current_D
     overall_rc = EXIT_FAILURE;
     break;
   }
-
   auto operation_end = chrono::steady_clock::now();
-
   auto operation_total_time =
           cast_to_microseconds(operation_end - operation_start).count();
-
   aca_goal_state_handler::Aca_Goal_State_Handler::get_instance().add_goal_state_operation_status(
           gsOperationReply, current_DhcpConfiguration.id(), DHCP,
           current_DhcpState.operation_type(), overall_rc, culminative_dataplane_programming_time,
           culminative_network_configuration_time, operation_total_time);
-
   return overall_rc;
 }
 
@@ -144,23 +162,17 @@ int Aca_Dhcp_State_Handler::update_dhcp_state_workitem_v2(const DHCPState curren
   int overall_rc = EXIT_SUCCESS;
   ulong culminative_dataplane_programming_time = 0;
   ulong culminative_network_configuration_time = 0;
-
   auto operation_start = chrono::steady_clock::now();
-
   DHCPConfiguration current_DhcpConfiguration = current_DhcpState.configuration();
   stDhcpCfg.mac_address = current_DhcpConfiguration.mac_address();
   stDhcpCfg.ipv4_address = current_DhcpConfiguration.ipv4_address();
   stDhcpCfg.ipv6_address = current_DhcpConfiguration.ipv6_address();
   stDhcpCfg.port_host_name = current_DhcpConfiguration.port_host_name();
-
   string subnet_id = current_DhcpConfiguration.subnet_id();
-
   auto subnetStateFound = parsed_struct.subnet_states().find(subnet_id);
-
   if (subnetStateFound != parsed_struct.subnet_states().end()) {
     SubnetState current_SubnetState = subnetStateFound->second;
     SubnetConfiguration current_SubnetConfiguration = current_SubnetState.configuration();
-
     stDhcpCfg.gateway_address = current_SubnetConfiguration.gateway().ip_address();
     stDhcpCfg.subnet_mask =
             aca_convert_cidr_to_netmask(current_SubnetConfiguration.cidr());
@@ -174,9 +186,27 @@ int Aca_Dhcp_State_Handler::update_dhcp_state_workitem_v2(const DHCPState curren
                   subnet_id.c_str());
     overall_rc = EXIT_FAILURE;
   }
-
+  alcor::schema::OperationType current_operation_type =
+          current_DhcpState.operation_type();
+  /*
+    In the current test environment, Nova may send DHCP UPDATE, when it tries to 
+    CREATE a new port, we are now adding this logic to the ACA as a temporary 
+    fix, if this logic is proved to be successful, this logic may be moved to the 
+    Port Manger/Dataplane Manager.
+  */
+  if (current_operation_type == alcor::schema::OperationType::UPDATE) {
+    auto target_port_state =
+            parsed_struct.port_states().find(current_DhcpConfiguration.mac_address());
+    // target_port_state.first is the key (resource_id)
+    // target_port_state.second is the value (PortState)
+    if (target_port_state != parsed_struct.port_states().end() &&
+        !target_port_state->second.configuration().device_id().empty() &&
+        !target_port_state->second.configuration().device_owner().empty()) {
+      current_operation_type = alcor::schema::OperationType::CREATE;
+    }
+  }
   if (overall_rc == EXIT_SUCCESS) {
-    switch (current_DhcpState.operation_type()) {
+    switch (current_operation_type) {
     case OperationType::CREATE:
       overall_rc = this->dhcp_programming_if->add_dhcp_entry(&stDhcpCfg);
       break;
@@ -191,17 +221,13 @@ int Aca_Dhcp_State_Handler::update_dhcp_state_workitem_v2(const DHCPState curren
       overall_rc = EXIT_FAILURE;
     }
   }
-
   auto operation_end = chrono::steady_clock::now();
-
   auto operation_total_time =
           cast_to_microseconds(operation_end - operation_start).count();
-
   aca_goal_state_handler::Aca_Goal_State_Handler::get_instance().add_goal_state_operation_status(
           gsOperationReply, current_DhcpConfiguration.id(), DHCP,
           current_DhcpState.operation_type(), overall_rc, culminative_dataplane_programming_time,
           culminative_network_configuration_time, operation_total_time);
-
   return overall_rc;
 }
 

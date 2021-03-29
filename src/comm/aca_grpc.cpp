@@ -41,7 +41,7 @@ HostRequestReply GoalStateProvisionerImpl::RequestGoalStates(HostRequest *reques
 {
   grpc::ClientContext ctx;
   alcor::schema::HostRequestReply reply;
-  
+
   if (chan_->GetState(false) != grpc_connectivity_state::GRPC_CHANNEL_READY) {
     ACA_LOG_INFO("%s, it is: [%d]\n", "Channel state is not READY", chan_->GetState(false));
     reply.mutable_operation_statuses()->Add();
