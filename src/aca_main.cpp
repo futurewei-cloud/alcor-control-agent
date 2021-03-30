@@ -219,7 +219,7 @@ int main(int argc, char *argv[])
   g_grpc_server_thread->detach();
   rc = aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().setup_ovs_bridges_if_need();
   if (rc == EXIT_FAILURE) {
-      ACA_LOG_ERROR("%s", "ACA is not able to create the bridges, please check your environment");
+      ACA_LOG_ERROR("%s \n", "ACA is not able to create the bridges, please check your environment");
       return rc;
   }
 
