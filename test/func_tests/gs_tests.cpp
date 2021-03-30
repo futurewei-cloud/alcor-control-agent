@@ -153,7 +153,7 @@ class GoalStateProvisionerServer final : public GoalStateProvisioner::Service {
 
 int RunServer()
 {
-    std::string server_address("0.0.0.0:54321");
+  std::string server_address("0.0.0.0:54321");
 
   GoalStateProvisionerServer service;
 
@@ -768,10 +768,3 @@ int main(int argc, char *argv[])
 
   return rc;
 }
-
-// int run_as_server()
-// {
-//   int rc;
-
-//   return rc;
-// }
