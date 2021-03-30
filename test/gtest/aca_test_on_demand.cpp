@@ -18,10 +18,13 @@ extern GoalStateProvisionerImpl *g_grpc_server;
 
 TEST(aca_on_demand_testcases, DISABLED_grpc_client_connectivity_test)
 {
-  ACA_LOG_INFO("%s", "Start of DISABLED_grpc_client_connectivity_test");
-  ASSERT_NE(g_grpc_server, NULL);
-  ACA_LOG_INFO("%s", "Made sure that g_grpc_server is not null");
-  HostRequest *example_request;
-  alcor::schema::HostRequestReply reply = g_grpc_server->RequestGoalStates(example_request);
-  ASSERT_EQ(reply.operation_statuses(0), OperationStatus::SUCCESS);
+  sleep(10);
+  ACA_LOG_INFO("%s", "Start of DISABLED_grpc_client_connectivity_test\n");
+  ASSERT_NE(g_grpc_server, nullptr);
+  ACA_LOG_INFO("%s", "Made sure that g_grpc_server is not null\n");
+  HostRequest example_request;
+  example_request.add_state_requests();
+  ACA_LOG_INFO("Channel state: %d\n", g_grpc_server->chan_->GetState(false));
+  alcor::schema::HostRequestReply reply = g_grpc_server->RequestGoalStates(&example_request);
+  ASSERT_EQ(reply.operation_statuses(0).operation_status(), OperationStatus::SUCCESS);
 }
