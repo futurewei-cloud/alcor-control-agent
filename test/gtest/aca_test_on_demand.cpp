@@ -26,5 +26,6 @@ TEST(aca_on_demand_testcases, DISABLED_grpc_client_connectivity_test)
   example_request.add_state_requests();
   ACA_LOG_INFO("Channel state: %d\n", g_grpc_server->chan_->GetState(false));
   alcor::schema::HostRequestReply reply = g_grpc_server->RequestGoalStates(&example_request);
+  ACA_LOG_INFO("Reply operation status size: %d\n", reply.operation_statuses_size());
   ASSERT_EQ(reply.operation_statuses(0).operation_status(), OperationStatus::SUCCESS);
 }

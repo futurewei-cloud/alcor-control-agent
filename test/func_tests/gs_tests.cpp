@@ -139,20 +139,22 @@ void print_goalstateReply(GoalStateOperationReply gsOperationReply)
 
 // Synchronous server implementation to test the grpc client's connectivity.
 class GoalStateProvisionerServer final : public GoalStateProvisioner::Service {
-  void replyGoalStateRequest(ServerContext *ctx, const GoalState *goalState,
-                             GoalStateOperationReply *goalStateOperationReply)
+  grpc::Status RequestGoalStates(ServerContext *ctx, const HostRequest *request,
+                                 HostRequestReply *response) override
   {
     ctx->client_metadata();
-    goalState->CheckInitialized();
+    request->CheckInitialized();
     ACA_LOG_INFO("%s", "Test Server code called!");
-    goalStateOperationReply->mutable_operation_statuses()->Add();
-    goalStateOperationReply->mutable_operation_statuses()->at(0).set_operation_status(
-            OperationStatus::SUCCESS);
+    response->mutable_operation_statuses()->Add();
+    response->mutable_operation_statuses()->at(0).set_operation_status(OperationStatus::SUCCESS);
+    return grpc::Status::OK;
   }
 };
 
 int RunServer()
 {
+  ACA_LOG_INFO("%s", "GS test runnig as a grpc server\n");
+
   std::string server_address("0.0.0.0:54321");
 
   GoalStateProvisionerServer service;
@@ -160,8 +162,10 @@ int RunServer()
   ServerBuilder builder;
   // Listen on the given address without any authentication mechanism.
   builder.AddListeningPort(server_address, grpc::InsecureServerCredentials());
+  ACA_LOG_INFO("%s", "Added listening port\n");
 
   builder.RegisterService(&service);
+  ACA_LOG_INFO("%s", "Registered service\n");
 
   std::unique_ptr<Server> server(builder.BuildAndStart());
 
