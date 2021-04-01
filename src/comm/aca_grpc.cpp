@@ -54,7 +54,10 @@ HostRequestReply GoalStateProvisionerImpl::RequestGoalStates(HostRequest *reques
     reply.mutable_operation_statuses()->at(0).set_operation_status(OperationStatus::FAILURE);
     return reply;
   }
-  stub_->RequestGoalStates(&ctx, *request, &reply);
+  AsyncClientCall *call = new AsyncClientCall;
+  call->response_reader = stub_->AsyncRequestGoalStates(&call->context, *request, &cq_);
+  call->response_reader->Finish(&call->reply, &call->status, (void *)call);
+  // stub_->RequestGoalStates(&ctx, *request, &reply);
   return reply;
 }
 
