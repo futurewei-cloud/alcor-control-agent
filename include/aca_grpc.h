@@ -45,6 +45,8 @@ class GoalStateProvisionerImpl final : public GoalStateProvisioner::Service {
 
   void RunServer();
 
+  void ConnectToNCM();
+
   private:
   std::unique_ptr<Server> server;
 };
