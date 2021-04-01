@@ -50,7 +50,10 @@ string g_ofctl_options = EMPTY_STRING;
 string g_ncm_address = EMPTY_STRING;
 string g_ncm_port = EMPTY_STRING;
 string g_grpc_server_port = EMPTY_STRING;
+// by default, this should run as GRCP client, unless specified by the corresponding flag.
+bool g_run_as_server = false;
 GoalStateProvisionerImpl *g_grpc_server = NULL;
+// GoalStateProvisionerServer *g_test_grcp_server = NULL;
 
 // total time for execute_system_command in microseconds
 std::atomic_ulong g_total_execute_system_time(0);
@@ -132,6 +135,53 @@ void print_goalstateReply(GoalStateOperationReply gsOperationReply)
                 us_to_ms(gsOperationReply.message_total_operation_time()));
 
   g_total_ACA_Message_time += gsOperationReply.message_total_operation_time();
+}
+
+// Synchronous server implementation to test the grpc client's connectivity.
+class GoalStateProvisionerServer final : public GoalStateProvisioner::Service {
+  grpc::Status RequestGoalStates(ServerContext *ctx, const HostRequest *request,
+                                 HostRequestReply *response) override
+  {
+    string expected_request_id = "12345";
+    ctx->client_metadata();
+    request->CheckInitialized();
+    ACA_LOG_INFO("%s", "Test Server code called!");
+    response->mutable_operation_statuses()->Add();
+    response->mutable_operation_statuses(0)->set_request_id(
+            request->state_requests(0).request_id());
+    if (request->state_requests(0).request_id() == expected_request_id) {
+      response->mutable_operation_statuses()->at(0).set_operation_status(OperationStatus::SUCCESS);
+    } else {
+      response->mutable_operation_statuses()->at(0).set_operation_status(OperationStatus::FAILURE);
+    }
+    return grpc::Status::OK;
+  }
+};
+
+int RunServer()
+{
+  ACA_LOG_INFO("%s", "GS test runnig as a grpc server\n");
+
+  std::string server_address("0.0.0.0:54321");
+
+  GoalStateProvisionerServer service;
+
+  ServerBuilder builder;
+  // Listen on the given address without any authentication mechanism.
+  builder.AddListeningPort(server_address, grpc::InsecureServerCredentials());
+  ACA_LOG_INFO("%s", "Added listening port\n");
+
+  builder.RegisterService(&service);
+  ACA_LOG_INFO("%s", "Registered service\n");
+
+  std::unique_ptr<Server> server(builder.BuildAndStart());
+
+  ACA_LOG_INFO("Test Server listening on %s", server_address.c_str());
+  // Wait for the server to shutdown.
+  // Note that some other thread must be responsible for shutting down the server for this call to ever return.
+  server->Wait();
+  // server->Shutdown();
+  return 0;
 }
 
 class GoalStateProvisionerClient {
@@ -534,51 +584,9 @@ void parse_goalstate(GoalState parsed_struct, GoalState GoalState_builder)
   fprintf(stdout, "All content matched!\n");
 }
 
-int main(int argc, char *argv[])
+int run_as_client()
 {
-  int option;
   int rc;
-  ACA_LOG_INIT(ACALOGNAME);
-
-  // Register the signal handlers
-  signal(SIGINT, aca_signal_handler);
-  signal(SIGTERM, aca_signal_handler);
-
-  while ((option = getopt(argc, argv, "s:p:d")) != -1) {
-    switch (option) {
-    case 's':
-      g_grpc_server_ip = optarg;
-      break;
-    case 'p':
-      g_grpc_port = optarg;
-      break;
-    case 'd':
-      g_debug_mode = true;
-      break;
-    default: /* the '?' case when the option is not recognized */
-      fprintf(stderr,
-              "Usage: %s\n"
-              "\t\t[-s grpc server]\n"
-              "\t\t[-p grpc port]\n"
-              "\t\t[-d enable debug mode]\n",
-              argv[0]);
-      exit(EXIT_FAILURE);
-    }
-  }
-
-  // fill in the grpc server and protocol if it is not provided in
-  // command line arg
-  if (g_grpc_server_ip == EMPTY_STRING) {
-    g_grpc_server_ip = LOCALHOST;
-  }
-  if (g_grpc_port == EMPTY_STRING) {
-    g_grpc_port = GRPC_PORT;
-  }
-
-  // Verify that the version of the library that we linked against is
-  // compatible with the version of the headers we compiled against.
-  GOOGLE_PROTOBUF_VERIFY_VERSION;
-
   string port_name_postfix = "11111111-2222-3333-4444-555555555555";
   string ip_address_prefix = "10.0.0.";
   string remote_ip_address_prefix = "123.0.0.";
@@ -710,6 +718,62 @@ int main(int argc, char *argv[])
 
     grpc_client.send_goalstate_stream(10, "32");
   }
+  return rc;
+}
+
+int main(int argc, char *argv[])
+{
+  int option;
+  int rc;
+  ACA_LOG_INIT(ACALOGNAME);
+
+  // Register the signal handlers
+  signal(SIGINT, aca_signal_handler);
+  signal(SIGTERM, aca_signal_handler);
+
+  while ((option = getopt(argc, argv, "s:p:dm")) != -1) {
+    switch (option) {
+    case 's':
+      g_grpc_server_ip = optarg;
+      break;
+    case 'p':
+      g_grpc_port = optarg;
+      break;
+    case 'd':
+      g_debug_mode = true;
+      break;
+    case 'm':
+      g_run_as_server = true;
+      break;
+    default: /* the '?' case when the option is not recognized */
+      fprintf(stderr,
+              "Usage: %s\n"
+              "\t\t[-s grpc server]\n"
+              "\t\t[-p grpc port]\n"
+              "\t\t[-d enable debug mode]\n"
+              "\t\t[-m If this flag is passed in, gs test runs as grpc server, which listens on localhost:54321; otherwise it runs as a grpc client]\n",
+              argv[0]);
+      exit(EXIT_FAILURE);
+    }
+  }
+
+  // fill in the grpc server and protocol if it is not provided in
+  // command line arg
+  if (g_grpc_server_ip == EMPTY_STRING) {
+    g_grpc_server_ip = LOCALHOST;
+  }
+  if (g_grpc_port == EMPTY_STRING) {
+    g_grpc_port = GRPC_PORT;
+  }
+
+  if (g_run_as_server) {
+    rc = RunServer();
+  } else {
+    rc = run_as_client();
+  }
+  // Verify that the version of the library that we linked against is
+  // compatible with the version of the headers we compiled against.
+  GOOGLE_PROTOBUF_VERIFY_VERSION;
 
   aca_cleanup();
 

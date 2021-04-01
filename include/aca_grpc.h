@@ -32,7 +32,6 @@ class GoalStateProvisionerImpl final : public GoalStateProvisioner::Service {
   std::unique_ptr<GoalStateProvisioner::Stub> stub_;
   std::shared_ptr<grpc_impl::Channel> chan_;
   HostRequestReply RequestGoalStates(HostRequest *request);
-  
   // ~GoalStateProvisionerImpl();
   explicit GoalStateProvisionerImpl(){};
   Status PushNetworkResourceStates(ServerContext *context, const GoalState *goalState,
@@ -45,6 +44,8 @@ class GoalStateProvisionerImpl final : public GoalStateProvisioner::Service {
   Status ShutDownServer();
 
   void RunServer();
+
+  void ConnectToNCM();
 
   private:
   std::unique_ptr<Server> server;
