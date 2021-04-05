@@ -144,9 +144,15 @@ int main(int argc, char **argv)
 
   testing::InitGoogleTest(&argc, argv);
 
-  while ((option = getopt(argc, argv, "p:c:n:")) != -1) {
+  while ((option = getopt(argc, argv, "a:p:m:c:n:")) != -1) {
     switch (option) {
+    case 'a':
+      g_ncm_address = optarg;
+      break;
     case 'p':
+      g_ncm_port = optarg;
+      break;
+    case 'm':
       remote_ip_1 = optarg;
       break;
     case 'c':
@@ -158,6 +164,8 @@ int main(int argc, char **argv)
     default: /* the '?' case when the option is not recognized */
       fprintf(stderr,
               "Usage: %s\n"
+              "\t\t[-a NCM IP Address]\n"
+              "\t\t[-p NCM Port]\n"
               "\t\t[-m parent machine IP]\n"
               "\t\t[-c child machine IP]\n"
               "\t\t[-n neighbors to create (default: 10)]\n",
@@ -167,9 +175,10 @@ int main(int argc, char **argv)
   }
 
   g_grpc_server = new GoalStateProvisionerImpl();
-  g_grpc_server_thread = new std::thread(std::bind(&GoalStateProvisionerImpl::RunServer, g_grpc_server));
+  g_grpc_server_thread =
+          new std::thread(std::bind(&GoalStateProvisionerImpl::RunServer, g_grpc_server));
   g_grpc_server_thread->detach();
-  
+
   int rc = RUN_ALL_TESTS();
 
   aca_cleanup();
