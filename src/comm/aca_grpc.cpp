@@ -37,7 +37,8 @@ extern string g_ncm_port;
 using namespace alcor::schema;
 using aca_comm_manager::Aca_Comm_Manager;
 
-HostRequestReply GoalStateProvisionerImpl::RequestGoalStates(HostRequest *request)
+HostRequestReply
+GoalStateProvisionerImpl::RequestGoalStates(HostRequest *request, grpc::CompletionQueue *cq)
 {
   grpc::ClientContext ctx;
   alcor::schema::HostRequestReply reply;
@@ -55,7 +56,7 @@ HostRequestReply GoalStateProvisionerImpl::RequestGoalStates(HostRequest *reques
     return reply;
   }
   AsyncClientCall *call = new AsyncClientCall;
-  call->response_reader = stub_->AsyncRequestGoalStates(&call->context, *request, &cq_);
+  call->response_reader = stub_->AsyncRequestGoalStates(&call->context, *request, cq);
   call->response_reader->Finish(&call->reply, &call->status, (void *)call);
   // stub_->RequestGoalStates(&ctx, *request, &reply);
   return reply;

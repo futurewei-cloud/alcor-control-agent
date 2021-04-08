@@ -63,18 +63,56 @@ ACA_On_Demand_Engine &ACA_On_Demand_Engine::get_instance()
   return instance;
 }
 
-OperationStatus ACA_On_Demand_Engine::unknown_recv(uint16_t vlan_id, string ip_src, string ip_dest,
-                                        int port_src, int port_dest, Protocol protocol) {
-  HostRequest HostRequest_builder;
-  HostRequest_ResourceStateRequest *new_state_requests = HostRequest_builder.add_state_requests();
-  HostRequestReply hostRequestReply;
+void ACA_On_Demand_Engine::process_async_grpc_replies()
+{
+  void *got_tag;
+  bool ok = false;
   HostRequestReply_HostRequestOperationStatus hostOperationStatus;
   OperationStatus replyStatus;
-  
-  uuid_t uuid;
-  uuid_generate_time(uuid);
-  char uuid_str[37];
-  uuid_unparse_lower(uuid, uuid_str);
+  bool found_data = false;
+  string uuid_for_call;
+  data_for_on_demand_call *data_for_uuid;
+
+  // char *uuid;
+  ACA_LOG_INFO("%s\n", "Beginning of process_async_grpc_replies");
+  while (cq_->Next(&got_tag, &ok)) {
+    if (ok) {
+      AsyncClientCall *call = static_cast<AsyncClientCall *>(got_tag);
+      if (call->status.ok()) {
+        ACA_LOG_INFO("%s\n", "Got an GRPC reply that is OK, need to process it.");
+        for (int i = 0; i < call->reply.operation_statuses_size(); i++) {
+          hostOperationStatus = call->reply.operation_statuses(i);
+          replyStatus = hostOperationStatus.operation_status();
+          uuid_for_call = hostOperationStatus.request_id();
+          found_data = request_uuid_on_demand_data_map.find(uuid_for_call, data_for_uuid);
+        }
+        ACA_LOG_DEBUG("Return from NCM - Reply Status: %s\n",
+                      to_string(replyStatus).c_str());
+        if (found_data) {
+          on_demand(replyStatus, data_for_uuid->in_port, data_for_uuid->packet,
+                    data_for_uuid->packet_size, data_for_uuid->protocol);
+          request_uuid_on_demand_data_map.erase(uuid_for_call);
+        }
+      }
+
+      delete call;
+    } else {
+      ACA_LOG_INFO("%s\n", "Got an GRPC reply that is NOT OK, don't need to process the data");
+    }
+  }
+}
+
+void ACA_On_Demand_Engine::unknown_recv(uint16_t vlan_id, string ip_src,
+                                        string ip_dest, int port_src, int port_dest,
+                                        Protocol protocol, char *uuid_str)
+{
+  HostRequest HostRequest_builder;
+  HostRequest_ResourceStateRequest *new_state_requests =
+          HostRequest_builder.add_state_requests();
+  HostRequestReply hostRequestReply;
+  // HostRequestReply_HostRequestOperationStatus hostOperationStatus;
+  // OperationStatus replyStatus;
+
   uint tunnel_id = ACA_Vlan_Manager::get_instance().get_tunnelId_by_vlanId(vlan_id);
   new_state_requests->set_request_id(uuid_str);
   new_state_requests->set_tunnel_id(tunnel_id);
@@ -86,18 +124,19 @@ OperationStatus ACA_On_Demand_Engine::unknown_recv(uint16_t vlan_id, string ip_s
   new_state_requests->set_ethertype(EtherType::IPV4);
 
   ACA_LOG_DEBUG("Calling NCM - %s:%s\n", g_ncm_address.c_str(), g_ncm_port.c_str());
-  hostRequestReply = g_grpc_server->RequestGoalStates(&HostRequest_builder);
-  for (int i = 0; i < hostRequestReply.operation_statuses_size(); i++) {
-    hostOperationStatus = hostRequestReply.operation_statuses(i);
-    replyStatus = hostOperationStatus.operation_status();
-  }
-  ACA_LOG_DEBUG("Return from NCM - Reply Status: %s\n", to_string(replyStatus).c_str());
+  // hostRequestReply =
+  g_grpc_server->RequestGoalStates(&HostRequest_builder, cq_);
+  // for (int i = 0; i < hostRequestReply.operation_statuses_size(); i++) {
+  //   hostOperationStatus = hostRequestReply.operation_statuses(i);
+  //   replyStatus = hostOperationStatus.operation_status();
+  // }
+  // ACA_LOG_DEBUG("Return from NCM - Reply Status: %s\n", to_string(replyStatus).c_str());
   usleep(USLEEPTIME_IN_MICROSECONDS);
-  return replyStatus;
+  // return replyStatus;
 }
 
-void ACA_On_Demand_Engine::on_demand(OperationStatus status, uint32_t in_port, void *packet, 
-                                     int packet_size, Protocol protocol) 
+void ACA_On_Demand_Engine::on_demand(OperationStatus status, uint32_t in_port,
+                                     void *packet, int packet_size, Protocol protocol)
 {
   string bridge = "br-tun";
   string inport = "in_port=controller";
@@ -106,19 +145,20 @@ void ACA_On_Demand_Engine::on_demand(OperationStatus status, uint32_t in_port, v
   string rs_action = "actions=resubmit(,20)";
   string packetpre = "packet=";
   string options = "";
-  string serialized_packet = "";  
+  string serialized_packet = "";
   const struct ether_header *eth_header = (struct ether_header *)packet;
-  const u_char *ch = (const u_char *) packet;
+  const u_char *ch = (const u_char *)packet;
   char str[10];
-  
+
   if (status == OperationStatus::SUCCESS) {
     if (protocol == Protocol::ARP) {
       char *base = (char *)packet;
       unsigned char *vlan_hdr = (unsigned char *)(base + 12);
       vlan_message *vlanmsg = (vlan_message *)vlan_hdr;
       unsigned char *arp_hdr = (unsigned char *)(base + SIZE_ETHERNET + 4);
-      arp_message *arpmsg = (arp_message *) arp_hdr;
-      aca_arp_responder::ACA_ARP_Responder::get_instance()._parse_arp_request(in_port, vlanmsg, arpmsg);
+      arp_message *arpmsg = (arp_message *)arp_hdr;
+      aca_arp_responder::ACA_ARP_Responder::get_instance()._parse_arp_request(
+              in_port, vlanmsg, arpmsg);
       ACA_LOG_DEBUG("%s", "On-demand arp request packet sent to arp_responder.\n");
     } else {
       for (int i = 0; i < packet_size; i++) {
@@ -126,13 +166,16 @@ void ACA_On_Demand_Engine::on_demand(OperationStatus status, uint32_t in_port, v
         serialized_packet.append(str);
         ch++;
       }
-      options = inport + whitespace + packetpre + serialized_packet + whitespace + action;      
-      aca_ovs_control::ACA_OVS_Control::get_instance().packet_out(bridge.c_str(), options.c_str());
-      ACA_LOG_DEBUG("On-demand packet with protocol %d sent to ovs: %s\n", protocol, options.c_str());
+      options = inport + whitespace + packetpre + serialized_packet + whitespace + action;
+      aca_ovs_control::ACA_OVS_Control::get_instance().packet_out(
+              bridge.c_str(), options.c_str());
+      ACA_LOG_DEBUG("On-demand packet with protocol %d sent to ovs: %s\n",
+                    protocol, options.c_str());
     }
   } else {
-    ACA_LOG_ERROR("Packet dropped from %s to %s\n", ether_ntoa((ether_addr *)&eth_header->ether_shost),
-                                                    ether_ntoa((ether_addr *)&eth_header->ether_dhost));
+    ACA_LOG_ERROR("Packet dropped from %s to %s\n",
+                  ether_ntoa((ether_addr *)&eth_header->ether_shost),
+                  ether_ntoa((ether_addr *)&eth_header->ether_dhost));
   }
 }
 
@@ -158,7 +201,7 @@ void ACA_On_Demand_Engine::parse_packet(uint32_t in_port, void *packet)
   string ip_src, ip_dest;
   int port_src, port_dest, packet_size;
   Protocol _protocol = Protocol::Protocol_INT_MAX_SENTINEL_DO_NOT_USE_;
-  OperationStatus on_demand_reply;
+  // OperationStatus on_demand_reply;
 
   uint16_t ether_type = ntohs(*(uint16_t *)(base + 12));
   if (ether_type == ETHERTYPE_VLAN) {
@@ -176,19 +219,21 @@ void ACA_On_Demand_Engine::parse_packet(uint32_t in_port, void *packet)
   if (ether_type == ETHERTYPE_ARP) {
     ACA_LOG_DEBUG("%s", "Ethernet Type: ARP (0x0806) \n");
     ACA_LOG_DEBUG("   From: %s\n", inet_ntoa(*(in_addr *)(base + 14 + vlan_len + 14)));
-    ACA_LOG_DEBUG("     to: %s\n", inet_ntoa(*(in_addr *)(base + 14 + vlan_len + 14 + 10)));
+    ACA_LOG_DEBUG("     to: %s\n",
+                  inet_ntoa(*(in_addr *)(base + 14 + vlan_len + 14 + 10)));
     /* compute arp message offset */
-    unsigned char *arp_hdr= (unsigned char *)(base + SIZE_ETHERNET + vlan_len);
+    unsigned char *arp_hdr = (unsigned char *)(base + SIZE_ETHERNET + vlan_len);
     /* arp request procedure,type = 1 */
-    if(ntohs(*(uint16_t *)(arp_hdr + 6)) == 0x0001){
-      if (aca_arp_responder::ACA_ARP_Responder::get_instance().arp_recv(in_port,vlan_hdr,arp_hdr) == ENOTSUP) {
-          _protocol = Protocol::ARP;
-          arp_message *arpmsg = (arp_message *)arp_hdr;
-          ip_src = aca_arp_responder::ACA_ARP_Responder::get_instance()._get_source_ip(arpmsg);
-          ip_dest = aca_arp_responder::ACA_ARP_Responder::get_instance()._get_requested_ip(arpmsg);
-          packet_size = SIZE_ETHERNET + vlan_len + 28;
-          port_src = 0;
-          port_dest = 0;
+    if (ntohs(*(uint16_t *)(arp_hdr + 6)) == 0x0001) {
+      if (aca_arp_responder::ACA_ARP_Responder::get_instance().arp_recv(
+                  in_port, vlan_hdr, arp_hdr) == ENOTSUP) {
+        _protocol = Protocol::ARP;
+        arp_message *arpmsg = (arp_message *)arp_hdr;
+        ip_src = aca_arp_responder::ACA_ARP_Responder::get_instance()._get_source_ip(arpmsg);
+        ip_dest = aca_arp_responder::ACA_ARP_Responder::get_instance()._get_requested_ip(arpmsg);
+        packet_size = SIZE_ETHERNET + vlan_len + 28;
+        port_src = 0;
+        port_dest = 0;
       }
     }
   } else if (ether_type == ETHERTYPE_IP) {
@@ -310,8 +355,21 @@ void ACA_On_Demand_Engine::parse_packet(uint32_t in_port, void *packet)
   }
 
   if (_protocol != Protocol::Protocol_INT_MAX_SENTINEL_DO_NOT_USE_) {
-    on_demand_reply = unknown_recv(vlan_id, ip_src, ip_dest, port_src, port_dest, _protocol);
-    on_demand(on_demand_reply, in_port, packet, SIZE_ETHERNET + vlan_len + packet_size, _protocol);
+    packet_size = SIZE_ETHERNET + vlan_len + packet_size;
+    uuid_t uuid;
+    uuid_generate_time(uuid);
+    char uuid_str[37];
+    uuid_unparse_lower(uuid, uuid_str);
+    data_for_on_demand_call *data;
+    data->in_port = in_port;
+    data->packet = packet;
+    data->packet_size = packet_size;
+    data->protocol = _protocol;
+    request_uuid_on_demand_data_map.insert(uuid_str, data);
+    // on_demand_reply =
+    unknown_recv(vlan_id, ip_src, ip_dest, port_src, port_dest, _protocol, uuid_str);
+    // on_demand(on_demand_reply, in_port, packet,
+    //           SIZE_ETHERNET + vlan_len + packet_size, _protocol);
   }
 }
 

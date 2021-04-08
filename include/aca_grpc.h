@@ -31,10 +31,11 @@ class GoalStateProvisionerImpl final : public GoalStateProvisioner::Service {
   public:
   std::unique_ptr<GoalStateProvisioner::Stub> stub_;
   std::shared_ptr<grpc_impl::Channel> chan_;
-  grpc::CompletionQueue cq_;
+  // grpc::CompletionQueue cq_;
 
-  HostRequestReply RequestGoalStates(HostRequest *request);
   
+  HostRequestReply RequestGoalStates(HostRequest *request, grpc::CompletionQueue *cq);
+
   // ~GoalStateProvisionerImpl();
   explicit GoalStateProvisionerImpl(){};
   Status PushNetworkResourceStates(ServerContext *context, const GoalState *goalState,
