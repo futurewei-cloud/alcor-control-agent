@@ -157,8 +157,12 @@ int ACA_OVS_L2_Programmer::setup_ovs_bridges_if_need()
   } else {
     // case 3: only one of the br-int or br-tun is there,
     // Invalid environment so return an error
-    ACA_LOG_CRIT("Invalid environment br-int=%d and br-tun=%d, cannot proceed\n",
-                 br_int_existed, br_tun_existed);
+    if (br_int_existed)
+        ACA_LOG_DEBUG("Valid environment for br-int but Invalid for br_tun = %d\n", br_tun_existed);
+    else
+        ACA_LOG_DEBUG("Valid environment for br-tun but Invalid for br_int = %d\n", br_int_existed);
+
+    ACA_LOG_DEBUG("%s\n", "Cannot proceed\n");
     overall_rc = EXIT_FAILURE;
   }
 
