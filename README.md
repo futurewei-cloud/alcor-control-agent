@@ -1,5 +1,5 @@
 [![Build Status](https://travis-ci.org/futurewei-cloud/alcor-control-agent.svg?branch=master)](https://travis-ci.org/github/futurewei-cloud/alcor-control-agent)
-[![License: GPL v2](https://img.shields.io/badge/License-GPL%20v2-blue.svg)](https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Percentage of issues still open](http://isitmaintained.com/badge/open/futurewei-cloud/alcor-control-agent.svg)](http://isitmaintained.com/project/futurewei-cloud/alcor-control-agent "Percentage of issues still open")
 [![Average time to resolve an issue](http://isitmaintained.com/badge/resolution/futurewei-cloud/alcor-control-agent.svg)](http://isitmaintained.com/project/futurewei-cloud/alcor-control-agent "Average time to resolve an issue")
 
