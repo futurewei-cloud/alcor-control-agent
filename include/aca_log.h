@@ -13,26 +13,41 @@
 // limitations under the License.
 
 #pragma once
+#pragma GCC system_header
 
 #include <syslog.h>
-#include "trn_log.h"
+// #include "trn_log.h"
 
 extern bool g_debug_mode;
+    /*TRN_LOG_INIT(entity);                                                      \*/
+    /*TRN_LOG_CLOSE();                                                           \*/
+    /*TRN_LOG_DEBUG(f_, ##__VA_ARGS__);                                          \*/
+    /*TRN_LOG_INFO(f_, ##__VA_ARGS__);                                           \*/
+    /*TRN_LOG_NOTICE(f_, ##__VA_ARGS__);                                         \*/
+    /*TRN_LOG_WARN(f_, ##__VA_ARGS__);                                           \*/
+    /*TRN_LOG_ERROR(f_, ##__VA_ARGS__);                                          \*/
+    /*TRN_LOG_CRIT(f_, ##__VA_ARGS__);                                           \*/
+    /*TRN_LOG_ALERT(f_, ##__VA_ARGS__);                                          \*/
+    /*TRN_LOG_EMERG(f_, ##__VA_ARGS__);                                          \*/
+
+#define UNUSED(x) (void)(x)
+#define QUOTE(...) #__VA_ARGS__
 
 #define ACA_LOG_INIT(entity)                                                   \
   do {                                                                         \
-    TRN_LOG_INIT(entity);                                                      \
+    openlog(entity, LOG_CONS | LOG_PID | LOG_NDELAY, LOG_LOCAL1);              \
   } while (0)
 
 #define ACA_LOG_CLOSE()                                                        \
   do {                                                                         \
-    TRN_LOG_CLOSE();                                                           \
+    closelog();                                                                \
   } while (0)
 
 /* debug-level message */
 #define ACA_LOG_DEBUG(f_, ...)                                                 \
   do {                                                                         \
-    TRN_LOG_DEBUG(f_, ##__VA_ARGS__);                                          \
+    syslog(LOG_DEBUG, "[%s:%d] " f_, __func__, __LINE__,                     \
+		       ##__VA_ARGS__);                                                     \
     if (g_debug_mode) {                                                        \
       fprintf(stdout, f_, ##__VA_ARGS__);                                      \
     }                                                                          \
@@ -41,7 +56,7 @@ extern bool g_debug_mode;
 /* informational message */
 #define ACA_LOG_INFO(f_, ...)                                                  \
   do {                                                                         \
-    TRN_LOG_INFO(f_, ##__VA_ARGS__);                                           \
+    syslog(LOG_INFO, f_, ##__VA_ARGS__);                                       \
     if (g_debug_mode) {                                                        \
       fprintf(stdout, f_, ##__VA_ARGS__);                                      \
     }                                                                          \
@@ -50,7 +65,7 @@ extern bool g_debug_mode;
 /* normal, but significant, condition */
 #define ACA_LOG_NOTICE(f_, ...)                                                \
   do {                                                                         \
-    TRN_LOG_NOTICE(f_, ##__VA_ARGS__);                                         \
+    syslog(LOG_NOTICE, f_, ##__VA_ARGS__);                                     \
     if (g_debug_mode) {                                                        \
       fprintf(stdout, f_, ##__VA_ARGS__);                                      \
     }                                                                          \
@@ -59,7 +74,7 @@ extern bool g_debug_mode;
 /* warning conditions */
 #define ACA_LOG_WARN(f_, ...)                                                  \
   do {                                                                         \
-    TRN_LOG_WARN(f_, ##__VA_ARGS__);                                           \
+    syslog(LOG_WARNING, f_, ##__VA_ARGS__);                                    \
     if (g_debug_mode) {                                                        \
       fprintf(stdout, f_, ##__VA_ARGS__);                                      \
     }                                                                          \
@@ -68,7 +83,7 @@ extern bool g_debug_mode;
 /* error conditions */
 #define ACA_LOG_ERROR(f_, ...)                                                 \
   do {                                                                         \
-    TRN_LOG_ERROR(f_, ##__VA_ARGS__);                                          \
+    syslog(LOG_ERR, f_, ##__VA_ARGS__);                                        \
     if (g_debug_mode) {                                                        \
       fprintf(stdout, f_, ##__VA_ARGS__);                                      \
     }                                                                          \
@@ -77,7 +92,7 @@ extern bool g_debug_mode;
 /* critical conditions */
 #define ACA_LOG_CRIT(f_, ...)                                                  \
   do {                                                                         \
-    TRN_LOG_CRIT(f_, ##__VA_ARGS__);                                           \
+    syslog(LOG_CRIT, f_, ##__VA_ARGS__);                                       \
     if (g_debug_mode) {                                                        \
       fprintf(stdout, f_, ##__VA_ARGS__);                                      \
     }                                                                          \
@@ -86,7 +101,7 @@ extern bool g_debug_mode;
 /* action must be taken immediately */
 #define ACA_LOG_ALERT(f_, ...)                                                 \
   do {                                                                         \
-    TRN_LOG_ALERT(f_, ##__VA_ARGS__);                                          \
+    syslog(LOG_ALERT, f_, ##__VA_ARGS__);                                      \
     if (g_debug_mode) {                                                        \
       fprintf(stdout, f_, ##__VA_ARGS__);                                      \
     }                                                                          \
@@ -95,7 +110,7 @@ extern bool g_debug_mode;
 /* system is unusable */
 #define ACA_LOG_EMERG(f_, ...)                                                 \
   do {                                                                         \
-    TRN_LOG_EMERG(f_, ##__VA_ARGS__);                                          \
+    syslog(LOG_EMERG, f_, ##__VA_ARGS__);                                      \
     if (g_debug_mode) {                                                        \
       fprintf(stdout, f_, ##__VA_ARGS__);                                      \
     }                                                                          \
