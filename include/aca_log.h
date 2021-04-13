@@ -16,19 +16,8 @@
 #pragma GCC system_header
 
 #include <syslog.h>
-// #include "trn_log.h"
 
 extern bool g_debug_mode;
-    /*TRN_LOG_INIT(entity);                                                      \*/
-    /*TRN_LOG_CLOSE();                                                           \*/
-    /*TRN_LOG_DEBUG(f_, ##__VA_ARGS__);                                          \*/
-    /*TRN_LOG_INFO(f_, ##__VA_ARGS__);                                           \*/
-    /*TRN_LOG_NOTICE(f_, ##__VA_ARGS__);                                         \*/
-    /*TRN_LOG_WARN(f_, ##__VA_ARGS__);                                           \*/
-    /*TRN_LOG_ERROR(f_, ##__VA_ARGS__);                                          \*/
-    /*TRN_LOG_CRIT(f_, ##__VA_ARGS__);                                           \*/
-    /*TRN_LOG_ALERT(f_, ##__VA_ARGS__);                                          \*/
-    /*TRN_LOG_EMERG(f_, ##__VA_ARGS__);                                          \*/
 
 #define UNUSED(x) (void)(x)
 #define QUOTE(...) #__VA_ARGS__
