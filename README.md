@@ -50,7 +50,6 @@ This main repository of Alcor Control Agent is organized as follows:
 * test: Unit and integration test code
 
 ## Notes
-* json.hpp based on https://github.com/nlohmann/json
 * ovs_control.h and ovs_control.cpp is based on https://github.com/openvswitch/ovs/blob/master/utilities/ovs-ofctl.c
 * aca_grpc.cpp is based on https://github.com/grpc/grpc/blob/v1.30.0/examples/cpp/route_guide/route_guide_server.cc
 * HashMap.h and HashNode.h is based on https://github.com/kshk123/hashMap
