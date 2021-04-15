@@ -483,6 +483,7 @@ TEST(zeta_programming_test_cases, DISABLED_create_auxgateway_test)
   EXPECT_EQ(retcode, EXIT_SUCCESS);
 }
 
+/*
 TEST(zeta_programming_test_cases, DISABLED_zeta_scale_CHILD)
 {
   // ulong culminative_network_configuration_time = 0;
@@ -536,6 +537,7 @@ TEST(zeta_programming_test_cases, DISABLED_zeta_scale_PARENT)
   // restore demo mode
   g_demo_mode = previous_demo_mode;
 }
+*/
 
 /*
 TEST(zeta_programming_test_cases, DISABLED_zeta_scale_container)
