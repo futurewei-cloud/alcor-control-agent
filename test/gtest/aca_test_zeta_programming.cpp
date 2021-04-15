@@ -537,6 +537,7 @@ TEST(zeta_programming_test_cases, DISABLED_zeta_scale_PARENT)
   g_demo_mode = previous_demo_mode;
 }
 
+/*
 TEST(zeta_programming_test_cases, DISABLED_zeta_scale_container)
 {
   // ulong culminative_network_configuration_time = 0;
@@ -584,3 +585,4 @@ TEST(zeta_programming_test_cases, DISABLED_zeta_scale_container)
   // restore demo mode
   g_demo_mode = previous_demo_mode;
 }
+*/
