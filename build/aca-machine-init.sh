@@ -23,8 +23,8 @@ echo "1--- installing mizar dependencies ---" && \
     rpcbind \
     rsyslog \
     build-essential \
-    clang-7 \
-    llvm-7 \
+    clang-9 \
+    llvm-9 \
     libelf-dev \
     iproute2  \
     net-tools \

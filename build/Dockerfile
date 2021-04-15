@@ -22,8 +22,8 @@ RUN echo "1--- installing common dependencies ---" && \
     g++ \
     unzip \
     cmake \
-    clang-7 \
-    llvm-7 \
+    clang-9 \
+    llvm-9 \
     libelf-dev \
     doxygen \
     zlib1g-dev \
