@@ -34,7 +34,7 @@ class GoalStateProvisionerImpl final : public GoalStateProvisioner::Service {
   // grpc::CompletionQueue cq_;
 
   
-  HostRequestReply RequestGoalStates(HostRequest *request, grpc::CompletionQueue *cq);
+  void RequestGoalStates(HostRequest *request, grpc::CompletionQueue *cq);
 
   // ~GoalStateProvisionerImpl();
   explicit GoalStateProvisionerImpl(){};
