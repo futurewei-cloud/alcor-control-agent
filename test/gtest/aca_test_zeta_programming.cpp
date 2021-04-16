@@ -22,7 +22,7 @@
 #include "aca_zeta_programming.h"
 #include "aca_util.h"
 #include <fstream>
-#include <nlohmann/json.hpp>
+// #include <nlohmann/json.hpp>
 #include <iostream>
 #include <typeinfo>
 
@@ -72,6 +72,7 @@ extern uint oam_port_2;
 uint parent_position_in_port_info = 0;
 uint child_position_in_port_info = 1;
 
+/*
 void aca_test_create_default_port_state_with_zeta_data(PortState *new_port_states,
                                                        nlohmann::json port_data)
 {
@@ -114,6 +115,7 @@ void aca_test_create_default_subnet_state_with_zeta_data(SubnetState *new_subnet
   subnetConfig_GatewayBuilder->set_mac_address(subnet1_gw_mac); // make it up
   SubnetConiguration_builder->set_allocated_gateway(subnetConfig_GatewayBuilder);
 }
+*/
 
 void create_container(string container_name, string vip_address, string vmac_address)
 {
@@ -136,6 +138,7 @@ void create_container(string container_name, string vip_address, string vmac_add
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
 }
 
+/*
 void aca_test_zeta_setup_container(string zeta_gateway_path_config_file)
 {
   ifstream ifs(zeta_gateway_path_config_file);
@@ -359,6 +362,7 @@ void aca_test_zeta_setup(string zeta_gateway_path_config_file)
           GoalState_builder, gsOperationalReply);
   ASSERT_EQ(overall_rc, EXIT_SUCCESS);
 }
+*/
 
 TEST(zeta_programming_test_cases, create_zeta_config_valid)
 {
@@ -479,6 +483,7 @@ TEST(zeta_programming_test_cases, DISABLED_create_auxgateway_test)
   EXPECT_EQ(retcode, EXIT_SUCCESS);
 }
 
+/*
 TEST(zeta_programming_test_cases, DISABLED_zeta_scale_CHILD)
 {
   // ulong culminative_network_configuration_time = 0;
@@ -532,7 +537,9 @@ TEST(zeta_programming_test_cases, DISABLED_zeta_scale_PARENT)
   // restore demo mode
   g_demo_mode = previous_demo_mode;
 }
+*/
 
+/*
 TEST(zeta_programming_test_cases, DISABLED_zeta_scale_container)
 {
   // ulong culminative_network_configuration_time = 0;
@@ -580,3 +587,4 @@ TEST(zeta_programming_test_cases, DISABLED_zeta_scale_container)
   // restore demo mode
   g_demo_mode = previous_demo_mode;
 }
+*/
