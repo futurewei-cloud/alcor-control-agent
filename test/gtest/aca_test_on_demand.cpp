@@ -62,7 +62,7 @@ TEST(aca_on_demand_testcases, DISABLED_grpc_client_connectivity_test)
   HostRequestReply_HostRequestOperationStatus hostOperationStatus;
   OperationStatus replyStatus;
   //   bool found_data = false;
-  string uuid_for_call;
+  //   string uuid_for_call;
   //   data_for_on_demand_call *data_for_uuid;
 
   // char *uuid;
@@ -80,8 +80,8 @@ TEST(aca_on_demand_testcases, DISABLED_grpc_client_connectivity_test)
         for (int i = 0; i < call->reply.operation_statuses_size(); i++) {
           hostOperationStatus = call->reply.operation_statuses(i);
           replyStatus = hostOperationStatus.operation_status();
-          uuid_for_call = hostOperationStatus.request_id().c_str();
-          ACA_LOG_INFO("This reply has request ID: %s\n", uuid_for_call);
+          ACA_LOG_INFO("This reply has request ID: %s\n",
+                       hostOperationStatus.request_id().c_str());
         }
         ACA_LOG_DEBUG("Return from NCM - Reply Status: %s\n",
                       to_string(replyStatus).c_str());
@@ -93,6 +93,7 @@ TEST(aca_on_demand_testcases, DISABLED_grpc_client_connectivity_test)
     } else {
       ACA_LOG_INFO("%s\n", "Got an GRPC reply that is NOT OK, don't need to process the data");
     }
-    if(counter == 2) break;
+    if (counter == 2)
+      break;
   }
 }
