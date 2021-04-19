@@ -75,9 +75,14 @@ void ACA_On_Demand_Engine::process_async_grpc_replies()
 
   // char *uuid;
   ACA_LOG_INFO("%s\n", "Beginning of process_async_grpc_replies");
-  while (cq_->Next(&got_tag, &ok)) {
+  while (cq_.Next(&got_tag, &ok)) {
+    ACA_LOG_INFO("%s\n", "One more loop in process_async_grpc_replies");
     if (ok) {
+      ACA_LOG_INFO("%s\n", "cq_->Next is good, ready to static cast the Async Client Call");
+
       AsyncClientCall *call = static_cast<AsyncClientCall *>(got_tag);
+      ACA_LOG_INFO("%s\n", "Async Client Call casted successfully.");
+
       if (call->status.ok()) {
         ACA_LOG_INFO("%s\n", "Got an GRPC reply that is OK, need to process it.");
         for (int i = 0; i < call->reply.operation_statuses_size(); i++) {
@@ -125,7 +130,7 @@ void ACA_On_Demand_Engine::unknown_recv(uint16_t vlan_id, string ip_src,
 
   ACA_LOG_DEBUG("Calling NCM - %s:%s\n", g_ncm_address.c_str(), g_ncm_port.c_str());
   // hostRequestReply =
-  g_grpc_server->RequestGoalStates(&HostRequest_builder, cq_);
+  g_grpc_server->RequestGoalStates(&HostRequest_builder, &cq_);
   // for (int i = 0; i < hostRequestReply.operation_statuses_size(); i++) {
   //   hostOperationStatus = hostRequestReply.operation_statuses(i);
   //   replyStatus = hostOperationStatus.operation_status();
@@ -138,6 +143,7 @@ void ACA_On_Demand_Engine::unknown_recv(uint16_t vlan_id, string ip_src,
 void ACA_On_Demand_Engine::on_demand(OperationStatus status, uint32_t in_port,
                                      void *packet, int packet_size, Protocol protocol)
 {
+  ACA_LOG_INFO("%s\n", "Inside of on_demand function");
   string bridge = "br-tun";
   string inport = "in_port=controller";
   string whitespace = " ";
@@ -151,6 +157,7 @@ void ACA_On_Demand_Engine::on_demand(OperationStatus status, uint32_t in_port,
   char str[10];
 
   if (status == OperationStatus::SUCCESS) {
+    ACA_LOG_INFO("%s\n", "It was an succesful operation");
     if (protocol == Protocol::ARP) {
       char *base = (char *)packet;
       unsigned char *vlan_hdr = (unsigned char *)(base + 12);
