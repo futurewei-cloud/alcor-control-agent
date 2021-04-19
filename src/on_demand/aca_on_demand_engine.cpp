@@ -367,12 +367,12 @@ void ACA_On_Demand_Engine::parse_packet(uint32_t in_port, void *packet)
     uuid_generate_time(uuid);
     char uuid_str[37];
     uuid_unparse_lower(uuid, uuid_str);
-    data_for_on_demand_call *data;
-    data->in_port = in_port;
-    data->packet = packet;
-    data->packet_size = packet_size;
-    data->protocol = _protocol;
-    request_uuid_on_demand_data_map.insert(uuid_str, data);
+    data_for_on_demand_call data;
+    data.in_port = in_port;
+    data.packet = packet;
+    data.packet_size = packet_size;
+    data.protocol = _protocol;
+    request_uuid_on_demand_data_map.insert(uuid_str, &data);
     // on_demand_reply =
     unknown_recv(vlan_id, ip_src, ip_dest, port_src, port_dest, _protocol, uuid_str);
     // on_demand(on_demand_reply, in_port, packet,
