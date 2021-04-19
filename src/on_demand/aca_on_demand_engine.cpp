@@ -94,8 +94,12 @@ void ACA_On_Demand_Engine::process_async_grpc_replies()
         ACA_LOG_DEBUG("Return from NCM - Reply Status: %s\n",
                       to_string(replyStatus).c_str());
         if (found_data) {
+          ACA_LOG_INFO("Found data into the map, UUID: [%s], in_port: [%d], protocol: [%d]\n",
+                       uuid_for_call.c_str(), data_for_uuid->in_port, data_for_uuid->protocol);
+
           on_demand(replyStatus, data_for_uuid->in_port, data_for_uuid->packet,
                     data_for_uuid->packet_size, data_for_uuid->protocol);
+          delete data_for_uuid;
           request_uuid_on_demand_data_map.erase(uuid_for_call);
         }
       }
@@ -367,12 +371,14 @@ void ACA_On_Demand_Engine::parse_packet(uint32_t in_port, void *packet)
     uuid_generate_time(uuid);
     char uuid_str[37];
     uuid_unparse_lower(uuid, uuid_str);
-    data_for_on_demand_call data;
-    data.in_port = in_port;
-    data.packet = packet;
-    data.packet_size = packet_size;
-    data.protocol = _protocol;
-    request_uuid_on_demand_data_map.insert(uuid_str, &data);
+    data_for_on_demand_call* data = new data_for_on_demand_call;
+    data->in_port = in_port;
+    data->packet = packet;
+    data->packet_size = packet_size;
+    data->protocol = _protocol;
+    request_uuid_on_demand_data_map.insert(uuid_str, data);
+    ACA_LOG_INFO("Inserted data into the map, UUID: [%s], in_port: [%d], protocol: [%d]\n",
+                 uuid_str, in_port, _protocol);
     // on_demand_reply =
     unknown_recv(vlan_id, ip_src, ip_dest, port_src, port_dest, _protocol, uuid_str);
     // on_demand(on_demand_reply, in_port, packet,
