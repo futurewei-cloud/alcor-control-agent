@@ -165,7 +165,6 @@ void ACA_On_Demand_Engine::unknown_recv(uint16_t vlan_id, string ip_src,
   //   replyStatus = hostOperationStatus.operation_status();
   // }
   // ACA_LOG_DEBUG("Return from NCM - Reply Status: %s\n", to_string(replyStatus).c_str());
-  usleep(USLEEPTIME_IN_MICROSECONDS);
   // return replyStatus;
 }
 
@@ -186,7 +185,8 @@ void ACA_On_Demand_Engine::on_demand(OperationStatus status, uint32_t in_port,
   char str[10];
 
   if (status == OperationStatus::SUCCESS) {
-    ACA_LOG_INFO("%s\n", "It was an succesful operation");
+    ACA_LOG_INFO("%s\n", "It was an succesful operation, let's sleep a little bit, so that the goalstate is created/updated");
+    usleep(USLEEPTIME_IN_MICROSECONDS);
     if (protocol == Protocol::ARP) {
       char *base = (char *)packet;
       unsigned char *vlan_hdr = (unsigned char *)(base + 12);
