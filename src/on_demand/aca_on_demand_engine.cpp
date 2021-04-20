@@ -73,11 +73,17 @@ void ACA_On_Demand_Engine::process_async_grpc_replies()
   std::unordered_map<std::__cxx11::string, data_for_on_demand_call *>::iterator found_data;
   string uuid_for_call;
   data_for_on_demand_call *data_for_uuid;
-
+  std::chrono::_V2::steady_clock::time_point time_zero =
+          std::chrono::steady_clock::now();
   // char *uuid;
   ACA_LOG_INFO("%s\n", "Beginning of process_async_grpc_replies");
   while (cq_.Next(&got_tag, &ok)) {
     ACA_LOG_INFO("%s\n", "One more loop in process_async_grpc_replies");
+    std::chrono::_V2::steady_clock::time_point time_zero_sub =
+            std::chrono::steady_clock::now();
+    auto one_loop_time = cast_to_microseconds(time_zero_sub - time_zero).count();
+    ACA_LOG_INFO("[METRICS] One loop in the while took: %ld microseconds or %ld milliseconds\n",
+                 one_loop_time, us_to_ms(one_loop_time));
     if (ok) {
       ACA_LOG_INFO("%s\n", "cq_->Next is good, ready to static cast the Async Client Call");
 
@@ -102,7 +108,7 @@ void ACA_On_Demand_Engine::process_async_grpc_replies()
           time_three = std::chrono::steady_clock::now();
           auto from_finish_to_got_result_time =
                   cast_to_microseconds(time_three - time_two).count();
-          ACA_LOG_INFO("[METRICS] on_demand took: %ld microseconds or %ld milliseconds\n",
+          ACA_LOG_INFO("[METRICS] from grpc call finish to got result took: %ld microseconds or %ld milliseconds\n",
                        from_finish_to_got_result_time,
                        us_to_ms(from_finish_to_got_result_time));
           on_demand(replyStatus, data_for_uuid->in_port, data_for_uuid->packet,
