@@ -99,7 +99,7 @@ void ACA_On_Demand_Engine::process_async_grpc_replies()
 
           on_demand(replyStatus, data_for_uuid->in_port, data_for_uuid->packet,
                     data_for_uuid->packet_size, data_for_uuid->protocol);
-          delete data_for_uuid;
+          // delete data_for_uuid;
           request_uuid_on_demand_data_map.erase(uuid_for_call);
         }
       }
