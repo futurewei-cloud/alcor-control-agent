@@ -55,6 +55,7 @@ extern GoalStateProvisionerImpl *g_grpc_server;
 
 namespace aca_on_demand_engine
 {
+std::chrono::_V2::steady_clock::time_point time_one, time_two, time_three, time_four;
 ACA_On_Demand_Engine &ACA_On_Demand_Engine::get_instance()
 {
   // Instance is destroyed when program exits.
@@ -98,9 +99,20 @@ void ACA_On_Demand_Engine::process_async_grpc_replies()
           ACA_LOG_INFO("Found data into the map, UUID: [%s], in_port: [%d], protocol: [%d]\n",
                        uuid_for_call.c_str(), data_for_uuid->in_port,
                        data_for_uuid->protocol);
-
+          time_three = std::chrono::steady_clock::now();
+          auto from_finish_to_got_result_time =
+                  cast_to_microseconds(time_three - time_two).count();
+          ACA_LOG_INFO("[METRICS] on_demand took: %ld microseconds or %ld milliseconds\n",
+                       from_finish_to_got_result_time,
+                       us_to_ms(from_finish_to_got_result_time));
           on_demand(replyStatus, data_for_uuid->in_port, data_for_uuid->packet,
                     data_for_uuid->packet_size, data_for_uuid->protocol);
+          time_four = std::chrono::steady_clock::now();
+          auto message_total_operation_time =
+                  cast_to_microseconds(time_four - time_three).count();
+          ACA_LOG_INFO("[METRICS] on_demand took: %ld microseconds or %ld milliseconds\n",
+                       message_total_operation_time,
+                       us_to_ms(message_total_operation_time));
           // delete data_for_uuid;
           request_uuid_on_demand_data_map.erase(uuid_for_call);
         }
@@ -136,7 +148,12 @@ void ACA_On_Demand_Engine::unknown_recv(uint16_t vlan_id, string ip_src,
 
   ACA_LOG_DEBUG("Calling NCM - %s:%s\n", g_ncm_address.c_str(), g_ncm_port.c_str());
   // hostRequestReply =
+  time_one = std::chrono::steady_clock::now();
   g_grpc_server->RequestGoalStates(&HostRequest_builder, &cq_);
+  time_two = std::chrono::steady_clock::now();
+  auto message_total_operation_time = cast_to_microseconds(time_two - time_one).count();
+  ACA_LOG_INFO("[METRICS] async grpc call took: %ld microseconds or %ld milliseconds\n",
+               message_total_operation_time, us_to_ms(message_total_operation_time));
   // for (int i = 0; i < hostRequestReply.operation_statuses_size(); i++) {
   //   hostOperationStatus = hostRequestReply.operation_statuses(i);
   //   replyStatus = hostOperationStatus.operation_status();
