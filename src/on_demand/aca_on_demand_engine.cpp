@@ -69,7 +69,7 @@ void ACA_On_Demand_Engine::process_async_grpc_replies()
   bool ok = false;
   HostRequestReply_HostRequestOperationStatus hostOperationStatus;
   OperationStatus replyStatus;
-  bool found_data = false;
+  std::unordered_map<std::__cxx11::string, data_for_on_demand_call *>::iterator found_data;
   string uuid_for_call;
   data_for_on_demand_call *data_for_uuid;
 
@@ -89,13 +89,15 @@ void ACA_On_Demand_Engine::process_async_grpc_replies()
           hostOperationStatus = call->reply.operation_statuses(i);
           replyStatus = hostOperationStatus.operation_status();
           uuid_for_call = hostOperationStatus.request_id();
-          found_data = request_uuid_on_demand_data_map.find(uuid_for_call, data_for_uuid);
+          found_data = request_uuid_on_demand_data_map.find(uuid_for_call);
         }
         ACA_LOG_DEBUG("Return from NCM - Reply Status: %s\n",
                       to_string(replyStatus).c_str());
-        if (found_data) {
+        if (found_data != request_uuid_on_demand_data_map.end()) {
+          data_for_uuid = found_data->second;
           ACA_LOG_INFO("Found data into the map, UUID: [%s], in_port: [%d], protocol: [%d]\n",
-                       uuid_for_call.c_str(), data_for_uuid->in_port, data_for_uuid->protocol);
+                       uuid_for_call.c_str(), data_for_uuid->in_port,
+                       data_for_uuid->protocol);
 
           on_demand(replyStatus, data_for_uuid->in_port, data_for_uuid->packet,
                     data_for_uuid->packet_size, data_for_uuid->protocol);
@@ -371,12 +373,12 @@ void ACA_On_Demand_Engine::parse_packet(uint32_t in_port, void *packet)
     uuid_generate_time(uuid);
     char uuid_str[37];
     uuid_unparse_lower(uuid, uuid_str);
-    data_for_on_demand_call* data = new data_for_on_demand_call;
+    data_for_on_demand_call *data = new data_for_on_demand_call;
     data->in_port = in_port;
     data->packet = packet;
     data->packet_size = packet_size;
     data->protocol = _protocol;
-    request_uuid_on_demand_data_map.insert(uuid_str, data);
+    request_uuid_on_demand_data_map[uuid_str] = data;
     ACA_LOG_INFO("Inserted data into the map, UUID: [%s], in_port: [%d], protocol: [%d]\n",
                  uuid_str, in_port, _protocol);
     // on_demand_reply =

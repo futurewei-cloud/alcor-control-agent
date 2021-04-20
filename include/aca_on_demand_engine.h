@@ -26,8 +26,10 @@
 #include <thread>
 #include "hashmap/HashMap.h"
 #include <grpcpp/grpcpp.h>
+#include <unordered_map>
 
 using namespace alcor::schema;
+using namespace std;
 // using namespace grpc;
 struct data_for_on_demand_call {
   //     alcor::schema::OperationStatus on_demand_reply;
@@ -43,8 +45,8 @@ class ACA_On_Demand_Engine {
   public:
   std::thread *on_demand_reply_processing_thread;
   grpc::CompletionQueue cq_;
-  CTSL::HashMap<string, data_for_on_demand_call *> request_uuid_on_demand_data_map;
-
+  //CTSL::HashMap
+  unordered_map<string, data_for_on_demand_call *> request_uuid_on_demand_data_map;
   static ACA_On_Demand_Engine &get_instance();
 
   /*
