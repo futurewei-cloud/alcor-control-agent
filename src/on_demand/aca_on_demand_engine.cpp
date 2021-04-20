@@ -165,7 +165,7 @@ void ACA_On_Demand_Engine::unknown_recv(uint16_t vlan_id, string ip_src,
   //   replyStatus = hostOperationStatus.operation_status();
   // }
   // ACA_LOG_DEBUG("Return from NCM - Reply Status: %s\n", to_string(replyStatus).c_str());
-  //usleep(USLEEPTIME_IN_MICROSECONDS);
+  usleep(USLEEPTIME_IN_MICROSECONDS);
   // return replyStatus;
 }
 
