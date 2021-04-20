@@ -144,6 +144,8 @@ class ACA_On_Demand_Engine {
   };
   ~ACA_On_Demand_Engine()
   {
+    cq_.Shutdown();
+    request_uuid_on_demand_data_map.clear();
     delete on_demand_reply_processing_thread;
   };
 };
