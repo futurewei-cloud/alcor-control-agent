@@ -45,7 +45,6 @@ class ACA_On_Demand_Engine {
   public:
   std::thread *on_demand_reply_processing_thread;
   grpc::CompletionQueue cq_;
-  //CTSL::HashMap
   unordered_map<string, data_for_on_demand_call *> request_uuid_on_demand_data_map;
   static ACA_On_Demand_Engine &get_instance();
 
