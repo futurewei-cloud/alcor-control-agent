@@ -155,14 +155,25 @@ void ACA_On_Demand_Engine::on_demand(OperationStatus status, uint32_t in_port,
   char str[10];
 
   if (status == OperationStatus::SUCCESS) {
-    ACA_LOG_INFO("%s\n", "It was an succesful operation, let's sleep a little bit, so that the goalstate is created/updated");
-    usleep(USLEEPTIME_IN_MICROSECONDS);
+    ACA_LOG_INFO("%s\n", "It was an succesful operation, let's wait a little bit, so that the goalstate is created/updated");
+    // usleep(USLEEPTIME_IN_MICROSECONDS);
     if (protocol == Protocol::ARP) {
       char *base = (char *)packet;
       unsigned char *vlan_hdr = (unsigned char *)(base + 12);
       vlan_message *vlanmsg = (vlan_message *)vlan_hdr;
       unsigned char *arp_hdr = (unsigned char *)(base + SIZE_ETHERNET + 4);
       arp_message *arpmsg = (arp_message *)arp_hdr;
+      arp_entry_data stData;
+      // get the ip address from arp message
+      stData.ipv4_address =
+              aca_arp_responder::ACA_ARP_Responder::get_instance()._get_requested_ip(arpmsg);
+      // get the vlan id from vlan header
+      if (vlanmsg) {
+        stData.vlan_id = ntohs(vlanmsg->vlan_tci) & 0x0fff;
+      } else {
+        stData.vlan_id = 0;
+      }
+      aca_arp_responder::ACA_ARP_Responder::get_instance().wait_for_arp_entry(10000, stData);
       aca_arp_responder::ACA_ARP_Responder::get_instance()._parse_arp_request(
               in_port, vlanmsg, arpmsg);
       ACA_LOG_DEBUG("%s", "On-demand arp request packet sent to arp_responder.\n");

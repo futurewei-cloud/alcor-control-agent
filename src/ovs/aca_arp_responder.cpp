@@ -20,6 +20,7 @@
 #include <shared_mutex>
 #include <arpa/inet.h>
 #include <errno.h>
+#include <unistd.h>
 
 using namespace std;
 
@@ -51,7 +52,7 @@ void ACA_ARP_Responder::_init_arp_ofp()
 {
   // int overall_rc = EXIT_SUCCESS;
   // unsigned long not_care_culminative_time;
-  // remove the following 
+  // remove the following
   // aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
   //         "add-flow br-tun \"table=0,priority=50,arp,arp_op=1, actions=CONTROLLER\"",
   //         not_care_culminative_time, overall_rc);
@@ -73,7 +74,31 @@ ACA_ARP_Responder &ACA_ARP_Responder::get_instance()
   static ACA_ARP_Responder instance;
   return instance;
 }
+bool ACA_ARP_Responder::wait_for_arp_entry(int time_in_milliseconds, arp_entry_data stData)
+{
+  ACA_LOG_INFO("Start waiting for arp entry with IP %s.\n", stData.ipv4_address);
+  arp_table_data *current_arp_data = new arp_table_data;
 
+  bool found_arp_entry = false;
+  int check_how_many_times = time_in_milliseconds / 1000;
+  int counter = 0;
+  do {
+    found_arp_entry = _arp_db.find(stData, current_arp_data);
+    counter++;
+    if (!found_arp_entry) {
+      usleep(1000);
+      ACA_LOG_INFO("Couldn't find arp entry for %s, sleep 1000 milliseconds, counter = %d\n",
+                   stData.ipv4_address, counter);
+    } else {
+      ACA_LOG_INFO("Found arp entry for %s, let's go!\n", stData.ipv4_address);
+    }
+  } while (!found_arp_entry && counter < check_how_many_times);
+
+  delete current_arp_data;
+  ACA_LOG_INFO("Done waiting for arp entry with IP %s, with result: %v\n",
+               stData.ipv4_address, found_arp_entry);
+  return found_arp_entry;
+}
 int ACA_ARP_Responder::add_arp_entry(arp_config *arp_cfg_in)
 {
   arp_entry_data stData;
@@ -254,7 +279,7 @@ void ACA_ARP_Responder::arp_xmit(uint32_t in_port, void *vlanmsg, void *message,
 }
 
 int ACA_ARP_Responder::_parse_arp_request(uint32_t in_port, vlan_message *vlanmsg,
-                                           arp_message *arpmsg)
+                                          arp_message *arpmsg)
 {
   arp_entry_data stData;
   arp_table_data *current_arp_data = new arp_table_data;
