@@ -173,14 +173,22 @@ void ACA_On_Demand_Engine::on_demand(OperationStatus status, uint32_t in_port,
       } else {
         stData.vlan_id = 0;
       }
-      int wait_time = 1000000; // one second
-      int check_frequency = 1000; // 0.001 seconds, or 1000 microseconds.
+      // int wait_time = 1000000; // one second
+      int check_frequency = 1000; // 0.01 seconds, or 10000 microseconds.
       bool found_arp_entry = false;
-      int times_to_check = wait_time / check_frequency;
-      for (int i = 0; i < times_to_check && !found_arp_entry; i++) {
+      // int times_to_check = wait_time / check_frequency;
+      int i = 0;
+      do {
         found_arp_entry =
-                aca_arp_responder::ACA_ARP_Responder::get_instance().wait_for_arp_entry(stData);
-      }
+                aca_arp_responder::ACA_ARP_Responder::get_instance().does_arp_entry_exist(stData);
+        if (!found_arp_entry) {
+          i++;
+          usleep(check_frequency);
+        }
+      } while (!found_arp_entry);
+
+      ACA_LOG_INFO("Finished waiting for the arp entry for IP [%d], it took %d microseconds.\n",
+                   stData.ipv4_address.c_str(), check_frequency * i);
       int parse_arp_request_rc =
               aca_arp_responder::ACA_ARP_Responder::get_instance()._parse_arp_request(
                       in_port, vlanmsg, arpmsg);

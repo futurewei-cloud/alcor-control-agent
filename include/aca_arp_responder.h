@@ -100,7 +100,7 @@ class ACA_ARP_Responder {
   public:
   static ACA_ARP_Responder &get_instance();
 
-  bool wait_for_arp_entry(arp_entry_data stData);
+  bool does_arp_entry_exist(arp_entry_data stData);
 
   /* Managemet Plane Ops*/
   int add_arp_entry(arp_config *arp_config_in);

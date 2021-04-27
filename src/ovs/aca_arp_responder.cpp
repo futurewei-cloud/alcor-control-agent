@@ -74,29 +74,30 @@ ACA_ARP_Responder &ACA_ARP_Responder::get_instance()
   static ACA_ARP_Responder instance;
   return instance;
 }
-bool ACA_ARP_Responder::wait_for_arp_entry(arp_entry_data stData)
+bool ACA_ARP_Responder::does_arp_entry_exist(arp_entry_data stData)
 {
-  ACA_LOG_INFO("Check for arp entry with IP %s.\n", stData.ipv4_address.c_str());
+  return _arp_db.find(stData) == _arp_db.end();
+  // ACA_LOG_INFO("Check for arp entry with IP %s.\n", stData.ipv4_address.c_str());
 
-  bool found_arp_entry = false;
-  // int check_how_many_times = time_in_milliseconds / 1000;
-  int counter = 0;
-  // do {
-  auto found = _arp_db.find(stData);
-  counter++;
-  if (found == _arp_db.end()) {
-    // usleep(1000);
-    ACA_LOG_INFO("Couldn't find arp entry for %s, sleep 1000 milliseconds, counter = %d\n",
-                 stData.ipv4_address, counter);
-  } else {
-    found_arp_entry = true;
-    ACA_LOG_INFO("Found arp entry for %s, let's go!\n", stData.ipv4_address.c_str());
-  }
-  // } while (!found_arp_entry && counter < check_how_many_times);
+  // bool found_arp_entry = false;
+  // // int check_how_many_times = time_in_milliseconds / 1000;
+  // int counter = 0;
+  // // do {
+  // auto found = _arp_db.find(stData);
+  // // counter++;
+  // if (found == _arp_db.end()) {
+  //   // usleep(1000);
+  //   ACA_LOG_INFO("Couldn't find arp entry for %s, sleep 1000 milliseconds\n",
+  //                stData.ipv4_address.c_str());
+  // } else {
+  //   found_arp_entry = true;
+  //   ACA_LOG_INFO("Found arp entry for %s, let's go!\n", stData.ipv4_address.c_str());
+  // }
+  // // } while (!found_arp_entry && counter < check_how_many_times);
 
-  ACA_LOG_INFO("Done waiting for arp entry with IP %s, with result: %d\n",
-               stData.ipv4_address.c_str(), found_arp_entry);
-  return found_arp_entry;
+  // // ACA_LOG_INFO("Done waiting for arp entry with IP %s, with result: %d\n",
+  // //              stData.ipv4_address.c_str(), found_arp_entry);
+  // return found_arp_entry;
 }
 int ACA_ARP_Responder::add_arp_entry(arp_config *arp_cfg_in)
 {
