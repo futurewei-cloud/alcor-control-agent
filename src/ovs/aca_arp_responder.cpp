@@ -76,7 +76,7 @@ ACA_ARP_Responder &ACA_ARP_Responder::get_instance()
 }
 bool ACA_ARP_Responder::does_arp_entry_exist(arp_entry_data stData)
 {
-  return _arp_db.find(stData) == _arp_db.end();
+  return _arp_db.find(stData) != _arp_db.end();
   // ACA_LOG_INFO("Check for arp entry with IP %s.\n", stData.ipv4_address.c_str());
 
   // bool found_arp_entry = false;

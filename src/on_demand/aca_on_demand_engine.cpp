@@ -187,7 +187,7 @@ void ACA_On_Demand_Engine::on_demand(OperationStatus status, uint32_t in_port,
         }
       } while (!found_arp_entry);
 
-      ACA_LOG_INFO("Finished waiting for the arp entry for IP [%d], it took %d microseconds.\n",
+      ACA_LOG_INFO("Finished waiting for the arp entry for IP [%s], it took %d microseconds.\n",
                    stData.ipv4_address.c_str(), check_frequency * i);
       int parse_arp_request_rc =
               aca_arp_responder::ACA_ARP_Responder::get_instance()._parse_arp_request(
