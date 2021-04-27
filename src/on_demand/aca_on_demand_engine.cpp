@@ -173,10 +173,23 @@ void ACA_On_Demand_Engine::on_demand(OperationStatus status, uint32_t in_port,
       } else {
         stData.vlan_id = 0;
       }
-      aca_arp_responder::ACA_ARP_Responder::get_instance().wait_for_arp_entry(10000, stData);
-      aca_arp_responder::ACA_ARP_Responder::get_instance()._parse_arp_request(
-              in_port, vlanmsg, arpmsg);
-      ACA_LOG_DEBUG("%s", "On-demand arp request packet sent to arp_responder.\n");
+      int wait_time = 1000000; // one second
+      int check_frequency = 1000; // 0.001 seconds, or 1000 microseconds.
+      bool found_arp_entry = false;
+      int times_to_check = wait_time / check_frequency;
+      for (int i = 0; i < times_to_check && !found_arp_entry; i++) {
+        found_arp_entry =
+                aca_arp_responder::ACA_ARP_Responder::get_instance().wait_for_arp_entry(stData);
+      }
+      int parse_arp_request_rc =
+              aca_arp_responder::ACA_ARP_Responder::get_instance()._parse_arp_request(
+                      in_port, vlanmsg, arpmsg);
+      if (parse_arp_request_rc == EXIT_SUCCESS) {
+        ACA_LOG_DEBUG("%s", "On-demand arp request packet sent to arp_responder.\n");
+
+      } else {
+        ACA_LOG_DEBUG("%s", "On-demand arp request packet FAILED to send to arp_responder.\n");
+      }
     } else {
       for (int i = 0; i < packet_size; i++) {
         sprintf(str, "%02x", *ch);

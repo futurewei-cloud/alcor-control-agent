@@ -100,7 +100,7 @@ class ACA_ARP_Responder {
   public:
   static ACA_ARP_Responder &get_instance();
 
-  bool wait_for_arp_entry(int time_in_milliseconds, arp_entry_data stData);
+  bool wait_for_arp_entry(arp_entry_data stData);
 
   /* Managemet Plane Ops*/
   int add_arp_entry(arp_config *arp_config_in);
@@ -118,7 +118,7 @@ class ACA_ARP_Responder {
   ACA_ARP_Responder();
   ~ACA_ARP_Responder();
 
-  CTSL::HashMap<arp_entry_data, arp_table_data *, arp_hash> _arp_db;
+  unordered_map<arp_entry_data, arp_table_data *, arp_hash> _arp_db;
 
   /*************** Initialization and De-initialization ***********************/
   void _init_arp_db();
