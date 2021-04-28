@@ -101,6 +101,11 @@ void ACA_On_Demand_Engine::process_async_grpc_replies()
           uuid_ncm_reply_time_map[uuid_for_call] = &now;
           ACA_LOG_INFO("For UUID: [%s], NCM called returned at: [%ld]\n",
                        uuid_for_call.c_str(), now);
+          for (auto it : request_uuid_on_demand_data_map) {
+            ACA_LOG_INFO("Key: [%s], \npacket address: [%p]\npacket_size: [%d]\nprotocol: [%d]",
+                         it.first, it.second->packet, it.second->packet_size,
+                         it.second->protocol);
+          }
           on_demand(uuid_for_call, replyStatus, data_for_uuid->in_port,
                     data_for_uuid->packet, data_for_uuid->packet_size,
                     data_for_uuid->protocol);
@@ -422,12 +427,13 @@ void ACA_On_Demand_Engine::parse_packet(uint32_t in_port, void *packet)
     uuid_generate_time(uuid);
     char uuid_str[37];
     uuid_unparse_lower(uuid, uuid_str);
-    data_for_on_demand_call data;
-    data.in_port = in_port;
-    data.packet = packet;
-    data.packet_size = packet_size;
-    data.protocol = _protocol;
-    request_uuid_on_demand_data_map[uuid_str] = &data;
+    data_for_on_demand_call *data = new data_for_on_demand_call;
+    data->in_port = in_port;
+    data->packet = packet;
+    data->packet_size = packet_size;
+    data->protocol = _protocol;
+    request_uuid_on_demand_data_map[uuid_str] = data;
+
     ACA_LOG_INFO("Inserted data into the map, UUID: [%s], in_port: [%d], protocol: [%d]\n",
                  uuid_str, in_port, _protocol);
     unknown_recv(vlan_id, ip_src, ip_dest, port_src, port_dest, _protocol, uuid_str);
