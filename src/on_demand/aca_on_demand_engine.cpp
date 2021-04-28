@@ -96,7 +96,8 @@ void ACA_On_Demand_Engine::process_async_grpc_replies()
           ACA_LOG_INFO("Found data into the map, UUID: [%s], in_port: [%d], protocol: [%d]\n",
                        uuid_for_call.c_str(), data_for_uuid->in_port,
                        data_for_uuid->protocol);
-          std::chrono::_V2::steady_clock::time_point now = chrono::steady_clock::now();
+          std::chrono::_V2::steady_clock::time_point now =
+                  std::chrono::steady_clock::now();
           uuid_ncm_reply_time_map[uuid_for_call] = &now;
           ACA_LOG_INFO("For UUID: [%s], NCM called returned at: [%ld]\n",
                        uuid_for_call.c_str(), now);
@@ -136,7 +137,7 @@ void ACA_On_Demand_Engine::unknown_recv(uint16_t vlan_id, string ip_src,
   new_state_requests->set_destination_port(port_dest);
   new_state_requests->set_protocol(protocol);
   new_state_requests->set_ethertype(EtherType::IPV4);
-  std::chrono::_V2::steady_clock::time_point now = chrono::steady_clock::now();
+  std::chrono::_V2::steady_clock::time_point now = std::chrono::steady_clock::now();
   uuid_call_ncm_time_map[uuid_str] = &now;
   ACA_LOG_DEBUG("For UUID [%s], calling NCM for info of IP [%s] at: [%ld]",
                 uuid_str, ip_dest.c_str(), now);
@@ -163,37 +164,37 @@ void ACA_On_Demand_Engine::on_demand(string uuid_for_call, OperationStatus statu
 
   if (status == OperationStatus::SUCCESS) {
     ACA_LOG_INFO("%s\n", "It was an succesful operation, let's wait a little bit, so that the goalstate is created/updated");
-    // usleep(USLEEPTIME_IN_MICROSECONDS);
+    usleep(USLEEPTIME_IN_MICROSECONDS);
     if (protocol == Protocol::ARP) {
       char *base = (char *)packet;
       unsigned char *vlan_hdr = (unsigned char *)(base + 12);
       vlan_message *vlanmsg = (vlan_message *)vlan_hdr;
       unsigned char *arp_hdr = (unsigned char *)(base + SIZE_ETHERNET + 4);
       arp_message *arpmsg = (arp_message *)arp_hdr;
-      arp_entry_data stData;
-      // get the ip address from arp message
-      stData.ipv4_address =
-              aca_arp_responder::ACA_ARP_Responder::get_instance()._get_requested_ip(arpmsg);
-      // get the vlan id from vlan header
-      if (vlanmsg) {
-        stData.vlan_id = ntohs(vlanmsg->vlan_tci) & 0x0fff;
-      } else {
-        stData.vlan_id = 0;
-      }
-      // int wait_time = 1000000; // one second
-      int check_frequency = 1000; // 0.01 seconds, or 10000 microseconds.
-      bool found_arp_entry = false;
-      // int times_to_check = wait_time / check_frequency;
-      int i = 0;
-      do {
-        found_arp_entry =
-                aca_arp_responder::ACA_ARP_Responder::get_instance().does_arp_entry_exist(stData);
-        if (!found_arp_entry) {
-          i++;
-          usleep(check_frequency);
-        }
-      } while (!found_arp_entry);
-      std::chrono::_V2::steady_clock::time_point now = chrono::steady_clock::now();
+      // arp_entry_data stData;
+      // // get the ip address from arp message
+      // stData.ipv4_address =
+      //         aca_arp_responder::ACA_ARP_Responder::get_instance()._get_requested_ip(arpmsg);
+      // // get the vlan id from vlan header
+      // if (vlanmsg) {
+      //   stData.vlan_id = ntohs(vlanmsg->vlan_tci) & 0x0fff;
+      // } else {
+      //   stData.vlan_id = 0;
+      // }
+      // // int wait_time = 1000000; // one second
+      // int check_frequency = 1000; // 0.01 seconds, or 10000 microseconds.
+      // bool found_arp_entry = false;
+      // // int times_to_check = wait_time / check_frequency;
+      // int i = 0;
+      // do {
+      //   found_arp_entry =
+      //           aca_arp_responder::ACA_ARP_Responder::get_instance().does_arp_entry_exist(stData);
+      //   if (!found_arp_entry) {
+      //     i++;
+      //     usleep(check_frequency);
+      //   }
+      // } while (!found_arp_entry);
+      std::chrono::_V2::steady_clock::time_point now = std::chrono::steady_clock::now();
       uuid_wait_done_time_map[uuid_for_call] = &now;
       ACA_LOG_INFO("For UUID: [%s], wait finished at: [%ld]\n", uuid_for_call.c_str(), now);
       // auto call_ncm_operation_time =
