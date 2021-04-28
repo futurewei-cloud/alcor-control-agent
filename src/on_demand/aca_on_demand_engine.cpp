@@ -138,8 +138,8 @@ void ACA_On_Demand_Engine::unknown_recv(uint16_t vlan_id, string ip_src,
   new_state_requests->set_ethertype(EtherType::IPV4);
   std::chrono::_V2::steady_clock::time_point now = chrono::steady_clock::now();
   uuid_call_ncm_time_map[uuid_str] = &now;
-  ACA_LOG_DEBUG("Calling NCM for info of IP [%s] at: [%ld]", ip_dest.c_str(),
-                *(uuid_call_ncm_time_map[uuid_str] = &now));
+  ACA_LOG_DEBUG("For UUID [%s], calling NCM for info of IP [%s] at: [%ld]", uuid_str,
+                ip_dest.c_str(), *(uuid_call_ncm_time_map[uuid_str] = &now));
 
   g_grpc_server->RequestGoalStates(&HostRequest_builder, &cq_);
 }
@@ -197,22 +197,22 @@ void ACA_On_Demand_Engine::on_demand(string uuid_for_call, OperationStatus statu
       uuid_wait_done_time_map[uuid_for_call] = &now;
       ACA_LOG_INFO("For UUID: [%s], wait finished at: [%ld]\n",
                    uuid_for_call.c_str(), *(uuid_wait_done_time_map[uuid_for_call]));
-      auto call_ncm_operation_time =
-              cast_to_microseconds(*(uuid_ncm_reply_time_map[uuid_for_call]) -
-                                   *(uuid_call_ncm_time_map[uuid_for_call]))
-                      .count();
-      auto total_time =
-              cast_to_microseconds(*(uuid_wait_done_time_map[uuid_for_call]) -
-                                   *(uuid_call_ncm_time_map[uuid_for_call]))
-                      .count();
-      ACA_LOG_INFO("For uuid: [%s], NCM called at [%ld]\nNCM reply received at [%ld]\nwait finished at [%ld],\ncalling ncm took [%ld] microsecond, which is [%ld] millisecond\ntotal time need from calling NCM to wait wait finished is [%ld] microsecond, which is [%ld] millisecond\n",
-                   uuid_for_call.c_str(), *(uuid_call_ncm_time_map[uuid_for_call]),
-                   *(uuid_ncm_reply_time_map[uuid_for_call]),
-                   *(uuid_wait_done_time_map[uuid_for_call]), call_ncm_operation_time,
-                   us_to_ms(call_ncm_operation_time), total_time, us_to_ms(total_time));
+      // auto call_ncm_operation_time =
+      //         cast_to_microseconds(*(uuid_ncm_reply_time_map[uuid_for_call]) -
+      //                              *(uuid_call_ncm_time_map[uuid_for_call]))
+      //                 .count();
+      // auto total_time =
+      //         cast_to_microseconds(*(uuid_wait_done_time_map[uuid_for_call]) -
+      //                              *(uuid_call_ncm_time_map[uuid_for_call]))
+      //                 .count();
+      // ACA_LOG_INFO("For uuid: [%s], NCM called at [%ld]\nNCM reply received at [%ld]\nwait finished at [%ld],\ncalling ncm took [%ld] microsecond, which is [%ld] millisecond\ntotal time need from calling NCM to wait wait finished is [%ld] microsecond, which is [%ld] millisecond\n",
+      //              uuid_for_call.c_str(), *(uuid_call_ncm_time_map[uuid_for_call]),
+      //              *(uuid_ncm_reply_time_map[uuid_for_call]),
+      //              *(uuid_wait_done_time_map[uuid_for_call]), call_ncm_operation_time,
+      //              us_to_ms(call_ncm_operation_time), total_time, us_to_ms(total_time));
 
-      ACA_LOG_INFO("Finished waiting for the arp entry for IP [%s], it took %d microseconds.\n",
-                   stData.ipv4_address.c_str(), check_frequency * i);
+      // ACA_LOG_INFO("Finished waiting for the arp entry for IP [%s], it took %d microseconds.\n",
+      //              stData.ipv4_address.c_str(), check_frequency * i);
       int parse_arp_request_rc =
               aca_arp_responder::ACA_ARP_Responder::get_instance()._parse_arp_request(
                       in_port, vlanmsg, arpmsg);
