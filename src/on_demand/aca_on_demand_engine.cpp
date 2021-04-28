@@ -99,7 +99,7 @@ void ACA_On_Demand_Engine::process_async_grpc_replies()
           std::chrono::_V2::steady_clock::time_point now = chrono::steady_clock::now();
           uuid_ncm_reply_time_map[uuid_for_call] = &now;
           ACA_LOG_INFO("For UUID: [%s], NCM called returned at: [%ld]\n",
-                       uuid_for_call.c_str(), *(uuid_ncm_reply_time_map[uuid_for_call]));
+                       uuid_for_call.c_str(), now);
           on_demand(uuid_for_call, replyStatus, data_for_uuid->in_port,
                     data_for_uuid->packet, data_for_uuid->packet_size,
                     data_for_uuid->protocol);
@@ -138,8 +138,8 @@ void ACA_On_Demand_Engine::unknown_recv(uint16_t vlan_id, string ip_src,
   new_state_requests->set_ethertype(EtherType::IPV4);
   std::chrono::_V2::steady_clock::time_point now = chrono::steady_clock::now();
   uuid_call_ncm_time_map[uuid_str] = &now;
-  ACA_LOG_DEBUG("For UUID [%s], calling NCM for info of IP [%s] at: [%ld]", uuid_str,
-                ip_dest.c_str(), *(uuid_call_ncm_time_map[uuid_str] = &now));
+  ACA_LOG_DEBUG("For UUID [%s], calling NCM for info of IP [%s] at: [%ld]",
+                uuid_str, ip_dest.c_str(), now);
 
   g_grpc_server->RequestGoalStates(&HostRequest_builder, &cq_);
 }
@@ -195,8 +195,7 @@ void ACA_On_Demand_Engine::on_demand(string uuid_for_call, OperationStatus statu
       } while (!found_arp_entry);
       std::chrono::_V2::steady_clock::time_point now = chrono::steady_clock::now();
       uuid_wait_done_time_map[uuid_for_call] = &now;
-      ACA_LOG_INFO("For UUID: [%s], wait finished at: [%ld]\n",
-                   uuid_for_call.c_str(), *(uuid_wait_done_time_map[uuid_for_call]));
+      ACA_LOG_INFO("For UUID: [%s], wait finished at: [%ld]\n", uuid_for_call.c_str(), now);
       // auto call_ncm_operation_time =
       //         cast_to_microseconds(*(uuid_ncm_reply_time_map[uuid_for_call]) -
       //                              *(uuid_call_ncm_time_map[uuid_for_call]))
