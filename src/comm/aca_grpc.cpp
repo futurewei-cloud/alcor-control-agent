@@ -21,6 +21,7 @@
 #include <iostream>
 #include <string>
 #include <thread>
+#include <chrono>
 
 #include <grpcpp/server.h>
 #include <grpcpp/server_builder.h>
@@ -94,6 +95,8 @@ Status GoalStateProvisionerImpl::PushGoalStatesStream(
   int rc = EXIT_FAILURE;
 
   while (stream->Read(&goalStateV2)) {
+    std::chrono::_V2::steady_clock::time_point start = std::chrono::steady_clock::now();
+
     rc = Aca_Comm_Manager::get_instance().update_goal_state(goalStateV2, gsOperationReply);
     if (rc == EXIT_SUCCESS) {
       ACA_LOG_INFO("Control Fast Path streaming - Successfully updated host with latest goal state %d.\n",
@@ -105,6 +108,13 @@ Status GoalStateProvisionerImpl::PushGoalStatesStream(
       ACA_LOG_ERROR("Control Fast Path streaming - Failed to update host with latest goal state, rc=%d.\n",
                     rc);
     }
+    std::chrono::_V2::steady_clock::time_point end = std::chrono::steady_clock::now();
+    auto message_total_operation_time =
+            std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+
+    ACA_LOG_INFO("[METRICS] Received goalstate at: [%ld], update finished at: [%ld]\nElapsed time for update goalstate operation took: %ld microseconds or %ld milliseconds\n",
+                 start, end, message_total_operation_time,
+                 (message_total_operation_time * 1000));
     stream->Write(gsOperationReply);
     gsOperationReply.Clear();
   }

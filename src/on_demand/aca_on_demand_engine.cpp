@@ -96,9 +96,11 @@ void ACA_On_Demand_Engine::process_async_grpc_replies()
           ACA_LOG_INFO("Found data into the map, UUID: [%s], in_port: [%d], protocol: [%d]\n",
                        uuid_for_call.c_str(), data_for_uuid->in_port,
                        data_for_uuid->protocol);
-
-          on_demand(replyStatus, data_for_uuid->in_port, data_for_uuid->packet,
-                    data_for_uuid->packet_size, data_for_uuid->protocol);
+          std::chrono::_V2::steady_clock::time_point now = chrono::steady_clock::now();
+          uuid_ncm_reply_time_map[uuid_for_call] = &now;
+          on_demand(uuid_for_call, replyStatus, data_for_uuid->in_port,
+                    data_for_uuid->packet, data_for_uuid->packet_size,
+                    data_for_uuid->protocol);
 
           // delete data_for_uuid;
           request_uuid_on_demand_data_map.erase(uuid_for_call);
@@ -132,14 +134,17 @@ void ACA_On_Demand_Engine::unknown_recv(uint16_t vlan_id, string ip_src,
   new_state_requests->set_destination_port(port_dest);
   new_state_requests->set_protocol(protocol);
   new_state_requests->set_ethertype(EtherType::IPV4);
-
-  ACA_LOG_DEBUG("Calling NCM - %s:%s\n", g_ncm_address.c_str(), g_ncm_port.c_str());
+  std::chrono::_V2::steady_clock::time_point now = chrono::steady_clock::now();
+  uuid_call_ncm_time_map[uuid_str] = &now;
+  ACA_LOG_DEBUG("Calling NCM for info of IP [%s] - %s:%s\n", ip_dest.c_str(),
+                g_ncm_address.c_str(), g_ncm_port.c_str());
 
   g_grpc_server->RequestGoalStates(&HostRequest_builder, &cq_);
 }
 
-void ACA_On_Demand_Engine::on_demand(OperationStatus status, uint32_t in_port,
-                                     void *packet, int packet_size, Protocol protocol)
+void ACA_On_Demand_Engine::on_demand(string uuid_for_call, OperationStatus status,
+                                     uint32_t in_port, void *packet,
+                                     int packet_size, Protocol protocol)
 {
   ACA_LOG_INFO("%s\n", "Inside of on_demand function");
   string bridge = "br-tun";
@@ -186,6 +191,20 @@ void ACA_On_Demand_Engine::on_demand(OperationStatus status, uint32_t in_port,
           usleep(check_frequency);
         }
       } while (!found_arp_entry);
+      std::chrono::_V2::steady_clock::time_point now = chrono::steady_clock::now();
+      uuid_wait_done_time_map[uuid_for_call] = &now;
+      auto call_ncm_operation_time =
+              cast_to_microseconds(*uuid_ncm_reply_time_map[uuid_for_call] -
+                                   *uuid_call_ncm_time_map[uuid_for_call])
+                      .count();
+      auto total_time = cast_to_microseconds(*uuid_wait_done_time_map[uuid_for_call] -
+                                             *uuid_call_ncm_time_map[uuid_for_call])
+                                .count();
+      ACA_LOG_INFO("For uuid: [%s], NCM called at [%ld]\n NCM reply received at [%ld]\nwait finished at [%ld],\n calling ncm took [%ld] microsecond, which is [%ld] millisecond\n total time need from calling NCM to wait wait finished is [%ld] microsecond, which is [%ld] millisecond\n",
+                   uuid_for_call, uuid_call_ncm_time_map[uuid_for_call],
+                   uuid_ncm_reply_time_map[uuid_for_call],
+                   uuid_wait_done_time_map[uuid_for_call], call_ncm_operation_time,
+                   us_to_ms(call_ncm_operation_time), total_time, us_to_ms(total_time));
 
       ACA_LOG_INFO("Finished waiting for the arp entry for IP [%s], it took %d microseconds.\n",
                    stData.ipv4_address.c_str(), check_frequency * i);
