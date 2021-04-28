@@ -114,7 +114,7 @@ Status GoalStateProvisionerImpl::PushGoalStatesStream(
 
     ACA_LOG_INFO("[METRICS] Received goalstate at: [%ld], update finished at: [%ld]\nElapsed time for update goalstate operation took: %ld microseconds or %ld milliseconds\n",
                  start, end, message_total_operation_time,
-                 (message_total_operation_time * 1000));
+                 (message_total_operation_time / 1000));
     stream->Write(gsOperationReply);
     gsOperationReply.Clear();
   }

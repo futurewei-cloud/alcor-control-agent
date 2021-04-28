@@ -200,8 +200,8 @@ void ACA_On_Demand_Engine::on_demand(string uuid_for_call, OperationStatus statu
       auto total_time = cast_to_microseconds(*uuid_wait_done_time_map[uuid_for_call] -
                                              *uuid_call_ncm_time_map[uuid_for_call])
                                 .count();
-      ACA_LOG_INFO("For uuid: [%s], NCM called at [%ld]\n NCM reply received at [%ld]\nwait finished at [%ld],\n calling ncm took [%ld] microsecond, which is [%ld] millisecond\n total time need from calling NCM to wait wait finished is [%ld] microsecond, which is [%ld] millisecond\n",
-                   uuid_for_call, uuid_call_ncm_time_map[uuid_for_call],
+      ACA_LOG_INFO("For uuid: [%s], NCM called at [%ld]\nNCM reply received at [%ld]\nwait finished at [%ld],\ncalling ncm took [%ld] microsecond, which is [%ld] millisecond\ntotal time need from calling NCM to wait wait finished is [%ld] microsecond, which is [%ld] millisecond\n",
+                   uuid_for_call.c_str(), uuid_call_ncm_time_map[uuid_for_call],
                    uuid_ncm_reply_time_map[uuid_for_call],
                    uuid_wait_done_time_map[uuid_for_call], call_ncm_operation_time,
                    us_to_ms(call_ncm_operation_time), total_time, us_to_ms(total_time));
