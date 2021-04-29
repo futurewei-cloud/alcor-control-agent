@@ -440,6 +440,13 @@ void ACA_On_Demand_Engine::parse_packet(uint32_t in_port, void *packet)
 
     ACA_LOG_INFO("Inserted data into the map, UUID: [%s], in_port: [%d], protocol: [%d]\n",
                  uuid_str, in_port, _protocol);
+    ACA_LOG_INFO("%s\n", "Printing out stuffs inside the unordered_map in parse_packet.");
+
+    for (auto it : request_uuid_on_demand_data_map) {
+      ACA_LOG_INFO("Key: [%s], \npacket address: [%p]\npacket_size: [%d]\nprotocol: [%d]\n",
+                   it.first.c_str(), it.second->packet, it.second->packet_size,
+                   it.second->protocol);
+    }
     unknown_recv(vlan_id, ip_src, ip_dest, port_src, port_dest, _protocol, uuid_str);
   }
 }
