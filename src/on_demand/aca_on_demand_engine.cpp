@@ -72,17 +72,16 @@ void ACA_On_Demand_Engine::process_async_grpc_replies()
   std::unordered_map<std::__cxx11::string, data_for_on_demand_call *>::iterator found_data;
   string uuid_for_call;
   data_for_on_demand_call *data_for_uuid;
-  // char *uuid;
-  ACA_LOG_INFO("%s\n", "Beginning of process_async_grpc_replies");
+  ACA_LOG_DEBUG("%s\n", "Beginning of process_async_grpc_replies");
   while (cq_.Next(&got_tag, &ok)) {
     if (ok) {
-      ACA_LOG_INFO("%s\n", "cq_->Next is good, ready to static cast the Async Client Call");
+      ACA_LOG_DEBUG("%s\n", "cq_->Next is good, ready to static cast the Async Client Call");
 
       AsyncClientCall *call = static_cast<AsyncClientCall *>(got_tag);
-      ACA_LOG_INFO("%s\n", "Async Client Call casted successfully.");
+      ACA_LOG_DEBUG("%s\n", "Async Client Call casted successfully.");
 
       if (call->status.ok()) {
-        ACA_LOG_INFO("%s\n", "Got an GRPC reply that is OK, need to process it.");
+        ACA_LOG_DEBUG("%s\n", "Got an GRPC reply that is OK, need to process it.");
         for (int i = 0; i < call->reply.operation_statuses_size(); i++) {
           hostOperationStatus = call->reply.operation_statuses(i);
           replyStatus = hostOperationStatus.operation_status();
@@ -93,26 +92,19 @@ void ACA_On_Demand_Engine::process_async_grpc_replies()
                       to_string(replyStatus).c_str());
         if (found_data != request_uuid_on_demand_data_map.end()) {
           data_for_uuid = found_data->second;
-          ACA_LOG_INFO("Found data into the map, UUID: [%s], in_port: [%d], protocol: [%d]\n",
-                       uuid_for_call.c_str(), data_for_uuid->in_port,
-                       data_for_uuid->protocol);
+          ACA_LOG_DEBUG("Found data into the map, UUID: [%s], in_port: [%d], protocol: [%d]\n",
+                        uuid_for_call.c_str(), data_for_uuid->in_port,
+                        data_for_uuid->protocol);
           std::chrono::_V2::steady_clock::time_point now =
                   std::chrono::steady_clock::now();
-          uuid_ncm_reply_time_map[uuid_for_call] = &now;
-          ACA_LOG_INFO("For UUID: [%s], NCM called returned at: [%ld]\n",
-                       uuid_for_call.c_str(), now);
-          ACA_LOG_INFO("%s\n", "Printing out stuffs inside the unordered_map.");
+          ACA_LOG_DEBUG("For UUID: [%s], NCM called returned at: [%ld]\n",
+                        uuid_for_call.c_str(), now);
+          ACA_LOG_DEBUG("%s\n", "Printing out stuffs inside the unordered_map.");
 
-          for (auto it : request_uuid_on_demand_data_map) {
-            ACA_LOG_INFO("Key: [%s], \npacket address: [%p]\npacket_size: [%d]\nprotocol: [%d]\n",
-                         it.first.c_str(), it.second->packet,
-                         it.second->packet_size, it.second->protocol);
-          }
           on_demand(uuid_for_call, replyStatus, data_for_uuid->in_port,
                     data_for_uuid->packet, data_for_uuid->packet_size,
                     data_for_uuid->protocol);
 
-          // delete data_for_uuid;
           request_uuid_on_demand_data_map.erase(uuid_for_call);
         }
       }
@@ -132,8 +124,6 @@ void ACA_On_Demand_Engine::unknown_recv(uint16_t vlan_id, string ip_src,
   HostRequest_ResourceStateRequest *new_state_requests =
           HostRequest_builder.add_state_requests();
   HostRequestReply hostRequestReply;
-  // HostRequestReply_HostRequestOperationStatus hostOperationStatus;
-  // OperationStatus replyStatus;
 
   uint tunnel_id = ACA_Vlan_Manager::get_instance().get_tunnelId_by_vlanId(vlan_id);
   new_state_requests->set_request_id(uuid_str);
@@ -145,7 +135,6 @@ void ACA_On_Demand_Engine::unknown_recv(uint16_t vlan_id, string ip_src,
   new_state_requests->set_protocol(protocol);
   new_state_requests->set_ethertype(EtherType::IPV4);
   std::chrono::_V2::steady_clock::time_point now = std::chrono::steady_clock::now();
-  uuid_call_ncm_time_map[uuid_str] = &now;
   ACA_LOG_DEBUG("For UUID [%s], calling NCM for info of IP [%s] at: [%ld]",
                 uuid_str, ip_dest.c_str(), now);
 
@@ -170,9 +159,7 @@ void ACA_On_Demand_Engine::on_demand(string uuid_for_call, OperationStatus statu
   char str[10];
 
   if (status == OperationStatus::SUCCESS) {
-    ACA_LOG_INFO("%s\n", "It was an succesful operation, let's wait a little bit, so that the goalstate is created/updated");
-    // usleep(USLEEPTIME_IN_MICROSECONDS);
-    // ACA_LOG_INFO("%s\n", "Sleep done!");
+    ACA_LOG_DEBUG("%s\n", "It was an succesful operation, let's wait a little bit, so that the goalstate is created/updated");
 
     if (protocol == Protocol::ARP) {
       char *base = (char *)packet;
@@ -215,27 +202,10 @@ void ACA_On_Demand_Engine::on_demand(string uuid_for_call, OperationStatus statu
       std::chrono::_V2::steady_clock::time_point end = std::chrono::steady_clock::now();
       auto total_time_slept = cast_to_microseconds(end - start).count();
 
-      ACA_LOG_INFO("For UUID: [%s], wait started at: [%ld] finished at: [%ld], took: %ld microseconds or %ld milliseconds\n",
-                   uuid_for_call.c_str(), start, end, total_time_slept,
-                   us_to_ms(total_time_slept));
-      // uuid_wait_done_time_map[uuid_for_call] = &end;
+      ACA_LOG_DEBUG("For UUID: [%s], wait started at: [%ld] finished at: [%ld], took: %ld microseconds or %ld milliseconds\n",
+                    uuid_for_call.c_str(), start, end, total_time_slept,
+                    us_to_ms(total_time_slept));
 
-      // auto call_ncm_operation_time =
-      //         cast_to_microseconds(*(uuid_ncm_reply_time_map[uuid_for_call]) -
-      //                              *(uuid_call_ncm_time_map[uuid_for_call]))
-      //                 .count();
-      // auto total_time =
-      //         cast_to_microseconds(*(uuid_wait_done_time_map[uuid_for_call]) -
-      //                              *(uuid_call_ncm_time_map[uuid_for_call]))
-      //                 .count();
-      // ACA_LOG_INFO("For uuid: [%s], NCM called at [%ld]\nNCM reply received at [%ld]\nwait finished at [%ld],\ncalling ncm took [%ld] microsecond, which is [%ld] millisecond\ntotal time need from calling NCM to wait wait finished is [%ld] microsecond, which is [%ld] millisecond\n",
-      //              uuid_for_call.c_str(), *(uuid_call_ncm_time_map[uuid_for_call]),
-      //              *(uuid_ncm_reply_time_map[uuid_for_call]),
-      //              *(uuid_wait_done_time_map[uuid_for_call]), call_ncm_operation_time,
-      //              us_to_ms(call_ncm_operation_time), total_time, us_to_ms(total_time));
-
-      // ACA_LOG_INFO("Finished waiting for the arp entry for IP [%s], it took %d microseconds.\n",
-      //              stData.ipv4_address.c_str(), check_frequency * i);
       int parse_arp_request_rc =
               aca_arp_responder::ACA_ARP_Responder::get_instance()._parse_arp_request(
                       in_port, vlanmsg, arpmsg);
@@ -286,7 +256,6 @@ void ACA_On_Demand_Engine::parse_packet(uint32_t in_port, void *packet)
   string ip_src, ip_dest;
   int port_src, port_dest, packet_size;
   Protocol _protocol = Protocol::Protocol_INT_MAX_SENTINEL_DO_NOT_USE_;
-  // OperationStatus on_demand_reply;
 
   uint16_t ether_type = ntohs(*(uint16_t *)(base + 12));
   if (ether_type == ETHERTYPE_VLAN) {
@@ -455,15 +424,10 @@ void ACA_On_Demand_Engine::parse_packet(uint32_t in_port, void *packet)
     data->protocol = _protocol;
     request_uuid_on_demand_data_map[uuid_str] = data;
 
-    ACA_LOG_INFO("Inserted data into the map, UUID: [%s], in_port: [%d], protocol: [%d]\n",
-                 uuid_str, in_port, _protocol);
-    ACA_LOG_INFO("%s\n", "Printing out stuffs inside the unordered_map in parse_packet.");
+    ACA_LOG_DEBUG("Inserted data into the map, UUID: [%s], in_port: [%d], protocol: [%d]\n",
+                  uuid_str, in_port, _protocol);
+    ACA_LOG_DEBUG("%s\n", "Printing out stuffs inside the unordered_map in parse_packet.");
 
-    for (auto it : request_uuid_on_demand_data_map) {
-      ACA_LOG_INFO("Key: [%s], \npacket address: [%p]\npacket_size: [%d]\nprotocol: [%d]\n",
-                   it.first.c_str(), it.second->packet, it.second->packet_size,
-                   it.second->protocol);
-    }
     unknown_recv(vlan_id, ip_src, ip_dest, port_src, port_dest, _protocol, uuid_str);
   }
 }

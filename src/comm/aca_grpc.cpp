@@ -59,7 +59,6 @@ void GoalStateProvisionerImpl::RequestGoalStates(HostRequest *request,
   AsyncClientCall *call = new AsyncClientCall;
   call->response_reader = stub_->AsyncRequestGoalStates(&call->context, *request, cq);
   call->response_reader->Finish(&call->reply, &call->status, (void *)call);
-  // stub_->RequestGoalStates(&ctx, *request, &reply);
   return;
 }
 
@@ -96,8 +95,7 @@ Status GoalStateProvisionerImpl::PushGoalStatesStream(
 
   while (stream->Read(&goalStateV2)) {
     std::chrono::_V2::steady_clock::time_point start = std::chrono::steady_clock::now();
-    ACA_LOG_INFO("One more loop inside PushGoalStatesStream, need to process some GS from the NCM, time now: [%ld]\n",
-                 start);
+
     rc = Aca_Comm_Manager::get_instance().update_goal_state(goalStateV2, gsOperationReply);
     if (rc == EXIT_SUCCESS) {
       ACA_LOG_INFO("Control Fast Path streaming - Successfully updated host with latest goal state %d.\n",
