@@ -432,8 +432,11 @@ void ACA_On_Demand_Engine::parse_packet(uint32_t in_port, void *packet)
     char uuid_str[37];
     uuid_unparse_lower(uuid, uuid_str);
     data_for_on_demand_call *data = new data_for_on_demand_call;
+    // auto size_of_packet_void_pointer = sizeof(packet);
+    void *packet_copy = malloc(packet_size);
+    memcpy(packet_copy, packet, packet_size);
     data->in_port = in_port;
-    data->packet = packet;
+    data->packet = packet_copy;
     data->packet_size = packet_size;
     data->protocol = _protocol;
     request_uuid_on_demand_data_map[uuid_str] = data;
