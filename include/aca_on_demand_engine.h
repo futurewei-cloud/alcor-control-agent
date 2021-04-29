@@ -46,7 +46,7 @@ class ACA_On_Demand_Engine {
   public:
   std::thread *on_demand_reply_processing_thread;
   grpc::CompletionQueue cq_;
-  vector<data_for_on_demand_call> request_uuid_on_demand_data_map;
+  unordered_map<std::string, data_for_on_demand_call *, std::hash<std::string> > request_uuid_on_demand_data_map;
   unordered_map<std::string, std::chrono::_V2::steady_clock::time_point *, std::hash<std::string> > uuid_call_ncm_time_map;
   unordered_map<std::string, std::chrono::_V2::steady_clock::time_point *, std::hash<std::string> > uuid_ncm_reply_time_map;
   unordered_map<std::string, std::chrono::_V2::steady_clock::time_point *, std::hash<std::string> > uuid_wait_done_time_map;
