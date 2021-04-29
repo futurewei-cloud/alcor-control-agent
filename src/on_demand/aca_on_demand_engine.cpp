@@ -101,10 +101,12 @@ void ACA_On_Demand_Engine::process_async_grpc_replies()
           uuid_ncm_reply_time_map[uuid_for_call] = &now;
           ACA_LOG_INFO("For UUID: [%s], NCM called returned at: [%ld]\n",
                        uuid_for_call.c_str(), now);
+          ACA_LOG_INFO("%s\n", "Printing out stuffs inside the unordered_map.");
+
           for (auto it : request_uuid_on_demand_data_map) {
-            ACA_LOG_INFO("Key: [%s], \npacket address: [%p]\npacket_size: [%d]\nprotocol: [%d]",
-                         it.first, it.second->packet, it.second->packet_size,
-                         it.second->protocol);
+            ACA_LOG_INFO("Key: [%s], \npacket address: [%p]\npacket_size: [%d]\nprotocol: [%d]\n",
+                         it.first.c_str(), it.second->packet,
+                         it.second->packet_size, it.second->protocol);
           }
           on_demand(uuid_for_call, replyStatus, data_for_uuid->in_port,
                     data_for_uuid->packet, data_for_uuid->packet_size,
@@ -170,6 +172,8 @@ void ACA_On_Demand_Engine::on_demand(string uuid_for_call, OperationStatus statu
   if (status == OperationStatus::SUCCESS) {
     ACA_LOG_INFO("%s\n", "It was an succesful operation, let's wait a little bit, so that the goalstate is created/updated");
     usleep(USLEEPTIME_IN_MICROSECONDS);
+    ACA_LOG_INFO("%s\n", "Sleep done!");
+
     if (protocol == Protocol::ARP) {
       char *base = (char *)packet;
       unsigned char *vlan_hdr = (unsigned char *)(base + 12);
