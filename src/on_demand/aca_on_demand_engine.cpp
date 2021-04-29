@@ -171,8 +171,8 @@ void ACA_On_Demand_Engine::on_demand(string uuid_for_call, OperationStatus statu
 
   if (status == OperationStatus::SUCCESS) {
     ACA_LOG_INFO("%s\n", "It was an succesful operation, let's wait a little bit, so that the goalstate is created/updated");
-    usleep(USLEEPTIME_IN_MICROSECONDS);
-    ACA_LOG_INFO("%s\n", "Sleep done!");
+    // usleep(USLEEPTIME_IN_MICROSECONDS);
+    // ACA_LOG_INFO("%s\n", "Sleep done!");
 
     if (protocol == Protocol::ARP) {
       char *base = (char *)packet;
@@ -180,32 +180,46 @@ void ACA_On_Demand_Engine::on_demand(string uuid_for_call, OperationStatus statu
       vlan_message *vlanmsg = (vlan_message *)vlan_hdr;
       unsigned char *arp_hdr = (unsigned char *)(base + SIZE_ETHERNET + 4);
       arp_message *arpmsg = (arp_message *)arp_hdr;
-      // arp_entry_data stData;
-      // // get the ip address from arp message
-      // stData.ipv4_address =
-      //         aca_arp_responder::ACA_ARP_Responder::get_instance()._get_requested_ip(arpmsg);
-      // // get the vlan id from vlan header
-      // if (vlanmsg) {
-      //   stData.vlan_id = ntohs(vlanmsg->vlan_tci) & 0x0fff;
-      // } else {
-      //   stData.vlan_id = 0;
-      // }
-      // // int wait_time = 1000000; // one second
-      // int check_frequency = 1000; // 0.01 seconds, or 10000 microseconds.
-      // bool found_arp_entry = false;
-      // // int times_to_check = wait_time / check_frequency;
-      // int i = 0;
-      // do {
-      //   found_arp_entry =
-      //           aca_arp_responder::ACA_ARP_Responder::get_instance().does_arp_entry_exist(stData);
-      //   if (!found_arp_entry) {
-      //     i++;
-      //     usleep(check_frequency);
-      //   }
-      // } while (!found_arp_entry);
-      std::chrono::_V2::steady_clock::time_point now = std::chrono::steady_clock::now();
-      uuid_wait_done_time_map[uuid_for_call] = &now;
-      ACA_LOG_INFO("For UUID: [%s], wait finished at: [%ld]\n", uuid_for_call.c_str(), now);
+      arp_entry_data stData;
+      // get the ip address from arp message
+      stData.ipv4_address =
+              aca_arp_responder::ACA_ARP_Responder::get_instance()._get_requested_ip(arpmsg);
+      // get the vlan id from vlan header
+      if (vlanmsg) {
+        stData.vlan_id = ntohs(vlanmsg->vlan_tci) & 0x0fff;
+      } else {
+        stData.vlan_id = 0;
+      }
+      /*
+        Implementing a "Smart" sleep here, which checks if the target arp entry exists,
+        if exists, stop sleeping and go forward; 
+        otherwise, sleep for another 1000 us (0.001) seconds and then check again.
+        If arp still not found after one second, it lets the packet drop.
+      */
+      int wait_time = 1000000; // one second
+      int check_frequency_us = 1000; // 0.001 seconds, or 10000 microseconds.
+      bool found_arp_entry = false;
+      int times_to_check = wait_time / check_frequency_us;
+      int i = 0;
+      std::chrono::_V2::steady_clock::time_point start =
+              std::chrono::steady_clock::now();
+
+      do {
+        found_arp_entry =
+                aca_arp_responder::ACA_ARP_Responder::get_instance().does_arp_entry_exist(stData);
+        if (!found_arp_entry) {
+          i++;
+          usleep(check_frequency_us);
+        }
+      } while (!found_arp_entry && i < times_to_check);
+      std::chrono::_V2::steady_clock::time_point end = std::chrono::steady_clock::now();
+      auto total_time_slept = cast_to_microseconds(end - start).count();
+
+      ACA_LOG_INFO("For UUID: [%s], wait started at: [%ld] finished at: [%ld], took: %ld microseconds or %ld milliseconds\n",
+                   uuid_for_call.c_str(), start, end, total_time_slept,
+                   us_to_ms(total_time_slept));
+      // uuid_wait_done_time_map[uuid_for_call] = &end;
+
       // auto call_ncm_operation_time =
       //         cast_to_microseconds(*(uuid_ncm_reply_time_map[uuid_for_call]) -
       //                              *(uuid_call_ncm_time_map[uuid_for_call]))
