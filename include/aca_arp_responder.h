@@ -118,7 +118,7 @@ class ACA_ARP_Responder {
   ACA_ARP_Responder();
   ~ACA_ARP_Responder();
 
-  unordered_map<arp_entry_data, arp_table_data *, arp_hash> _arp_db;
+  CTSL::HashMap<arp_entry_data, arp_table_data *, arp_hash> _arp_db;
 
   /*************** Initialization and De-initialization ***********************/
   void _init_arp_db();

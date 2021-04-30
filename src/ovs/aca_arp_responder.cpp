@@ -76,29 +76,12 @@ ACA_ARP_Responder &ACA_ARP_Responder::get_instance()
 }
 bool ACA_ARP_Responder::does_arp_entry_exist(arp_entry_data stData)
 {
-  return _arp_db.find(stData) != _arp_db.end();
-  // ACA_LOG_INFO("Check for arp entry with IP %s.\n", stData.ipv4_address.c_str());
-
-  // bool found_arp_entry = false;
-  // // int check_how_many_times = time_in_milliseconds / 1000;
-  // int counter = 0;
-  // // do {
-  // auto found = _arp_db.find(stData);
-  // // counter++;
-  // if (found == _arp_db.end()) {
-  //   // usleep(1000);
-  //   ACA_LOG_INFO("Couldn't find arp entry for %s, sleep 1000 milliseconds\n",
-  //                stData.ipv4_address.c_str());
-  // } else {
-  //   found_arp_entry = true;
-  //   ACA_LOG_INFO("Found arp entry for %s, let's go!\n", stData.ipv4_address.c_str());
-  // }
-  // // } while (!found_arp_entry && counter < check_how_many_times);
-
-  // // ACA_LOG_INFO("Done waiting for arp entry with IP %s, with result: %d\n",
-  // //              stData.ipv4_address.c_str(), found_arp_entry);
-  // return found_arp_entry;
+  bool entry_exist = false;
+  arp_table_data *current_arp_data = nullptr;
+  entry_exist = _arp_db.find(stData, current_arp_data);
+  return entry_exist;
 }
+
 int ACA_ARP_Responder::add_arp_entry(arp_config *arp_cfg_in)
 {
   arp_entry_data stData;
@@ -110,15 +93,13 @@ int ACA_ARP_Responder::add_arp_entry(arp_config *arp_cfg_in)
     ARP_ENTRY_DATA_SET((arp_entry_data *)&stData, arp_cfg_in);
     ARP_TABLE_DATA_SET(current_arp_data, arp_cfg_in);
 
-    if (_arp_db.find(stData) != _arp_db.end()) {
+    if (_arp_db.find(stData, current_arp_data)) {
       ACA_LOG_ERROR("Entry already existed! (ip = %s and vlan id = %u)\n",
                     arp_cfg_in->ipv4_address.c_str(), arp_cfg_in->vlan_id);
-      delete current_arp_data;
       return EXIT_FAILURE;
     }
 
-    // _arp_db.insert(stData, current_arp_data);
-    _arp_db[stData] = current_arp_data;
+    _arp_db.insert(stData, current_arp_data);
 
     ACA_LOG_DEBUG("Arp Entry with ip: %s and vlan id %u added\n",
                   arp_cfg_in->ipv4_address.c_str(), arp_cfg_in->vlan_id);
@@ -141,12 +122,11 @@ int ACA_ARP_Responder::create_or_update_arp_entry(arp_config *arp_cfg_in)
     ARP_ENTRY_DATA_SET((arp_entry_data *)&stData, arp_cfg_in);
     ARP_TABLE_DATA_SET(current_arp_data, arp_cfg_in);
 
-    if (_arp_db.find(stData) == _arp_db.end()) {
+    if (_arp_db.find(stData, current_arp_data)) {
       ACA_LOG_DEBUG("Entry not exist! (ip = %s and vlan id = %u)\n",
                     arp_cfg_in->ipv4_address.c_str(), arp_cfg_in->vlan_id);
       add_arp_entry(arp_cfg_in);
     } else {
-      current_arp_data = _arp_db[stData];
       current_arp_data->mac_address = arp_cfg_in->mac_address;
     }
     return EXIT_SUCCESS;
@@ -166,10 +146,9 @@ int ACA_ARP_Responder::delete_arp_entry(arp_config *arp_cfg_in)
     ARP_ENTRY_DATA_SET((arp_entry_data *)&stData, arp_cfg_in);
     ARP_TABLE_DATA_SET(current_arp_data, arp_cfg_in);
 
-    if (_arp_db.find(stData) == _arp_db.end()) {
+    if (!_arp_db.find(stData, current_arp_data)) {
       ACA_LOG_DEBUG("Entry not exist! (ip = %s and vlan id = %u)\n",
                     arp_cfg_in->ipv4_address.c_str(), arp_cfg_in->vlan_id);
-      delete current_arp_data;
       return EXIT_SUCCESS;
     }
     _arp_db.erase(stData);
@@ -301,12 +280,11 @@ int ACA_ARP_Responder::_parse_arp_request(uint32_t in_port, vlan_message *vlanms
 
   // if not find the corresponding mac address in the db based on ip and vlan id, resubmit to table 22
   // else construct an arp reply
-  if (_arp_db.find(stData) == _arp_db.end()) {
+  if (!_arp_db.find(stData, current_arp_data)) {
     ACA_LOG_DEBUG("ARP entry does not exist! (ip = %s and vlan id = %u)\n",
                   stData.ipv4_address.c_str(), stData.vlan_id);
     return ENOTSUP;
   } else {
-    current_arp_data = _arp_db[stData];
     ACA_LOG_DEBUG("ARP entry exist (ip = %s and vlan id = %u) with mac = %s\n",
                   stData.ipv4_address.c_str(), stData.vlan_id,
                   current_arp_data->mac_address.c_str());
