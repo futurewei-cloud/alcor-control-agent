@@ -69,13 +69,16 @@ void ACA_On_Demand_Engine::clean_remaining_payload()
   last_time_cleaned_remaining_payload = std::chrono::steady_clock::now();
 
   while (true) {
+    usleep(ON_DEMAND_ENTRY_CLEANUP_FREQUENCY_IN_MICROSECONDS);
+
     ACA_LOG_DEBUG("\n", "Checking if there's any leftover inside request_uuid_on_demand_data_map");
     vector<string> uuids_to_remove;
 
     for (size_t i = 0; i < request_uuid_on_demand_data_map.hashSize; i++) {
+      auto entry_key = request_uuid_on_demand_data_map.hashTable[i].head->getKey();
+      ACA_LOG_DEBUG("i = %ld, key = %s", i, entry_key.c_str());
       auto entry_insert_time =
               request_uuid_on_demand_data_map.hashTable[i].head->getValue()->insert_time;
-      auto entry_key = request_uuid_on_demand_data_map.hashTable[i].head->getKey();
       if (cast_to_microseconds(last_time_cleaned_remaining_payload - entry_insert_time)
                   .count() >= ON_DEMAND_ENTRY_EXPIRATION_IN_MICROSECONDS) {
         ACA_LOG_DEBUG("Need to cleanup this key: %d\n", entry_key.c_str());
@@ -87,7 +90,6 @@ void ACA_On_Demand_Engine::clean_remaining_payload()
       request_uuid_on_demand_data_map.erase(uuid);
     }
     ACA_LOG_DEBUG("%s\n", "request_uuid_on_demand_data_map check finished, sleeping");
-    usleep(ON_DEMAND_ENTRY_CLEANUP_FREQUENCY_IN_MICROSECONDS);
     last_time_cleaned_remaining_payload = std::chrono::steady_clock::now();
   }
 }

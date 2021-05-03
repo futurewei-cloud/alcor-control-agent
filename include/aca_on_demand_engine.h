@@ -164,6 +164,7 @@ class ACA_On_Demand_Engine {
     _cq.Shutdown();
     request_uuid_on_demand_data_map.clear();
     delete on_demand_reply_processing_thread;
+    delete on_demand_payload_cleaning_thread;
   };
 };
 } // namespace aca_on_demand_engine
