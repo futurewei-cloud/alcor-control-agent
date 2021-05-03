@@ -63,19 +63,48 @@ ACA_On_Demand_Engine &ACA_On_Demand_Engine::get_instance()
   return instance;
 }
 
+void ACA_On_Demand_Engine::clean_remaining_payload()
+{
+  ACA_LOG_DEBUG("\n", "Entering clean_remaining_payload");
+  last_time_cleaned_remaining_payload = std::chrono::steady_clock::now();
+
+  while (true) {
+    ACA_LOG_DEBUG("\n", "Checking if there's any leftover inside request_uuid_on_demand_data_map");
+    vector<string> uuids_to_remove;
+
+    for (size_t i = 0; i < request_uuid_on_demand_data_map.hashSize; i++) {
+      auto entry_insert_time =
+              request_uuid_on_demand_data_map.hashTable[i].head->getValue()->insert_time;
+      auto entry_key = request_uuid_on_demand_data_map.hashTable[i].head->getKey();
+      if (cast_to_microseconds(last_time_cleaned_remaining_payload - entry_insert_time)
+                  .count() >= ON_DEMAND_ENTRY_EXPIRATION_IN_MICROSECONDS) {
+        ACA_LOG_DEBUG("Need to cleanup this key: %d\n", entry_key.c_str());
+        uuids_to_remove.push_back(entry_key);
+      }
+    }
+
+    for (auto uuid : uuids_to_remove) {
+      request_uuid_on_demand_data_map.erase(uuid);
+    }
+    ACA_LOG_DEBUG("%s\n", "request_uuid_on_demand_data_map check finished, sleeping");
+    usleep(ON_DEMAND_ENTRY_CLEANUP_FREQUENCY_IN_MICROSECONDS);
+    last_time_cleaned_remaining_payload = std::chrono::steady_clock::now();
+  }
+}
+
 void ACA_On_Demand_Engine::process_async_grpc_replies()
 {
   void *got_tag;
   bool ok = false;
   HostRequestReply_HostRequestOperationStatus hostOperationStatus;
   OperationStatus replyStatus;
-  std::unordered_map<std::__cxx11::string, data_for_on_demand_call *>::iterator found_data;
-  string uuid_for_call;
-  data_for_on_demand_call *data_for_uuid;
+  bool found_data;
+  string request_id;
+  on_demand_payload *request_payload;
   ACA_LOG_DEBUG("%s\n", "Beginning of process_async_grpc_replies");
-  while (cq_.Next(&got_tag, &ok)) {
+  while (_cq.Next(&got_tag, &ok)) {
     if (ok) {
-      ACA_LOG_DEBUG("%s\n", "cq_->Next is good, ready to static cast the Async Client Call");
+      ACA_LOG_DEBUG("%s\n", "_cq->Next is good, ready to static cast the Async Client Call");
 
       AsyncClientCall *call = static_cast<AsyncClientCall *>(got_tag);
       ACA_LOG_DEBUG("%s\n", "Async Client Call casted successfully.");
@@ -85,30 +114,27 @@ void ACA_On_Demand_Engine::process_async_grpc_replies()
         for (int i = 0; i < call->reply.operation_statuses_size(); i++) {
           hostOperationStatus = call->reply.operation_statuses(i);
           replyStatus = hostOperationStatus.operation_status();
-          uuid_for_call = hostOperationStatus.request_id();
-          found_data = request_uuid_on_demand_data_map.find(uuid_for_call);
+          request_id = hostOperationStatus.request_id();
+          found_data = request_uuid_on_demand_data_map.find(request_id, request_payload);
         }
         ACA_LOG_DEBUG("Return from NCM - Reply Status: %s\n",
                       to_string(replyStatus).c_str());
-        if (found_data != request_uuid_on_demand_data_map.end()) {
-          data_for_uuid = found_data->second;
+        if (found_data) {
           ACA_LOG_DEBUG("Found data into the map, UUID: [%s], in_port: [%d], protocol: [%d]\n",
-                        uuid_for_call.c_str(), data_for_uuid->in_port,
-                        data_for_uuid->protocol);
+                        request_id.c_str(), request_payload->in_port,
+                        request_payload->protocol);
           std::chrono::_V2::steady_clock::time_point now =
                   std::chrono::steady_clock::now();
           ACA_LOG_DEBUG("For UUID: [%s], NCM called returned at: [%ld]\n",
-                        uuid_for_call.c_str(), now);
+                        request_id.c_str(), now);
           ACA_LOG_DEBUG("%s\n", "Printing out stuffs inside the unordered_map.");
 
-          on_demand(uuid_for_call, replyStatus, data_for_uuid->in_port,
-                    data_for_uuid->packet, data_for_uuid->packet_size,
-                    data_for_uuid->protocol);
-
-          request_uuid_on_demand_data_map.erase(uuid_for_call);
+          on_demand(request_id, replyStatus, request_payload->in_port,
+                    request_payload->packet, request_payload->packet_size,
+                    request_payload->protocol);
+          request_uuid_on_demand_data_map.erase(request_id);
         }
       }
-
       delete call;
     } else {
       ACA_LOG_INFO("%s\n", "Got an GRPC reply that is NOT OK, don't need to process the data");
@@ -138,7 +164,7 @@ void ACA_On_Demand_Engine::unknown_recv(uint16_t vlan_id, string ip_src,
   ACA_LOG_DEBUG("For UUID [%s], calling NCM for info of IP [%s] at: [%ld]",
                 uuid_str, ip_dest.c_str(), now);
 
-  g_grpc_server->RequestGoalStates(&HostRequest_builder, &cq_);
+  g_grpc_server->RequestGoalStates(&HostRequest_builder, &_cq);
 }
 
 void ACA_On_Demand_Engine::on_demand(string uuid_for_call, OperationStatus status,
@@ -414,7 +440,7 @@ void ACA_On_Demand_Engine::parse_packet(uint32_t in_port, void *packet)
     uuid_generate_time(uuid);
     char uuid_str[37];
     uuid_unparse_lower(uuid, uuid_str);
-    data_for_on_demand_call *data = new data_for_on_demand_call;
+    on_demand_payload *data = new on_demand_payload;
     // auto size_of_packet_void_pointer = sizeof(packet);
     void *packet_copy = malloc(packet_size);
     memcpy(packet_copy, packet, packet_size);
@@ -422,7 +448,8 @@ void ACA_On_Demand_Engine::parse_packet(uint32_t in_port, void *packet)
     data->packet = packet_copy;
     data->packet_size = packet_size;
     data->protocol = _protocol;
-    request_uuid_on_demand_data_map[uuid_str] = data;
+    data->insert_time = std::chrono::steady_clock::now();
+    request_uuid_on_demand_data_map.insert(uuid_str, data);
 
     ACA_LOG_DEBUG("Inserted data into the map, UUID: [%s], in_port: [%d], protocol: [%d]\n",
                   uuid_str, in_port, _protocol);

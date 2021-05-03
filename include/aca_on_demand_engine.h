@@ -27,12 +27,13 @@
 #include "hashmap/HashMap.h"
 #include <grpcpp/grpcpp.h>
 #include <unordered_map>
+#include "aca_log.h"
 
 using namespace alcor::schema;
 using namespace std;
 // using namespace grpc;
-struct data_for_on_demand_call {
-  //     alcor::schema::OperationStatus on_demand_reply;
+struct on_demand_payload {
+  std::chrono::_V2::steady_clock::time_point insert_time;
   string uuid;
   uint32_t in_port;
   void *packet;
@@ -44,10 +45,19 @@ namespace aca_on_demand_engine
 {
 class ACA_On_Demand_Engine {
   public:
+  /* This thread is responsible for processing hostOperationReplies from NCM */
   std::thread *on_demand_reply_processing_thread;
-  grpc::CompletionQueue cq_;
-  unordered_map<std::string, data_for_on_demand_call *, std::hash<std::string> > request_uuid_on_demand_data_map;
+  /* 
+  This thread checks request_uuid_on_demand_data_map periodically and removes any 
+  entry that has been staying in the map for more than ON_DEMAND_ENTRY_CLEANUP_FREQUENCY_IN_MICROSECONDS
+  */
+  std::thread *on_demand_payload_cleaning_thread;
+  grpc::CompletionQueue _cq;
+  CTSL::HashMap<std::string, on_demand_payload *, std::hash<std::string> > request_uuid_on_demand_data_map;
 
+  /* This records when clean_remaining_payload() ran last time, 
+  its initial value should be the time  when clean_remaining_payload() was first called*/
+  std::chrono::_V2::steady_clock::time_point last_time_cleaned_remaining_payload;
   static ACA_On_Demand_Engine &get_instance();
 
   /*
@@ -60,6 +70,7 @@ class ACA_On_Demand_Engine {
    */
   void parse_packet(uint32_t in_port, void *packet);
 
+  void clean_remaining_payload();
   /*
    * print out the contents of packet payload data.
    * Input:
@@ -139,15 +150,18 @@ class ACA_On_Demand_Engine {
   private:
   ACA_On_Demand_Engine()
   {
-    std::cout << "Constructor of a new on demand engine, need to create a new thread to process the grpc replies"
-              << std::endl;
+    ACA_LOG_DEBUG("%s\n", "Constructor of a new on demand engine, need to create a new thread to process the grpc replies");
+
     on_demand_reply_processing_thread = new std::thread(
             std::bind(&ACA_On_Demand_Engine::process_async_grpc_replies, this));
     on_demand_reply_processing_thread->detach();
+    on_demand_payload_cleaning_thread = new std::thread(
+            std::bind(&ACA_On_Demand_Engine::clean_remaining_payload, this));
+    on_demand_payload_cleaning_thread->detach();
   };
   ~ACA_On_Demand_Engine()
   {
-    cq_.Shutdown();
+    _cq.Shutdown();
     request_uuid_on_demand_data_map.clear();
     delete on_demand_reply_processing_thread;
   };
