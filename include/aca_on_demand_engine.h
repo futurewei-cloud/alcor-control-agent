@@ -53,8 +53,8 @@ class ACA_On_Demand_Engine {
   */
   std::thread *on_demand_payload_cleaning_thread;
   grpc::CompletionQueue _cq;
-  CTSL::HashMap<std::string, on_demand_payload *, std::hash<std::string> > request_uuid_on_demand_data_map;
-
+  unordered_map<std::string, on_demand_payload *, std::hash<std::string> > request_uuid_on_demand_data_map;
+  std::mutex _mutex;
   /* This records when clean_remaining_payload() ran last time, 
   its initial value should be the time  when clean_remaining_payload() was first called*/
   std::chrono::_V2::steady_clock::time_point last_time_cleaned_remaining_payload;
