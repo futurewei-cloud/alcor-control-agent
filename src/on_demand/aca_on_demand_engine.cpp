@@ -63,6 +63,10 @@ ACA_On_Demand_Engine &ACA_On_Demand_Engine::get_instance()
   return instance;
 }
 
+/* 
+  This function checks request_uuid_on_demand_data_map periodically and removes any 
+  entry that has been staying in the map for more than ON_DEMAND_ENTRY_EXPIRATION_IN_MICROSECONDS
+*/
 void ACA_On_Demand_Engine::clean_remaining_payload()
 {
   ACA_LOG_DEBUG("\n", "Entering clean_remaining_payload");
@@ -72,23 +76,6 @@ void ACA_On_Demand_Engine::clean_remaining_payload()
     usleep(ON_DEMAND_ENTRY_CLEANUP_FREQUENCY_IN_MICROSECONDS);
 
     ACA_LOG_DEBUG("\n", "Checking if there's any leftover inside request_uuid_on_demand_data_map");
-    // vector<string> uuids_to_remove;
-
-    // for (size_t i = 0; i < request_uuid_on_demand_data_map.hashSize; i++) {
-    //   auto entry_key = request_uuid_on_demand_data_map.hashTable[i].head->getKey();
-    //   ACA_LOG_DEBUG("i = %ld, key = %s", i, entry_key.c_str());
-    //   auto entry_insert_time =
-    //           request_uuid_on_demand_data_map.hashTable[i].head->getValue()->insert_time;
-    //   if (cast_to_microseconds(last_time_cleaned_remaining_payload - entry_insert_time)
-    //               .count() >= ON_DEMAND_ENTRY_EXPIRATION_IN_MICROSECONDS) {
-    //     ACA_LOG_DEBUG("Need to cleanup this key: %d\n", entry_key.c_str());
-    //     uuids_to_remove.push_back(entry_key);
-    //   }
-    // }
-
-    // for (auto uuid : uuids_to_remove) {
-    //   request_uuid_on_demand_data_map.erase(uuid);
-    // }
 
     for (auto it = request_uuid_on_demand_data_map.cbegin();
          it != request_uuid_on_demand_data_map.cend();) {
