@@ -154,9 +154,9 @@ class ACA_On_Demand_Engine {
 
     on_demand_reply_processing_thread = new std::thread(
             std::bind(&ACA_On_Demand_Engine::process_async_grpc_replies, this));
-    on_demand_reply_processing_thread->detach();
     on_demand_payload_cleaning_thread = new std::thread(
             std::bind(&ACA_On_Demand_Engine::clean_remaining_payload, this));
+    on_demand_reply_processing_thread->detach();
     on_demand_payload_cleaning_thread->detach();
   };
   ~ACA_On_Demand_Engine()
