@@ -104,6 +104,9 @@ void ACA_On_Demand_Engine::process_async_grpc_replies()
   string request_id;
   on_demand_payload *request_payload;
   ACA_LOG_DEBUG("%s\n", "Beginning of process_async_grpc_replies");
+  on_demand_payload_cleaning_thread = new std::thread(
+          std::bind(&ACA_On_Demand_Engine::clean_remaining_payload, this));
+  on_demand_payload_cleaning_thread->detach();
   while (_cq.Next(&got_tag, &ok)) {
     if (ok) {
       ACA_LOG_DEBUG("%s\n", "_cq->Next is good, ready to static cast the Async Client Call");
