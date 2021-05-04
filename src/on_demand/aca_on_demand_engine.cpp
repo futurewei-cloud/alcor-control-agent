@@ -64,7 +64,7 @@ ACA_On_Demand_Engine &ACA_On_Demand_Engine::get_instance()
 }
 
 /* 
-  This function checks request_uuid_on_demand_data_map periodically and removes any 
+  This function checks request_uuid_on_demand_payload_map periodically and removes any 
   entry that has been staying in the map for more than ON_DEMAND_ENTRY_EXPIRATION_IN_MICROSECONDS
 */
 void ACA_On_Demand_Engine::clean_remaining_payload()
@@ -75,26 +75,26 @@ void ACA_On_Demand_Engine::clean_remaining_payload()
   while (true) {
     usleep(ON_DEMAND_ENTRY_CLEANUP_FREQUENCY_IN_MICROSECONDS);
 
-    ACA_LOG_DEBUG("\n", "Checking if there's any leftover inside request_uuid_on_demand_data_map");
+    ACA_LOG_DEBUG("\n", "Checking if there's any leftover inside request_uuid_on_demand_payload_map");
     std::chrono::_V2::steady_clock::time_point start = std::chrono::steady_clock::now();
     /* Critical section begins */
-    _mutex.lock();
-    auto size_before_cleanup = request_uuid_on_demand_data_map.size();
-    for (auto it = request_uuid_on_demand_data_map.cbegin();
-         it != request_uuid_on_demand_data_map.cend();) {
+    _payload_map_mutex.lock();
+    auto size_before_cleanup = request_uuid_on_demand_payload_map.size();
+    for (auto it = request_uuid_on_demand_payload_map.cbegin();
+         it != request_uuid_on_demand_payload_map.cend();) {
       auto request_id = it->first;
       auto payload = it->second;
       ACA_LOG_DEBUG("key = %s", request_id.c_str());
       if (cast_to_microseconds(last_time_cleaned_remaining_payload - payload->insert_time)
                   .count() >= ON_DEMAND_ENTRY_EXPIRATION_IN_MICROSECONDS) {
         ACA_LOG_DEBUG("Need to cleanup this key: %d\n", request_id.c_str());
-        request_uuid_on_demand_data_map.erase(it++);
+        request_uuid_on_demand_payload_map.erase(it++);
       } else {
         ++it;
       }
     }
-    auto size_after_cleanup = request_uuid_on_demand_data_map.size();
-    _mutex.unlock();
+    auto size_after_cleanup = request_uuid_on_demand_payload_map.size();
+    _payload_map_mutex.unlock();
     /* Critical section ends */
     std::chrono::_V2::steady_clock::time_point end = std::chrono::steady_clock::now();
 
@@ -104,7 +104,7 @@ void ACA_On_Demand_Engine::clean_remaining_payload()
                   size_after_cleanup - size_before_cleanup, cleanup_time,
                   us_to_ms(cleanup_time));
 
-    ACA_LOG_DEBUG("%s\n", "request_uuid_on_demand_data_map check finished, sleeping");
+    ACA_LOG_DEBUG("%s\n", "request_uuid_on_demand_payload_map check finished, sleeping");
     last_time_cleaned_remaining_payload = std::chrono::steady_clock::now();
   }
 }
@@ -134,11 +134,11 @@ void ACA_On_Demand_Engine::process_async_grpc_replies()
           hostOperationStatus = call->reply.operation_statuses(i);
           replyStatus = hostOperationStatus.operation_status();
           request_id = hostOperationStatus.request_id();
-          found_data = request_uuid_on_demand_data_map.find(request_id);
+          found_data = request_uuid_on_demand_payload_map.find(request_id);
         }
         ACA_LOG_DEBUG("Return from NCM - Reply Status: %s\n",
                       to_string(replyStatus).c_str());
-        if (found_data != request_uuid_on_demand_data_map.end()) {
+        if (found_data != request_uuid_on_demand_payload_map.end()) {
           request_payload = found_data->second;
           ACA_LOG_DEBUG("Found data into the map, UUID: [%s], in_port: [%d], protocol: [%d]\n",
                         request_id.c_str(), request_payload->in_port,
@@ -155,16 +155,16 @@ void ACA_On_Demand_Engine::process_async_grpc_replies()
           std::chrono::_V2::steady_clock::time_point start =
                   std::chrono::steady_clock::now();
           /* Critical section begins */
-          _mutex.lock();
-          request_uuid_on_demand_data_map.erase(request_id);
-          _mutex.unlock();
+          _payload_map_mutex.lock();
+          request_uuid_on_demand_payload_map.erase(request_id);
+          _payload_map_mutex.unlock();
           /* Critical section ends */
           std::chrono::_V2::steady_clock::time_point end =
                   std::chrono::steady_clock::now();
 
           auto cleanup_time = cast_to_microseconds(end - start).count();
 
-          ACA_LOG_DEBUG("Erasing one entry into request_uuid_on_demand_data_map took [%ld]us, which is [%ld]ms\n",
+          ACA_LOG_DEBUG("Erasing one entry into request_uuid_on_demand_payload_map took [%ld]us, which is [%ld]ms\n",
                         cleanup_time, us_to_ms(cleanup_time));
         }
       }
@@ -484,20 +484,20 @@ void ACA_On_Demand_Engine::parse_packet(uint32_t in_port, void *packet)
     std::chrono::_V2::steady_clock::time_point start = std::chrono::steady_clock::now();
 
     /* Sleep until the size is less than the max limit. */
-    while (request_uuid_on_demand_data_map.size() >= REQUEST_UUID_ON_DEMAND_DATA_MAP_MAX_SIZE) {
-      usleep(REQUEST_UUID_ON_DEMAND_DATA_MAP_SIZE_CHECK_IN_MICROSECONDS);
+    while (request_uuid_on_demand_payload_map.size() >= REQUEST_UUID_ON_DEMAND_PAYLOAD_MAP_MAX_SIZE) {
+      usleep(REQUEST_UUID_ON_DEMAND_PAYLOAD_MAP_SIZE_CHECK_IN_MICROSECONDS);
     }
 
     /* Critical section begins */
-    _mutex.lock();
-    request_uuid_on_demand_data_map[uuid_str] = data;
-    _mutex.unlock();
+    _payload_map_mutex.lock();
+    request_uuid_on_demand_payload_map[uuid_str] = data;
+    _payload_map_mutex.unlock();
     /* Critical section ends */
     std::chrono::_V2::steady_clock::time_point end = std::chrono::steady_clock::now();
 
     auto cleanup_time = cast_to_microseconds(end - start).count();
 
-    ACA_LOG_DEBUG("Inserting one entry into request_uuid_on_demand_data_map took [%ld]us, which is [%ld]ms\n",
+    ACA_LOG_DEBUG("Inserting one entry into request_uuid_on_demand_payload_map took [%ld]us, which is [%ld]ms\n",
                   cleanup_time, us_to_ms(cleanup_time));
     ACA_LOG_DEBUG("Inserted data into the map, UUID: [%s], in_port: [%d], protocol: [%d]\n",
                   uuid_str, in_port, _protocol);
