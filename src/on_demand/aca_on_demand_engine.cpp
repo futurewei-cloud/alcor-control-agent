@@ -485,7 +485,7 @@ void ACA_On_Demand_Engine::parse_packet(uint32_t in_port, void *packet)
 
     /* Sleep until the size is less than the max limit. */
     while (request_uuid_on_demand_payload_map.size() >= REQUEST_UUID_ON_DEMAND_PAYLOAD_MAP_MAX_SIZE) {
-      usleep(REQUEST_UUID_ON_DEMAND_PAYLOAD_MAP_SIZE_CHECK_IN_MICROSECONDS);
+      usleep(REQUEST_UUID_ON_DEMAND_PAYLOAD_MAP_SIZE_CHECK_FREQUENCY_IN_MICROSECONDS);
     }
 
     /* Critical section begins */
