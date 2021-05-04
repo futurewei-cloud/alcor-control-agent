@@ -76,7 +76,10 @@ void ACA_On_Demand_Engine::clean_remaining_payload()
     usleep(ON_DEMAND_ENTRY_CLEANUP_FREQUENCY_IN_MICROSECONDS);
 
     ACA_LOG_DEBUG("\n", "Checking if there's any leftover inside request_uuid_on_demand_data_map");
-
+    std::chrono::_V2::steady_clock::time_point start = std::chrono::steady_clock::now();
+    /* Critical section begins */
+    _mutex.lock();
+    auto size_before_cleanup = request_uuid_on_demand_data_map.size();
     for (auto it = request_uuid_on_demand_data_map.cbegin();
          it != request_uuid_on_demand_data_map.cend();) {
       auto request_id = it->first;
@@ -85,15 +88,21 @@ void ACA_On_Demand_Engine::clean_remaining_payload()
       if (cast_to_microseconds(last_time_cleaned_remaining_payload - payload->insert_time)
                   .count() >= ON_DEMAND_ENTRY_EXPIRATION_IN_MICROSECONDS) {
         ACA_LOG_DEBUG("Need to cleanup this key: %d\n", request_id.c_str());
-        /* Critical section begins */
-        _mutex.lock();
         request_uuid_on_demand_data_map.erase(it++);
-        _mutex.unlock();
-        /* Critical section ends */
       } else {
         ++it;
       }
     }
+    auto size_after_cleanup = request_uuid_on_demand_data_map.size();
+    _mutex.unlock();
+    /* Critical section ends */
+    std::chrono::_V2::steady_clock::time_point end = std::chrono::steady_clock::now();
+
+    auto cleanup_time = cast_to_microseconds(end - start).count();
+
+    ACA_LOG_DEBUG("Cleaned up [%ld] entries in the map, which took [%ld]us, which is [%ld]ms\n",
+                  size_after_cleanup - size_before_cleanup, cleanup_time,
+                  us_to_ms(cleanup_time));
 
     ACA_LOG_DEBUG("%s\n", "request_uuid_on_demand_data_map check finished, sleeping");
     last_time_cleaned_remaining_payload = std::chrono::steady_clock::now();
@@ -143,11 +152,20 @@ void ACA_On_Demand_Engine::process_async_grpc_replies()
           on_demand(request_id, replyStatus, request_payload->in_port,
                     request_payload->packet, request_payload->packet_size,
                     request_payload->protocol);
+          std::chrono::_V2::steady_clock::time_point start =
+                  std::chrono::steady_clock::now();
           /* Critical section begins */
           _mutex.lock();
           request_uuid_on_demand_data_map.erase(request_id);
           _mutex.unlock();
           /* Critical section ends */
+          std::chrono::_V2::steady_clock::time_point end =
+                  std::chrono::steady_clock::now();
+
+          auto cleanup_time = cast_to_microseconds(end - start).count();
+
+          ACA_LOG_DEBUG("Erasing one entry into request_uuid_on_demand_data_map took [%ld]us, which is [%ld]ms\n",
+                        cleanup_time, us_to_ms(cleanup_time));
         }
       }
       delete call;
@@ -456,7 +474,6 @@ void ACA_On_Demand_Engine::parse_packet(uint32_t in_port, void *packet)
     char uuid_str[37];
     uuid_unparse_lower(uuid, uuid_str);
     on_demand_payload *data = new on_demand_payload;
-    // auto size_of_packet_void_pointer = sizeof(packet);
     void *packet_copy = malloc(packet_size);
     memcpy(packet_copy, packet, packet_size);
     data->in_port = in_port;
@@ -464,16 +481,26 @@ void ACA_On_Demand_Engine::parse_packet(uint32_t in_port, void *packet)
     data->packet_size = packet_size;
     data->protocol = _protocol;
     data->insert_time = std::chrono::steady_clock::now();
-    // request_uuid_on_demand_data_map.insert(uuid_str, data);
+    std::chrono::_V2::steady_clock::time_point start = std::chrono::steady_clock::now();
+
+    /* Sleep until the size is less than the max limit. */
+    while (request_uuid_on_demand_data_map.size() >= REQUEST_UUID_ON_DEMAND_DATA_MAP_MAX_SIZE) {
+      usleep(REQUEST_UUID_ON_DEMAND_DATA_MAP_SIZE_CHECK_IN_MICROSECONDS);
+    }
+
     /* Critical section begins */
     _mutex.lock();
     request_uuid_on_demand_data_map[uuid_str] = data;
     _mutex.unlock();
     /* Critical section ends */
+    std::chrono::_V2::steady_clock::time_point end = std::chrono::steady_clock::now();
 
+    auto cleanup_time = cast_to_microseconds(end - start).count();
+
+    ACA_LOG_DEBUG("Inserting one entry into request_uuid_on_demand_data_map took [%ld]us, which is [%ld]ms\n",
+                  cleanup_time, us_to_ms(cleanup_time));
     ACA_LOG_DEBUG("Inserted data into the map, UUID: [%s], in_port: [%d], protocol: [%d]\n",
                   uuid_str, in_port, _protocol);
-    ACA_LOG_DEBUG("%s\n", "Printing out stuffs inside the unordered_map in parse_packet.");
 
     unknown_recv(vlan_id, ip_src, ip_dest, port_src, port_dest, _protocol, uuid_str);
   }
