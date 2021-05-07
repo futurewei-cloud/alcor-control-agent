@@ -151,7 +151,7 @@ void ACA_On_Demand_Engine::process_async_grpc_replies()
 
           on_demand(request_id, replyStatus, request_payload->in_port,
                     request_payload->packet, request_payload->packet_size,
-                    request_payload->protocol);
+                    request_payload->protocol, request_payload->insert_time);
           std::chrono::_V2::steady_clock::time_point start =
                   std::chrono::steady_clock::now();
           /* Critical section begins */
@@ -194,15 +194,16 @@ void ACA_On_Demand_Engine::unknown_recv(uint16_t vlan_id, string ip_src,
   new_state_requests->set_protocol(protocol);
   new_state_requests->set_ethertype(EtherType::IPV4);
   std::chrono::_V2::steady_clock::time_point now = std::chrono::steady_clock::now();
-  ACA_LOG_DEBUG("For UUID [%s], calling NCM for info of IP [%s] at: [%ld]",
-                uuid_str, ip_dest.c_str(), now);
+  ACA_LOG_DEBUG("For UUID [%s], calling NCM for info of IP [%s] at: [%ld], tunnel_id: []",
+                uuid_str, ip_dest.c_str(), now, tunnel_id);
 
   g_grpc_server->RequestGoalStates(&HostRequest_builder, &_cq);
 }
 
 void ACA_On_Demand_Engine::on_demand(string uuid_for_call, OperationStatus status,
                                      uint32_t in_port, void *packet,
-                                     int packet_size, Protocol protocol)
+                                     int packet_size, Protocol protocol,
+                                     std::chrono::_V2::steady_clock::time_point insert_time)
 {
   ACA_LOG_INFO("%s\n", "Inside of on_demand function");
   string bridge = "br-tun";
@@ -260,10 +261,13 @@ void ACA_On_Demand_Engine::on_demand(string uuid_for_call, OperationStatus statu
       } while (!found_arp_entry && i < times_to_check);
       std::chrono::_V2::steady_clock::time_point end = std::chrono::steady_clock::now();
       auto total_time_slept = cast_to_microseconds(end - start).count();
-
-      ACA_LOG_DEBUG("For UUID: [%s], wait started at: [%ld] finished at: [%ld], took: %ld microseconds or %ld milliseconds\n",
+      auto total_time_for_goalstate_from_send_gs_to_gs_received_and_programmed =
+              cast_to_microseconds(end - insert_time).count();
+      ACA_LOG_DEBUG("For UUID: [%s], wait started at: [%ld] finished at: [%ld], took: %ld microseconds or %ld milliseconds\nThe whole operation took %ld microseconds or %ld milliseconds",
                     uuid_for_call.c_str(), start, end, total_time_slept,
-                    us_to_ms(total_time_slept));
+                    us_to_ms(total_time_slept),
+                    total_time_for_goalstate_from_send_gs_to_gs_received_and_programmed,
+                    us_to_ms(total_time_for_goalstate_from_send_gs_to_gs_received_and_programmed));
 
       int parse_arp_request_rc =
               aca_arp_responder::ACA_ARP_Responder::get_instance()._parse_arp_request(

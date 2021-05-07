@@ -82,7 +82,8 @@ class ACA_On_Demand_Engine {
   void print_payload(const u_char *payload, int len);
   void print_hex_ascii_line(const u_char *payload, int len, int offset);
   void on_demand(string uuid_for_call, OperationStatus status, uint32_t in_port,
-                 void *packet, int packet_size, Protocol protocol);
+                 void *packet, int packet_size, Protocol protocol,
+                 std::chrono::_V2::steady_clock::time_point insert_time);
   void unknown_recv(uint16_t vlan_id, string ip_src, string ip_dest, int port_src,
                     int port_dest, Protocol protocol, char *uuid_str);
   void process_async_grpc_replies();
