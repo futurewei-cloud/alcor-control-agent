@@ -63,18 +63,127 @@ ACA_On_Demand_Engine &ACA_On_Demand_Engine::get_instance()
   return instance;
 }
 
-OperationStatus ACA_On_Demand_Engine::unknown_recv(uint16_t vlan_id, string ip_src, string ip_dest,
-                                        int port_src, int port_dest, Protocol protocol) {
-  HostRequest HostRequest_builder;
-  HostRequest_ResourceStateRequest *new_state_requests = HostRequest_builder.add_state_requests();
-  HostRequestReply hostRequestReply;
+/* 
+  This function checks request_uuid_on_demand_payload_map periodically and removes any 
+  entry that has been staying in the map for more than ON_DEMAND_ENTRY_EXPIRATION_IN_MICROSECONDS
+*/
+void ACA_On_Demand_Engine::clean_remaining_payload()
+{
+  ACA_LOG_DEBUG("\n", "Entering clean_remaining_payload");
+  last_time_cleaned_remaining_payload = std::chrono::steady_clock::now();
+
+  while (true) {
+    usleep(ON_DEMAND_ENTRY_CLEANUP_FREQUENCY_IN_MICROSECONDS);
+
+    ACA_LOG_DEBUG("\n", "Checking if there's any leftover inside request_uuid_on_demand_payload_map");
+    std::chrono::_V2::steady_clock::time_point start = std::chrono::steady_clock::now();
+    /* Critical section begins */
+    _payload_map_mutex.lock();
+    auto size_before_cleanup = request_uuid_on_demand_payload_map.size();
+    for (auto it = request_uuid_on_demand_payload_map.cbegin();
+         it != request_uuid_on_demand_payload_map.cend();) {
+      auto request_id = it->first;
+      auto payload = it->second;
+      ACA_LOG_DEBUG("key = %s", request_id.c_str());
+      if (cast_to_microseconds(last_time_cleaned_remaining_payload - payload->insert_time)
+                  .count() >= ON_DEMAND_ENTRY_EXPIRATION_IN_MICROSECONDS) {
+        ACA_LOG_DEBUG("Need to cleanup this key: %d\n", request_id.c_str());
+        request_uuid_on_demand_payload_map.erase(it++);
+      } else {
+        ++it;
+      }
+    }
+    auto size_after_cleanup = request_uuid_on_demand_payload_map.size();
+    _payload_map_mutex.unlock();
+    /* Critical section ends */
+    std::chrono::_V2::steady_clock::time_point end = std::chrono::steady_clock::now();
+
+    auto cleanup_time = cast_to_microseconds(end - start).count();
+
+    ACA_LOG_DEBUG("Cleaned up [%ld] entries in the map, which took [%ld]us, which is [%ld]ms\n",
+                  size_after_cleanup - size_before_cleanup, cleanup_time,
+                  us_to_ms(cleanup_time));
+
+    ACA_LOG_DEBUG("%s\n", "request_uuid_on_demand_payload_map check finished, sleeping");
+    last_time_cleaned_remaining_payload = std::chrono::steady_clock::now();
+  }
+}
+
+void ACA_On_Demand_Engine::process_async_grpc_replies()
+{
+  void *got_tag;
+  bool ok = false;
   HostRequestReply_HostRequestOperationStatus hostOperationStatus;
   OperationStatus replyStatus;
-  
-  uuid_t uuid;
-  uuid_generate_time(uuid);
-  char uuid_str[37];
-  uuid_unparse_lower(uuid, uuid_str);
+  // bool found_data;
+  std::unordered_map<std::__cxx11::string, on_demand_payload *, std::hash<std::__cxx11::string> >::iterator found_data;
+  string request_id;
+  on_demand_payload *request_payload;
+  ACA_LOG_DEBUG("%s\n", "Beginning of process_async_grpc_replies");
+
+  while (_cq.Next(&got_tag, &ok)) {
+    if (ok) {
+      ACA_LOG_DEBUG("%s\n", "_cq->Next is good, ready to static cast the Async Client Call");
+
+      AsyncClientCall *call = static_cast<AsyncClientCall *>(got_tag);
+      ACA_LOG_DEBUG("%s\n", "Async Client Call casted successfully.");
+
+      if (call->status.ok()) {
+        ACA_LOG_DEBUG("%s\n", "Got an GRPC reply that is OK, need to process it.");
+        for (int i = 0; i < call->reply.operation_statuses_size(); i++) {
+          hostOperationStatus = call->reply.operation_statuses(i);
+          replyStatus = hostOperationStatus.operation_status();
+          request_id = hostOperationStatus.request_id();
+          found_data = request_uuid_on_demand_payload_map.find(request_id);
+        }
+        ACA_LOG_DEBUG("Return from NCM - Reply Status: %s\n",
+                      to_string(replyStatus).c_str());
+        if (found_data != request_uuid_on_demand_payload_map.end()) {
+          request_payload = found_data->second;
+          ACA_LOG_DEBUG("Found data into the map, UUID: [%s], in_port: [%d], protocol: [%d]\n",
+                        request_id.c_str(), request_payload->in_port,
+                        request_payload->protocol);
+          std::chrono::_V2::steady_clock::time_point now =
+                  std::chrono::steady_clock::now();
+          ACA_LOG_DEBUG("For UUID: [%s], NCM called returned at: [%ld]\n",
+                        request_id.c_str(), now);
+          ACA_LOG_DEBUG("%s\n", "Printing out stuffs inside the unordered_map.");
+
+          on_demand(request_id, replyStatus, request_payload->in_port,
+                    request_payload->packet, request_payload->packet_size,
+                    request_payload->protocol, request_payload->insert_time);
+          std::chrono::_V2::steady_clock::time_point start =
+                  std::chrono::steady_clock::now();
+          /* Critical section begins */
+          _payload_map_mutex.lock();
+          request_uuid_on_demand_payload_map.erase(request_id);
+          _payload_map_mutex.unlock();
+          /* Critical section ends */
+          std::chrono::_V2::steady_clock::time_point end =
+                  std::chrono::steady_clock::now();
+
+          auto cleanup_time = cast_to_microseconds(end - start).count();
+
+          ACA_LOG_DEBUG("Erasing one entry into request_uuid_on_demand_payload_map took [%ld]us, which is [%ld]ms\n",
+                        cleanup_time, us_to_ms(cleanup_time));
+        }
+      }
+      delete call;
+    } else {
+      ACA_LOG_INFO("%s\n", "Got an GRPC reply that is NOT OK, don't need to process the data");
+    }
+  }
+}
+
+void ACA_On_Demand_Engine::unknown_recv(uint16_t vlan_id, string ip_src,
+                                        string ip_dest, int port_src, int port_dest,
+                                        Protocol protocol, char *uuid_str)
+{
+  HostRequest HostRequest_builder;
+  HostRequest_ResourceStateRequest *new_state_requests =
+          HostRequest_builder.add_state_requests();
+  HostRequestReply hostRequestReply;
+
   uint tunnel_id = ACA_Vlan_Manager::get_instance().get_tunnelId_by_vlanId(vlan_id);
   new_state_requests->set_request_id(uuid_str);
   new_state_requests->set_tunnel_id(tunnel_id);
@@ -84,21 +193,19 @@ OperationStatus ACA_On_Demand_Engine::unknown_recv(uint16_t vlan_id, string ip_s
   new_state_requests->set_destination_port(port_dest);
   new_state_requests->set_protocol(protocol);
   new_state_requests->set_ethertype(EtherType::IPV4);
+  std::chrono::_V2::steady_clock::time_point now = std::chrono::steady_clock::now();
+  ACA_LOG_DEBUG("For UUID [%s], calling NCM for info of IP [%s] at: [%ld], tunnel_id: []",
+                uuid_str, ip_dest.c_str(), now, tunnel_id);
 
-  ACA_LOG_DEBUG("Calling NCM - %s:%s\n", g_ncm_address.c_str(), g_ncm_port.c_str());
-  hostRequestReply = g_grpc_server->RequestGoalStates(&HostRequest_builder);
-  for (int i = 0; i < hostRequestReply.operation_statuses_size(); i++) {
-    hostOperationStatus = hostRequestReply.operation_statuses(i);
-    replyStatus = hostOperationStatus.operation_status();
-  }
-  ACA_LOG_DEBUG("Return from NCM - Reply Status: %s\n", to_string(replyStatus).c_str());
-  usleep(USLEEPTIME_IN_MICROSECONDS);
-  return replyStatus;
+  g_grpc_server->RequestGoalStates(&HostRequest_builder, &_cq);
 }
 
-void ACA_On_Demand_Engine::on_demand(OperationStatus status, uint32_t in_port, void *packet, 
-                                     int packet_size, Protocol protocol) 
+void ACA_On_Demand_Engine::on_demand(string uuid_for_call, OperationStatus status,
+                                     uint32_t in_port, void *packet,
+                                     int packet_size, Protocol protocol,
+                                     std::chrono::_V2::steady_clock::time_point insert_time)
 {
+  ACA_LOG_INFO("%s\n", "Inside of on_demand function");
   string bridge = "br-tun";
   string inport = "in_port=controller";
   string whitespace = " ";
@@ -106,33 +213,87 @@ void ACA_On_Demand_Engine::on_demand(OperationStatus status, uint32_t in_port, v
   string rs_action = "actions=resubmit(,20)";
   string packetpre = "packet=";
   string options = "";
-  string serialized_packet = "";  
+  string serialized_packet = "";
   const struct ether_header *eth_header = (struct ether_header *)packet;
-  const u_char *ch = (const u_char *) packet;
+  const u_char *ch = (const u_char *)packet;
   char str[10];
-  
+
   if (status == OperationStatus::SUCCESS) {
+    ACA_LOG_DEBUG("%s\n", "It was an succesful operation, let's wait a little bit, so that the goalstate is created/updated");
+
     if (protocol == Protocol::ARP) {
       char *base = (char *)packet;
       unsigned char *vlan_hdr = (unsigned char *)(base + 12);
       vlan_message *vlanmsg = (vlan_message *)vlan_hdr;
       unsigned char *arp_hdr = (unsigned char *)(base + SIZE_ETHERNET + 4);
-      arp_message *arpmsg = (arp_message *) arp_hdr;
-      aca_arp_responder::ACA_ARP_Responder::get_instance()._parse_arp_request(in_port, vlanmsg, arpmsg);
-      ACA_LOG_DEBUG("%s", "On-demand arp request packet sent to arp_responder.\n");
+      arp_message *arpmsg = (arp_message *)arp_hdr;
+      arp_entry_data stData;
+      // get the ip address from arp message
+      stData.ipv4_address =
+              aca_arp_responder::ACA_ARP_Responder::get_instance()._get_requested_ip(arpmsg);
+      // get the vlan id from vlan header
+      if (vlanmsg) {
+        stData.vlan_id = ntohs(vlanmsg->vlan_tci) & 0x0fff;
+      } else {
+        stData.vlan_id = 0;
+      }
+      /*
+        Implementing a "Smart" sleep here, which checks if the target arp entry exists,
+        if exists, stop sleeping and go forward; 
+        otherwise, sleep for another 1000 us (0.001) seconds and then check again.
+        If arp still not found after one second, it lets the packet drop.
+      */
+      int wait_time = 1000000; // one second
+      int check_frequency_us = 1000; // 0.001 seconds, or 10000 microseconds.
+      bool found_arp_entry = false;
+      int times_to_check = wait_time / check_frequency_us;
+      int i = 0;
+      std::chrono::_V2::steady_clock::time_point start =
+              std::chrono::steady_clock::now();
+
+      do {
+        found_arp_entry =
+                aca_arp_responder::ACA_ARP_Responder::get_instance().does_arp_entry_exist(stData);
+        if (!found_arp_entry) {
+          i++;
+          usleep(check_frequency_us);
+        }
+      } while (!found_arp_entry && i < times_to_check);
+      std::chrono::_V2::steady_clock::time_point end = std::chrono::steady_clock::now();
+      auto total_time_slept = cast_to_microseconds(end - start).count();
+      auto total_time_for_goalstate_from_send_gs_to_gs_received_and_programmed =
+              cast_to_microseconds(end - insert_time).count();
+      ACA_LOG_DEBUG("For UUID: [%s], wait started at: [%ld] finished at: [%ld], took: %ld microseconds or %ld milliseconds\nThe whole operation took %ld microseconds or %ld milliseconds",
+                    uuid_for_call.c_str(), start, end, total_time_slept,
+                    us_to_ms(total_time_slept),
+                    total_time_for_goalstate_from_send_gs_to_gs_received_and_programmed,
+                    us_to_ms(total_time_for_goalstate_from_send_gs_to_gs_received_and_programmed));
+
+      int parse_arp_request_rc =
+              aca_arp_responder::ACA_ARP_Responder::get_instance()._parse_arp_request(
+                      in_port, vlanmsg, arpmsg);
+      if (parse_arp_request_rc == EXIT_SUCCESS) {
+        ACA_LOG_DEBUG("%s", "On-demand arp request packet sent to arp_responder.\n");
+
+      } else {
+        ACA_LOG_DEBUG("%s", "On-demand arp request packet FAILED to send to arp_responder.\n");
+      }
     } else {
       for (int i = 0; i < packet_size; i++) {
         sprintf(str, "%02x", *ch);
         serialized_packet.append(str);
         ch++;
       }
-      options = inport + whitespace + packetpre + serialized_packet + whitespace + action;      
-      aca_ovs_control::ACA_OVS_Control::get_instance().packet_out(bridge.c_str(), options.c_str());
-      ACA_LOG_DEBUG("On-demand packet with protocol %d sent to ovs: %s\n", protocol, options.c_str());
+      options = inport + whitespace + packetpre + serialized_packet + whitespace + action;
+      aca_ovs_control::ACA_OVS_Control::get_instance().packet_out(
+              bridge.c_str(), options.c_str());
+      ACA_LOG_DEBUG("On-demand packet with protocol %d sent to ovs: %s\n",
+                    protocol, options.c_str());
     }
   } else {
-    ACA_LOG_ERROR("Packet dropped from %s to %s\n", ether_ntoa((ether_addr *)&eth_header->ether_shost),
-                                                    ether_ntoa((ether_addr *)&eth_header->ether_dhost));
+    ACA_LOG_ERROR("Packet dropped from %s to %s\n",
+                  ether_ntoa((ether_addr *)&eth_header->ether_shost),
+                  ether_ntoa((ether_addr *)&eth_header->ether_dhost));
   }
 }
 
@@ -158,7 +319,6 @@ void ACA_On_Demand_Engine::parse_packet(uint32_t in_port, void *packet)
   string ip_src, ip_dest;
   int port_src, port_dest, packet_size;
   Protocol _protocol = Protocol::Protocol_INT_MAX_SENTINEL_DO_NOT_USE_;
-  OperationStatus on_demand_reply;
 
   uint16_t ether_type = ntohs(*(uint16_t *)(base + 12));
   if (ether_type == ETHERTYPE_VLAN) {
@@ -176,19 +336,21 @@ void ACA_On_Demand_Engine::parse_packet(uint32_t in_port, void *packet)
   if (ether_type == ETHERTYPE_ARP) {
     ACA_LOG_DEBUG("%s", "Ethernet Type: ARP (0x0806) \n");
     ACA_LOG_DEBUG("   From: %s\n", inet_ntoa(*(in_addr *)(base + 14 + vlan_len + 14)));
-    ACA_LOG_DEBUG("     to: %s\n", inet_ntoa(*(in_addr *)(base + 14 + vlan_len + 14 + 10)));
+    ACA_LOG_DEBUG("     to: %s\n",
+                  inet_ntoa(*(in_addr *)(base + 14 + vlan_len + 14 + 10)));
     /* compute arp message offset */
-    unsigned char *arp_hdr= (unsigned char *)(base + SIZE_ETHERNET + vlan_len);
+    unsigned char *arp_hdr = (unsigned char *)(base + SIZE_ETHERNET + vlan_len);
     /* arp request procedure,type = 1 */
-    if(ntohs(*(uint16_t *)(arp_hdr + 6)) == 0x0001){
-      if (aca_arp_responder::ACA_ARP_Responder::get_instance().arp_recv(in_port,vlan_hdr,arp_hdr) == ENOTSUP) {
-          _protocol = Protocol::ARP;
-          arp_message *arpmsg = (arp_message *)arp_hdr;
-          ip_src = aca_arp_responder::ACA_ARP_Responder::get_instance()._get_source_ip(arpmsg);
-          ip_dest = aca_arp_responder::ACA_ARP_Responder::get_instance()._get_requested_ip(arpmsg);
-          packet_size = SIZE_ETHERNET + vlan_len + 28;
-          port_src = 0;
-          port_dest = 0;
+    if (ntohs(*(uint16_t *)(arp_hdr + 6)) == 0x0001) {
+      if (aca_arp_responder::ACA_ARP_Responder::get_instance().arp_recv(
+                  in_port, vlan_hdr, arp_hdr) == ENOTSUP) {
+        _protocol = Protocol::ARP;
+        arp_message *arpmsg = (arp_message *)arp_hdr;
+        ip_src = aca_arp_responder::ACA_ARP_Responder::get_instance()._get_source_ip(arpmsg);
+        ip_dest = aca_arp_responder::ACA_ARP_Responder::get_instance()._get_requested_ip(arpmsg);
+        packet_size = SIZE_ETHERNET + vlan_len + 28;
+        port_src = 0;
+        port_dest = 0;
       }
     }
   } else if (ether_type == ETHERTYPE_IP) {
@@ -310,8 +472,41 @@ void ACA_On_Demand_Engine::parse_packet(uint32_t in_port, void *packet)
   }
 
   if (_protocol != Protocol::Protocol_INT_MAX_SENTINEL_DO_NOT_USE_) {
-    on_demand_reply = unknown_recv(vlan_id, ip_src, ip_dest, port_src, port_dest, _protocol);
-    on_demand(on_demand_reply, in_port, packet, SIZE_ETHERNET + vlan_len + packet_size, _protocol);
+    packet_size = SIZE_ETHERNET + vlan_len + packet_size;
+    uuid_t uuid;
+    uuid_generate_time(uuid);
+    char uuid_str[37];
+    uuid_unparse_lower(uuid, uuid_str);
+    on_demand_payload *data = new on_demand_payload;
+    void *packet_copy = malloc(packet_size);
+    memcpy(packet_copy, packet, packet_size);
+    data->in_port = in_port;
+    data->packet = packet_copy;
+    data->packet_size = packet_size;
+    data->protocol = _protocol;
+    data->insert_time = std::chrono::steady_clock::now();
+    std::chrono::_V2::steady_clock::time_point start = std::chrono::steady_clock::now();
+
+    /* Sleep until the size is less than the max limit. */
+    while (request_uuid_on_demand_payload_map.size() >= REQUEST_UUID_ON_DEMAND_PAYLOAD_MAP_MAX_SIZE) {
+      usleep(REQUEST_UUID_ON_DEMAND_PAYLOAD_MAP_SIZE_CHECK_FREQUENCY_IN_MICROSECONDS);
+    }
+
+    /* Critical section begins */
+    _payload_map_mutex.lock();
+    request_uuid_on_demand_payload_map[uuid_str] = data;
+    _payload_map_mutex.unlock();
+    /* Critical section ends */
+    std::chrono::_V2::steady_clock::time_point end = std::chrono::steady_clock::now();
+
+    auto cleanup_time = cast_to_microseconds(end - start).count();
+
+    ACA_LOG_DEBUG("Inserting one entry into request_uuid_on_demand_payload_map took [%ld]us, which is [%ld]ms\n",
+                  cleanup_time, us_to_ms(cleanup_time));
+    ACA_LOG_DEBUG("Inserted data into the map, UUID: [%s], in_port: [%d], protocol: [%d]\n",
+                  uuid_str, in_port, _protocol);
+
+    unknown_recv(vlan_id, ip_src, ip_dest, port_src, port_dest, _protocol, uuid_str);
   }
 }
 

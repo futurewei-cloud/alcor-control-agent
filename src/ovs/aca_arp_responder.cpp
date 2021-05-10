@@ -20,6 +20,7 @@
 #include <shared_mutex>
 #include <arpa/inet.h>
 #include <errno.h>
+#include <unistd.h>
 
 using namespace std;
 
@@ -51,7 +52,7 @@ void ACA_ARP_Responder::_init_arp_ofp()
 {
   // int overall_rc = EXIT_SUCCESS;
   // unsigned long not_care_culminative_time;
-  // remove the following 
+  // remove the following
   // aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
   //         "add-flow br-tun \"table=0,priority=50,arp,arp_op=1, actions=CONTROLLER\"",
   //         not_care_culminative_time, overall_rc);
@@ -72,6 +73,13 @@ ACA_ARP_Responder &ACA_ARP_Responder::get_instance()
 {
   static ACA_ARP_Responder instance;
   return instance;
+}
+bool ACA_ARP_Responder::does_arp_entry_exist(arp_entry_data stData)
+{
+  bool entry_exist = false;
+  arp_table_data *current_arp_data = nullptr;
+  entry_exist = _arp_db.find(stData, current_arp_data);
+  return entry_exist;
 }
 
 int ACA_ARP_Responder::add_arp_entry(arp_config *arp_cfg_in)
@@ -254,7 +262,7 @@ void ACA_ARP_Responder::arp_xmit(uint32_t in_port, void *vlanmsg, void *message,
 }
 
 int ACA_ARP_Responder::_parse_arp_request(uint32_t in_port, vlan_message *vlanmsg,
-                                           arp_message *arpmsg)
+                                          arp_message *arpmsg)
 {
   arp_entry_data stData;
   arp_table_data *current_arp_data = new arp_table_data;

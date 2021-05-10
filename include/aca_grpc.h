@@ -31,7 +31,9 @@ class GoalStateProvisionerImpl final : public GoalStateProvisioner::Service {
   public:
   std::unique_ptr<GoalStateProvisioner::Stub> stub_;
   std::shared_ptr<grpc_impl::Channel> chan_;
-  HostRequestReply RequestGoalStates(HostRequest *request);
+  
+  void RequestGoalStates(HostRequest *request, grpc::CompletionQueue *cq);
+
   // ~GoalStateProvisionerImpl();
   explicit GoalStateProvisionerImpl(){};
   Status PushNetworkResourceStates(ServerContext *context, const GoalState *goalState,
@@ -49,4 +51,11 @@ class GoalStateProvisionerImpl final : public GoalStateProvisioner::Service {
 
   private:
   std::unique_ptr<Server> server;
+};
+
+struct AsyncClientCall {
+  alcor::schema::HostRequestReply reply;
+  grpc::ClientContext context;
+  grpc::Status status;
+  std::unique_ptr<grpc::ClientAsyncResponseReader<alcor::schema::HostRequestReply> > response_reader;
 };
