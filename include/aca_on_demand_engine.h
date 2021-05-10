@@ -53,6 +53,13 @@ class ACA_On_Demand_Engine {
   */
   std::thread *on_demand_payload_cleaning_thread;
   grpc::CompletionQueue _cq;
+
+  /*
+      If there is a good way to iterate thru the CTSL::HashMap,
+      we should change this request_uuid_on_demand_payload_map 
+      back to this HashMap. Using unordered_map and locking it 
+      with a mutex will prabably bring performance issues in the future.
+  */
   unordered_map<std::string, on_demand_payload *, std::hash<std::string> > request_uuid_on_demand_payload_map;
   std::mutex _payload_map_mutex;
   /* This records when clean_remaining_payload() ran last time, 
