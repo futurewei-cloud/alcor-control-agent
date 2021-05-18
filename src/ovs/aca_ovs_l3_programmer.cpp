@@ -732,6 +732,7 @@ int ACA_OVS_L3_Programmer::create_or_update_router(RouterConfiguration &current_
         } else {
           ACA_LOG_INFO("Using existing router subnet table entry for subnet id %s\n",
                        current_router_subnet_id.c_str());
+          new_subnet_routing_tables[current_router_subnet_id] = new_subnet_routing_table_entry;
         }
       } else {
         ACA_LOG_ERROR("Not able to find the info for router with subnet ID: %s.\n",
