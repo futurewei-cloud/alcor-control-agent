@@ -328,11 +328,6 @@ int ACA_OVS_L3_Programmer::create_or_update_router(RouterConfiguration &current_
                          current_router_subnet_id.c_str());
             new_subnet_routing_tables[current_router_subnet_id] = new_subnet_routing_table_entry;
           }
-          ACA_LOG_DEBUG("After inserting subnet routing table entry for subnet: %s, printing out the contents:\n",
-                        current_router_subnet_id.c_str());
-          for (auto kv : new_subnet_routing_tables) {
-            ACA_LOG_DEBUG("subnet_id: %s\n", kv.first.c_str());
-          }
           subnet_info_found = true;
           break;
         }
@@ -353,20 +348,9 @@ int ACA_OVS_L3_Programmer::create_or_update_router(RouterConfiguration &current_
       // -----critical section ends-----
       ACA_LOG_INFO("Added router entry for router id %s\n", router_id.c_str());
     } else {
-      ACA_LOG_DEBUG("Using existing router entry for router id %s\n", router_id.c_str());
-      ACA_LOG_DEBUG("Let's print out what we have in router %s 's subnet routing table.\n",
-                    router_id);
-      for (auto kv : _routers_table[router_id]) {
-        ACA_LOG_DEBUG("subnet_id: %s\n", kv.first.c_str());
-      }
       _routers_table_mutex.lock();
       _routers_table[router_id] = new_subnet_routing_tables;
       _routers_table_mutex.unlock();
-      ACA_LOG_DEBUG("After updating, print out what we have in router %s 's subnet routing table.\n",
-                    router_id);
-      for (auto kv : _routers_table[router_id]) {
-        ACA_LOG_DEBUG("subnet_id: %s\n", kv.first.c_str());
-      }
     }
 
   } catch (const std::invalid_argument &e) {
