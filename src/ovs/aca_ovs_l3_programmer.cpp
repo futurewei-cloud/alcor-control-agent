@@ -839,9 +839,6 @@ int ACA_OVS_L3_Programmer::create_or_update_l3_neighbor(
       // for each other subnet connected to this router, create the routing rule
       for (auto subnet_it = router_it->second.begin();
            subnet_it != router_it->second.end(); subnet_it++) {
-        // ACA_LOG_INFO("[create_or_update_l3_neighbor] router ID: [%s], subnet routering table's subnet ID: [%s], subnet_id we're looking for: [%s]\n",
-        //              router_it->first.c_str(), subnet_it->first.c_str(),
-        //              subnet_id.c_str());
         if (subnet_it->first == subnet_id) {
           // for the destination subnet, add the neighbor port to track it
           neighbor_port_table_entry new_neighbor_port_table_entry;
