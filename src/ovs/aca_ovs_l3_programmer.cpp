@@ -753,6 +753,11 @@ int ACA_OVS_L3_Programmer::create_or_update_router(RouterConfiguration &current_
       ACA_LOG_INFO("Added router entry for router id %s\n", router_id.c_str());
     } else {
       ACA_LOG_INFO("Using existing router entry for router id %s\n", router_id.c_str());
+      // -----critical section starts-----
+      _routers_table_mutex.lock();
+      _routers_table[router_id] = new_subnet_routing_tables;
+      _routers_table_mutex.unlock();
+      // -----critical section ends-----
     }
 
   } catch (const std::invalid_argument &e) {
