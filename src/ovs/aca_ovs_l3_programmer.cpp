@@ -821,10 +821,6 @@ int ACA_OVS_L3_Programmer::create_or_update_l3_neighbor(
   for (auto router_it = _routers_table.begin();
        router_it != _routers_table.end(); router_it++) {
     ACA_LOG_DEBUG("router ID:%s\n ", router_it->first.c_str());
-    for (auto kv : router_it->second) {
-      ACA_LOG_INFO("[create_or_update_l3_neighbor] router ID: [%s], subnet routering table's subnet ID: [%s], subnet_id we're looking for: [%s]\n",
-                   router_it->first.c_str(), kv.first.c_str(), subnet_id.c_str());
-    }
     // try to see if the destination subnet GW is connected to the current router
     auto found_subnet = router_it->second.find(subnet_id);
 
