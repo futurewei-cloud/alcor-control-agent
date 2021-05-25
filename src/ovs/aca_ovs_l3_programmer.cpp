@@ -326,8 +326,8 @@ int ACA_OVS_L3_Programmer::create_or_update_router(RouterConfiguration &current_
           } else {
             ACA_LOG_INFO("Using existing router subnet table entry for subnet id %s\n",
                          current_router_subnet_id.c_str());
+            new_subnet_routing_tables[current_router_subnet_id] = new_subnet_routing_table_entry;
           }
-
           subnet_info_found = true;
           break;
         }
@@ -348,7 +348,11 @@ int ACA_OVS_L3_Programmer::create_or_update_router(RouterConfiguration &current_
       // -----critical section ends-----
       ACA_LOG_INFO("Added router entry for router id %s\n", router_id.c_str());
     } else {
-      ACA_LOG_INFO("Using existing router entry for router id %s\n", router_id.c_str());
+      // -----critical section starts-----
+      _routers_table_mutex.lock();
+      _routers_table[router_id] = new_subnet_routing_tables;
+      _routers_table_mutex.unlock();
+      // -----critical section ends-----
     }
 
   } catch (const std::invalid_argument &e) {
@@ -732,6 +736,7 @@ int ACA_OVS_L3_Programmer::create_or_update_router(RouterConfiguration &current_
         } else {
           ACA_LOG_INFO("Using existing router subnet table entry for subnet id %s\n",
                        current_router_subnet_id.c_str());
+          new_subnet_routing_tables[current_router_subnet_id] = new_subnet_routing_table_entry;
         }
       } else {
         ACA_LOG_ERROR("Not able to find the info for router with subnet ID: %s.\n",
@@ -750,6 +755,11 @@ int ACA_OVS_L3_Programmer::create_or_update_router(RouterConfiguration &current_
       ACA_LOG_INFO("Added router entry for router id %s\n", router_id.c_str());
     } else {
       ACA_LOG_INFO("Using existing router entry for router id %s\n", router_id.c_str());
+      // -----critical section starts-----
+      _routers_table_mutex.lock();
+      _routers_table[router_id] = new_subnet_routing_tables;
+      _routers_table_mutex.unlock();
+      // -----critical section ends-----
     }
 
   } catch (const std::invalid_argument &e) {
@@ -818,7 +828,6 @@ int ACA_OVS_L3_Programmer::create_or_update_l3_neighbor(
   for (auto router_it = _routers_table.begin();
        router_it != _routers_table.end(); router_it++) {
     ACA_LOG_DEBUG("router ID:%s\n ", router_it->first.c_str());
-
     // try to see if the destination subnet GW is connected to the current router
     auto found_subnet = router_it->second.find(subnet_id);
 
