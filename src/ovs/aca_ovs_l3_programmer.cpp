@@ -142,8 +142,6 @@ int ACA_OVS_L3_Programmer::create_or_update_router(RouterConfiguration &current_
 
     // it is okay for have subnet_routing_tables_size = 0
     for (int i = 0; i < current_RouterConfiguration.subnet_routing_tables_size(); i++) {
-      // reset the default value of subnet_info_found for each subnet_id
-      subnet_info_found = false;
       auto current_subnet_routing_table =
               current_RouterConfiguration.subnet_routing_tables(i);
 
