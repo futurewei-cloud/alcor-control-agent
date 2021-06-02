@@ -142,6 +142,8 @@ int ACA_OVS_L3_Programmer::create_or_update_router(RouterConfiguration &current_
 
     // it is okay for have subnet_routing_tables_size = 0
     for (int i = 0; i < current_RouterConfiguration.subnet_routing_tables_size(); i++) {
+      // reset the default value of subnet_info_found for each subnet_id
+      subnet_info_found = false;
       auto current_subnet_routing_table =
               current_RouterConfiguration.subnet_routing_tables(i);
 
@@ -332,12 +334,13 @@ int ACA_OVS_L3_Programmer::create_or_update_router(RouterConfiguration &current_
           break;
         }
 
-        if (!subnet_info_found) {
-          ACA_LOG_ERROR("Not able to find the info for router with subnet ID: %s.\n",
-                        current_router_subnet_id.c_str());
-          overall_rc = -EXIT_FAILURE;
-        }
       } // for (int j = 0; j < parsed_struct.subnet_states_size(); j++)
+      // check subnet_info_found only once per loop through the subnet states.
+      if (!subnet_info_found) {
+        ACA_LOG_ERROR("Not able to find the info for router with subnet ID: %s.\n",
+                      current_router_subnet_id.c_str());
+        overall_rc = -EXIT_FAILURE;
+      }
     } // for (int i = 0; i < current_RouterConfiguration.subnet_routing_tables_size(); i++)
 
     if (!is_router_exist || (current_RouterConfiguration.update_type() == UpdateType::FULL)) {
