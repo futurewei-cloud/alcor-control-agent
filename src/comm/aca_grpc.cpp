@@ -87,15 +87,87 @@ GoalStateProvisionerImpl::PushNetworkResourceStates(ServerContext * /* context *
 
 Status GoalStateProvisionerImpl::PushGoalStatesStream(
         ServerContext * /* context */,
-        ServerReaderWriter<GoalStateOperationReply, GoalStateV2> *stream)
+        ServerAsyncReaderWriter<GoalStateOperationReply, GoalStateV2> *stream)
 {
   GoalStateV2 goalStateV2;
-  GoalStateOperationReply gsOperationReply;
-  int rc = EXIT_FAILURE;
+  grpc::ServerContext ctx;
 
-  while (stream->Read(&goalStateV2)) {
-    std::chrono::_V2::steady_clock::time_point start = std::chrono::steady_clock::now();
+  void* got_tag = nullptr;
+  bool ok = false;
 
+  enum class Type { READY_TO_READ = 1, READY_TO_WRITE = 2, READY_TO_CONNECT = 3, DONE = 4, FINISH = 5 };
+
+  ACA_LOG_DEBUG("be called");
+  service_.RequestPushGoalStatesStream(&ctx, stream, cq_.get(), cq_.get(), 
+                                        reinterpret_cast<void*>(Type::READY_TO_READ));
+  ctx.AsyncNotifyWhenDone(reinterpret_cast<void*>(Type::FINISH));
+
+  while (cq_->Next(&got_tag, &ok))
+  {
+    if (ok) {
+      switch (static_cast<Type>(reinterpret_cast<size_t>(got_tag)))
+      {
+        case Type::READY_TO_WRITE: 
+        {
+            std::cout << "Read a new message." << std::endl;
+            std::chrono::_V2::steady_clock::time_point start = std::chrono::steady_clock::now();
+            thread_pool.push(std::bind(&GoalStateProvisionerImpl::PushGoalStatesWorker, this, goalStateV2, stream, start, 
+                              reinterpret_cast<void*>(Type::READY_TO_READ)));
+            ACA_LOG_DEBUG("After using the thread pool, we have %ld idle threads in the pool, thread pool size: %ld\n",
+                            thread_pool.n_idle(), thread_pool.size());
+            break;
+        }
+        case Type::READY_TO_READ:
+        {
+            std::cout << "Sending message (async)." << std::endl;
+            // change the ptr?
+            GoalStateV2* goalStateV2 = new GoalStateV2;
+            stream->Read(goalStateV2, reinterpret_cast<void*>(Type::READY_TO_WRITE));
+            break;
+        }
+        case Type::FINISH:
+        {
+            std::cout << "Server quitting." << std::endl;
+            break;
+        }
+        default:
+        {
+            std::cerr << "Unexpected tag " << got_tag << std::endl;
+            assert(false);
+        }
+      }
+    }
+  }
+    // rc = Aca_Comm_Manager::get_instance().update_goal_state(goalStateV2, gsOperationReply);
+    // if (rc == EXIT_SUCCESS) {
+    //   ACA_LOG_INFO("Control Fast Path streaming - Successfully updated host with latest goal state %d.\n",
+    //                rc);
+    // } else if (rc == EINPROGRESS) {
+    //   ACA_LOG_INFO("Control Fast Path streaming - Update host with latest goal state returned pending, rc=%d.\n",
+    //                rc);
+    // } else {
+    //   ACA_LOG_ERROR("Control Fast Path streaming - Failed to update host with latest goal state, rc=%d.\n",
+    //                 rc);
+    // }
+    // std::chrono::_V2::steady_clock::time_point end = std::chrono::steady_clock::now();
+    // auto message_total_operation_time =
+    //         std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+
+    // ACA_LOG_INFO("[METRICS] Received goalstate at: [%ld], update finished at: [%ld]\nElapsed time for update goalstate operation took: %ld microseconds or %ld milliseconds\n",
+    //              start, end, message_total_operation_time,
+    //              (message_total_operation_time / 1000));
+
+  return Status::OK;
+}
+
+void
+GoalStateProvisionerImpl::PushGoalStatesWorker(GoalStateV2 &goalStateV2, 
+                                               ServerAsyncReaderWriter<GoalStateOperationReply, GoalStateV2> *stream,
+                                               std::chrono::_V2::steady_clock::time_point start,
+                                               void *tag)
+{
+    GoalStateOperationReply gsOperationReply;
+    int rc = EXIT_FAILURE;
     rc = Aca_Comm_Manager::get_instance().update_goal_state(goalStateV2, gsOperationReply);
     if (rc == EXIT_SUCCESS) {
       ACA_LOG_INFO("Control Fast Path streaming - Successfully updated host with latest goal state %d.\n",
@@ -114,11 +186,9 @@ Status GoalStateProvisionerImpl::PushGoalStatesStream(
     ACA_LOG_INFO("[METRICS] Received goalstate at: [%ld], update finished at: [%ld]\nElapsed time for update goalstate operation took: %ld microseconds or %ld milliseconds\n",
                  start, end, message_total_operation_time,
                  (message_total_operation_time / 1000));
-    stream->Write(gsOperationReply);
+    stream->Write(gsOperationReply, tag);
+    std::cout << "after write" << std::endl;
     gsOperationReply.Clear();
-  }
-
-  return Status::OK;
 }
 
 Status GoalStateProvisionerImpl::ShutDownServer()
@@ -151,11 +221,18 @@ void GoalStateProvisionerImpl::RunServer()
 {
   this->ConnectToNCM();
   ServerBuilder builder;
+  
   string GRPC_SERVER_ADDRESS = "0.0.0.0:" + g_grpc_server_port;
   builder.AddListeningPort(GRPC_SERVER_ADDRESS, grpc::InsecureServerCredentials());
+  // builder.RegisterService(&service_);
   builder.RegisterService(this);
+  cq_ = builder.AddCompletionQueue();
   server = builder.BuildAndStart();
   ACA_LOG_INFO("Streaming capable GRPC server listening on %s\n",
                GRPC_SERVER_ADDRESS.c_str());
+  thread_pool.resize(32);
+  // dispatcher = new std::thread(std::bind(&GoalStateProvisionerImpl::PushGoalStatesStream, this));
+  // dispatcher->detach();
+
   server->Wait();
 }

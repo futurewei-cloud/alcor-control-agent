@@ -17,6 +17,7 @@
 #include <grpcpp/grpcpp.h>
 #include <grpc/support/log.h>
 #include "goalstateprovisioner.grpc.pb.h"
+#include "ctpl/ctpl_stl.h"
 
 using namespace alcor::schema;
 using grpc::Server;
@@ -24,6 +25,8 @@ using grpc::ServerBuilder;
 using grpc::ServerContext;
 using grpc::ServerReader;
 using grpc::ServerReaderWriter;
+using grpc::ServerAsyncReaderWriter;
+using grpc::ServerCompletionQueue;
 using grpc::ServerWriter;
 using grpc::Status;
 
@@ -31,7 +34,13 @@ class GoalStateProvisionerImpl final : public GoalStateProvisioner::Service {
   public:
   std::unique_ptr<GoalStateProvisioner::Stub> stub_;
   std::shared_ptr<grpc_impl::Channel> chan_;
-  
+
+  /* This thread is responsible for dispatching GoalStatesV2 to the thread pool */
+  // std::thread *dispatcher;
+  std::unique_ptr<ServerCompletionQueue> cq_;
+  ctpl::thread_pool thread_pool;
+  GoalStateProvisioner::AsyncService service_;
+
   void RequestGoalStates(HostRequest *request, grpc::CompletionQueue *cq);
 
   // ~GoalStateProvisionerImpl();
@@ -41,7 +50,12 @@ class GoalStateProvisionerImpl final : public GoalStateProvisioner::Service {
 
   Status
   PushGoalStatesStream(ServerContext *context,
-                       ServerReaderWriter<GoalStateOperationReply, GoalStateV2> *stream) override;
+                       ServerAsyncReaderWriter<GoalStateOperationReply, GoalStateV2> *stream) /*override */;
+  void
+  PushGoalStatesWorker(GoalStateV2 &goalStateV2, 
+                       ServerAsyncReaderWriter<GoalStateOperationReply, GoalStateV2> *stream,
+                       std::chrono::_V2::steady_clock::time_point start,
+                       void *tag);
 
   Status ShutDownServer();
 
