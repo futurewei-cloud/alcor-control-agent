@@ -235,7 +235,7 @@ GoalStateProvisionerAsyncImpl::PushGoalStatesStreamWorker()
   while (true)
   { 
     if (!cq_->Next(&got_tag, &ok)) {
-        ACA_LOG_DEBUG("Server stream closed. Quitting");
+        ACA_LOG_DEBUG("Server stream closed. Quitting\n");
         break;
     }
     if (ok) {
@@ -243,7 +243,7 @@ GoalStateProvisionerAsyncImpl::PushGoalStatesStreamWorker()
       {
         case Type::READY_TO_WRITE: 
         {
-            ACA_LOG_DEBUG("Writing a new message (Async GRPC)");
+            ACA_LOG_DEBUG("Writing a new message (Async GRPC)\n");
             std::chrono::_V2::steady_clock::time_point start = std::chrono::steady_clock::now();
             GoalStateOperationReply gsOperationReply;
             int rc = Aca_Comm_Manager::get_instance().update_goal_state(goalStateV2, gsOperationReply);
@@ -272,38 +272,36 @@ GoalStateProvisionerAsyncImpl::PushGoalStatesStreamWorker()
         }
         case Type::READY_TO_READ:
         {
-            ACA_LOG_DEBUG("Reading a new message (Async GRPC)");
+            ACA_LOG_DEBUG("Reading a new message (Async GRPC)\n");
             stream_->Read(&goalStateV2, reinterpret_cast<void*>(Type::READY_TO_WRITE));
             break;
         }
         case Type::FINISH:
         {
-            ACA_LOG_DEBUG("Finishing the stream (Async GRPC)");
+            ACA_LOG_DEBUG("Finishing the stream (Async GRPC)\n");
             stream_->Finish(Status::OK, reinterpret_cast<void*>(Type::DONE));
             break;
         }
         case Type::DONE:
         {
-            ACA_LOG_DEBUG("Stream Done (Async GRPC)");
-            std::cout << "Warning: Done." << std::endl;
+            ACA_LOG_DEBUG("Stream Done (Async GRPC)\n");
             break;
         }
         default:
         {   
-            ACA_LOG_ERROR("Unexpected tag (Async GRPC): %ld", got_tag);
-            // assert(false);
+            ACA_LOG_ERROR("Unexpected tag (Async GRPC): %ld\n", got_tag);
         }
       }
     }
     else {
       size_t failed_tag = reinterpret_cast<size_t>(got_tag);
       if (failed_tag == static_cast<size_t>(Type::READY_TO_WRITE)) {
-        ACA_LOG_DEBUG("Read Failed, Read Again (Async GRPC)");
+        ACA_LOG_DEBUG("Read Failed, Read Again (Async GRPC)\n");
         stream_->Read(&goalStateV2, reinterpret_cast<void*>(Type::READY_TO_WRITE));
         break;
       }
       else if (failed_tag == static_cast<size_t>(Type::FINISH)) {
-        ACA_LOG_DEBUG("Server quitting (Async GRPC)");
+        ACA_LOG_DEBUG("Server quitting (Async GRPC)\n");
         break;
       }
     }
