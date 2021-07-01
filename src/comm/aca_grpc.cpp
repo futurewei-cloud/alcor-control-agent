@@ -208,7 +208,6 @@ void GoalStateProvisionerAsyncImpl::RunServer()
   server = builder.BuildAndStart();
   ACA_LOG_INFO("Async GRPC Imple: Streaming capable GRPC server listening on %s\n",
                GRPC_SERVER_ADDRESS.c_str());
-  thread_pool.resize(32);
   std::this_thread::sleep_for (std::chrono::seconds(1));
 
   stream_.reset(new ServerAsyncReaderWriter<GoalStateOperationReply, GoalStateV2>(&ctx_));
@@ -216,13 +215,7 @@ void GoalStateProvisionerAsyncImpl::RunServer()
                                         reinterpret_cast<void*>(Type::READY_TO_READ));
   ctx_.AsyncNotifyWhenDone(reinterpret_cast<void*>(Type::FINISH));
 
-  int threads_num = 10;
-  for (int i = 0; i < threads_num; i++) {
-    thread_pool.push(std::bind(&GoalStateProvisionerAsyncImpl::PushGoalStatesStreamWorker, this));
-  }
-  std::this_thread::sleep_for(std::chrono::seconds(1));
-  ACA_LOG_DEBUG("After using the thread pool, we have %ld idle threads in the pool, thread pool size: %ld\n",
-                thread_pool.n_idle(), thread_pool.size());
+  this->PushGoalStatesStreamWorker();
   server->Wait();
 }
 

@@ -78,7 +78,6 @@ class GoalStateProvisionerAsyncImpl final : public GoalStateProvisioner::AsyncSe
   std::unique_ptr<ServerCompletionQueue> cq_;
   ServerContext ctx_;
   std::unique_ptr<ServerAsyncReaderWriter<GoalStateOperationReply,  GoalStateV2>> stream_;
-  ctpl::thread_pool thread_pool;
 };
 
 struct AsyncClientCall {
