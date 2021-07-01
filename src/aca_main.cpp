@@ -44,7 +44,7 @@ using namespace std;
 std::thread *g_grpc_server_thread = NULL;
 std::thread *ovs_monitor_brtun_thread = NULL;
 std::thread *ovs_monitor_brint_thread = NULL;
-GoalStateProvisionerImpl *g_grpc_server = NULL;
+GoalStateProvisionerAsyncImpl *g_grpc_server = NULL;
 string g_broker_list = EMPTY_STRING;
 string g_pulsar_topic = EMPTY_STRING;
 string g_pulsar_subsription_name = EMPTY_STRING;
@@ -213,9 +213,9 @@ int main(int argc, char *argv[])
     g_ofctl_target = OFCTL_TARGET;
   }
 
-  g_grpc_server = new GoalStateProvisionerImpl();
+  g_grpc_server = new GoalStateProvisionerAsyncImpl();
   g_grpc_server_thread =
-          new std::thread(std::bind(&GoalStateProvisionerImpl::RunServer, g_grpc_server));
+          new std::thread(std::bind(&GoalStateProvisionerAsyncImpl::RunServer, g_grpc_server));
   g_grpc_server_thread->detach();
 
   aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().setup_ovs_bridges_if_need();

@@ -36,14 +36,6 @@ class GoalStateProvisionerImpl final : public GoalStateProvisioner::Service {
   public:
   std::unique_ptr<GoalStateProvisioner::Stub> stub_;
   std::shared_ptr<grpc_impl::Channel> chan_;
-  std::unique_ptr<ServerCompletionQueue> cq_;
-  ctpl::thread_pool thread_pool;
-
-  /* This thread is responsible for dispatching GoalStatesV2 to the thread pool */
-  // std::thread *dispatcher;
-  // std::unique_ptr<ServerCompletionQueue> cq_;
-  // ctpl::thread_pool thread_pool;
-  // GoalStateProvisioner::AsyncService service_;
 
   void RequestGoalStates(HostRequest *request, grpc::CompletionQueue *cq);
 
@@ -52,9 +44,9 @@ class GoalStateProvisionerImpl final : public GoalStateProvisioner::Service {
   Status PushNetworkResourceStates(ServerContext *context, const GoalState *goalState,
                                    GoalStateOperationReply *goalStateOperationReply) override;
 
-  // Status
-  // PushGoalStatesStream(ServerContext *context,
-  //                      ServerReaderWriter<GoalStateOperationReply, GoalStateV2> *stream) override;
+  Status
+  PushGoalStatesStream(ServerContext *context,
+                       ServerReaderWriter<GoalStateOperationReply, GoalStateV2> *stream) override;
   Status ShutDownServer();
 
   void RunServer();
@@ -66,25 +58,15 @@ class GoalStateProvisionerImpl final : public GoalStateProvisioner::Service {
 };
 
 class GoalStateProvisionerAsyncImpl final : public GoalStateProvisioner::AsyncService {
+  enum class Type { READY_TO_READ = 1, READY_TO_WRITE = 2, READY_TO_CONNECT = 3, DONE = 4, FINISH = 5 };
+
   public:
   std::unique_ptr<GoalStateProvisioner::Stub> stub_;
   std::shared_ptr<grpc_impl::Channel> chan_;
 
-  /* This thread is responsible for dispatching GoalStatesV2 to the thread pool */
-  // std::thread *dispatcher;
-  std::unique_ptr<ServerCompletionQueue> cq_;
-  std::unique_ptr<ServerAsyncReaderWriter<GoalStateOperationReply,  GoalStateV2>> stream_;
-  ctpl::thread_pool thread_pool;
-
-  // Status
-  // PushGoalStatesStream(ServerContext *context,
-  //                      ServerAsyncReaderWriter<GoalStateOperationReply, GoalStateV2> *stream) /*override */;
   void
-  PushGoalStatesWorker(GoalStateV2 &goalStateV2, 
-                       ServerAsyncReaderWriter<GoalStateOperationReply, GoalStateV2> *stream,
-                       std::chrono::_V2::steady_clock::time_point start,
-                       void *tag);
-
+  PushGoalStatesStreamWorker();
+  
   Status ShutDownServer();
 
   void RunServer();
@@ -93,8 +75,11 @@ class GoalStateProvisionerAsyncImpl final : public GoalStateProvisioner::AsyncSe
 
   private:
   std::unique_ptr<Server> server;
+  std::unique_ptr<ServerCompletionQueue> cq_;
+  ServerContext ctx_;
+  std::unique_ptr<ServerAsyncReaderWriter<GoalStateOperationReply,  GoalStateV2>> stream_;
+  ctpl::thread_pool thread_pool;
 };
-
 
 struct AsyncClientCall {
   alcor::schema::HostRequestReply reply;
