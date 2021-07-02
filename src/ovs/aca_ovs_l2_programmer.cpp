@@ -236,27 +236,27 @@ int ACA_OVS_L2_Programmer::create_port(const string vpc_id, const string port_na
     if (command_rc != EXIT_SUCCESS)
       overall_rc = command_rc;
   } else {
-    // non-demo mode is for nova integration, where the vif and ovs port has been
-    // created by nova compute agent running on the compute host
+    // // non-demo mode is for nova integration, where the vif and ovs port has been
+    // // created by nova compute agent running on the compute host
 
-    // just need to set the vlan tag on the ovs port, the ovs port may be not created by nova yet
-    string cmd_string = "set port " + port_name + " tag=" + to_string(internal_vlan_id);
+    // // just need to set the vlan tag on the ovs port, the ovs port may be not created by nova yet
+    // string cmd_string = "set port " + port_name + " tag=" + to_string(internal_vlan_id);
 
-    execute_ovsdb_command(cmd_string, culminative_time, overall_rc);
+    // execute_ovsdb_command(cmd_string, culminative_time, overall_rc);
 
-    // if the ovs port is not there to set to vlan, we will return PENDING as the result
-    // and spin up the new thread to keep trying that in the backgroud
-    if (overall_rc != EXIT_SUCCESS) {
-      overall_rc = EINPROGRESS;
+    // // if the ovs port is not there to set to vlan, we will return PENDING as the result
+    // // and spin up the new thread to keep trying that in the backgroud
+    // if (overall_rc != EXIT_SUCCESS) {
+    //   overall_rc = EINPROGRESS;
 
-      // start a new background thread work set the port vlan
-      std::thread t(aca_set_port_vlan_workitem, port_name, internal_vlan_id);
+    //   // start a new background thread work set the port vlan
+    //   std::thread t(aca_set_port_vlan_workitem, port_name, internal_vlan_id);
 
-      // purposely not wait for this aca_set_port_vlan_workitem
-      if (t.joinable()) {
-        t.detach();
-      }
-    }
+    //   // purposely not wait for this aca_set_port_vlan_workitem
+    //   if (t.joinable()) {
+    //     t.detach();
+    //   }
+    // }
   }
 
   ACA_LOG_DEBUG("ACA_OVS_L2_Programmer::create_port <--- Exiting, overall_rc = %d\n", overall_rc);
