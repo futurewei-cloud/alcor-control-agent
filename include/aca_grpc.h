@@ -65,6 +65,7 @@ class GoalStateProvisionerAsyncServer {
   Status ShutDownServer();
   void RunServer();
   void ConnectToNCM();
+  void RequestGoalStates(HostRequest *request, grpc::CompletionQueue *cq);
 
   private:
   std::unique_ptr<Server> server;
