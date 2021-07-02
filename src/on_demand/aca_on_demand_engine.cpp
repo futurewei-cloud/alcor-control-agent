@@ -51,7 +51,7 @@ using namespace alcor::schema;
 extern std::atomic_ulong g_total_execute_system_time;
 extern bool g_demo_mode;
 extern string g_ncm_address, g_ncm_port;
-extern GoalStateProvisionerAsyncServer*g_grpc_server;
+extern GoalStateProvisionerAsyncServer* g_grpc_server;
 
 namespace aca_on_demand_engine
 {

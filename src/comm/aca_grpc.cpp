@@ -154,7 +154,6 @@ void GoalStateProvisionerImpl::RunServer()
   
   string GRPC_SERVER_ADDRESS = "0.0.0.0:" + g_grpc_server_port;
   builder.AddListeningPort(GRPC_SERVER_ADDRESS, grpc::InsecureServerCredentials());
-  // builder.RegisterService(&service_);
   builder.RegisterService(this);
   server = builder.BuildAndStart();
   ACA_LOG_INFO("Streaming capable GRPC server listening on %s\n",
