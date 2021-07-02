@@ -57,27 +57,45 @@ class GoalStateProvisionerImpl final : public GoalStateProvisioner::Service {
   std::unique_ptr<Server> server;
 };
 
-class GoalStateProvisionerAsyncImpl final : public GoalStateProvisioner::AsyncService {
-  enum class Type { READY_TO_READ = 1, READY_TO_WRITE = 2, READY_TO_CONNECT = 3, DONE = 4, FINISH = 5 };
-
+class GoalStateProvisionerAsyncServer {
   public:
   std::unique_ptr<GoalStateProvisioner::Stub> stub_;
   std::shared_ptr<grpc_impl::Channel> chan_;
 
-  void
-  PushGoalStatesStreamWorker();
-  
   Status ShutDownServer();
-
   void RunServer();
-
   void ConnectToNCM();
 
   private:
   std::unique_ptr<Server> server;
   std::unique_ptr<ServerCompletionQueue> cq_;
+  GoalStateProvisioner::AsyncService service_;
+};
+
+class GoalStateProvisionerAsyncInstance {
+  public:
+  enum StreamStatus { READY_TO_CONNECT, CONNECTED, READY_TO_READ, READY_TO_WRITE, DONE, FINISH};
+  GoalStateProvisionerAsyncInstance(GoalStateProvisioner::AsyncService* service, ServerCompletionQueue* cq)
+  {
+    service_ = service;
+    cq_ = cq;
+    stream_ = new ServerAsyncReaderWriter<GoalStateOperationReply, GoalStateV2>(&ctx_);
+    status_ = READY_TO_CONNECT;
+    PushGoalStatesStreamWorker(true);
+  }
+
+  void
+  PushGoalStatesStreamWorker(bool ok);
+
+  StreamStatus status_;
+
+  private:
+  GoalStateProvisioner::AsyncService* service_;
+  ServerCompletionQueue* cq_;
   ServerContext ctx_;
-  std::unique_ptr<ServerAsyncReaderWriter<GoalStateOperationReply,  GoalStateV2>> stream_;
+  ServerAsyncReaderWriter<GoalStateOperationReply, GoalStateV2>* stream_;
+  GoalStateV2 goalStateV2;
+  GoalStateOperationReply gsOperationReply;
 };
 
 struct AsyncClientCall {
