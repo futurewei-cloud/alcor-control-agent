@@ -51,7 +51,7 @@ using namespace alcor::schema;
 extern std::atomic_ulong g_total_execute_system_time;
 extern bool g_demo_mode;
 extern string g_ncm_address, g_ncm_port;
-extern GoalStateProvisionerImpl *g_grpc_server;
+extern GoalStateProvisionerAsyncServer*g_grpc_server;
 
 namespace aca_on_demand_engine
 {
@@ -193,6 +193,7 @@ void ACA_On_Demand_Engine::unknown_recv(uint16_t vlan_id, string ip_src,
   new_state_requests->set_destination_port(port_dest);
   new_state_requests->set_protocol(protocol);
   new_state_requests->set_ethertype(EtherType::IPV4);
+
   std::chrono::_V2::steady_clock::time_point now = std::chrono::steady_clock::now();
   ACA_LOG_DEBUG("For UUID [%s], calling NCM for info of IP [%s] at: [%ld], tunnel_id: []",
                 uuid_str, ip_dest.c_str(), now, tunnel_id);

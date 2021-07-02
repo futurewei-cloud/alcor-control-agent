@@ -162,10 +162,7 @@ void GoalStateProvisionerImpl::RunServer()
   server->Wait();
 }
 
-
-
-void GoalStateProvisionerAsyncServer::RequestGoalStates(HostRequest *request,
-                                                 grpc::CompletionQueue *cq)
+void GoalStateProvisionerAsyncServer::RequestGoalStates(HostRequest *request, grpc::CompletionQueue *cq)
 {
   grpc::ClientContext ctx;
   alcor::schema::HostRequestReply reply;
