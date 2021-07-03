@@ -82,21 +82,25 @@ class GoalStateProvisionerAsyncInstance {
     cq_ = cq;
     stream_ = new ServerAsyncReaderWriter<GoalStateOperationReply, GoalStateV2>(&ctx_);
     status_ = READY_TO_CONNECT;
-    PushGoalStatesStreamWorker(true);
+    thread_pool_.resize(32);
+    PushGoalStatesStream(true);
   }
 
   void
-  PushGoalStatesStreamWorker(bool ok);
+  PushGoalStatesStream(bool ok);
+  void
+  Worker();
 
-  StreamStatus status_;
+  volatile StreamStatus status_;
 
   private:
   GoalStateProvisioner::AsyncService* service_;
   ServerCompletionQueue* cq_;
   ServerContext ctx_;
   ServerAsyncReaderWriter<GoalStateOperationReply, GoalStateV2>* stream_;
-  GoalStateV2 goalStateV2;
-  GoalStateOperationReply gsOperationReply;
+  GoalStateV2 goalStateV2_;
+  GoalStateOperationReply gsOperationReply_;
+  ctpl::thread_pool thread_pool_;
 };
 
 struct AsyncClientCall {
