@@ -739,6 +739,58 @@ int ACA_OVS_L3_Programmer::create_or_update_router(RouterConfiguration &current_
                        current_router_subnet_id.c_str());
           new_subnet_routing_tables[current_router_subnet_id] = new_subnet_routing_table_entry;
         }
+        // TODO: Apply the new subnet table rule to OVS.
+        /*
+            Example:
+            table=20,priority=50,dl_vlan=1,nw_dst=new_subnet_routing_table_entry.cidr \
+            actions=strip_vlan,load:new_subnet_routing_table_entry.tunnel_id->NXM_NX_TUN_ID[],\
+            load:new_subnet_routing_table_entry.gateway_ip->NXM_NX_TUN_IPV4_DST[],output:"vxlan-generic"
+        */
+        // string new_subnet_routing_table_entry_ovs_command_string;
+        // new_subnet_routing_table_entry_ovs_command_string =
+        //         "table=20,priority=50,dl_vlan=" + to_string(source_vlan_id) +
+        //         ",nw_dst=" + new_subnet_routing_table_entry.cidr +
+        //         "actions=strip_vlan,load:" + to_string(found_tunnel_id) +
+        //         "->NXM_NX_TUN_ID[]," + "load:" + new_subnet_routing_table_entry.gateway_ip +
+        //         "->NXM_NX_TUN_IPV4_DST[],output:\"vxlan-generic\"";
+        // ACA_LOG_DEBUG("Adding this rule, based on new_subnet_routing_table_entry, to ovs: [ovs-ofctl %s]\n",
+        //               new_subnet_routing_table_entry_ovs_command_string);
+        // ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
+        //         new_subnet_routing_table_entry_ovs_command_string,
+        //         dataplane_programming_time, overall_rc);
+        for (auto routing_rule_id_to_routing_rules :
+             new_subnet_routing_table_entry.routing_rules) {
+          auto routing_rule_id = routing_rule_id_to_routing_rules.first;
+          auto routing_rule = routing_rule_id_to_routing_rules.second;
+          string remote_host_ip;
+          // need to find the remote_host_ip for this routing_rule.next_hop_ip
+
+          for (auto neighborPortTableEntry : new_subnet_routing_table_entry.neighbor_ports) {
+            if (neighborPortTableEntry.second.virtual_ip == routing_rule.next_hop_ip) {
+              remote_host_ip = neighborPortTableEntry.second.host_ip;
+            }
+          }
+          // if not found, then do on-demand again
+          if (remote_host_ip.empty()) {
+            ACA_LOG_WARN("Cannot find host IP for this next_hop_ip: [%s], not applying ovs rule\n",
+                         routing_rule.next_hop_ip);
+          } else {
+            string new_subnet_routing_table_entry_routing_rule_ovs_command_string;
+            new_subnet_routing_table_entry_routing_rule_ovs_command_string =
+                    "table=20,priority=" + to_string(routing_rule.priority) +
+                    ",dl_vlan=" + to_string(source_vlan_id) +
+                    ",nw_dst=" + routing_rule.destination +
+                    "actions=strip_vlan,load:" + to_string(found_tunnel_id) +
+                    "->NXM_NX_TUN_ID[]," + ",set_field:" + remote_host_ip +
+                    "->tun_dst,output:" + VXLAN_GENERIC_OUTPORT_NUMBER;
+            ACA_LOG_DEBUG("Adding this rule, based on routing rule [%s], to ovs: [ovs-ofctl %s]\n",
+                          routing_rule_id,
+                          new_subnet_routing_table_entry_routing_rule_ovs_command_string);
+            ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
+                    new_subnet_routing_table_entry_routing_rule_ovs_command_string,
+                    dataplane_programming_time, overall_rc);
+          }
+        }
       } else {
         ACA_LOG_ERROR("Not able to find the info for router with subnet ID: %s.\n",
                       current_router_subnet_id.c_str());
