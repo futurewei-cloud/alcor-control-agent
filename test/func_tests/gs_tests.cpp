@@ -53,7 +53,8 @@ string g_ncm_port = EMPTY_STRING;
 string g_grpc_server_port = EMPTY_STRING;
 // by default, this should run as GRCP client, unless specified by the corresponding flag.
 bool g_run_as_server = false;
-GoalStateProvisionerImpl *g_grpc_server = NULL;
+GoalStateProvisionerAsyncServer *g_grpc_server = NULL;
+GoalStateProvisionerClientImpl *g_grpc_client = NULL;
 // GoalStateProvisionerServer *g_test_grcp_server = NULL;
 
 // total time for execute_system_command in microseconds
@@ -142,25 +143,16 @@ int RunServer()
 {
   ACA_LOG_INFO("%s", "GS test runnig as a grpc server\n");
 
-  std::string server_address("0.0.0.0:54321");
+  g_grpc_server = new GoalStateProvisionerAsyncServer();
+  auto g_grpc_server_thread =
+          new std::thread(std::bind(&GoalStateProvisionerAsyncServer::RunServer, g_grpc_server));
+  g_grpc_server_thread->detach();
 
-  GoalStateProvisioner::Service service;
+  g_grpc_client = new GoalStateProvisionerClientImpl();
+  auto g_grpc_client_thread = new std::thread(
+          std::bind(&GoalStateProvisionerClientImpl::RunClient, g_grpc_client));
+  g_grpc_client_thread->detach();
 
-  ServerBuilder builder;
-  // Listen on the given address without any authentication mechanism.
-  builder.AddListeningPort(server_address, grpc::InsecureServerCredentials());
-  ACA_LOG_INFO("%s", "Added listening port\n");
-
-  builder.RegisterService(&service);
-  ACA_LOG_INFO("%s", "Registered service\n");
-
-  std::unique_ptr<Server> server(builder.BuildAndStart());
-
-  ACA_LOG_INFO("Test Server listening on %s", server_address.c_str());
-  // Wait for the server to shutdown.
-  // Note that some other thread must be responsible for shutting down the server for this call to ever return.
-  server->Wait();
-  // server->Shutdown();
   return 0;
 }
 
@@ -726,6 +718,7 @@ int main(int argc, char *argv[])
       g_run_as_server = true;
       break;
     default: /* the '?' case when the option is not recognized */
+      /* specifying port not avaiable for now */
       fprintf(stderr,
               "Usage: %s\n"
               "\t\t[-s grpc server]\n"
