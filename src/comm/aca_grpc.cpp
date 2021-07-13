@@ -110,6 +110,14 @@ GoalStateProvisionerAsyncInstance::PushGoalStatesStream(bool ok)
       }
       case READY_TO_WRITE: 
       {
+          if (goalStateV2_.neighbor_states_size() == 1) {
+            // if there's only one neighbor state, it means that it is pushed
+            // because of the on-demand request
+            auto received_gs_time_high_res = std::chrono::high_resolution_clock::now();
+            auto neighbor_id = goalStateV2_.neighbor_states().begin()->first.c_str();
+            ACA_LOG_INFO("Neighbor ID: %s received at: %ld milliseconds\n", neighbor_id,
+                        std::chrono::duration_cast<std::chrono::milliseconds>(received_gs_time_high_res.time_since_epoch()).count());
+          }
           std::chrono::_V2::steady_clock::time_point start = std::chrono::steady_clock::now(); 
           int rc = Aca_Comm_Manager::get_instance().update_goal_state(goalStateV2_, gsOperationReply_);
           if (rc == EXIT_SUCCESS) {
