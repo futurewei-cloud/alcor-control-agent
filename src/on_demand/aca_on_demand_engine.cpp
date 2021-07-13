@@ -118,33 +118,10 @@ void ACA_On_Demand_Engine::process_async_replies_asyncly(
 {
   ACA_LOG_INFO("Trying to process this hostOperationReply in another thread id: [%ld]",
                std::this_thread::get_id());
-  // std::chrono::_V2::high_resolution_clock::time_point received_ncm_reply_time =
-  //         std::chrono::high_resolution_clock::now();
-  // HostRequestReply_HostRequestOperationStatus hostOperationStatus;
-  // OperationStatus replyStatus;
   std::unordered_map<std::__cxx11::string, on_demand_payload *, std::hash<std::__cxx11::string> >::iterator found_data;
   // string request_id;
   on_demand_payload *request_payload;
-  // if (ok) {
-  //   ACA_LOG_DEBUG("%s\n", "_cq->Next is good, ready to static cast the Async Client Call");
-
-  //   AsyncClientCall *call = static_cast<AsyncClientCall *>(got_tag);
-
-  //   ACA_LOG_DEBUG("%s\n", "Async Client Call casted successfully.");
-
-  // if (status.ok()) {
   ACA_LOG_DEBUG("%s\n", "Got an GRPC reply that is OK, need to process it.");
-  // for (int i = 0; i < reply.operation_statuses_size(); i++) {
-  //   hostOperationStatus = reply.operation_statuses(i);
-  //   replyStatus = hostOperationStatus.operation_status();
-  //   request_id = hostOperationStatus.request_id();
-  //   found_data = request_uuid_on_demand_payload_map.find(request_id);
-  // }
-  // ACA_LOG_DEBUG("For UUID: [%s], NCM called returned at: %ld milliseconds\n",
-  //               request_id.c_str(),
-  //               chrono::duration_cast<chrono::milliseconds>(
-  //                       received_ncm_reply_time.time_since_epoch())
-  //                       .count());
   ACA_LOG_DEBUG("Return from NCM - Reply Status: %s\n", to_string(replyStatus).c_str());
   found_data = request_uuid_on_demand_payload_map.find(request_id);
   if (found_data != request_uuid_on_demand_payload_map.end()) {
