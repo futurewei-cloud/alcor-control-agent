@@ -68,10 +68,10 @@ add_test(
 )
 
 # goal state test to process goal state message and send to local client
-add_executable(gs_tests func_tests/gs_tests.cpp)
+# add_executable(gs_tests func_tests/gs_tests.cpp)
 
-target_link_libraries(gs_tests AlcorControlAgentLib)
-target_link_libraries(gs_tests proto)
-target_link_libraries(gs_tests ${PROTOBUF_LIBRARY})
-target_link_libraries(gs_tests grpc)
-target_link_libraries(gs_tests ${_GRPC_GRPCPP_UNSECURE})
+# target_link_libraries(gs_tests AlcorControlAgentLib)
+# target_link_libraries(gs_tests proto)
+# target_link_libraries(gs_tests ${PROTOBUF_LIBRARY})
+# target_link_libraries(gs_tests grpc)
+# target_link_libraries(gs_tests ${_GRPC_GRPCPP_UNSECURE})

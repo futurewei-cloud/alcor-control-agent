@@ -38,192 +38,17 @@ extern string g_ncm_port;
 using namespace alcor::schema;
 using aca_comm_manager::Aca_Comm_Manager;
 
-void GoalStateProvisionerImpl::RequestGoalStates(HostRequest *request,
-                                                 grpc::CompletionQueue *cq)
-{
-  grpc::ClientContext ctx;
-  alcor::schema::HostRequestReply reply;
-
-  // check current grpc channel state, try to connect if needed
-  grpc_connectivity_state current_state = chan_->GetState(true);
-  if (current_state == grpc_connectivity_state::GRPC_CHANNEL_SHUTDOWN ||
-      current_state == grpc_connectivity_state::GRPC_CHANNEL_TRANSIENT_FAILURE) {
-    ACA_LOG_INFO("%s, it is: [%d]\n",
-                 "Channel state is not READY/CONNECTING/IDLE. Try to reconnnect.",
-                 current_state);
-    this->ConnectToNCM();
-    reply.mutable_operation_statuses()->Add();
-    reply.mutable_operation_statuses()->at(0).set_operation_status(OperationStatus::FAILURE);
-    return;
-  }
-  AsyncClientCall *call = new AsyncClientCall;
-  call->response_reader = stub_->AsyncRequestGoalStates(&call->context, *request, cq);
-  call->response_reader->Finish(&call->reply, &call->status, (void *)call);
-  return;
-}
-
-Status
-GoalStateProvisionerImpl::PushNetworkResourceStates(ServerContext * /* context */,
-                                                    const GoalState *goalState,
-                                                    GoalStateOperationReply *goalStateOperationReply)
-{
-  GoalState received_goal_state = *goalState;
-
-  int rc = Aca_Comm_Manager::get_instance().update_goal_state(
-          received_goal_state, *goalStateOperationReply);
-  if (rc == EXIT_SUCCESS) {
-    ACA_LOG_INFO("Control Fast Path synchronized - Successfully updated host with latest goal state %d.\n",
-                 rc);
-  } else if (rc == EINPROGRESS) {
-    ACA_LOG_INFO("Control Fast Path synchronized - Update host with latest goal state returned pending, rc=%d.\n",
-                 rc);
-  } else {
-    ACA_LOG_ERROR("Control Fast Path synchronized - Failed to update host with latest goal state, rc=%d.\n",
-                  rc);
-  }
-
-  return Status::OK;
-}
-
-Status GoalStateProvisionerImpl::PushGoalStatesStream(
-        ServerContext * /* context */,
-        ServerReaderWriter<GoalStateOperationReply, GoalStateV2> *stream)
-{
-  GoalStateV2 goalStateV2;
-  GoalStateOperationReply gsOperationReply;
-  int rc = EXIT_FAILURE;
-
-  while (stream->Read(&goalStateV2)) {
-    std::chrono::_V2::steady_clock::time_point start = std::chrono::steady_clock::now();
-
-    rc = Aca_Comm_Manager::get_instance().update_goal_state(goalStateV2, gsOperationReply);
-    if (rc == EXIT_SUCCESS) {
-      ACA_LOG_INFO("Control Fast Path streaming - Successfully updated host with latest goal state %d.\n",
-                   rc);
-    } else if (rc == EINPROGRESS) {
-      ACA_LOG_INFO("Control Fast Path streaming - Update host with latest goal state returned pending, rc=%d.\n",
-                   rc);
-    } else {
-      ACA_LOG_ERROR("Control Fast Path streaming - Failed to update host with latest goal state, rc=%d.\n",
-                    rc);
-    }
-    std::chrono::_V2::steady_clock::time_point end = std::chrono::steady_clock::now();
-    auto message_total_operation_time =
-            std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
-
-    ACA_LOG_INFO("[METRICS] Received goalstate at: [%ld], update finished at: [%ld]\nElapsed time for update goalstate operation took: %ld microseconds or %ld milliseconds\n",
-                 start, end, message_total_operation_time,
-                 (message_total_operation_time / 1000));
-    stream->Write(gsOperationReply);
-    gsOperationReply.Clear();
-  }
-
-  return Status::OK;
-}
-
-Status GoalStateProvisionerImpl::ShutDownServer()
-{
-  ACA_LOG_INFO("%s", "Shutdown server");
-  server->Shutdown();
-  return Status::OK;
-}
-
-void GoalStateProvisionerImpl::ConnectToNCM()
-{
-  ACA_LOG_INFO("%s\n", "Trying to init a new sub to connect to the NCM");
-  grpc::ChannelArguments args;
-  // Channel does a keep alive ping every 10 seconds;
-  args.SetInt(GRPC_ARG_KEEPALIVE_TIME_MS, 10000);
-  // If the channel does receive the keep alive ping result in 20 seconds, it closes the connection
-  args.SetInt(GRPC_ARG_KEEPALIVE_TIMEOUT_MS, 20000);
-
-  // Allow keep alive ping even if there are no calls in flight
-  args.SetInt(GRPC_ARG_KEEPALIVE_PERMIT_WITHOUT_CALLS, 1);
-
-  chan_ = grpc::CreateCustomChannel(g_ncm_address + ":" + g_ncm_port,
-                                    grpc::InsecureChannelCredentials(), args);
-  stub_ = GoalStateProvisioner::NewStub(chan_);
-
-  ACA_LOG_INFO("%s\n", "After initing a new sub to connect to the NCM");
-}
-
-void GoalStateProvisionerImpl::RunServer()
-{
-  this->ConnectToNCM();
-  ServerBuilder builder;
-  
-  string GRPC_SERVER_ADDRESS = "0.0.0.0:" + g_grpc_server_port;
-  builder.AddListeningPort(GRPC_SERVER_ADDRESS, grpc::InsecureServerCredentials());
-  builder.RegisterService(this);
-  server = builder.BuildAndStart();
-  ACA_LOG_INFO("Streaming capable GRPC server listening on %s\n",
-               GRPC_SERVER_ADDRESS.c_str());
-  server->Wait();
-}
-
-void GoalStateProvisionerAsyncServer::RequestGoalStates(HostRequest *request, grpc::CompletionQueue *cq)
-{
-  grpc::ClientContext ctx;
-  alcor::schema::HostRequestReply reply;
-
-  // check current grpc channel state, try to connect if needed
-  grpc_connectivity_state current_state = chan_->GetState(true);
-  if (current_state == grpc_connectivity_state::GRPC_CHANNEL_SHUTDOWN ||
-      current_state == grpc_connectivity_state::GRPC_CHANNEL_TRANSIENT_FAILURE) {
-    ACA_LOG_INFO("%s, it is: [%d]\n",
-                 "Channel state is not READY/CONNECTING/IDLE. Try to reconnnect.",
-                 current_state);
-    this->ConnectToNCM();
-    reply.mutable_operation_statuses()->Add();
-    reply.mutable_operation_statuses()->at(0).set_operation_status(OperationStatus::FAILURE);
-    return;
-  }
-  AsyncClientCall *call = new AsyncClientCall;
-  call->response_reader = stub_->AsyncRequestGoalStates(&call->context, *request, cq);
-  call->response_reader->Finish(&call->reply, &call->status, (void *)call);
-  return;
-}
-
-void GoalStateProvisionerAsyncServer::ConnectToNCM()
-{
-  ACA_LOG_INFO("%s\n", "Async Imple: Trying to init a new sub to connect to the NCM");
-  grpc::ChannelArguments args;
-  // Channel does a keep alive ping every 10 seconds;
-  args.SetInt(GRPC_ARG_KEEPALIVE_TIME_MS, 10000);
-  // If the channel does receive the keep alive ping result in 20 seconds, it closes the connection
-  args.SetInt(GRPC_ARG_KEEPALIVE_TIMEOUT_MS, 20000);
-
-  // Allow keep alive ping even if there are no calls in flight
-  args.SetInt(GRPC_ARG_KEEPALIVE_PERMIT_WITHOUT_CALLS, 1);
-
-  chan_ = grpc::CreateCustomChannel(g_ncm_address + ":" + g_ncm_port,
-                                    grpc::InsecureChannelCredentials(), args);
-  stub_ = GoalStateProvisioner::NewStub(chan_);
-
-  ACA_LOG_INFO("%s\n", "After initing a new sub to connect to the NCM");
-}
-
 Status 
 GoalStateProvisionerAsyncServer::ShutDownServer()
 {
   ACA_LOG_INFO("%s", "Shutdown server");
-  server->Shutdown();
+  server_->Shutdown();
   cq_->Shutdown();
   return Status::OK;
 }
 
-void GoalStateProvisionerAsyncServer::RunServer()
+void GoalStateProvisionerAsyncServer::AsyncWorker()
 {
-  this->ConnectToNCM();
-  ServerBuilder builder;
-  string GRPC_SERVER_ADDRESS = "0.0.0.0:" + g_grpc_server_port;
-  builder.AddListeningPort(GRPC_SERVER_ADDRESS, grpc::InsecureServerCredentials());
-  builder.RegisterService(&service_);
-  cq_ = builder.AddCompletionQueue();
-  server = builder.BuildAndStart();
-  ACA_LOG_INFO("Async GRPC: Streaming capable GRPC server listening on %s\n",
-               GRPC_SERVER_ADDRESS.c_str());
-
   void* got_tag;
   bool ok;
   new GoalStateProvisionerAsyncInstance(&service_, cq_.get());
@@ -237,35 +62,27 @@ void GoalStateProvisionerAsyncServer::RunServer()
   }
 }
 
-void GoalStateProvisionerAsyncInstance::Worker()
+void GoalStateProvisionerAsyncServer::RunServer()
 {
-    GoalStateV2 goalStateV2(goalStateV2_);
-    GoalStateOperationReply gsOperationReply(gsOperationReply_);
-    gsOperationReply.Clear();
+  ServerBuilder builder;
+  string GRPC_SERVER_ADDRESS = "0.0.0.0:" + g_grpc_server_port;
+  builder.AddListeningPort(GRPC_SERVER_ADDRESS, grpc::InsecureServerCredentials());
+  builder.RegisterService(&service_);
+  cq_ = builder.AddCompletionQueue();
+  server_ = builder.BuildAndStart();
+  ACA_LOG_INFO("Async GRPC: Streaming capable GRPC server listening on %s\n",
+               GRPC_SERVER_ADDRESS.c_str());
 
-    std::chrono::_V2::steady_clock::time_point start = std::chrono::steady_clock::now(); 
-    int rc = Aca_Comm_Manager::get_instance().update_goal_state(goalStateV2, gsOperationReply);
-    if (rc == EXIT_SUCCESS) {
-      ACA_LOG_INFO("Control Fast Path streaming - Successfully updated host with latest goal state %d.\n",
-                  rc);
-    } else if (rc == EINPROGRESS) {
-      ACA_LOG_INFO("Control Fast Path streaming - Update host with latest goal state returned pending, rc=%d.\n",
-                  rc);
-    } else {
-      ACA_LOG_ERROR("Control Fast Path streaming - Failed to update host with latest goal state, rc=%d.\n",
-                    rc);
-    }
-    std::chrono::_V2::steady_clock::time_point end = std::chrono::steady_clock::now();
-    auto message_total_operation_time =
-            std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+  int pool_size = 16;
+  thread_pool_.resize(pool_size);
+  std::this_thread::sleep_for (std::chrono::seconds(1));
 
-    ACA_LOG_INFO("[METRICS] Received goalstate at: [%ld], update finished at: [%ld]\nElapsed time for update goalstate operation took: %ld microseconds or %ld milliseconds\n",
-                start, end, message_total_operation_time,
-                (message_total_operation_time / 1000));
-
-    stream_->Write(gsOperationReply, this);
-    status_ = READY_TO_READ;
-    gsOperationReply_.Clear();
+  for (int i = 0; i < pool_size; i++) {
+    thread_pool_.push(std::bind(&GoalStateProvisionerAsyncServer::AsyncWorker, this));
+  }
+  ACA_LOG_DEBUG("After using the thread pool, we have %ld idle threads in the pool, thread pool size: %ld\n",
+                thread_pool_.n_idle(), thread_pool_.size());
+  server_->Wait();
 }
 
 void
@@ -291,23 +108,32 @@ GoalStateProvisionerAsyncInstance::PushGoalStatesStream(bool ok)
           status_ = READY_TO_READ;
           break;
       }
-      case CONNECTED:
-      {   
-          ACA_LOG_DEBUG("Connected (Async GRPC)\n");
-          ctx_.AsyncNotifyWhenDone(this);
-          status_ = READY_TO_READ;
-          break;
-      }
       case READY_TO_WRITE: 
       {
-        ACA_LOG_DEBUG("Writing a new message (Async GRPC)\n");
-        new GoalStateProvisionerAsyncInstance(service_, cq_);
+          std::chrono::_V2::steady_clock::time_point start = std::chrono::steady_clock::now(); 
+          int rc = Aca_Comm_Manager::get_instance().update_goal_state(goalStateV2_, gsOperationReply_);
+          if (rc == EXIT_SUCCESS) {
+            ACA_LOG_INFO("Control Fast Path streaming - Successfully updated host with latest goal state %d.\n",
+                        rc);
+          } else if (rc == EINPROGRESS) {
+            ACA_LOG_INFO("Control Fast Path streaming - Update host with latest goal state returned pending, rc=%d.\n",
+                        rc);
+          } else {
+            ACA_LOG_ERROR("Control Fast Path streaming - Failed to update host with latest goal state, rc=%d.\n",
+                          rc);
+          }
+          std::chrono::_V2::steady_clock::time_point end = std::chrono::steady_clock::now();
+          auto message_total_operation_time =
+                  std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
 
-
-        thread_pool_.push(std::bind(&GoalStateProvisionerAsyncInstance::Worker, this));
-        ACA_LOG_DEBUG("After using the thread pool, we have %ld idle threads in the pool, thread pool size: %ld\n",
-                       thread_pool_.n_idle(), thread_pool_.size());
-        break;
+          ACA_LOG_INFO("[METRICS] Received goalstate at: [%ld], update finished at: [%ld]\nElapsed time for update goalstate operation took: %ld microseconds or %ld milliseconds\n",
+                      start, end, message_total_operation_time,
+                      (message_total_operation_time / 1000));
+          new GoalStateProvisionerAsyncInstance(service_, cq_);
+          stream_->Write(gsOperationReply_, this);
+          status_ = READY_TO_READ;
+          gsOperationReply_.Clear();
+          break;
       }
       case READY_TO_READ:
       {
@@ -316,18 +142,11 @@ GoalStateProvisionerAsyncInstance::PushGoalStatesStream(bool ok)
           status_ = READY_TO_WRITE;
           break;
       }
-      case FINISH:
-      {
-          ACA_LOG_DEBUG("Finishing the stream (Async GRPC)\n");
-          stream_->Finish(Status::OK, this);
-          status_ = DONE;
-          break;
-      }
       case DONE:
       {
-          ACA_LOG_DEBUG("Stream Done (Async GRPC)\n");
-          thread_pool_.stop();
+          ACA_LOG_DEBUG("Killing the stream (Async GRPC)\n");
           delete this;
+          break;
       }
     }
   }

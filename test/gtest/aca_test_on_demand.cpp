@@ -12,15 +12,17 @@
 #include <string>
 #include <thread>
 #include "aca_grpc.h"
+#include "aca_grpc_client.h"
 #include "aca_on_demand_engine.h"
 
-extern GoalStateProvisionerImpl *g_grpc_server;
+// extern GoalStateProvisionerImpl *g_grpc_server;
+extern GoalStateProvisionerClientImpl *g_grpc_client;
 
 TEST(aca_on_demand_testcases, DISABLED_grpc_client_connectivity_test)
 {
   sleep(10);
   ACA_LOG_INFO("%s", "Start of DISABLED_grpc_client_connectivity_test\n");
-  ASSERT_NE(g_grpc_server, nullptr);
+  ASSERT_NE(g_grpc_client, nullptr);
   ACA_LOG_INFO("%s", "Made sure that g_grpc_server is not null\n");
 
   // test sending a request with an expected request_id, which should return
@@ -33,10 +35,10 @@ TEST(aca_on_demand_testcases, DISABLED_grpc_client_connectivity_test)
   string unexpected_request_id = "54321";
 
   example_request_with_expected_id.mutable_state_requests(0)->set_request_id(expected_request_id);
-  ACA_LOG_INFO("Channel state: %d\n", g_grpc_server->chan_->GetState(false));
+  ACA_LOG_INFO("Channel state: %d\n", g_grpc_client->chan_->GetState(false));
   ACA_LOG_INFO("Request one's request ID: %s\n",
                example_request_with_expected_id.state_requests(0).request_id().c_str());
-  g_grpc_server->RequestGoalStates(&example_request_with_expected_id, &cq);
+  g_grpc_client->RequestGoalStates(&example_request_with_expected_id, &cq);
 
   HostRequest example_request_with_unexpected_id;
   example_request_with_unexpected_id.add_state_requests();
@@ -44,7 +46,7 @@ TEST(aca_on_demand_testcases, DISABLED_grpc_client_connectivity_test)
   ACA_LOG_INFO("Request two's request ID: %s\n",
                example_request_with_unexpected_id.state_requests(0).request_id().c_str());
 
-  g_grpc_server->RequestGoalStates(&example_request_with_unexpected_id, &cq);
+  g_grpc_client->RequestGoalStates(&example_request_with_unexpected_id, &cq);
 
   void *got_tag;
   bool ok = false;

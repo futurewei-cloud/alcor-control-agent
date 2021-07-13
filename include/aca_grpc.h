@@ -64,34 +64,31 @@ class GoalStateProvisionerAsyncServer {
 
   Status ShutDownServer();
   void RunServer();
-  void ConnectToNCM();
-  void RequestGoalStates(HostRequest *request, grpc::CompletionQueue *cq);
+  void AsyncWorker();
 
   private:
-  std::unique_ptr<Server> server;
+  std::unique_ptr<Server> server_;
   std::unique_ptr<ServerCompletionQueue> cq_;
   GoalStateProvisioner::AsyncService service_;
+  ctpl::thread_pool thread_pool_;
 };
 
 class GoalStateProvisionerAsyncInstance {
   public:
-  enum StreamStatus { READY_TO_CONNECT, CONNECTED, READY_TO_READ, READY_TO_WRITE, DONE, FINISH};
+  enum StreamStatus { READY_TO_CONNECT, READY_TO_READ, READY_TO_WRITE, DONE};
   GoalStateProvisionerAsyncInstance(GoalStateProvisioner::AsyncService* service, ServerCompletionQueue* cq)
   {
     service_ = service;
     cq_ = cq;
     stream_ = new ServerAsyncReaderWriter<GoalStateOperationReply, GoalStateV2>(&ctx_);
     status_ = READY_TO_CONNECT;
-    thread_pool_.resize(32);
     PushGoalStatesStream(true);
   }
 
   void
   PushGoalStatesStream(bool ok);
-  void
-  Worker();
 
-  volatile StreamStatus status_;
+  StreamStatus status_;
 
   private:
   GoalStateProvisioner::AsyncService* service_;
@@ -100,12 +97,4 @@ class GoalStateProvisionerAsyncInstance {
   ServerAsyncReaderWriter<GoalStateOperationReply, GoalStateV2>* stream_;
   GoalStateV2 goalStateV2_;
   GoalStateOperationReply gsOperationReply_;
-  ctpl::thread_pool thread_pool_;
-};
-
-struct AsyncClientCall {
-  alcor::schema::HostRequestReply reply;
-  grpc::ClientContext context;
-  grpc::Status status;
-  std::unique_ptr<grpc::ClientAsyncResponseReader<alcor::schema::HostRequestReply> > response_reader;
 };

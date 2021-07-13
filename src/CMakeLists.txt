@@ -7,6 +7,7 @@ set(SOURCES
     ./comm/aca_message_pulsar_producer.cpp
     ./comm/aca_comm_mgr.cpp
     ./comm/aca_grpc.cpp
+    ./comm/aca_grpc_client.cpp
     ./dp_abstraction/aca_goal_state_handler.cpp
     ./dp_abstraction/aca_dataplane_ovs.cpp
     ./net_config/aca_net_config.cpp

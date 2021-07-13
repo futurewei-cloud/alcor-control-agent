@@ -17,6 +17,7 @@
 #include "gtest/gtest.h"
 #include "goalstate.pb.h"
 #include "aca_grpc.h"
+#include "aca_grpc_client.h"
 #include "aca_message_pulsar_producer.h"
 #include <unistd.h> /* for getopt */
 #include <grpcpp/grpcpp.h>
@@ -36,7 +37,9 @@ string g_ncm_address = EMPTY_STRING;
 string g_ncm_port = EMPTY_STRING;
 string g_grpc_server_port = EMPTY_STRING;
 std::thread *g_grpc_server_thread = NULL;
-GoalStateProvisionerImpl *g_grpc_server = NULL;
+GoalStateProvisionerAsyncServer *g_grpc_server = NULL;
+std::thread *g_grpc_client_thread = NULL;
+GoalStateProvisionerClientImpl *g_grpc_client = NULL;
 
 // total time for execute_system_command in microseconds
 std::atomic_ulong g_initialize_execute_system_time(0);
@@ -174,10 +177,15 @@ int main(int argc, char **argv)
     }
   }
 
-  g_grpc_server = new GoalStateProvisionerImpl();
+  g_grpc_server = new GoalStateProvisionerAsyncServer();
   g_grpc_server_thread =
-          new std::thread(std::bind(&GoalStateProvisionerImpl::RunServer, g_grpc_server));
+          new std::thread(std::bind(&GoalStateProvisionerAsyncServer::RunServer, g_grpc_server));
   g_grpc_server_thread->detach();
+
+  g_grpc_client = new GoalStateProvisionerClientImpl();
+  g_grpc_client_thread = new std::thread(
+          std::bind(&GoalStateProvisionerClientImpl::RunClient, g_grpc_client));
+  g_grpc_client_thread->detach();
 
   int rc = RUN_ALL_TESTS();
 
