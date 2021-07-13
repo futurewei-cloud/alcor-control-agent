@@ -768,9 +768,37 @@ int ACA_OVS_L3_Programmer::create_or_update_router(RouterConfiguration &current_
           for (auto neighborPortTableEntry : new_subnet_routing_table_entry.neighbor_ports) {
             if (neighborPortTableEntry.second.virtual_ip == routing_rule.next_hop_ip) {
               remote_host_ip = neighborPortTableEntry.second.host_ip;
+              ACA_LOG_DEBUG("Found the host ip for next_hop_ip: [%s] in local cache!\n",
+                            routing_rule.next_hop_ip);
+              break;
             }
           }
-          // if not found, then do on-demand again
+          // if not found, check the current goalstate's neighbor states
+          if (remote_host_ip.empty()) {
+            ACA_LOG_WARN("Cannot find host IP for this next_hop_ip: [%s] in the local cache , need to check if the current goalstate has it\n",
+                         routing_rule.next_hop_ip);
+            for (auto neighbor_state : parsed_struct.neighbor_states()) {
+              auto current_neighbor_state = neighbor_state.second;
+              auto neighbor_configuration = current_neighbor_state.configuration();
+              auto neighbor_configuration_vpc_id = neighbor_configuration.vpc_id();
+              if (neighbor_configuration_vpc_id == found_vpc_id) {
+                // loop through all fixed IPs, to see if the virtual IP is the same, if they match, the remote host IP is what we are looking for.
+                for (int ip_index = 0;
+                     ip_index < neighbor_configuration.fixed_ips_size(); ip_index++) {
+                  auto current_fixed_ip = neighbor_configuration.fixed_ips(ip_index);
+                  if (current_fixed_ip.ip_address() == routing_rule.next_hop_ip) {
+                    remote_host_ip = neighbor_configuration.host_ip_address();
+                    break;
+                  }
+                }
+              }
+            }
+            if (remote_host_ip.empty()) {
+              ACA_LOG_WARN("Cannot find host IP for this next_hop_ip: [%s] in the current goalstate, something's wrong.\n",
+                           routing_rule.next_hop_ip);
+              overall_rc = -EXIT_FAILURE;
+            }
+          }
           if (remote_host_ip.empty()) {
             ACA_LOG_WARN("Cannot find host IP for this next_hop_ip: [%s], not applying ovs rule\n",
                          routing_rule.next_hop_ip);
