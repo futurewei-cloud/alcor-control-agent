@@ -178,8 +178,9 @@ int main(int argc, char **argv)
   }
 
   g_grpc_server = new GoalStateProvisionerAsyncServer();
+  int g_grpc_server_pool_size = 3;
   g_grpc_server_thread =
-          new std::thread(std::bind(&GoalStateProvisionerAsyncServer::RunServer, g_grpc_server));
+          new std::thread(std::bind(&GoalStateProvisionerAsyncServer::RunServer, g_grpc_server, g_grpc_server_pool_size));
   g_grpc_server_thread->detach();
 
   g_grpc_client = new GoalStateProvisionerClientImpl();

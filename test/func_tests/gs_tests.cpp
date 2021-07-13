@@ -143,9 +143,10 @@ int RunServer()
 {
   ACA_LOG_INFO("%s", "GS test runnig as a grpc server\n");
 
+  int pool_size = 3;
   g_grpc_server = new GoalStateProvisionerAsyncServer();
   auto g_grpc_server_thread =
-          new std::thread(std::bind(&GoalStateProvisionerAsyncServer::RunServer, g_grpc_server));
+          new std::thread(std::bind(&GoalStateProvisionerAsyncServer::RunServer, g_grpc_server, pool_size));
   g_grpc_server_thread->detach();
 
   g_grpc_client = new GoalStateProvisionerClientImpl();

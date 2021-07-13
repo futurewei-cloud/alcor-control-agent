@@ -44,6 +44,7 @@ GoalStateProvisionerAsyncServer::ShutDownServer()
   ACA_LOG_INFO("%s", "Shutdown server");
   server_->Shutdown();
   cq_->Shutdown();
+  thread_pool_.stop();
   return Status::OK;
 }
 
@@ -62,7 +63,7 @@ void GoalStateProvisionerAsyncServer::AsyncWorker()
   }
 }
 
-void GoalStateProvisionerAsyncServer::RunServer()
+void GoalStateProvisionerAsyncServer::RunServer(int thread_pool_size)
 {
   ServerBuilder builder;
   string GRPC_SERVER_ADDRESS = "0.0.0.0:" + g_grpc_server_port;
@@ -73,11 +74,10 @@ void GoalStateProvisionerAsyncServer::RunServer()
   ACA_LOG_INFO("Async GRPC: Streaming capable GRPC server listening on %s\n",
                GRPC_SERVER_ADDRESS.c_str());
 
-  int pool_size = 16;
-  thread_pool_.resize(pool_size);
-  std::this_thread::sleep_for (std::chrono::seconds(1));
+  thread_pool_.resize(thread_pool_size);
+  std::this_thread::sleep_for(std::chrono::seconds(1));
 
-  for (int i = 0; i < pool_size; i++) {
+  for (int i = 0; i < thread_pool_size; i++) {
     thread_pool_.push(std::bind(&GoalStateProvisionerAsyncServer::AsyncWorker, this));
   }
   ACA_LOG_DEBUG("After using the thread pool, we have %ld idle threads in the pool, thread pool size: %ld\n",

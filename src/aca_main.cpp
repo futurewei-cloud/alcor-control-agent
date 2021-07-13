@@ -38,6 +38,7 @@ static char PULSAR_SUBSCRIPTION_NAME[] = "Test-Subscription";
 static char GRPC_SERVER_PORT[] = "50001";
 static char OFCTL_COMMAND[] = "monitor";
 static char OFCTL_TARGET[] = "br-int";
+static int grpc_server_thread_pool_size = 16;
 
 using namespace std;
 
@@ -235,7 +236,7 @@ int main(int argc, char *argv[])
 
   g_grpc_server = new GoalStateProvisionerAsyncServer();
   g_grpc_server_thread =
-          new std::thread(std::bind(&GoalStateProvisionerAsyncServer::RunServer, g_grpc_server));
+          new std::thread(std::bind(&GoalStateProvisionerAsyncServer::RunServer, g_grpc_server, grpc_server_thread_pool_size));
   g_grpc_server_thread->detach();
 
   // Create a separate thread to run the grpc client.

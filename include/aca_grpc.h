@@ -32,38 +32,13 @@ using grpc::ServerCompletionQueue;
 using grpc::ServerWriter;
 using grpc::Status;
 
-class GoalStateProvisionerImpl final : public GoalStateProvisioner::Service {
-  public:
-  std::unique_ptr<GoalStateProvisioner::Stub> stub_;
-  std::shared_ptr<grpc_impl::Channel> chan_;
-
-  void RequestGoalStates(HostRequest *request, grpc::CompletionQueue *cq);
-
-  // ~GoalStateProvisionerImpl();
-  explicit GoalStateProvisionerImpl(){};
-  Status PushNetworkResourceStates(ServerContext *context, const GoalState *goalState,
-                                   GoalStateOperationReply *goalStateOperationReply) override;
-
-  Status
-  PushGoalStatesStream(ServerContext *context,
-                       ServerReaderWriter<GoalStateOperationReply, GoalStateV2> *stream) override;
-  Status ShutDownServer();
-
-  void RunServer();
-
-  void ConnectToNCM();
-
-  private:
-  std::unique_ptr<Server> server;
-};
-
 class GoalStateProvisionerAsyncServer {
   public:
   std::unique_ptr<GoalStateProvisioner::Stub> stub_;
   std::shared_ptr<grpc_impl::Channel> chan_;
 
   Status ShutDownServer();
-  void RunServer();
+  void RunServer(int thread_pool_size);
   void AsyncWorker();
 
   private:

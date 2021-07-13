@@ -18,6 +18,7 @@
 #define IPTOS_PREC_INTERNETCONTROL 0xc0
 #define DSCP_DEFAULT (IPTOS_PREC_INTERNETCONTROL >> 2)
 #define STDOUT_FILENO 1 /* Standard output.  */
+#define ON_DEMAND_POOL_SIZE 16 /* Standard output.  */
 
 #include "common.pb.h"
 #include <openvswitch/ofp-errors.h>
@@ -176,7 +177,7 @@ class ACA_On_Demand_Engine {
     on_demand_payload_cleaning_thread = new std::thread(
             std::bind(&ACA_On_Demand_Engine::clean_remaining_payload, this));
     on_demand_payload_cleaning_thread->detach();
-    thread_pool_.resize(16);
+    thread_pool_.resize(ON_DEMAND_POOL_SIZE);
   };
   ~ACA_On_Demand_Engine()
   {
