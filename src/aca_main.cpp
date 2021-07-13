@@ -218,8 +218,12 @@ int main(int argc, char *argv[])
           new std::thread(std::bind(&GoalStateProvisionerImpl::RunServer, g_grpc_server));
   g_grpc_server_thread->detach();
 
-  aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().setup_ovs_bridges_if_need();
-
+  rc = aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().setup_ovs_bridges_if_need();
+  if (rc == EXIT_FAILURE) {
+    ACA_LOG_ERROR("%s \n", "ACA is not able to create the bridges, please check your environment");
+    aca_cleanup();
+    return rc;
+  }
   // monitor br-int for dhcp request message
   ovs_monitor_brint_thread =
           new thread(bind(&ACA_OVS_Control::monitor,

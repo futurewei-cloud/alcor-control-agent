@@ -97,18 +97,29 @@ int ACA_OVS_L2_Programmer::setup_ovs_bridges_if_need()
   // check to see if br-int and br-tun is already there
   execute_ovsdb_command("br-exists br-int", not_care_culminative_time, overall_rc);
   bool br_int_existed = (overall_rc == EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
 
   execute_ovsdb_command("br-exists br-tun", not_care_culminative_time, overall_rc);
   bool br_tun_existed = (overall_rc == EXIT_SUCCESS);
-
+  ACA_LOG_INFO("Environment br-int=%d and br-tun=%d\n", br_int_existed, br_tun_existed);
   overall_rc = EXIT_SUCCESS;
 
   if (br_int_existed && br_tun_existed) {
     // case 1: both br-int and br-tun existed
     ACA_LOG_DEBUG("%s", "Both br-int and br-tun existed: do nothing\n");
-  } else if (!br_int_existed && !br_int_existed) {
+    setup_ovs_bridges_mutex.unlock();
+    // -----critical section ends-----
+
+    ACA_LOG_DEBUG("ACA_OVS_L2_Programmer::setup_ovs_bridges_if_need <--- Exiting, overall_rc = %d\n",
+                  overall_rc);
+
+    return overall_rc;
+  }
+
+  if (!br_int_existed && !br_tun_existed) {
     // case 2: both br-int and br-tun not existed
     ACA_LOG_DEBUG("%s", "Both br-int and br-tun not existed: create them\n");
+    ACA_LOG_INFO("Environment br-int=%d and br-tun=%d\n", br_int_existed, br_tun_existed);
 
     execute_ovsdb_command("add-br br-int", not_care_culminative_time, overall_rc);
 
@@ -123,10 +134,9 @@ int ACA_OVS_L2_Programmer::setup_ovs_bridges_if_need()
 
     // adding default flows
     // details at: https://github.com/futurewei-cloud/alcor-control-agent/wiki/Openflow-Tables-Explain
-    
-    execute_openflow_command(
-          "add-flow br-tun \"table=0,priority=50,arp,arp_op=1, actions=CONTROLLER\"",
-          not_care_culminative_time, overall_rc);
+
+    execute_openflow_command("add-flow br-tun \"table=0,priority=50,arp,arp_op=1, actions=CONTROLLER\"",
+                             not_care_culminative_time, overall_rc);
 
     execute_openflow_command("add-flow br-tun \"table=0,priority=1,in_port=\"patch-int\" actions=resubmit(,2)\"",
                              not_care_culminative_time, overall_rc);
@@ -154,13 +164,28 @@ int ACA_OVS_L2_Programmer::setup_ovs_bridges_if_need()
 
     execute_openflow_command("add-flow br-tun \"table=0,priority=25,in_port=\"vxlan-generic\" actions=resubmit(,4)\"",
                              not_care_culminative_time, overall_rc);
-  } else {
-    // case 3: only one of the br-int or br-tun is there,
-    // Invalid environment so return an error
-    ACA_LOG_CRIT("Invalid environment br-int=%d and br-tun=%d, cannot proceed\n",
-                 br_int_existed, br_tun_existed);
-    overall_rc = EXIT_FAILURE;
+    setup_ovs_bridges_mutex.unlock();
+    // -----critical section ends-----
+
+    ACA_LOG_DEBUG("ACA_OVS_L2_Programmer::setup_ovs_bridges_if_need <--- Exiting, overall_rc = %d\n",
+                  overall_rc);
+
+    return overall_rc;
   }
+
+  // case 3: only one of the br-int or br-tun is there,
+  // Invalid environment so return an error
+  if (br_int_existed) {
+    ACA_LOG_DEBUG("You have br-int, but you don't have br-tun, please add br-tun by executing command 'ovs-vsctl add-br br-tun', or delete the existing br-int by executing command 'ovs-vsctl del-br br-int' and try again.\n",
+                  br_tun_existed);
+  }
+  if (br_tun_existed) {
+    ACA_LOG_DEBUG("You have br-tun, but you don't have br-int, please add br-int by executing command 'ovs-vsctl add-br br-int', or delete the existing br-tun by executing command 'ovs-vsctl del-br br-tun' and try again.\n",
+                  br_tun_existed);
+  }
+  ACA_LOG_CRIT("Invalid environment br-int=%d and br-tun=%d, cannot proceed\n",
+               br_int_existed, br_tun_existed);
+  overall_rc = EXIT_FAILURE;
 
   setup_ovs_bridges_mutex.unlock();
   // -----critical section ends-----
