@@ -2,7 +2,6 @@
 
 import sys
 from statistics import median, mean
-import argparse
 print("Hi")
 
 ACA_LOG_FILE_NAME = ''
