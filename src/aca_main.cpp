@@ -252,7 +252,6 @@ int main(int argc, char *argv[])
     aca_cleanup();
     return rc;
   }
-
   // monitor br-int for dhcp request message
   ovs_monitor_brint_thread =
           new thread(bind(&ACA_OVS_Control::monitor,
