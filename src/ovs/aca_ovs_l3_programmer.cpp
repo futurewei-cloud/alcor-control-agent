@@ -709,7 +709,11 @@ int ACA_OVS_L3_Programmer::create_or_update_router(RouterConfiguration &current_
               ACA_LOG_INFO("Using existing routing table entry for routering rule id %s\n",
                            current_routing_rule.id().c_str());
             }
-
+            ACA_LOG_DEBUG("Set new_routing_rule_entry.next_hop_ip = [%s]\nnew_routing_rule_entry.priority = [%ld]\nnew_routing_rule_entry.destination_type = [%ld]\nnew_routing_rule_entry.next_hop_mac = [%s]\n",
+                          new_routing_rule_entry.next_hop_ip.c_str(),
+                          new_routing_rule_entry.priority,
+                          new_routing_rule_entry.destination_type,
+                          new_routing_rule_entry.next_hop_mac.c_str());
           } else if (current_routing_rule.operation_type() == OperationType::DELETE) {
             if (new_subnet_routing_table_entry.routing_rules.erase(
                         current_routing_rule.id())) {
@@ -758,18 +762,24 @@ int ACA_OVS_L3_Programmer::create_or_update_router(RouterConfiguration &current_
         // ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
         //         new_subnet_routing_table_entry_ovs_command_string,
         //         dataplane_programming_time, overall_rc);
+
         for (auto routing_rule_id_to_routing_rules :
              new_subnet_routing_table_entry.routing_rules) {
           auto routing_rule_id = routing_rule_id_to_routing_rules.first;
           auto routing_rule = routing_rule_id_to_routing_rules.second;
           string remote_host_ip;
           // need to find the remote_host_ip for this routing_rule.next_hop_ip
-
+          ACA_LOG_DEBUG("Beginning of looking for remote_ip of routing_rule.next_hop_ip [%s]",
+                        routing_rule.next_hop_ip.c_str());
           for (auto neighborPortTableEntry : new_subnet_routing_table_entry.neighbor_ports) {
-            if (neighborPortTableEntry.second.virtual_ip == routing_rule.next_hop_ip) {
-              remote_host_ip = neighborPortTableEntry.second.host_ip;
-              ACA_LOG_DEBUG("Found the host ip for next_hop_ip: [%s] in local cache!\n",
-                            routing_rule.next_hop_ip);
+            ACA_LOG_DEBUG("Looking for routing_rule.next_hop_ip.c_str() = [%s],current neighborPortTableEntry.second.virtual_ip.c_str() = [%s]\n",
+                          routing_rule.next_hop_ip.c_str(),
+                          neighborPortTableEntry.second.virtual_ip.c_str());
+            if (neighborPortTableEntry.second.virtual_ip.c_str() ==
+                routing_rule.next_hop_ip.c_str()) {
+              remote_host_ip = neighborPortTableEntry.second.host_ip.c_str();
+              ACA_LOG_DEBUG("Found the host ip for next_hop_ip: [%s] in local cache, it is: [%s]!\n",
+                            routing_rule.next_hop_ip.c_str(), remote_host_ip.c_str());
               break;
             }
           }
@@ -781,12 +791,22 @@ int ACA_OVS_L3_Programmer::create_or_update_router(RouterConfiguration &current_
               auto current_neighbor_state = neighbor_state.second;
               auto neighbor_configuration = current_neighbor_state.configuration();
               auto neighbor_configuration_vpc_id = neighbor_configuration.vpc_id();
+              ACA_LOG_DEBUG("neighbor_configuration_vpc_id = [%s], found_vpc_id = [%s]\n",
+                            neighbor_configuration_vpc_id.c_str(), found_vpc_id.c_str());
               if (neighbor_configuration_vpc_id == found_vpc_id) {
                 // loop through all fixed IPs, to see if the virtual IP is the same, if they match, the remote host IP is what we are looking for.
+                ACA_LOG_DEBUG("Found matching VPC ID [%s], now need to loop through the fix ips\n",
+                              found_vpc_id.c_str());
                 for (int ip_index = 0;
                      ip_index < neighbor_configuration.fixed_ips_size(); ip_index++) {
                   auto current_fixed_ip = neighbor_configuration.fixed_ips(ip_index);
+                  ACA_LOG_DEBUG("Lookingfor next_hop_ip: [%s], current fixed_ip: [%s]\n",
+                                routing_rule.next_hop_ip.c_str(),
+                                current_fixed_ip.ip_address().c_str());
                   if (current_fixed_ip.ip_address() == routing_rule.next_hop_ip) {
+                    ACA_LOG_DEBUG("Found mathcing next_hop_ip: [%s] in neighbor_id [%s]\n",
+                                  routing_rule.next_hop_ip.c_str(),
+                                  neighbor_state.first.c_str());
                     remote_host_ip = neighbor_configuration.host_ip_address();
                     break;
                   }
@@ -795,7 +815,7 @@ int ACA_OVS_L3_Programmer::create_or_update_router(RouterConfiguration &current_
             }
             if (remote_host_ip.empty()) {
               ACA_LOG_WARN("Cannot find host IP for this next_hop_ip: [%s] in the current goalstate, something's wrong.\n",
-                           routing_rule.next_hop_ip);
+                           routing_rule.next_hop_ip.c_str());
               overall_rc = -EXIT_FAILURE;
             }
           }
