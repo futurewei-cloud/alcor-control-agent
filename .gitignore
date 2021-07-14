@@ -91,3 +91,4 @@ aca_tests
 *.pb.h
 *.pb.cc
 *aca_data.json
+*.log
