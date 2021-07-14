@@ -134,9 +134,9 @@ GoalStateProvisionerAsyncInstance::PushGoalStatesStream(bool ok)
           auto message_total_operation_time =
                   std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
 
-          ACA_LOG_INFO("[METRICS] Received goalstate at: [%ld], update finished at: [%ld]\nElapsed time for update goalstate operation took: %ld microseconds or %ld milliseconds\n",
-                      start, end, message_total_operation_time,
-                      (message_total_operation_time / 1000));
+          ACA_LOG_DEBUG("[METRICS] Received goalstate at: [%ld], update finished at: [%ld]\nElapsed time for update goalstate operation took: %ld microseconds or %ld milliseconds\n",
+                        start, end, message_total_operation_time,
+                        (message_total_operation_time / 1000));
           new GoalStateProvisionerAsyncInstance(service_, cq_);
           stream_->Write(gsOperationReply_, this);
           status_ = READY_TO_READ;

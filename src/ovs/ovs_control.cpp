@@ -412,7 +412,7 @@ int OVS_Control::flow_mod(const char *bridge, const char *flow, unsigned short i
     std::chrono::_V2::steady_clock::time_point end = std::chrono::steady_clock::now();
     auto message_total_operation_time =
             std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
-    ACA_LOG_INFO("[flow_mod] Start flow_mod__ at: [%ld], finished at: [%ld]\nElapsed time for flow_mod__ took: %ld microseconds or %ld milliseconds\n",
+    ACA_LOG_DEBUG("[flow_mod] Start flow_mod__ at: [%ld], finished at: [%ld]\nElapsed time for flow_mod__ took: %ld microseconds or %ld milliseconds\n",
                  start, end, message_total_operation_time,
                  (message_total_operation_time / 1000));
     rc = EXIT_SUCCESS;

@@ -43,7 +43,6 @@
 #include "goalstateprovisioner.pb.h"
 #include "aca_dhcp_server.h"
 #include "aca_arp_responder.h"
-#include <future>
 
 using namespace std;
 using namespace aca_vlan_manager;
@@ -115,8 +114,8 @@ void ACA_On_Demand_Engine::process_async_replies_asyncly(
         string request_id, OperationStatus replyStatus,
         std::chrono::_V2::high_resolution_clock::time_point received_ncm_reply_time)
 {
-  ACA_LOG_INFO("Trying to process this hostOperationReply in another thread id: [%ld]",
-               std::this_thread::get_id());
+  ACA_LOG_DEBUG("Trying to process this hostOperationReply in another thread id: [%ld]",
+                std::this_thread::get_id());
   std::unordered_map<std::__cxx11::string, on_demand_payload *, std::hash<std::__cxx11::string> >::iterator found_data;
   on_demand_payload *request_payload;
   ACA_LOG_DEBUG("%s\n", "Got an GRPC reply that is OK, need to process it.");
@@ -145,7 +144,7 @@ void ACA_On_Demand_Engine::process_async_replies_asyncly(
             cast_to_microseconds(end_high_rest - received_ncm_reply_time).count();
     ACA_LOG_DEBUG("Erasing one entry into request_uuid_on_demand_payload_map took [%ld]us, which is [%ld]ms\n",
                   cleanup_time, us_to_ms(cleanup_time));
-    ACA_LOG_INFO("For UUID: [%s], processing a successful host operation reply took %ld milliseconds\n",
+    ACA_LOG_DEBUG("For UUID: [%s], processing a successful host operation reply took %ld milliseconds\n",
                  request_id.c_str(),
                  us_to_ms(process_successful_host_operation_reply_time));
   }
@@ -157,12 +156,8 @@ void ACA_On_Demand_Engine::process_async_grpc_replies()
   bool ok = false;
   HostRequestReply_HostRequestOperationStatus hostOperationStatus;
   OperationStatus replyStatus;
-  // bool found_data;
-  // std::unordered_map<std::__cxx11::string, on_demand_payload *, std::hash<std::__cxx11::string> >::iterator found_data;
   string request_id;
-  // on_demand_payload *request_payload;
   ACA_LOG_DEBUG("%s\n", "Beginning of process_async_grpc_replies");
-  // auto future_pointer = std::make_shared<std::future<void> >();
   std::chrono::_V2::high_resolution_clock::time_point received_ncm_reply_time_prev =
           std::chrono::high_resolution_clock::now();
   while (_cq.Next(&got_tag, &ok)) {
@@ -174,7 +169,7 @@ void ACA_On_Demand_Engine::process_async_grpc_replies()
       auto received_ncm_reply_interval =
               cast_to_microseconds(received_ncm_reply_time - received_ncm_reply_time_prev)
                       .count();
-      ACA_LOG_INFO("[METRICS] Elapsed time between receiving the last and current hostOperationReply took: %ld microseconds or %ld milliseconds\n",
+      ACA_LOG_DEBUG("[METRICS] Elapsed time between receiving the last and current hostOperationReply took: %ld microseconds or %ld milliseconds\n",
                    received_ncm_reply_interval, (received_ncm_reply_interval / 1000));
       received_ncm_reply_time_prev = received_ncm_reply_time;
 
@@ -189,7 +184,6 @@ void ACA_On_Demand_Engine::process_async_grpc_replies()
           hostOperationStatus = call->reply.operation_statuses(i);
           replyStatus = hostOperationStatus.operation_status();
           request_id = hostOperationStatus.request_id();
-          // found_data = request_uuid_on_demand_payload_map.find(request_id);
         }
         ACA_LOG_DEBUG("For UUID: [%s], NCM called returned at: %ld milliseconds\n",
                       request_id.c_str(),
@@ -198,7 +192,7 @@ void ACA_On_Demand_Engine::process_async_grpc_replies()
                               .count());
         ACA_LOG_DEBUG("Return from NCM - Reply Status: %s\n",
                       to_string(replyStatus).c_str());
-        ACA_LOG_INFO("Received hostOperationReply in thread id: [%ld]\n",
+        ACA_LOG_DEBUG("Received hostOperationReply in thread id: [%ld]\n",
                      std::this_thread::get_id());
         thread_pool_.push(std::bind(&ACA_On_Demand_Engine::process_async_replies_asyncly, this,
                              request_id, replyStatus, received_ncm_reply_time));

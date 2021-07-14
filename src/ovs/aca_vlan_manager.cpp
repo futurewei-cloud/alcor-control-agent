@@ -195,7 +195,7 @@ int ACA_Vlan_Manager::create_l2_neighbor(string virtual_ip, string virtual_mac,
   std::chrono::_V2::steady_clock::time_point end_1 = std::chrono::steady_clock::now();
   auto message_total_operation_time_1 =
           std::chrono::duration_cast<std::chrono::microseconds>(end_1 - start_1).count();
-  ACA_LOG_INFO("[create_l2_neighbor] Start adding ovs rule at: [%ld], finished at: [%ld]\nElapsed time for adding ovs rule for l2 neighbor took: %ld microseconds or %ld milliseconds\n",
+  ACA_LOG_DEBUG("[create_l2_neighbor] Start adding ovs rule at: [%ld], finished at: [%ld]\nElapsed time for adding ovs rule for l2 neighbor took: %ld microseconds or %ld milliseconds\n",
                start_1, end_1, message_total_operation_time_1,
                (message_total_operation_time_1 / 1000));
   if (overall_rc != EXIT_SUCCESS) {

@@ -245,9 +245,9 @@ int ACA_OVS_L3_Programmer::create_or_update_router(RouterConfiguration &current_
 
           ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
                   cmd_string, dataplane_programming_time, overall_rc);
-          ACA_LOG_INFO("Tried to add this flow for ICMP responder: [%s], rc: [%ld]\n",
-                       cmd_string, overall_rc);
-          ACA_LOG_INFO("%s\n", "After adding flow, printout br-tun's flow table to verify");
+          ACA_LOG_DEBUG("Tried to add this flow for ICMP responder: [%s], rc: [%ld]\n",
+                        cmd_string, overall_rc);
+          ACA_LOG_DEBUG("%s\n", "After adding flow, printout br-tun's flow table to verify");
           aca_net_config::Aca_Net_Config::get_instance().execute_system_command(
                   "ovs-ofctl dump-flows br-tun");
           // Should be able to ping the gateway now
@@ -852,7 +852,7 @@ int ACA_OVS_L3_Programmer::create_or_update_l3_neighbor(
     // try to see if the destination subnet GW is connected to the current router
     auto found_subnet = router_it->second.find(subnet_id);
     for (auto kv : router_it->second) {
-      ACA_LOG_INFO("[create_or_update_l3_neighbor] router ID: [%s], subnet routering table's subnet ID: [%s], subnet_id we're looking for: [%s]\n",
+      ACA_LOG_DEBUG("[create_or_update_l3_neighbor] router ID: [%s], subnet routering table's subnet ID: [%s], subnet_id we're looking for: [%s]\n",
                    router_it->first.c_str(), kv.first.c_str(), subnet_id.c_str());
     }
     if (found_subnet == router_it->second.end()) {

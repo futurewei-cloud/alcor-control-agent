@@ -15,7 +15,6 @@
 #include "aca_grpc_client.h"
 #include "aca_on_demand_engine.h"
 
-// extern GoalStateProvisionerImpl *g_grpc_server;
 extern GoalStateProvisionerClientImpl *g_grpc_client;
 
 TEST(aca_on_demand_testcases, DISABLED_grpc_client_connectivity_test)
