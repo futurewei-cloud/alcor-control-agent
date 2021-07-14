@@ -1,4 +1,6 @@
+# This is a script for analyzing the logs files for ACA, NCM and Test Controller.
 # Usage: python3 analyze.py ./aca_200_ports_async_83.log ./ncm_log_200_async_83.log ./tc_log_200_async_83.log
+# It produces detailed analysis of many kinds of letencies, time spent in each step for the three components.
 
 import sys
 from statistics import median, mean
