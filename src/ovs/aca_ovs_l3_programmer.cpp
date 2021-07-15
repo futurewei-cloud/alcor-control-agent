@@ -295,7 +295,6 @@ int ACA_OVS_L3_Programmer::create_or_update_router(RouterConfiguration &current_
               load:new_subnet_routing_table_entry.gateway_ip->NXM_NX_TUN_IPV4_DST[],output:"vxlan-generic"
               */
               auto remote_host_ip = "";
-
               for (int i = 0; i < parsed_struct.neighbor_states_size(); i++) {
                 NeighborConfiguration current_NeighborConfiguration1 =
                         parsed_struct.neighbor_states(i).configuration();
@@ -347,9 +346,15 @@ int ACA_OVS_L3_Programmer::create_or_update_router(RouterConfiguration &current_
                             current_routing_rule.id(),
                             new_subnet_routing_table_entry_routing_rule_ovs_command_string);
 
-              ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
-                      new_subnet_routing_table_entry_routing_rule_ovs_command_string,
-                      dataplane_programming_time, overall_rc);
+              if (!aca_is_port_on_same_host(remote_host_ip)) {
+                ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
+                        new_subnet_routing_table_entry_routing_rule_ovs_command_string,
+                        dataplane_programming_time, overall_rc);
+              } else {
+                ACA_LOG_DEBUG("Not adding ovs routing rule for host [%s] as it is the same host",
+                              remote_host_ip);
+              }
+
               // Finished adding ovs routing rule
               if (!is_routing_rule_exist) {
                 new_subnet_routing_table_entry.routing_rules.emplace(
@@ -817,16 +822,18 @@ int ACA_OVS_L3_Programmer::create_or_update_router(RouterConfiguration &current_
                     "->tun_dst,output:" + VXLAN_GENERIC_OUTPORT_NUMBER + "\"";
 
             ACA_LOG_DEBUG("Adding this rule, based on routing rule [%s], to ovs: [ovs-ofctl %s]\n",
-
                           current_routing_rule.id(),
-
                           new_subnet_routing_table_entry_routing_rule_ovs_command_string);
 
-            ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
+            if (!aca_is_port_on_same_host(remote_host_ip)) {
+              ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
+                      new_subnet_routing_table_entry_routing_rule_ovs_command_string,
+                      dataplane_programming_time, overall_rc);
+            } else {
+              ACA_LOG_DEBUG("Not adding ovs routing rule for host [%s] as it is the same host",
+                            remote_host_ip);
+            }
 
-                    new_subnet_routing_table_entry_routing_rule_ovs_command_string,
-
-                    dataplane_programming_time, overall_rc);
             // Finished adding ovs routing rule
             if (!is_routing_rule_exist) {
               new_subnet_routing_table_entry.routing_rules.emplace(
