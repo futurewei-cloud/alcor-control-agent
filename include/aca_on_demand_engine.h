@@ -18,7 +18,7 @@
 #define IPTOS_PREC_INTERNETCONTROL 0xc0
 #define DSCP_DEFAULT (IPTOS_PREC_INTERNETCONTROL >> 2)
 #define STDOUT_FILENO 1 /* Standard output.  */
-#define ON_DEMAND_POOL_SIZE 16 /* Standard output.  */
+#define ON_DEMAND_POOL_SIZE 16
 
 #include "common.pb.h"
 #include <openvswitch/ofp-errors.h>

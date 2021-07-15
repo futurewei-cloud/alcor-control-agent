@@ -245,11 +245,6 @@ int ACA_OVS_L3_Programmer::create_or_update_router(RouterConfiguration &current_
 
           ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
                   cmd_string, dataplane_programming_time, overall_rc);
-          ACA_LOG_DEBUG("Tried to add this flow for ICMP responder: [%s], rc: [%ld]\n",
-                        cmd_string, overall_rc);
-          ACA_LOG_DEBUG("%s\n", "After adding flow, printout br-tun's flow table to verify");
-          aca_net_config::Aca_Net_Config::get_instance().execute_system_command(
-                  "ovs-ofctl dump-flows br-tun");
           // Should be able to ping the gateway now
 
           // add essential rule to restore from neighbor host DVR mac to destination GW mac:

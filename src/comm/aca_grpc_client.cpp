@@ -79,8 +79,6 @@ void GoalStateProvisionerClientImpl::ConnectToNCM()
   // If the channel does receive the keep alive ping result in 20 seconds, it closes the connection
   args.SetInt(GRPC_ARG_KEEPALIVE_TIMEOUT_MS, 20000);
 
-  // args.SetInt(GRPC_ARG_MAX_CONCURRENT_STREAMS, 500);
-
   // Allow keep alive ping even if there are no calls in flight
   args.SetInt(GRPC_ARG_KEEPALIVE_PERMIT_WITHOUT_CALLS, 1);
 
