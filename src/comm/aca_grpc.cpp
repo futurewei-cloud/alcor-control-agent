@@ -76,7 +76,9 @@ void GoalStateProvisionerAsyncServer::RunServer(int thread_pool_size)
 
   thread_pool_.resize(thread_pool_size);
   /* wait for thread pool to initialize*/
-  while (thread_pool_.n_idle() != thread_pool_.size()) {};
+  while (thread_pool_.n_idle() != thread_pool_.size()) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+  };
 
   for (int i = 0; i < thread_pool_size; i++) {
     thread_pool_.push(std::bind(&GoalStateProvisionerAsyncServer::AsyncWorker, this));
