@@ -756,7 +756,10 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
   ulong culminative_network_configuration_time = 0;
 
   auto operation_start = chrono::steady_clock::now();
-
+  static std::chrono::_V2::steady_clock::time_point fixed_ip_loop_start;
+  static std::chrono::_V2::steady_clock::time_point update_neighbor_time;
+  static std::chrono::_V2::steady_clock::time_point found_subnet_info_time;
+  static std::chrono::_V2::steady_clock::time_point determined_same_host_time;
   NeighborConfiguration current_NeighborConfiguration =
           current_NeighborState.configuration();
 
@@ -770,6 +773,8 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
 
     for (int ip_index = 0;
          ip_index < current_NeighborConfiguration.fixed_ips_size(); ip_index++) {
+      ACA_LOG_DEBUG("In fixed ip loop, index: %ld\n", ip_index);
+      fixed_ip_loop_start = chrono::steady_clock::now();
       auto current_fixed_ip = current_NeighborConfiguration.fixed_ips(ip_index);
 
       if (current_fixed_ip.neighbor_type() == NeighborType::L2 ||
@@ -814,6 +819,7 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
 
           subnet_info_found = true;
         }
+        found_subnet_info_time = chrono::steady_clock::now();
 
         if (!subnet_info_found) {
           ACA_LOG_ERROR("Not able to find the info for neighbor ip_index: %d with subnet ID: %s.\n",
@@ -836,6 +842,7 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
 
           // only need to update L2 neighbor info if it is not on the same compute host
           bool is_neighbor_port_on_same_host = aca_is_port_on_same_host(host_ip_address);
+          determined_same_host_time = chrono::steady_clock::now();
 
           if (is_neighbor_port_on_same_host) {
             ACA_LOG_DEBUG("neighbor host: %s is on the same compute node, don't need to update L2 neighbor info.\n",
@@ -885,6 +892,7 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
             }
           }
         }
+        update_neighbor_time = chrono::steady_clock::now();
       } else {
         ACA_LOG_ERROR("Unknown neighbor_type: %d.\n",
                       current_NeighborState.operation_type());
@@ -911,6 +919,13 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
   auto operation_total_time =
           cast_to_microseconds(operation_end - operation_start).count();
 
+  auto validate_info_total_time =
+          cast_to_microseconds(found_subnet_info_time - fixed_ip_loop_start).count();
+
+  auto determine_same_host_total_time =
+          cast_to_microseconds(determined_same_host_time - found_subnet_info_time).count();
+  auto update_neighbor_total_time =
+          cast_to_microseconds(update_neighbor_time - determined_same_host_time).count();
   aca_goal_state_handler::Aca_Goal_State_Handler::get_instance().add_goal_state_operation_status(
           gsOperationReply, current_NeighborConfiguration.id(),
           ResourceType::NEIGHBOR, current_NeighborState.operation_type(),
@@ -922,7 +937,11 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
   } else {
     ACA_LOG_ERROR("Unable to configure the neighbor state: rc=%d\n", overall_rc);
   }
-
+  ACA_LOG_DEBUG("[METRICS] Elapsed time for updating 1 neighbor state, total time is %ld microseconds, or %ld milliseconds\n[METRICS] Elapsed time for determining same host took %ld microseconds, or %ld milliseconds.\n[METRICS] Elapsed time for validate info took %ld microseconds, or %ld milliseconds.\n[METRICS] Elapsed time for updating neighbor info took %ld microseconds, or %ld milliseconds.\n",
+                operation_total_time, us_to_ms(operation_total_time),
+                validate_info_total_time, us_to_ms(validate_info_total_time),
+                determine_same_host_total_time, us_to_ms(determine_same_host_total_time),
+                update_neighbor_total_time, us_to_ms(update_neighbor_total_time));
   return overall_rc;
 }
 

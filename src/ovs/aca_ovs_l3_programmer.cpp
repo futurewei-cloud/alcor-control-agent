@@ -245,7 +245,6 @@ int ACA_OVS_L3_Programmer::create_or_update_router(RouterConfiguration &current_
 
           ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
                   cmd_string, dataplane_programming_time, overall_rc);
-
           // Should be able to ping the gateway now
 
           // add essential rule to restore from neighbor host DVR mac to destination GW mac:
@@ -328,17 +327,22 @@ int ACA_OVS_L3_Programmer::create_or_update_router(RouterConfiguration &current_
                          current_router_subnet_id.c_str());
             new_subnet_routing_tables[current_router_subnet_id] = new_subnet_routing_table_entry;
           }
+          ACA_LOG_DEBUG("After inserting subnet routing table entry for subnet: %s, printing out the contents:\n",
+                        current_router_subnet_id.c_str());
+          for (auto kv : new_subnet_routing_tables) {
+            ACA_LOG_DEBUG("subnet_id: %s\n", kv.first.c_str());
+          }
           subnet_info_found = true;
+          overall_rc = EXIT_SUCCESS;
           break;
         }
 
+        if (!subnet_info_found) {
+          ACA_LOG_ERROR("Not able to find the info for router with subnet ID: %s.\n",
+                        current_router_subnet_id.c_str());
+          overall_rc = -EXIT_FAILURE;
+        }
       } // for (int j = 0; j < parsed_struct.subnet_states_size(); j++)
-      // check subnet_info_found only once per loop through the subnet states.
-      if (!subnet_info_found) {
-        ACA_LOG_ERROR("Not able to find the info for router with subnet ID: %s.\n",
-                      current_router_subnet_id.c_str());
-        overall_rc = -EXIT_FAILURE;
-      }
     } // for (int i = 0; i < current_RouterConfiguration.subnet_routing_tables_size(); i++)
 
     if (!is_router_exist || (current_RouterConfiguration.update_type() == UpdateType::FULL)) {
@@ -349,11 +353,22 @@ int ACA_OVS_L3_Programmer::create_or_update_router(RouterConfiguration &current_
       // -----critical section ends-----
       ACA_LOG_INFO("Added router entry for router id %s\n", router_id.c_str());
     } else {
+      ACA_LOG_DEBUG("Using existing router entry for router id %s\n", router_id.c_str());
+      ACA_LOG_DEBUG("Let's print out what we have in router %s 's subnet routing table.\n",
+                    router_id);
+      for (auto kv : _routers_table[router_id]) {
+        ACA_LOG_DEBUG("subnet_id: %s\n", kv.first.c_str());
+      }
       // -----critical section starts-----
       _routers_table_mutex.lock();
       _routers_table[router_id] = new_subnet_routing_tables;
       _routers_table_mutex.unlock();
       // -----critical section ends-----
+      ACA_LOG_DEBUG("After updating, print out what we have in router %s 's subnet routing table.\n",
+                    router_id);
+      for (auto kv : _routers_table[router_id]) {
+        ACA_LOG_DEBUG("subnet_id: %s\n", kv.first.c_str());
+      }
     }
 
   } catch (const std::invalid_argument &e) {
@@ -831,7 +846,10 @@ int ACA_OVS_L3_Programmer::create_or_update_l3_neighbor(
     ACA_LOG_DEBUG("router ID:%s\n ", router_it->first.c_str());
     // try to see if the destination subnet GW is connected to the current router
     auto found_subnet = router_it->second.find(subnet_id);
-
+    for (auto kv : router_it->second) {
+      ACA_LOG_DEBUG("[create_or_update_l3_neighbor] router ID: [%s], subnet routering table's subnet ID: [%s], subnet_id we're looking for: [%s]\n",
+                   router_it->first.c_str(), kv.first.c_str(), subnet_id.c_str());
+    }
     if (found_subnet == router_it->second.end()) {
       // subnet not found in this router, go look at the next router
       continue;

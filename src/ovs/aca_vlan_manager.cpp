@@ -188,10 +188,16 @@ int ACA_Vlan_Manager::create_l2_neighbor(string virtual_ip, string virtual_mac,
   string action_string = ",actions=strip_vlan,load:" + to_string(tunnel_id) +
                          "->NXM_NX_TUN_ID[],set_field:" + remote_host_ip +
                          "->tun_dst,output:" + VXLAN_GENERIC_OUTPORT_NUMBER;
+  std::chrono::_V2::steady_clock::time_point start = std::chrono::steady_clock::now();
 
   overall_rc = ACA_OVS_Control::get_instance().add_flow(
           "br-tun", (match_string + action_string).c_str());
-
+  std::chrono::_V2::steady_clock::time_point end = std::chrono::steady_clock::now();
+  auto message_total_operation_time =
+          std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+  ACA_LOG_DEBUG("[create_l2_neighbor] Start adding ovs rule at: [%ld], finished at: [%ld]\nElapsed time for adding ovs rule for l2 neighbor took: %ld microseconds or %ld milliseconds\n",
+               start, end, message_total_operation_time,
+               (message_total_operation_time / 1000));
   if (overall_rc != EXIT_SUCCESS) {
     ACA_LOG_ERROR("%s", "Failed to add L2 neighbor rule\n");
   };
@@ -202,8 +208,9 @@ int ACA_Vlan_Manager::create_l2_neighbor(string virtual_ip, string virtual_mac,
   stArpCfg.vlan_id = internal_vlan_id;
 
   ACA_ARP_Responder::get_instance().create_or_update_arp_entry(&stArpCfg);
-  
-  ACA_LOG_DEBUG("create_l2_neighbor arp entry with ip = %s, vlan id = %u and mac = %s\n",virtual_ip.c_str(),internal_vlan_id, virtual_mac.c_str());
+
+  ACA_LOG_DEBUG("create_l2_neighbor arp entry with ip = %s, vlan id = %u and mac = %s\n",
+                virtual_ip.c_str(), internal_vlan_id, virtual_mac.c_str());
 
   ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::create_l2_neighbor <--- Exiting\n");
 
@@ -241,8 +248,8 @@ int ACA_Vlan_Manager::delete_l2_neighbor(string virtual_ip, string virtual_mac,
 
   ACA_ARP_Responder::get_instance().delete_arp_entry(&stArpCfg);
 
-  ACA_LOG_DEBUG("delete_l2_neighbor arp entry with ip = %s, vlan id = %u and mac = %s\n",virtual_ip.c_str(),internal_vlan_id, virtual_mac.c_str());
-
+  ACA_LOG_DEBUG("delete_l2_neighbor arp entry with ip = %s, vlan id = %u and mac = %s\n",
+                virtual_ip.c_str(), internal_vlan_id, virtual_mac.c_str());
 
   ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::delete_l2_neighbor <--- Exiting\n");
 

@@ -17,6 +17,7 @@
 #include "aca_ovs_control.h"
 #include "aca_message_pulsar_consumer.h"
 #include "aca_grpc.h"
+#include "aca_grpc_client.h"
 #include "aca_ovs_l2_programmer.h"
 #include "aca_ovs_control.h"
 #include "goalstateprovisioner.grpc.pb.h"
@@ -37,14 +38,17 @@ static char PULSAR_SUBSCRIPTION_NAME[] = "Test-Subscription";
 static char GRPC_SERVER_PORT[] = "50001";
 static char OFCTL_COMMAND[] = "monitor";
 static char OFCTL_TARGET[] = "br-int";
+static int grpc_server_thread_pool_size = 16;
 
 using namespace std;
 
 // Global variables
 std::thread *g_grpc_server_thread = NULL;
+std::thread *g_grpc_client_thread = NULL;
 std::thread *ovs_monitor_brtun_thread = NULL;
 std::thread *ovs_monitor_brint_thread = NULL;
-GoalStateProvisionerImpl *g_grpc_server = NULL;
+GoalStateProvisionerAsyncServer *g_grpc_server = NULL;
+GoalStateProvisionerClientImpl *g_grpc_client = NULL;
 string g_broker_list = EMPTY_STRING;
 string g_pulsar_topic = EMPTY_STRING;
 string g_pulsar_subsription_name = EMPTY_STRING;
@@ -114,6 +118,23 @@ static void aca_cleanup()
     ACA_LOG_INFO("%s", "Cleaned up grpc server thread.\n");
   } else {
     ACA_LOG_ERROR("%s", "Unable to call delete, grpc server thread pointer is null.\n");
+  }
+
+  //stops the grpc client
+  if (g_grpc_client != NULL) {
+    delete g_grpc_client;
+    g_grpc_client = NULL;
+    ACA_LOG_INFO("%s", "Cleaned up grpc client.\n");
+  } else {
+    ACA_LOG_ERROR("%s", "Unable to call delete, grpc client pointer is null.\n");
+  }
+
+  if (g_grpc_client_thread != NULL) {
+    delete g_grpc_client_thread;
+    g_grpc_client_thread = NULL;
+    ACA_LOG_INFO("%s", "Cleaned up grpc client thread.\n");
+  } else {
+    ACA_LOG_ERROR("%s", "Unable to call delete, grpc client thread pointer is null.\n");
   }
   ACA_LOG_CLOSE();
 }
@@ -213,11 +234,18 @@ int main(int argc, char *argv[])
     g_ofctl_target = OFCTL_TARGET;
   }
 
-  g_grpc_server = new GoalStateProvisionerImpl();
+  g_grpc_server = new GoalStateProvisionerAsyncServer();
   g_grpc_server_thread =
-          new std::thread(std::bind(&GoalStateProvisionerImpl::RunServer, g_grpc_server));
+          new std::thread(std::bind(&GoalStateProvisionerAsyncServer::RunServer, g_grpc_server, grpc_server_thread_pool_size));
   g_grpc_server_thread->detach();
 
+  // Create a separate thread to run the grpc client.
+
+  g_grpc_client = new GoalStateProvisionerClientImpl();
+  g_grpc_client_thread = new std::thread(
+          std::bind(&GoalStateProvisionerClientImpl::RunClient, g_grpc_client));
+  g_grpc_client_thread->detach();
+  
   rc = aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().setup_ovs_bridges_if_need();
   if (rc == EXIT_FAILURE) {
     ACA_LOG_ERROR("%s \n", "ACA is not able to create the bridges, please check your environment");
