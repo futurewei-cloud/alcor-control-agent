@@ -287,6 +287,7 @@ int ACA_OVS_L3_Programmer::create_or_update_router(RouterConfiguration &current_
                       current_routing_rule.routing_rule_extra_info().destination_type();
               new_routing_rule_entry.next_hop_mac =
                       current_routing_rule.routing_rule_extra_info().next_hop_mac();
+
               // Add ovs routing rule here
               /*
               Example:
@@ -294,68 +295,94 @@ int ACA_OVS_L3_Programmer::create_or_update_router(RouterConfiguration &current_
               actions=strip_vlan,load:new_subnet_routing_table_entry.tunnel_id->NXM_NX_TUN_ID[],\
               load:new_subnet_routing_table_entry.gateway_ip->NXM_NX_TUN_IPV4_DST[],output:"vxlan-generic"
               */
-              auto remote_host_ip = "";
-              for (int i = 0; i < parsed_struct.neighbor_states_size(); i++) {
-                NeighborConfiguration current_NeighborConfiguration1 =
-                        parsed_struct.neighbor_states(i).configuration();
+              string remote_host_ip = "";
+              // auto routing_rule_id = routing_rule_id_to_routing_rules.first;
+              // auto routing_rule = routing_rule_id_to_routing_rules.second;
+              // need to find the remote_host_ip for this routing_rule.next_hop_ip
+              // ACA_LOG_DEBUG("Beginning of looking for remote_ip of routing_rule.next_hop_ip [%s]",
+              //               routing_rule.next_hop_ip.c_str());
+              for (auto neighborPortTableEntry : new_subnet_routing_table_entry.neighbor_ports) {
+                ACA_LOG_DEBUG("Looking for routing_rule.next_hop_ip.c_str() = [%s],current neighborPortTableEntry.second.virtual_ip.c_str() = [%s]\n",
+                              new_routing_rule_entry.next_hop_ip.c_str(),
+                              neighborPortTableEntry.second.virtual_ip.c_str());
+                if (neighborPortTableEntry.second.virtual_ip.c_str() ==
+                    new_routing_rule_entry.next_hop_ip.c_str()) {
+                  remote_host_ip = neighborPortTableEntry.second.host_ip.c_str();
+                  ACA_LOG_DEBUG("Found the host ip for next_hop_ip: [%s] in local cache, it is: [%s]!\n",
+                                new_routing_rule_entry.next_hop_ip.c_str(), remote_host_ip);
+                  break;
+                }
+              }
+              // if can't find remote IP in the local cache, look into the sent down GoalState's neighbor states
+              if (remote_host_ip.empty()) {
+                for (int i = 0; i < parsed_struct.neighbor_states_size(); i++) {
+                  NeighborConfiguration current_NeighborConfiguration1 =
+                          parsed_struct.neighbor_states(i).configuration();
 
-                ACA_LOG_INFO("current_NeighborConfiguration.host_ip_address(): %s \n",
-                             current_NeighborConfiguration1.host_ip_address().c_str());
-                if (found_vpc_id.c_str() ==
-                    current_NeighborConfiguration1.vpc_id().c_str()) {
-                  for (int j = 0;
-                       j < current_NeighborConfiguration1.fixed_ips_size(); j++) {
-                    ACA_LOG_INFO("current_NeighborConfiguration.fixed_ips(%d): neighbor_type: %d, subnet_id %s, ip_address %s \n",
-                                 j, current_NeighborConfiguration1.fixed_ips(j).neighbor_type(),
-                                 current_NeighborConfiguration1.fixed_ips(j)
-                                         .subnet_id()
-                                         .c_str(),
-                                 current_NeighborConfiguration1.fixed_ips(j)
-                                         .ip_address()
-                                         .c_str());
+                  ACA_LOG_INFO("current_NeighborConfiguration.host_ip_address(): %s \n",
+                               current_NeighborConfiguration1.host_ip_address().c_str());
+                  if (found_vpc_id.c_str() ==
+                      current_NeighborConfiguration1.vpc_id().c_str()) {
+                    for (int j = 0;
+                         j < current_NeighborConfiguration1.fixed_ips_size(); j++) {
+                      ACA_LOG_INFO(
+                              "current_NeighborConfiguration.fixed_ips(%d): neighbor_type: %d, subnet_id %s, ip_address %s \n",
+                              j, current_NeighborConfiguration1.fixed_ips(j).neighbor_type(),
+                              current_NeighborConfiguration1.fixed_ips(j)
+                                      .subnet_id()
+                                      .c_str(),
+                              current_NeighborConfiguration1.fixed_ips(j)
+                                      .ip_address()
+                                      .c_str());
 
-                    ACA_LOG_INFO("current_routing_rule.next_hop_ip() %s",
-                                 current_routing_rule.next_hop_ip());
+                      ACA_LOG_INFO("current_routing_rule.next_hop_ip() %s",
+                                   current_routing_rule.next_hop_ip());
 
-                    if (current_routing_rule.next_hop_ip() ==
-                        current_NeighborConfiguration1.fixed_ips(j).ip_address().c_str()) {
-                      remote_host_ip =
-                              current_NeighborConfiguration1.host_ip_address().c_str();
+                      if (current_routing_rule.next_hop_ip() ==
+                          current_NeighborConfiguration1.fixed_ips(j)
+                                  .ip_address()
+                                  .c_str()) {
+                        remote_host_ip =
+                                current_NeighborConfiguration1.host_ip_address().c_str();
 
-                      break;
+                        break;
+                      }
                     }
                   }
                 }
               }
 
+              if (remote_host_ip.empty()) {
+                ACA_LOG_WARN("Cannot find remote host IP for next hop IP: [%s], not able to generate OVS routing rules.\n",
+                             current_routing_rule.next_hop_ip().c_str());
+              } else {
+                if (!aca_is_port_on_same_host(remote_host_ip)) {
+                  string new_subnet_routing_table_entry_routing_rule_ovs_command_string;
+
+                  new_subnet_routing_table_entry_routing_rule_ovs_command_string =
+                          "add-flow br-tun \"table=20,priority=" +
+                          to_string(current_routing_rule.priority()) +
+                          ",dl_vlan=" + to_string(source_vlan_id) +
+                          ",nw_dst=" + current_routing_rule.destination() +
+                          " actions=strip_vlan,load:" + to_string(found_tunnel_id) +
+                          "->NXM_NX_TUN_ID[]" + ",set_field:" + remote_host_ip +
+                          "->tun_dst,output:" + VXLAN_GENERIC_OUTPORT_NUMBER + "\"";
+
+                  ACA_LOG_DEBUG("Adding this rule, based on routing rule [%s], to ovs: [ovs-ofctl %s]\n",
+                                current_routing_rule.id(),
+                                new_subnet_routing_table_entry_routing_rule_ovs_command_string);
+                  ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
+                          new_subnet_routing_table_entry_routing_rule_ovs_command_string,
+                          dataplane_programming_time, overall_rc);
+                } else {
+                  ACA_LOG_DEBUG("Not adding ovs routing rule for host [%s] as it is the same host",
+                                remote_host_ip);
+                }
+              }
+              // Finished adding ovs routing rule
+
               ACA_LOG_INFO("current_routing_rule.destination() %s",
                            current_routing_rule.destination());
-
-              string new_subnet_routing_table_entry_routing_rule_ovs_command_string;
-
-              new_subnet_routing_table_entry_routing_rule_ovs_command_string =
-                      "add-flow br-tun \"table=20,priority=" +
-                      to_string(current_routing_rule.priority()) +
-                      ",dl_vlan=" + to_string(source_vlan_id) +
-                      ",nw_dst=" + current_routing_rule.destination() +
-                      " actions=strip_vlan,load:" + to_string(found_tunnel_id) +
-                      "->NXM_NX_TUN_ID[]" + ",set_field:" + remote_host_ip +
-                      "->tun_dst,output:" + VXLAN_GENERIC_OUTPORT_NUMBER + "\"";
-
-              ACA_LOG_DEBUG("Adding this rule, based on routing rule [%s], to ovs: [ovs-ofctl %s]\n",
-                            current_routing_rule.id(),
-                            new_subnet_routing_table_entry_routing_rule_ovs_command_string);
-
-              if (!aca_is_port_on_same_host(remote_host_ip)) {
-                ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
-                        new_subnet_routing_table_entry_routing_rule_ovs_command_string,
-                        dataplane_programming_time, overall_rc);
-              } else {
-                ACA_LOG_DEBUG("Not adding ovs routing rule for host [%s] as it is the same host",
-                              remote_host_ip);
-              }
-
-              // Finished adding ovs routing rule
               if (!is_routing_rule_exist) {
                 new_subnet_routing_table_entry.routing_rules.emplace(
                         current_routing_rule.id(), new_routing_rule_entry);
@@ -773,68 +800,88 @@ int ACA_OVS_L3_Programmer::create_or_update_router(RouterConfiguration &current_
               actions=strip_vlan,load:new_subnet_routing_table_entry.tunnel_id->NXM_NX_TUN_ID[],\
               load:new_subnet_routing_table_entry.gateway_ip->NXM_NX_TUN_IPV4_DST[],output:"vxlan-generic"
             */
-            auto remote_host_ip = "";
+            string remote_host_ip = "";
+            for (auto neighborPortTableEntry : new_subnet_routing_table_entry.neighbor_ports) {
+              ACA_LOG_DEBUG("Looking for routing_rule.next_hop_ip.c_str() = [%s],current neighborPortTableEntry.second.virtual_ip.c_str() = [%s]\n",
+                            new_routing_rule_entry.next_hop_ip.c_str(),
+                            neighborPortTableEntry.second.virtual_ip.c_str());
+              if (neighborPortTableEntry.second.virtual_ip.c_str() ==
+                  new_routing_rule_entry.next_hop_ip.c_str()) {
+                remote_host_ip = neighborPortTableEntry.second.host_ip.c_str();
+                ACA_LOG_DEBUG("Found the host ip for next_hop_ip: [%s] in local cache, it is: [%s]!\n",
+                              new_routing_rule_entry.next_hop_ip.c_str(), remote_host_ip);
+                break;
+              }
+            }
 
-            for (auto neighbor_state_id_value : parsed_struct.neighbor_states()) {
-              NeighborConfiguration current_NeighborConfiguration1 =
+            // if can't find remote IP in the local cache, look into the sent down GoalState's neighbor states
+            if (remote_host_ip.empty()) {
+              for (auto neighbor_state_id_value : parsed_struct.neighbor_states()) {
+                NeighborConfiguration current_NeighborConfiguration1 =
 
-                      neighbor_state_id_value.second.configuration();
+                        neighbor_state_id_value.second.configuration();
 
-              ACA_LOG_INFO("current_NeighborConfiguration.host_ip_address(): %s \n",
-                           current_NeighborConfiguration1.host_ip_address().c_str());
-              if (found_vpc_id.c_str() ==
-                  current_NeighborConfiguration1.vpc_id().c_str()) {
-                for (int j = 0; j < current_NeighborConfiguration1.fixed_ips_size(); j++) {
-                  ACA_LOG_INFO("current_NeighborConfiguration.fixed_ips(%d): neighbor_type: %d, subnet_id %s, ip_address %s \n",
-                               j, current_NeighborConfiguration1.fixed_ips(j).neighbor_type(),
-                               current_NeighborConfiguration1.fixed_ips(j)
-                                       .subnet_id()
-                                       .c_str(),
-                               current_NeighborConfiguration1.fixed_ips(j)
-                                       .ip_address()
-                                       .c_str());
+                ACA_LOG_INFO("current_NeighborConfiguration.host_ip_address(): %s \n",
+                             current_NeighborConfiguration1.host_ip_address().c_str());
+                if (found_vpc_id.c_str() ==
+                    current_NeighborConfiguration1.vpc_id().c_str()) {
+                  for (int j = 0;
+                       j < current_NeighborConfiguration1.fixed_ips_size(); j++) {
+                    ACA_LOG_INFO("current_NeighborConfiguration.fixed_ips(%d): neighbor_type: %d, subnet_id %s, ip_address %s \n",
+                                 j, current_NeighborConfiguration1.fixed_ips(j).neighbor_type(),
+                                 current_NeighborConfiguration1.fixed_ips(j)
+                                         .subnet_id()
+                                         .c_str(),
+                                 current_NeighborConfiguration1.fixed_ips(j)
+                                         .ip_address()
+                                         .c_str());
 
-                  ACA_LOG_INFO("current_routing_rule.next_hop_ip() %s",
-                               current_routing_rule.next_hop_ip());
+                    ACA_LOG_INFO("current_routing_rule.next_hop_ip() %s",
+                                 current_routing_rule.next_hop_ip());
 
-                  if (current_routing_rule.next_hop_ip() ==
-                      current_NeighborConfiguration1.fixed_ips(j).ip_address().c_str()) {
-                    remote_host_ip =
-                            current_NeighborConfiguration1.host_ip_address().c_str();
-                    break;
+                    if (current_routing_rule.next_hop_ip() ==
+                        current_NeighborConfiguration1.fixed_ips(j).ip_address().c_str()) {
+                      remote_host_ip =
+                              current_NeighborConfiguration1.host_ip_address().c_str();
+                      break;
+                    }
                   }
                 }
               }
             }
 
-            ACA_LOG_INFO("current_routing_rule.destination() %s",
-                         current_routing_rule.destination());
-
-            string new_subnet_routing_table_entry_routing_rule_ovs_command_string;
-
-            new_subnet_routing_table_entry_routing_rule_ovs_command_string =
-                    "add-flow br-tun \"table=20,priority=" +
-                    to_string(current_routing_rule.priority()) +
-                    ",dl_vlan=" + to_string(source_vlan_id) +
-                    ",nw_dst=" + current_routing_rule.destination() +
-                    " actions=strip_vlan,load:" + to_string(found_tunnel_id) +
-                    "->NXM_NX_TUN_ID[]" + ",set_field:" + remote_host_ip +
-                    "->tun_dst,output:" + VXLAN_GENERIC_OUTPORT_NUMBER + "\"";
-
-            ACA_LOG_DEBUG("Adding this rule, based on routing rule [%s], to ovs: [ovs-ofctl %s]\n",
-                          current_routing_rule.id(),
-                          new_subnet_routing_table_entry_routing_rule_ovs_command_string);
-
-            if (!aca_is_port_on_same_host(remote_host_ip)) {
-              ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
-                      new_subnet_routing_table_entry_routing_rule_ovs_command_string,
-                      dataplane_programming_time, overall_rc);
+            if (remote_host_ip.empty()) {
+              ACA_LOG_WARN("Cannot find remote host IP for next hop IP: [%s], not able to generate OVS routing rules.\n",
+                           current_routing_rule.next_hop_ip().c_str());
             } else {
-              ACA_LOG_DEBUG("Not adding ovs routing rule for host [%s] as it is the same host",
-                            remote_host_ip);
+              if (!aca_is_port_on_same_host(remote_host_ip)) {
+                string new_subnet_routing_table_entry_routing_rule_ovs_command_string;
+
+                new_subnet_routing_table_entry_routing_rule_ovs_command_string =
+                        "add-flow br-tun \"table=20,priority=" +
+                        to_string(current_routing_rule.priority()) +
+                        ",dl_vlan=" + to_string(source_vlan_id) +
+                        ",nw_dst=" + current_routing_rule.destination() +
+                        " actions=strip_vlan,load:" + to_string(found_tunnel_id) +
+                        "->NXM_NX_TUN_ID[]" + ",set_field:" + remote_host_ip +
+                        "->tun_dst,output:" + VXLAN_GENERIC_OUTPORT_NUMBER + "\"";
+
+                ACA_LOG_DEBUG("Adding this rule, based on routing rule [%s], to ovs: [ovs-ofctl %s]\n",
+                              current_routing_rule.id(),
+                              new_subnet_routing_table_entry_routing_rule_ovs_command_string);
+                ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
+                        new_subnet_routing_table_entry_routing_rule_ovs_command_string,
+                        dataplane_programming_time, overall_rc);
+              } else {
+                ACA_LOG_DEBUG("Not adding ovs routing rule for host [%s] as it is the same host",
+                              remote_host_ip);
+              }
             }
 
             // Finished adding ovs routing rule
+
+            ACA_LOG_INFO("current_routing_rule.destination() %s",
+                         current_routing_rule.destination());
             if (!is_routing_rule_exist) {
               new_subnet_routing_table_entry.routing_rules.emplace(
                       current_routing_rule.id(), new_routing_rule_entry);
