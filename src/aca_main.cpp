@@ -39,7 +39,6 @@ static char PULSAR_SUBSCRIPTION_NAME[] = "Test-Subscription";
 static char GRPC_SERVER_PORT[] = "50001";
 static char OFCTL_COMMAND[] = "monitor";
 static char OFCTL_TARGET[] = "br-int";
-// static int grpc_server_thread_pool_size = 16;
 
 using namespace std;
 
