@@ -30,6 +30,7 @@
 #include <string>
 #include <grpcpp/grpcpp.h>
 #include <grpc/support/log.h>
+#include <cmath>
 
 #define UNREFERENCED_PARAMETER(P) (void)(P)
 
@@ -56,6 +57,15 @@ bool g_run_as_server = false;
 GoalStateProvisionerAsyncServer *g_grpc_server = NULL;
 GoalStateProvisionerClientImpl *g_grpc_client = NULL;
 // GoalStateProvisionerServer *g_test_grcp_server = NULL;
+int processor_count = std::thread::hardware_concurrency();
+/*
+  From previous tests, we found that, for x number of cores,
+  it is more efficient to set the size of both thread pools
+  to be x * (2/3), which means the total size of the thread pools
+  is x * (4/3). For example, for a host with 24 cores, we would 
+  set the sizes of both thread pools to be 16.
+*/
+int thread_pools_size = (processor_count == 0) ? 1 : ((ceil(1.3 * processor_count)) / 2);
 
 // total time for execute_system_command in microseconds
 std::atomic_ulong g_total_execute_system_time(0);
@@ -145,8 +155,8 @@ int RunServer()
 
   int pool_size = 3;
   g_grpc_server = new GoalStateProvisionerAsyncServer();
-  auto g_grpc_server_thread =
-          new std::thread(std::bind(&GoalStateProvisionerAsyncServer::RunServer, g_grpc_server, pool_size));
+  auto g_grpc_server_thread = new std::thread(std::bind(
+          &GoalStateProvisionerAsyncServer::RunServer, g_grpc_server, pool_size));
   g_grpc_server_thread->detach();
 
   g_grpc_client = new GoalStateProvisionerClientImpl();

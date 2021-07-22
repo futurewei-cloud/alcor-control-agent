@@ -24,6 +24,7 @@
 #include <thread>
 #include <unistd.h> /* for getopt */
 #include <grpcpp/grpcpp.h>
+#include <cmath>
 
 using aca_message_pulsar::ACA_Message_Pulsar_Consumer;
 using aca_ovs_control::ACA_OVS_Control;
@@ -38,7 +39,6 @@ static char PULSAR_SUBSCRIPTION_NAME[] = "Test-Subscription";
 static char GRPC_SERVER_PORT[] = "50001";
 static char OFCTL_COMMAND[] = "monitor";
 static char OFCTL_TARGET[] = "br-int";
-static int grpc_server_thread_pool_size = 16;
 
 using namespace std;
 
@@ -72,6 +72,15 @@ std::atomic_ulong g_total_update_GS_time(0);
 
 bool g_demo_mode = false;
 bool g_debug_mode = false;
+int processor_count = std::thread::hardware_concurrency();
+/*
+  From previous tests, we found that, for x number of cores,
+  it is more efficient to set the size of both thread pools
+  to be x * (2/3), which means the total size of the thread pools
+  is x * (4/3). For example, for a host with 24 cores, we would 
+  set the sizes of both thread pools to be 16.
+*/
+int thread_pools_size = (processor_count == 0) ? 1 : ((ceil(1.3 * processor_count)) / 2);
 
 static void aca_cleanup()
 {
@@ -235,8 +244,8 @@ int main(int argc, char *argv[])
   }
 
   g_grpc_server = new GoalStateProvisionerAsyncServer();
-  g_grpc_server_thread =
-          new std::thread(std::bind(&GoalStateProvisionerAsyncServer::RunServer, g_grpc_server, grpc_server_thread_pool_size));
+  g_grpc_server_thread = new std::thread(std::bind(
+          &GoalStateProvisionerAsyncServer::RunServer, g_grpc_server, thread_pools_size));
   g_grpc_server_thread->detach();
 
   // Create a separate thread to run the grpc client.
@@ -245,7 +254,7 @@ int main(int argc, char *argv[])
   g_grpc_client_thread = new std::thread(
           std::bind(&GoalStateProvisionerClientImpl::RunClient, g_grpc_client));
   g_grpc_client_thread->detach();
-  
+
   rc = aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().setup_ovs_bridges_if_need();
   if (rc == EXIT_FAILURE) {
     ACA_LOG_ERROR("%s \n", "ACA is not able to create the bridges, please check your environment");

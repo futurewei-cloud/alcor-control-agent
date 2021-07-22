@@ -18,7 +18,6 @@
 #define IPTOS_PREC_INTERNETCONTROL 0xc0
 #define DSCP_DEFAULT (IPTOS_PREC_INTERNETCONTROL >> 2)
 #define STDOUT_FILENO 1 /* Standard output.  */
-#define ON_DEMAND_POOL_SIZE 16
 
 #include "common.pb.h"
 #include <openvswitch/ofp-errors.h>
@@ -35,6 +34,9 @@
 using namespace alcor::schema;
 using namespace std;
 using namespace ctpl;
+
+extern int thread_pools_size;
+
 // using namespace grpc;
 struct on_demand_payload {
   std::chrono::_V2::steady_clock::time_point insert_time;
@@ -169,7 +171,8 @@ class ACA_On_Demand_Engine {
   {
     ACA_LOG_DEBUG("%s\n", "Constructor of a new on demand engine, need to create a new thread to process the grpc replies");
     int cores = std::thread::hardware_concurrency();
-    ACA_LOG_DEBUG("This host has %ld cores\n", cores);
+    ACA_LOG_DEBUG("This host has %ld cores, setting the size of the thread pools to be %ld\n",
+                  cores, thread_pools_size);
     on_demand_reply_processing_thread = new std::thread(
             std::bind(&ACA_On_Demand_Engine::process_async_grpc_replies, this));
 
@@ -177,7 +180,7 @@ class ACA_On_Demand_Engine {
     on_demand_payload_cleaning_thread = new std::thread(
             std::bind(&ACA_On_Demand_Engine::clean_remaining_payload, this));
     on_demand_payload_cleaning_thread->detach();
-    thread_pool_.resize(ON_DEMAND_POOL_SIZE);
+    thread_pool_.resize(thread_pools_size);
   };
   ~ACA_On_Demand_Engine()
   {
