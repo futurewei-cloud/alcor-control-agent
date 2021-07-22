@@ -21,14 +21,14 @@
 
 using namespace alcor::schema;
 using grpc::Server;
+using grpc::ServerAsyncReader;
+using grpc::ServerAsyncReaderWriter;
+using grpc::ServerAsyncResponseWriter;
 using grpc::ServerBuilder;
+using grpc::ServerCompletionQueue;
 using grpc::ServerContext;
 using grpc::ServerReader;
 using grpc::ServerReaderWriter;
-using grpc::ServerAsyncResponseWriter;
-using grpc::ServerAsyncReader;
-using grpc::ServerAsyncReaderWriter;
-using grpc::ServerCompletionQueue;
 using grpc::ServerWriter;
 using grpc::Status;
 
@@ -39,19 +39,21 @@ class GoalStateProvisionerAsyncServer {
 
   Status ShutDownServer();
   void RunServer(int thread_pool_size);
-  void AsyncWorker();
+  void AsyncWorker(int cq_index);
 
   private:
   std::unique_ptr<Server> server_;
-  std::unique_ptr<ServerCompletionQueue> cq_;
+  // std::unique_ptr<ServerCompletionQueue> cq_;
+  std::vector<std::unique_ptr<ServerCompletionQueue> > cq_vector_;
   GoalStateProvisioner::AsyncService service_;
   ctpl::thread_pool thread_pool_;
 };
 
 class GoalStateProvisionerAsyncInstance {
   public:
-  enum StreamStatus { READY_TO_CONNECT, READY_TO_READ, READY_TO_WRITE, DONE};
-  GoalStateProvisionerAsyncInstance(GoalStateProvisioner::AsyncService* service, ServerCompletionQueue* cq)
+  enum StreamStatus { READY_TO_CONNECT, READY_TO_READ, READY_TO_WRITE, DONE };
+  GoalStateProvisionerAsyncInstance(GoalStateProvisioner::AsyncService *service,
+                                    ServerCompletionQueue *cq)
   {
     service_ = service;
     cq_ = cq;
@@ -60,16 +62,15 @@ class GoalStateProvisionerAsyncInstance {
     PushGoalStatesStream(true);
   }
 
-  void
-  PushGoalStatesStream(bool ok);
+  void PushGoalStatesStream(bool ok);
 
   StreamStatus status_;
 
   private:
-  GoalStateProvisioner::AsyncService* service_;
-  ServerCompletionQueue* cq_;
+  GoalStateProvisioner::AsyncService *service_;
+  ServerCompletionQueue *cq_;
   ServerContext ctx_;
-  ServerAsyncReaderWriter<GoalStateOperationReply, GoalStateV2>* stream_;
+  ServerAsyncReaderWriter<GoalStateOperationReply, GoalStateV2> *stream_;
   GoalStateV2 goalStateV2_;
   GoalStateOperationReply gsOperationReply_;
 };
