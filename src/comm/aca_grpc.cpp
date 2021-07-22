@@ -67,8 +67,9 @@ void GoalStateProvisionerAsyncServer::RunServer(int thread_pool_size)
   string GRPC_SERVER_ADDRESS = "0.0.0.0:" + g_grpc_server_port;
   builder.AddListeningPort(GRPC_SERVER_ADDRESS, grpc::InsecureServerCredentials());
   builder.RegisterService(&service_);
-  for (int i = 0; i < thread_pool_.size(); i++) {
-    cq_vector_.push_back(builder.AddCompletionQueue());
+  for (int i = 0; i < thread_pool_size; i++) {
+    std::unique_ptr<grpc_impl::ServerCompletionQueue> cq = builder.AddCompletionQueue();
+    cq_vector_.push_back(cq);
   }
   ACA_LOG_DEBUG("This async server has %ld CQs\n", cq_vector_.size());
   // cq_ = builder.AddCompletionQueue();
