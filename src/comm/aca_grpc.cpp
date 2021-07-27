@@ -30,6 +30,7 @@
 #include "aca_comm_mgr.h"
 #include "aca_log.h"
 #include "aca_grpc.h"
+#include "math.h"
 
 extern string g_grpc_server_port;
 extern string g_ncm_address;
@@ -67,7 +68,12 @@ void GoalStateProvisionerAsyncServer::RunServer(int thread_pool_size)
   string GRPC_SERVER_ADDRESS = "0.0.0.0:" + g_grpc_server_port;
   builder.AddListeningPort(GRPC_SERVER_ADDRESS, grpc::InsecureServerCredentials());
   builder.RegisterService(&service_);
-  for (int i = 0; i < thread_pool_size; i++) {
+
+  // new design: If the Async Server has x threads, then it shall have sqrt(x) CQs,
+  // and sqrt(x) worker threads pulling from each CQ. In total, it will still have
+  // (sqrt(x) * sqrt(x)) = x worker threads
+  int number_of_cqs = (int)(ceil(sqrt(thread_pool_size)));
+  for (int i = 0; i < number_of_cqs; i++) {
     // std::unique_ptr<grpc_impl::ServerCompletionQueue> cq = builder.AddCompletionQueue();
     cq_vector_.push_back(builder.AddCompletionQueue());
   }
@@ -84,7 +90,10 @@ void GoalStateProvisionerAsyncServer::RunServer(int thread_pool_size)
   };
 
   for (int i = 0; i < thread_pool_size; i++) {
-    thread_pool_.push(std::bind(&GoalStateProvisionerAsyncServer::AsyncWorker, this, i));
+    auto which_cq_to_pull_from = i % number_of_cqs;
+    ACA_LOG_DEBUG("Async worker %ld will pull from CQ %ld\n", i, which_cq_to_pull_from);
+    thread_pool_.push(std::bind(&GoalStateProvisionerAsyncServer::AsyncWorker,
+                                this, which_cq_to_pull_from));
   }
   ACA_LOG_DEBUG("After using the thread pool, we have %ld idle threads in the pool, thread pool size: %ld\n",
                 thread_pool_.n_idle(), thread_pool_.size());
