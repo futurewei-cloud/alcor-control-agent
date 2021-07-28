@@ -298,7 +298,6 @@ int ACA_OVS_L3_Programmer::create_or_update_router(RouterConfiguration &current_
                                       current_NeighborConfiguration1.fixed_ips(y).subnet_id().c_str(),
                                       current_NeighborConfiguration1.fixed_ips(y).ip_address().c_str());
                         ACA_LOG_INFO("current_routing_rule.next_hop_ip() %s\n", current_routing_rule.next_hop_ip().c_str());
-                        ACA_LOG_INFO("test%stest == test%stest\n", current_routing_rule.next_hop_ip().c_str(), current_NeighborConfiguration1.fixed_ips(y).ip_address().c_str());
                         auto current_fixed_ip = current_NeighborConfiguration1.fixed_ips(y);
                         string virtual_ip_address = current_fixed_ip.ip_address();
                         string virtual_mac_address = current_NeighborConfiguration1.mac_address();
@@ -959,14 +958,14 @@ int ACA_OVS_L3_Programmer::create_or_update_l3_neighbor(
 
         // the openflow rule depends on whether the hosting ip is on this compute host or not
         if (is_port_on_same_host) {
-          cmd_string = "add-flow br-tun \"table=0,priority=50,ip,dl_vlan=" +
+          cmd_string = "add-flow br-tun \"table=0,priority=25,ip,dl_vlan=" +
                        to_string(source_vlan_id) + ",nw_dst=" + virtual_ip +
                        ",dl_dst=" + subnet_it->second.gateway_mac +
                        " actions=mod_vlan_vid:" + to_string(destination_vlan_id) +
                        ",mod_dl_src:" + destination_gw_mac +
                        ",mod_dl_dst:" + virtual_mac + ",output:IN_PORT\"";
         } else {
-          cmd_string = "add-flow br-tun \"table=0,priority=50,ip,dl_vlan=" +
+          cmd_string = "add-flow br-tun \"table=0,priority=25,ip,dl_vlan=" +
                        to_string(source_vlan_id) + ",nw_dst=" + virtual_ip +
                        ",dl_dst=" + subnet_it->second.gateway_mac +
                        " actions=mod_vlan_vid:" + to_string(destination_vlan_id) +
