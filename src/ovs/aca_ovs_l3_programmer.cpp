@@ -82,6 +82,7 @@ int ACA_OVS_L3_Programmer::create_or_update_router(RouterConfiguration &current_
   char hex_ip_buffer[HEX_IP_BUFFER_SIZE];
   int addr;
   string cmd_string;
+  ulong culminative_dataplane_programming_time = 0;
 
   string router_id = current_RouterConfiguration.id();
   if (router_id.empty()) {
@@ -370,6 +371,15 @@ int ACA_OVS_L3_Programmer::create_or_update_router(RouterConfiguration &current_
               }
 
             } else if (current_routing_rule.operation_type() == OperationType::DELETE) {
+              int source_vlan_id = ACA_Vlan_Manager::get_instance().get_or_create_vlan_id(
+                                        found_tunnel_id);
+              string cmd_string = "del-flows br-tun \"table=0,priority=50,ip,dl_vlan=" + to_string(source_vlan_id) +
+                                  ",dl_dst=" + found_gateway_mac +
+                                  ",nw_dst=" + current_routing_rule.destination() +
+                                  "\" --strict";
+
+              ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
+                      cmd_string, culminative_dataplane_programming_time, overall_rc);
               if (new_subnet_routing_table_entry.routing_rules.erase(
                           current_routing_rule.id())) {
                 ACA_LOG_INFO("Successfuly cleaned up entry for router rule id %s\n",
