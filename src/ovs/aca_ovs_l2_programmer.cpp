@@ -87,6 +87,12 @@ ACA_OVS_L2_Programmer &ACA_OVS_L2_Programmer::get_instance()
   return instance;
 }
 
+bool ACA_OVS_L2_Programmer::is_ip_on_the_same_host(const std::string host_ip)
+{
+  return std::find(this->host_ips_vector.begin(), this->host_ips_vector.end(),
+                   host_ip) != this->host_ips_vector.end();
+}
+
 void ACA_OVS_L2_Programmer::get_local_host_ips()
 {
   std::array<char, 128> buffer;
@@ -113,9 +119,9 @@ void ACA_OVS_L2_Programmer::get_local_host_ips()
   // }
   vector<string>::iterator it = host_ips_vector.begin();
   while (it != host_ips_vector.end()) {
-    ACA_LOG_DEBUG("Current Host IP: [%s]", it->c_str());
+    ACA_LOG_DEBUG("Current Host IP: [%s]\n", it->c_str());
     if (it->empty()) {
-      ACA_LOG_DEBUG("Removing empty IP: [%s]", it->c_str());
+      ACA_LOG_DEBUG("Removing empty IP: [%s]\n", it->c_str());
       it = host_ips_vector.erase(it);
     } else {
       it++;

@@ -841,7 +841,9 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
           // for both L2 and L3 neighbor update
 
           // only need to update L2 neighbor info if it is not on the same compute host
-          bool is_neighbor_port_on_same_host = false; //aca_is_port_on_same_host(host_ip_address);
+          bool is_neighbor_port_on_same_host =
+                  ACA_OVS_L2_Programmer::get_instance().is_ip_on_the_same_host(
+                          host_ip_address); //aca_is_port_on_same_host(host_ip_address);
           determined_same_host_time = chrono::high_resolution_clock::now();
 
           if (is_neighbor_port_on_same_host) {

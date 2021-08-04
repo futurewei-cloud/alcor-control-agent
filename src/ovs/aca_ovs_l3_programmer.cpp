@@ -838,7 +838,8 @@ int ACA_OVS_L3_Programmer::create_or_update_l3_neighbor(
     throw std::invalid_argument("tunnel_id is 0");
   }
 
-  bool is_port_on_same_host = aca_is_port_on_same_host(remote_host_ip);
+  bool is_port_on_same_host = ACA_OVS_L2_Programmer::get_instance().is_ip_on_the_same_host(
+          remote_host_ip); //aca_is_port_on_same_host(remote_host_ip);
 
   // going through our list of routers
   for (auto router_it = _routers_table.begin();
@@ -848,7 +849,7 @@ int ACA_OVS_L3_Programmer::create_or_update_l3_neighbor(
     auto found_subnet = router_it->second.find(subnet_id);
     for (auto kv : router_it->second) {
       ACA_LOG_DEBUG("[create_or_update_l3_neighbor] router ID: [%s], subnet routering table's subnet ID: [%s], subnet_id we're looking for: [%s]\n",
-                   router_it->first.c_str(), kv.first.c_str(), subnet_id.c_str());
+                    router_it->first.c_str(), kv.first.c_str(), subnet_id.c_str());
     }
     if (found_subnet == router_it->second.end()) {
       // subnet not found in this router, go look at the next router
