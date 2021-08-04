@@ -29,6 +29,10 @@ class ACA_OVS_L2_Programmer {
   public:
   static ACA_OVS_L2_Programmer &get_instance();
 
+  std::vector<std::string> host_ips_vector;
+
+  void get_local_host_ips();
+
   int setup_ovs_bridges_if_need();
 
   int create_port(const std::string vpc_id, const std::string port_name,

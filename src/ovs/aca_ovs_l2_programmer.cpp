@@ -85,6 +85,23 @@ ACA_OVS_L2_Programmer &ACA_OVS_L2_Programmer::get_instance()
   return instance;
 }
 
+void ACA_OVS_L2_Programmer::get_local_host_ips()
+{
+  std::array<char, 128> buffer;
+  std::string list_local_host_ip_cmd = "ifconfig | grep inet | awk '{print $2}'";
+  std::string local_ips_string;
+  std::unique_ptr<FILE, decltype(&pclose)> pipe(
+          popen(list_local_host_ip_cmd.c_str(), "r"), pclose);
+  if (!pipe) {
+    throw std::runtime_error("popen() failed!");
+  }
+  while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {
+    local_ips_string += buffer.data();
+  }
+  host_ips_vector.push_back(local_ips_string);
+  ACA_LOG_INFO("Local IPs are: [%s]", local_ips_string);
+}
+
 int ACA_OVS_L2_Programmer::setup_ovs_bridges_if_need()
 {
   ACA_LOG_DEBUG("%s", "ACA_OVS_L2_Programmer::setup_ovs_bridges_if_need ---> Entering\n");
