@@ -101,13 +101,25 @@ void ACA_OVS_L2_Programmer::get_local_host_ips()
     local_ips_string += buffer.data();
   }
 
+  // split the string by '\n', but it leaves an empty element at the end.
   boost::split(host_ips_vector, local_ips_string, boost::is_any_of("\n"),
                boost::token_compress_on);
-
-  // host_ips_vector.push_back(local_ips_string);
-  ACA_LOG_INFO("Local IPs are: [%s]\n", local_ips_string.c_str());
-  for (std::string host_ip : host_ips_vector) {
-    ACA_LOG_INFO("Host IP: [%s]\n", host_ip.c_str());
+  // host_ips_vector.erase(
+  //         std::remove_if(host_ips_vector.begin(), host_ips_vector.end(),
+  //                        [](std::string str) { return str.empty(); }),
+  //         host_ips_vector.end());
+  // for (std::string host_ip : host_ips_vector) {
+  //   ACA_LOG_INFO("Host IP: [%s]\n", host_ip.c_str());
+  // }
+  vector<string>::iterator it = host_ips_vector.begin();
+  while (it != host_ips_vector.end()) {
+    ACA_LOG_DEBUG("Current Host IP: [%s]", it->c_str());
+    if (it->empty()) {
+      ACA_LOG_DEBUG("Removing empty IP: [%s]", it->c_str());
+      it = host_ips_vector.erase(it);
+    } else {
+      it++;
+    }
   }
 }
 
