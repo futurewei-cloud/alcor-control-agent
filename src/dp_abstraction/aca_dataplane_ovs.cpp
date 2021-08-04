@@ -755,7 +755,7 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
   ulong culminative_dataplane_programming_time = 0;
   ulong culminative_network_configuration_time = 0;
 
-  auto operation_start = chrono::steady_clock::now();
+  auto operation_start = chrono::high_resolution_clock::now();
   static std::chrono::_V2::high_resolution_clock::time_point fixed_ip_loop_start;
   static std::chrono::_V2::high_resolution_clock::time_point update_neighbor_time;
   static std::chrono::_V2::high_resolution_clock::time_point found_subnet_info_time;
@@ -914,7 +914,7 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
     overall_rc = -EFAULT;
   }
 
-  auto operation_end = chrono::steady_clock::now();
+  auto operation_end = chrono::high_resolution_clock::now();
 
   auto operation_total_time =
           cast_to_microseconds(operation_end - operation_start).count();
