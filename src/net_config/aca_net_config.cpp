@@ -334,7 +334,7 @@ int Aca_Net_Config::execute_system_command(string cmd_string, ulong &culminative
   }
 
   ACA_LOG_DEBUG(" Elapsed time for system command [%s] took: %ld microseconds or %ld milliseconds.\n",
-                cmd_string, execute_system_elapse_time,
+                cmd_string.c_str(), execute_system_elapse_time,
                 us_to_ms(execute_system_elapse_time));
 
   return rc;
