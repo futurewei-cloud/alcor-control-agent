@@ -923,7 +923,8 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
           cast_to_microseconds(found_subnet_info_time - fixed_ip_loop_start).count();
 
   auto determine_same_host_total_time =
-          cast_to_microseconds(determined_same_host_time - found_subnet_info_time).count();
+          cast_to_microseconds(determined_same_host_time - found_subnet_info_time)
+                  .count();
   auto update_neighbor_total_time =
           cast_to_microseconds(update_neighbor_time - determined_same_host_time).count();
   aca_goal_state_handler::Aca_Goal_State_Handler::get_instance().add_goal_state_operation_status(
@@ -937,10 +938,13 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
   } else {
     ACA_LOG_ERROR("Unable to configure the neighbor state: rc=%d\n", overall_rc);
   }
-  ACA_LOG_DEBUG("[METRICS] Elapsed time for updating 1 neighbor state, total time is %ld microseconds, or %ld milliseconds\n[METRICS] Elapsed time for determining same host took %ld microseconds, or %ld milliseconds.\n[METRICS] Elapsed time for validate info took %ld microseconds, or %ld milliseconds.\n[METRICS] Elapsed time for updating neighbor info took %ld microseconds, or %ld milliseconds.\n",
+  ACA_LOG_DEBUG("[METRICS] Elapsed time for updating 1 neighbor state, total time is %ld microseconds, or %ld milliseconds\n\
+                 [METRICS] Elapsed time for determining same host took %ld microseconds, or %ld milliseconds.\n\
+                 [METRICS] Elapsed time for validate info took %ld microseconds, or %ld milliseconds.\n\
+                 [METRICS] Elapsed time for updating neighbor info took %ld microseconds, or %ld milliseconds.\n",
                 operation_total_time, us_to_ms(operation_total_time),
-                validate_info_total_time, us_to_ms(validate_info_total_time),
                 determine_same_host_total_time, us_to_ms(determine_same_host_total_time),
+                validate_info_total_time, us_to_ms(validate_info_total_time),
                 update_neighbor_total_time, us_to_ms(update_neighbor_total_time));
   return overall_rc;
 }

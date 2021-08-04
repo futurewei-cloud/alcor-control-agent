@@ -151,7 +151,7 @@ void GoalStateProvisionerAsyncInstance::PushGoalStatesStream(bool ok)
                     start, end, message_total_operation_time,
                     (message_total_operation_time / 1000));
       new GoalStateProvisionerAsyncInstance(service_, cq_);
-      stream_->Write(gsOperationReply_, this);
+      stream_->Write(gsOperationReply_, grpc::WriteOptions().set_buffer_hint(), this);
       status_ = READY_TO_READ;
       gsOperationReply_.Clear();
       break;
