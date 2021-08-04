@@ -143,7 +143,11 @@ int Aca_Comm_Manager::update_goal_state(GoalState &goal_state_message,
           cast_to_microseconds(end - neighbor_update_finished_time).count();
   auto message_total_operation_time = cast_to_microseconds(end - start).count();
 
-  ACA_LOG_DEBUG("[METRICS] Elapsed time for message total operation took: %ld microseconds or %ld milliseconds\n[METRICS] Elapsed time for router operation took: %ld microseconds or %ld milliseconds\n[METRICS] Elapsed time for port operation took: %ld microseconds or %ld milliseconds\n[METRICS] Elapsed time for neighbor operation took: %ld microseconds or %ld milliseconds\n[METRICS] Elapsed time for dhcp operation took: %ld microseconds or %ld milliseconds\n",
+  ACA_LOG_DEBUG("[METRICS] Elapsed time for message total operation took: %ld microseconds or %ld milliseconds\n\
+[METRICS] Elapsed time for router operation took: %ld microseconds or %ld milliseconds\n\
+[METRICS] Elapsed time for port operation took: %ld microseconds or %ld milliseconds\n\
+[METRICS] Elapsed time for neighbor operation took: %ld microseconds or %ld milliseconds\n\
+[METRICS] Elapsed time for dhcp operation took: %ld microseconds or %ld milliseconds\n",
                 message_total_operation_time, us_to_ms(message_total_operation_time),
                 router_operation_time, us_to_ms(router_operation_time),
                 port_operation_time, us_to_ms(port_operation_time),
@@ -238,7 +242,12 @@ int Aca_Comm_Manager::update_goal_state(GoalStateV2 &goal_state_message,
           cast_to_microseconds(end - neighbor_update_finished_time).count();
   auto message_total_operation_time = cast_to_microseconds(end - start).count();
 
-  ACA_LOG_DEBUG("[METRICS] Elapsed time for message total operation took: %ld microseconds or %ld milliseconds\n[METRICS] Elapsed time for gs printout operation took: %ld microseconds or %ld milliseconds\n[METRICS] Elapsed time for router operation took: %ld microseconds or %ld milliseconds\n[METRICS] Elapsed time for port operation took: %ld microseconds or %ld milliseconds\n[METRICS] Elapsed time for neighbor operation took: %ld microseconds or %ld milliseconds\n[METRICS] Elapsed time for dhcp operation took: %ld microseconds or %ld milliseconds\n",
+  ACA_LOG_DEBUG("[METRICS] Elapsed time for message total operation took: %ld microseconds or %ld milliseconds\n\
+[METRICS] Elapsed time for gs printout operation took: %ld microseconds or %ld milliseconds\n\
+[METRICS] Elapsed time for router operation took: %ld microseconds or %ld milliseconds\n\
+[METRICS] Elapsed time for port operation took: %ld microseconds or %ld milliseconds\n\
+[METRICS] Elapsed time for neighbor operation took: %ld microseconds or %ld milliseconds\n\
+[METRICS] Elapsed time for dhcp operation took: %ld microseconds or %ld milliseconds\n",
                 message_total_operation_time, us_to_ms(message_total_operation_time),
                 gs_printout_operation_time, us_to_ms(gs_printout_operation_time),
                 router_operation_time, us_to_ms(router_operation_time),
@@ -1076,7 +1085,15 @@ void Aca_Comm_Manager::print_goal_state(GoalStateV2 parsed_struct)
   auto message_total_operation_time = cast_to_microseconds(end - start).count();
 
   ACA_LOG_DEBUG(
-          "[METRICS] Elapsed time for goalstateV2 printout took: %ld microseconds or %ld milliseconds\n[METRICS] Elapsed time for vpc printout operation took: %ld microseconds or %ld milliseconds\n[METRICS] Elapsed time for subnet printout operation took: %ld microseconds or %ld milliseconds\n[METRICS] Elapsed time for port printout operation took: %ld microseconds or %ld milliseconds\n[METRICS] Elapsed time for neighbor printout operation took: %ld microseconds or %ld milliseconds\n[METRICS] Elapsed time for security group printout operation took: %ld microseconds or %ld milliseconds\n[METRICS] Elapsed time for dhcp printout operation took: %ld microseconds or %ld milliseconds\n[METRICS] Elapsed time for router printout operation took: %ld microseconds or %ld milliseconds\n[METRICS] Elapsed time for gateway printout operation took: %ld microseconds or %ld milliseconds\n",
+          "[METRICS] Elapsed time for goalstateV2 printout took: %ld microseconds or %ld milliseconds\n\
+[METRICS] Elapsed time for vpc printout operation took: %ld microseconds or %ld milliseconds\n\
+[METRICS] Elapsed time for subnet printout operation took: %ld microseconds or %ld milliseconds\n\
+[METRICS] Elapsed time for port printout operation took: %ld microseconds or %ld milliseconds\n\
+[METRICS] Elapsed time for neighbor printout operation took: %ld microseconds or %ld milliseconds\n\
+[METRICS] Elapsed time for security group printout operation took: %ld microseconds or %ld milliseconds\n\
+[METRICS] Elapsed time for dhcp printout operation took: %ld microseconds or %ld milliseconds\n\
+[METRICS] Elapsed time for router printout operation took: %ld microseconds or %ld milliseconds\n\
+[METRICS] Elapsed time for gateway printout operation took: %ld microseconds or %ld milliseconds\n",
           message_total_operation_time, us_to_ms(message_total_operation_time),
           vpc_printout_elapsed_time, us_to_ms(vpc_printout_elapsed_time),
           subnet_printout_elapsed_time, us_to_ms(subnet_printout_elapsed_time),
