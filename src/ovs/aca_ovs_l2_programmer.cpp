@@ -21,6 +21,8 @@
 #include <chrono>
 #include <thread>
 #include <errno.h>
+#include <boost/algorithm/string/classification.hpp> // Include boost::for is_any_of
+#include <boost/algorithm/string/split.hpp> // Include for boost::split
 
 using namespace std;
 using namespace aca_vlan_manager;
@@ -98,8 +100,15 @@ void ACA_OVS_L2_Programmer::get_local_host_ips()
   while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {
     local_ips_string += buffer.data();
   }
-  host_ips_vector.push_back(local_ips_string);
-  ACA_LOG_INFO("Local IPs are: [%s]", local_ips_string);
+
+  boost::split(host_ips_vector, local_ips_string, boost::is_any_of("\n"),
+               boost::token_compress_on);
+
+  // host_ips_vector.push_back(local_ips_string);
+  ACA_LOG_INFO("Local IPs are: [%s]\n", local_ips_string.c_str());
+  for (std::string host_ip : host_ips_vector) {
+    ACA_LOG_INFO("Host IP: [%s]\n", host_ip.c_str());
+  }
 }
 
 int ACA_OVS_L2_Programmer::setup_ovs_bridges_if_need()
