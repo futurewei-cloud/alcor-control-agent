@@ -756,10 +756,13 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
   ulong culminative_network_configuration_time = 0;
 
   auto operation_start = chrono::high_resolution_clock::now();
+  static std::chrono::_V2::high_resolution_clock::time_point validate_fixed_ip_size_time;
+  static std::chrono::_V2::high_resolution_clock::time_point assert_revision_number_time;
   static std::chrono::_V2::high_resolution_clock::time_point fixed_ip_loop_start;
   static std::chrono::_V2::high_resolution_clock::time_point update_neighbor_time;
   static std::chrono::_V2::high_resolution_clock::time_point found_subnet_info_time;
   static std::chrono::_V2::high_resolution_clock::time_point determined_same_host_time;
+
   NeighborConfiguration current_NeighborConfiguration =
           current_NeighborState.configuration();
 
@@ -767,10 +770,10 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
     if (!aca_validate_fixed_ips_size(current_NeighborConfiguration.fixed_ips_size())) {
       throw std::invalid_argument("NeighborConfiguration.fixed_ips_size is less than zero");
     }
-
+    validate_fixed_ip_size_time = chrono::high_resolution_clock::now();
     // TODO: need to design the usage of current_NeighborConfiguration.revision_number()
     assert(current_NeighborConfiguration.revision_number() > 0);
-
+    assert_revision_number_time = chrono::high_resolution_clock::now();
     for (int ip_index = 0;
          ip_index < current_NeighborConfiguration.fixed_ips_size(); ip_index++) {
       ACA_LOG_DEBUG("In fixed ip loop, index: %ld\n", ip_index);
@@ -921,8 +924,15 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
   auto operation_total_time =
           cast_to_microseconds(operation_end - operation_start).count();
 
-  auto check_fixed_ip_size_and_revision_time =
-          cast_to_microseconds(fixed_ip_loop_start - operation_start).count();
+  auto check_fixed_ip_size_total_time =
+          cast_to_microseconds(validate_fixed_ip_size_time - operation_start).count();
+
+  auto assert_revision_number_total_time =
+          cast_to_microseconds(assert_revision_number_time - validate_fixed_ip_size_time)
+                  .count();
+
+  // auto check_fixed_ip_size_and_revision_time =
+  //         cast_to_microseconds(fixed_ip_loop_start - operation_start).count();
 
   auto validate_info_total_time =
           cast_to_microseconds(found_subnet_info_time - fixed_ip_loop_start).count();
@@ -943,17 +953,19 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
   } else {
     ACA_LOG_ERROR("Unable to configure the neighbor state: rc=%d\n", overall_rc);
   }
-  ACA_LOG_DEBUG("[METRICS] Elapsed time for updating 1 neighbor state, total time is %ld microseconds, or %ld milliseconds\n\
-[METRICS] Elapsed time for assuring fixed IP size and revision number took %ld microseconds, or %ld milliseconds.\n\
+  ACA_LOG_DEBUG(
+          "[METRICS] Elapsed time for updating 1 neighbor state, total time is %ld microseconds, or %ld milliseconds\n\
+[METRICS] Elapsed time for assuring fixed IP size took %ld microseconds, or %ld milliseconds.\n\
+[METRICS] Elapsed time for assuring revision number took %ld microseconds, or %ld milliseconds.\n\
 [METRICS] Elapsed time for determining same host took %ld microseconds, or %ld milliseconds.\n\
 [METRICS] Elapsed time for validate info took %ld microseconds, or %ld milliseconds.\n\
 [METRICS] Elapsed time for updating neighbor info took %ld microseconds, or %ld milliseconds.\n",
-                operation_total_time, us_to_ms(operation_total_time),
-                check_fixed_ip_size_and_revision_time,
-                us_to_ms(check_fixed_ip_size_and_revision_time),
-                determine_same_host_total_time, us_to_ms(determine_same_host_total_time),
-                validate_info_total_time, us_to_ms(validate_info_total_time),
-                update_neighbor_total_time, us_to_ms(update_neighbor_total_time));
+          operation_total_time, us_to_ms(operation_total_time),
+          check_fixed_ip_size_total_time, us_to_ms(check_fixed_ip_size_total_time),
+          assert_revision_number_total_time, us_to_ms(assert_revision_number_total_time),
+          determine_same_host_total_time, us_to_ms(determine_same_host_total_time),
+          validate_info_total_time, us_to_ms(validate_info_total_time),
+          update_neighbor_total_time, us_to_ms(update_neighbor_total_time));
   return overall_rc;
 }
 
