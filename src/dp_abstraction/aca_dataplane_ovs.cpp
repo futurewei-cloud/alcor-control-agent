@@ -569,20 +569,19 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
 
   auto operation_start = chrono::steady_clock::now();
 
-  NeighborConfiguration current_NeighborConfiguration =
-          current_NeighborState.configuration();
+  auto current_NeighborConfiguration = &(current_NeighborState.configuration());
 
   try {
-    if (!aca_validate_fixed_ips_size(current_NeighborConfiguration.fixed_ips_size())) {
+    if (!aca_validate_fixed_ips_size(current_NeighborConfiguration->fixed_ips_size())) {
       throw std::invalid_argument("NeighborConfiguration.fixed_ips_size is less than zero");
     }
 
     // TODO: need to design the usage of current_NeighborConfiguration.revision_number()
-    assert(current_NeighborConfiguration.revision_number() > 0);
+    assert(current_NeighborConfiguration->revision_number() > 0);
 
     for (int ip_index = 0;
-         ip_index < current_NeighborConfiguration.fixed_ips_size(); ip_index++) {
-      auto current_fixed_ip = current_NeighborConfiguration.fixed_ips(ip_index);
+         ip_index < current_NeighborConfiguration->fixed_ips_size(); ip_index++) {
+      auto current_fixed_ip = current_NeighborConfiguration->fixed_ips(ip_index);
 
       if (current_fixed_ip.neighbor_type() == NeighborType::L2 ||
           current_fixed_ip.neighbor_type() == NeighborType::L3) {
@@ -593,12 +592,12 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
           throw std::invalid_argument("Virtual ip address is not in the expect format");
         }
 
-        virtual_mac_address = current_NeighborConfiguration.mac_address();
+        virtual_mac_address = current_NeighborConfiguration->mac_address();
         if (!aca_validate_mac_address(virtual_mac_address.c_str())) {
           throw std::invalid_argument("virtual_mac_address is invalid");
         }
 
-        host_ip_address = current_NeighborConfiguration.host_ip_address();
+        host_ip_address = current_NeighborConfiguration->host_ip_address();
 
         // inet_pton returns 1 for success 0 for failure
         if (inet_pton(AF_INET, host_ip_address.c_str(), &(sa.sin_addr)) != 1) {
@@ -637,9 +636,9 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
                   "Neighbor Operation:%s: id: %s, neighbor_type:%s, vpc_id:%s, network_type:%d, ip_index: %d,"
                   "virtual_ip_address:%s, virtual_mac_address:%s, neighbor_host_ip_address:%s, tunnel_id:%d\n",
                   aca_get_operation_string(current_NeighborState.operation_type()),
-                  current_NeighborConfiguration.id().c_str(),
+                  current_NeighborConfiguration->id().c_str(),
                   aca_get_neighbor_type_string(current_fixed_ip.neighbor_type()),
-                  current_NeighborConfiguration.vpc_id().c_str(), found_network_type,
+                  current_NeighborConfiguration->vpc_id().c_str(), found_network_type,
                   ip_index, virtual_ip_address.c_str(), virtual_mac_address.c_str(),
                   host_ip_address.c_str(), found_tunnel_id);
 
@@ -681,15 +680,16 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
                   (current_NeighborState.operation_type() == OperationType::UPDATE) ||
                   (current_NeighborState.operation_type() == OperationType::INFO)) {
                 overall_rc = ACA_OVS_L3_Programmer::get_instance().create_or_update_l3_neighbor(
-                        current_NeighborConfiguration.id(),
-                        current_NeighborConfiguration.vpc_id(),
+                        current_NeighborConfiguration->id(),
+                        current_NeighborConfiguration->vpc_id(),
                         current_fixed_ip.subnet_id(), virtual_ip_address,
                         virtual_mac_address, host_ip_address, found_tunnel_id,
                         culminative_dataplane_programming_time);
               } else if (current_NeighborState.operation_type() == OperationType::DELETE) {
                 overall_rc = ACA_OVS_L3_Programmer::get_instance().delete_l3_neighbor(
-                        current_NeighborConfiguration.id(), current_fixed_ip.subnet_id(),
-                        virtual_ip_address, culminative_dataplane_programming_time);
+                        current_NeighborConfiguration->id(),
+                        current_fixed_ip.subnet_id(), virtual_ip_address,
+                        culminative_dataplane_programming_time);
               } else {
                 ACA_LOG_ERROR("Invalid neighbor state operation type %d\n",
                               current_NeighborState.operation_type());
@@ -725,7 +725,7 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
           cast_to_microseconds(operation_end - operation_start).count();
 
   aca_goal_state_handler::Aca_Goal_State_Handler::get_instance().add_goal_state_operation_status(
-          gsOperationReply, current_NeighborConfiguration.id(),
+          gsOperationReply, current_NeighborConfiguration->id(),
           ResourceType::NEIGHBOR, current_NeighborState.operation_type(),
           overall_rc, culminative_dataplane_programming_time,
           culminative_network_configuration_time, operation_total_time);
