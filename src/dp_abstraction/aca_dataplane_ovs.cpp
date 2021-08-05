@@ -757,6 +757,7 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
 
   auto operation_start = chrono::high_resolution_clock::now();
 
+  static std::chrono::_V2::high_resolution_clock::time_point got_neighbor_configuration_time;
   static std::chrono::_V2::high_resolution_clock::time_point got_fixed_ip_size_time;
   static std::chrono::_V2::high_resolution_clock::time_point validate_fixed_ip_size_time;
   static std::chrono::_V2::high_resolution_clock::time_point assert_revision_number_time;
@@ -765,8 +766,12 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
   static std::chrono::_V2::high_resolution_clock::time_point found_subnet_info_time;
   static std::chrono::_V2::high_resolution_clock::time_point determined_same_host_time;
 
+  auto init_time_vars_time = chrono::high_resolution_clock::now();
+
   NeighborConfiguration current_NeighborConfiguration =
           current_NeighborState.configuration();
+
+  got_neighbor_configuration_time = chrono::high_resolution_clock::now();
 
   try {
     // int fixed_ips_size = current_NeighborConfiguration.fixed_ips_size();
@@ -933,8 +938,16 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
   auto operation_total_time =
           cast_to_microseconds(operation_end - operation_start).count();
 
+  auto init_time_vars_total_time =
+          cast_to_microseconds(init_time_vars_time - operation_start).count();
+
+  auto get_neighbor_configuration_total_time =
+          cast_to_microseconds(got_neighbor_configuration_time - init_time_vars_time)
+                  .count();
+
   auto get_fixed_ip_size_total_time =
-          cast_to_microseconds(got_fixed_ip_size_time - operation_start).count();
+          cast_to_microseconds(got_fixed_ip_size_time - got_neighbor_configuration_time)
+                  .count();
 
   auto check_fixed_ip_size_total_time =
           cast_to_microseconds(validate_fixed_ip_size_time - got_fixed_ip_size_time)
@@ -965,16 +978,20 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
   }
   ACA_LOG_DEBUG(
           "[METRICS] Elapsed time for updating 1 neighbor state, total time is %ld microseconds, or %ld milliseconds\n\
+[METRICS] Elapsed time for initing the time stamps took %ld microseconds, or %ld milliseconds.\n\
+[METRICS] Elapsed time for getting neighbor configuration took %ld microseconds, or %ld milliseconds.\n\
 [METRICS] Elapsed time for getting fixed IP size took %ld microseconds, or %ld milliseconds.\n\
 [METRICS] Elapsed time for assuring fixed IP size took %ld microseconds, or %ld milliseconds.\n\
 [METRICS] Elapsed time for assuring revision number took %ld microseconds, or %ld milliseconds.\n\
 [METRICS] Elapsed time for determining same host took %ld microseconds, or %ld milliseconds.\n\
 [METRICS] Elapsed time for validate info took %ld microseconds, or %ld milliseconds.\n\
 [METRICS] Elapsed time for updating neighbor info took %ld microseconds, or %ld milliseconds.\n",
-          operation_total_time, us_to_ms(operation_total_time),
-          get_fixed_ip_size_total_time, us_to_ms(get_fixed_ip_size_total_time),
-          check_fixed_ip_size_total_time, us_to_ms(check_fixed_ip_size_total_time),
-          assert_revision_number_total_time, us_to_ms(assert_revision_number_total_time),
+          operation_total_time, us_to_ms(operation_total_time), init_time_vars_total_time,
+          us_to_ms(init_time_vars_total_time), get_neighbor_configuration_total_time,
+          us_to_ms(get_neighbor_configuration_total_time), get_fixed_ip_size_total_time,
+          us_to_ms(get_fixed_ip_size_total_time), check_fixed_ip_size_total_time,
+          us_to_ms(check_fixed_ip_size_total_time), assert_revision_number_total_time,
+          us_to_ms(assert_revision_number_total_time),
           determine_same_host_total_time, us_to_ms(determine_same_host_total_time),
           validate_info_total_time, us_to_ms(validate_info_total_time),
           update_neighbor_total_time, us_to_ms(update_neighbor_total_time));
