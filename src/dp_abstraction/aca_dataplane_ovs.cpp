@@ -756,6 +756,8 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
   ulong culminative_network_configuration_time = 0;
 
   auto operation_start = chrono::high_resolution_clock::now();
+
+  static std::chrono::_V2::high_resolution_clock::time_point got_fixed_ip_size_time;
   static std::chrono::_V2::high_resolution_clock::time_point validate_fixed_ip_size_time;
   static std::chrono::_V2::high_resolution_clock::time_point assert_revision_number_time;
   static std::chrono::_V2::high_resolution_clock::time_point fixed_ip_loop_start;
@@ -767,7 +769,11 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
           current_NeighborState.configuration();
 
   try {
-    if (current_NeighborConfiguration.fixed_ips_size() <= 0) {
+    int fixed_ips_size = current_NeighborConfiguration.fixed_ips_size();
+
+    got_fixed_ip_size_time = chrono::high_resolution_clock::now();
+
+    if (fixed_ips_size <= 0) {
       throw std::invalid_argument("NeighborConfiguration.fixed_ips_size is less than zero");
     }
     // if (!aca_validate_fixed_ips_size(current_NeighborConfiguration.fixed_ips_size())) {
@@ -927,15 +933,16 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
   auto operation_total_time =
           cast_to_microseconds(operation_end - operation_start).count();
 
+  auto get_fixed_ip_size_total_time =
+          cast_to_microseconds(got_fixed_ip_size_time - operation_start).count();
+
   auto check_fixed_ip_size_total_time =
-          cast_to_microseconds(validate_fixed_ip_size_time - operation_start).count();
+          cast_to_microseconds(validate_fixed_ip_size_time - got_fixed_ip_size_time)
+                  .count();
 
   auto assert_revision_number_total_time =
           cast_to_microseconds(assert_revision_number_time - validate_fixed_ip_size_time)
                   .count();
-
-  // auto check_fixed_ip_size_and_revision_time =
-  //         cast_to_microseconds(fixed_ip_loop_start - operation_start).count();
 
   auto validate_info_total_time =
           cast_to_microseconds(found_subnet_info_time - fixed_ip_loop_start).count();
@@ -958,12 +965,14 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
   }
   ACA_LOG_DEBUG(
           "[METRICS] Elapsed time for updating 1 neighbor state, total time is %ld microseconds, or %ld milliseconds\n\
+[METRICS] Elapsed time for getting fixed IP size took %ld microseconds, or %ld milliseconds.\n\
 [METRICS] Elapsed time for assuring fixed IP size took %ld microseconds, or %ld milliseconds.\n\
 [METRICS] Elapsed time for assuring revision number took %ld microseconds, or %ld milliseconds.\n\
 [METRICS] Elapsed time for determining same host took %ld microseconds, or %ld milliseconds.\n\
 [METRICS] Elapsed time for validate info took %ld microseconds, or %ld milliseconds.\n\
 [METRICS] Elapsed time for updating neighbor info took %ld microseconds, or %ld milliseconds.\n",
           operation_total_time, us_to_ms(operation_total_time),
+          get_fixed_ip_size_total_time, us_to_ms(get_fixed_ip_size_total_time),
           check_fixed_ip_size_total_time, us_to_ms(check_fixed_ip_size_total_time),
           assert_revision_number_total_time, us_to_ms(assert_revision_number_total_time),
           determine_same_host_total_time, us_to_ms(determine_same_host_total_time),
