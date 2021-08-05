@@ -767,9 +767,12 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
           current_NeighborState.configuration();
 
   try {
-    if (!aca_validate_fixed_ips_size(current_NeighborConfiguration.fixed_ips_size())) {
+    if (current_NeighborConfiguration.fixed_ips_size() <= 0) {
       throw std::invalid_argument("NeighborConfiguration.fixed_ips_size is less than zero");
     }
+    // if (!aca_validate_fixed_ips_size(current_NeighborConfiguration.fixed_ips_size())) {
+    //   throw std::invalid_argument("NeighborConfiguration.fixed_ips_size is less than zero");
+    // }
     validate_fixed_ip_size_time = chrono::high_resolution_clock::now();
     // TODO: need to design the usage of current_NeighborConfiguration.revision_number()
     assert(current_NeighborConfiguration.revision_number() > 0);
