@@ -768,7 +768,8 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
 
   auto init_time_vars_time = chrono::high_resolution_clock::now();
 
-  auto current_NeighborConfiguration = current_NeighborState.mutable_configuration();
+  alcor::schema::NeighborConfiguration *current_NeighborConfiguration =
+          current_NeighborState.mutable_configuration();
 
   got_neighbor_configuration_time = chrono::high_resolution_clock::now();
 
