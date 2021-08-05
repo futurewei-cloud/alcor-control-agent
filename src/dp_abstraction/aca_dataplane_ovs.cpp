@@ -768,18 +768,18 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
 
   auto init_time_vars_time = chrono::high_resolution_clock::now();
 
-  auto current_NeighborConfiguration = &(current_NeighborState.configuration());
+  auto current_NeighborConfiguration = current_NeighborState.mutable_configuration();
 
   got_neighbor_configuration_time = chrono::high_resolution_clock::now();
 
   try {
-    // int fixed_ips_size = current_NeighborConfiguration.fixed_ips_size();
+    int fixed_ips_size = current_NeighborConfiguration->fixed_ips_size();
 
     got_fixed_ip_size_time = chrono::high_resolution_clock::now();
 
-    // if (fixed_ips_size <= 0) {
-    //   throw std::invalid_argument("NeighborConfiguration.fixed_ips_size is less than zero");
-    // }
+    if (fixed_ips_size <= 0) {
+      throw std::invalid_argument("NeighborConfiguration.fixed_ips_size is less than zero");
+    }
     // if (!aca_validate_fixed_ips_size(current_NeighborConfiguration.fixed_ips_size())) {
     //   throw std::invalid_argument("NeighborConfiguration.fixed_ips_size is less than zero");
     // }
