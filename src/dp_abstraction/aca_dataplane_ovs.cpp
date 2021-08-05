@@ -770,15 +770,20 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
 
   alcor::schema::NeighborConfiguration current_NeighborConfiguration;
 
-  for (auto it : parsed_struct.neighbor_states()) {
-    auto before_get_neighbor_conf = chrono::high_resolution_clock::now();
-    current_NeighborConfiguration = it.second.configuration();
-    auto after_get_neighbor_conf = chrono::high_resolution_clock::now();
-    auto get_neigbhor_conf_total_time =
-            cast_to_microseconds(after_get_neighbor_conf - before_get_neighbor_conf)
-                    .count();
-    ACA_LOG_DEBUG("Getting one neighbor config took %ld microseconds, or %ld milliseconds\n",
-                  get_neigbhor_conf_total_time, us_to_ms(get_neigbhor_conf_total_time));
+  // check if it is on-demand stuff
+  if (parsed_struct.neighbor_states_size() == 1) {
+    for (auto it : parsed_struct.neighbor_states()) {
+      auto before_get_neighbor_conf = chrono::high_resolution_clock::now();
+      current_NeighborConfiguration = it.second.configuration();
+      auto after_get_neighbor_conf = chrono::high_resolution_clock::now();
+      auto get_neigbhor_conf_total_time =
+              cast_to_microseconds(after_get_neighbor_conf - before_get_neighbor_conf)
+                      .count();
+      ACA_LOG_DEBUG("Getting one neighbor config took %ld microseconds, or %ld milliseconds\n",
+                    get_neigbhor_conf_total_time, us_to_ms(get_neigbhor_conf_total_time));
+    }
+  } else {
+    current_NeighborConfiguration = current_NeighborState.configuration();
   }
 
   // alcor::schema::NeighborConfiguration *current_NeighborConfiguration =
