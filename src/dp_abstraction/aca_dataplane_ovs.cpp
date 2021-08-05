@@ -921,6 +921,9 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
   auto operation_total_time =
           cast_to_microseconds(operation_end - operation_start).count();
 
+  auto check_fixed_ip_size_and_revision_time =
+          cast_to_microseconds(fixed_ip_loop_start - operation_start).count();
+
   auto validate_info_total_time =
           cast_to_microseconds(found_subnet_info_time - fixed_ip_loop_start).count();
 
@@ -941,10 +944,13 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
     ACA_LOG_ERROR("Unable to configure the neighbor state: rc=%d\n", overall_rc);
   }
   ACA_LOG_DEBUG("[METRICS] Elapsed time for updating 1 neighbor state, total time is %ld microseconds, or %ld milliseconds\n\
+[METRICS] Elapsed time for assuring fixed IP size and revision number took %ld microseconds, or %ld milliseconds.\n\
 [METRICS] Elapsed time for determining same host took %ld microseconds, or %ld milliseconds.\n\
 [METRICS] Elapsed time for validate info took %ld microseconds, or %ld milliseconds.\n\
 [METRICS] Elapsed time for updating neighbor info took %ld microseconds, or %ld milliseconds.\n",
                 operation_total_time, us_to_ms(operation_total_time),
+                check_fixed_ip_size_and_revision_time,
+                us_to_ms(check_fixed_ip_size_and_revision_time),
                 determine_same_host_total_time, us_to_ms(determine_same_host_total_time),
                 validate_info_total_time, us_to_ms(validate_info_total_time),
                 update_neighbor_total_time, us_to_ms(update_neighbor_total_time));
