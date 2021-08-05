@@ -768,6 +768,17 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
 
   auto init_time_vars_time = chrono::high_resolution_clock::now();
 
+  for (auto it : parsed_struct.neighbor_states()) {
+    auto before_get_neighbor_conf = chrono::high_resolution_clock::now();
+    auto neighbor_conf = it.second.configuration();
+    auto after_get_neighbor_conf = chrono::high_resolution_clock::now();
+    auto get_neigbhor_conf_total_time =
+            cast_to_microseconds(after_get_neighbor_conf - before_get_neighbor_conf)
+                    .count();
+    ACA_LOG_DEBUG("Getting one neighbor config took %ld microseconds, or %ld milliseconds",
+                  get_neigbhor_conf_total_time, us_to_ms(get_neigbhor_conf_total_time));
+  }
+
   alcor::schema::NeighborConfiguration *current_NeighborConfiguration =
           current_NeighborState.mutable_configuration();
 
