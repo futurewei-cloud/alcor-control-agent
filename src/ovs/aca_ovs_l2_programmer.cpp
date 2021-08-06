@@ -124,12 +124,12 @@ void ACA_OVS_L2_Programmer::get_local_host_ips()
     /* Display interface name and family (including symbolic
            form of the latter for the common families) */
 
-    printf("%-8s %s (%d)\n", ifa->ifa_name,
-           (family == AF_PACKET) ? "AF_PACKET" :
-           (family == AF_INET)   ? "AF_INET" :
-           (family == AF_INET6)  ? "AF_INET6" :
-                                   "???",
-           family);
+    ACA_LOG_INFO("%-8s %s (%d)\n", ifa->ifa_name,
+                 (family == AF_PACKET) ? "AF_PACKET" :
+                 (family == AF_INET)   ? "AF_INET" :
+                 (family == AF_INET6)  ? "AF_INET6" :
+                                         "???",
+                 family);
 
     /* For an AF_INET* interface address, display the address */
 
@@ -139,39 +139,18 @@ void ACA_OVS_L2_Programmer::get_local_host_ips()
                                             sizeof(struct sockaddr_in6),
                       host, NI_MAXHOST, NULL, 0, NI_NUMERICHOST);
       if (s != 0) {
-        printf("getnameinfo() failed: %s\n", gai_strerror(s));
+        ACA_LOG_WARN("getnameinfo() failed: %s\n", gai_strerror(s));
         exit(EXIT_FAILURE);
       }
 
-      printf("\t\taddress: <%s>\n", host);
+      ACA_LOG_INFO("\t\taddress: <%s>\n", host);
       std::string host_ip_string = std::string(host);
       host_ips_vector.push_back(host_ip_string);
     }
   }
 
   freeifaddrs(ifaddr);
-  // std::array<char, 128> buffer;
-  // std::string list_local_host_ip_cmd = "ifconfig | grep inet | awk '{print $2}'";
-  // std::string local_ips_string;
-  // std::unique_ptr<FILE, decltype(&pclose)> pipe(
-  //         popen(list_local_host_ip_cmd.c_str(), "r"), pclose);
-  // if (!pipe) {
-  //   throw std::runtime_error("popen() failed!");
-  // }
-  // while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {
-  //   local_ips_string += buffer.data();
-  // }
 
-  // // split the string by '\n', but it leaves an empty element at the end.
-  // boost::split(host_ips_vector, local_ips_string, boost::is_any_of("\n"),
-  //              boost::token_compress_on);
-  // host_ips_vector.erase(
-  //         std::remove_if(host_ips_vector.begin(), host_ips_vector.end(),
-  //                        [](std::string str) { return str.empty(); }),
-  //         host_ips_vector.end());
-  // for (std::string host_ip : host_ips_vector) {
-  //   ACA_LOG_INFO("Host IP: [%s]\n", host_ip.c_str());
-  // }
   vector<string>::iterator it = host_ips_vector.begin();
   while (it != host_ips_vector.end()) {
     ACA_LOG_DEBUG("Current Host IP: [%s]\n", it->c_str());
