@@ -23,6 +23,14 @@
 #include <errno.h>
 #include <boost/algorithm/string/classification.hpp> // Include boost::for is_any_of
 #include <boost/algorithm/string/split.hpp> // Include for boost::split
+#include <arpa/inet.h>
+#include <sys/socket.h>
+#include <netdb.h>
+#include <ifaddrs.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <linux/if_link.h>
 
 using namespace std;
 using namespace aca_vlan_manager;
@@ -95,21 +103,68 @@ bool ACA_OVS_L2_Programmer::is_ip_on_the_same_host(const std::string host_ip)
 
 void ACA_OVS_L2_Programmer::get_local_host_ips()
 {
-  std::array<char, 128> buffer;
-  std::string list_local_host_ip_cmd = "ifconfig | grep inet | awk '{print $2}'";
-  std::string local_ips_string;
-  std::unique_ptr<FILE, decltype(&pclose)> pipe(
-          popen(list_local_host_ip_cmd.c_str(), "r"), pclose);
-  if (!pipe) {
-    throw std::runtime_error("popen() failed!");
-  }
-  while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {
-    local_ips_string += buffer.data();
+  struct ifaddrs *ifaddr, *ifa;
+  int family, s, n;
+  char host[NI_MAXHOST];
+
+  if (getifaddrs(&ifaddr) == -1) {
+    perror("getifaddrs");
+    exit(EXIT_FAILURE);
   }
 
-  // split the string by '\n', but it leaves an empty element at the end.
-  boost::split(host_ips_vector, local_ips_string, boost::is_any_of("\n"),
-               boost::token_compress_on);
+  /* Walk through linked list, maintaining head pointer so we
+       can free list later */
+
+  for (ifa = ifaddr, n = 0; ifa != NULL; ifa = ifa->ifa_next, n++) {
+    if (ifa->ifa_addr == NULL)
+      continue;
+
+    family = ifa->ifa_addr->sa_family;
+
+    /* Display interface name and family (including symbolic
+           form of the latter for the common families) */
+
+    printf("%-8s %s (%d)\n", ifa->ifa_name,
+           (family == AF_PACKET) ? "AF_PACKET" :
+           (family == AF_INET)   ? "AF_INET" :
+           (family == AF_INET6)  ? "AF_INET6" :
+                                   "???",
+           family);
+
+    /* For an AF_INET* interface address, display the address */
+
+    if (family == AF_INET || family == AF_INET6) {
+      s = getnameinfo(ifa->ifa_addr,
+                      (family == AF_INET) ? sizeof(struct sockaddr_in) :
+                                            sizeof(struct sockaddr_in6),
+                      host, NI_MAXHOST, NULL, 0, NI_NUMERICHOST);
+      if (s != 0) {
+        printf("getnameinfo() failed: %s\n", gai_strerror(s));
+        exit(EXIT_FAILURE);
+      }
+
+      printf("\t\taddress: <%s>\n", host);
+      std::string host_ip_string = std::string(host);
+      host_ips_vector.push_back(host_ip_string);
+    }
+  }
+
+  freeifaddrs(ifaddr);
+  // std::array<char, 128> buffer;
+  // std::string list_local_host_ip_cmd = "ifconfig | grep inet | awk '{print $2}'";
+  // std::string local_ips_string;
+  // std::unique_ptr<FILE, decltype(&pclose)> pipe(
+  //         popen(list_local_host_ip_cmd.c_str(), "r"), pclose);
+  // if (!pipe) {
+  //   throw std::runtime_error("popen() failed!");
+  // }
+  // while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {
+  //   local_ips_string += buffer.data();
+  // }
+
+  // // split the string by '\n', but it leaves an empty element at the end.
+  // boost::split(host_ips_vector, local_ips_string, boost::is_any_of("\n"),
+  //              boost::token_compress_on);
   // host_ips_vector.erase(
   //         std::remove_if(host_ips_vector.begin(), host_ips_vector.end(),
   //                        [](std::string str) { return str.empty(); }),
