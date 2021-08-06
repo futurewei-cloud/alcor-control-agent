@@ -39,12 +39,11 @@ class GoalStateProvisionerAsyncServer {
 
   Status ShutDownServer();
   void RunServer(int thread_pool_size);
-  void AsyncWorker(int cq_index);
+  void AsyncWorker();
 
   private:
   std::unique_ptr<Server> server_;
-  // std::unique_ptr<ServerCompletionQueue> cq_;
-  std::vector<std::unique_ptr<ServerCompletionQueue> > cq_vector_;
+  std::unique_ptr<ServerCompletionQueue> cq_;
   GoalStateProvisioner::AsyncService service_;
   ctpl::thread_pool thread_pool_;
 };

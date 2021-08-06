@@ -30,7 +30,6 @@
 #include "aca_comm_mgr.h"
 #include "aca_log.h"
 #include "aca_grpc.h"
-#include "math.h"
 
 extern string g_grpc_server_port;
 extern string g_ncm_address;
@@ -43,18 +42,18 @@ Status GoalStateProvisionerAsyncServer::ShutDownServer()
 {
   ACA_LOG_INFO("%s", "Shutdown server");
   server_->Shutdown();
-  // cq_->Shutdown();
+  cq_->Shutdown();
   thread_pool_.stop();
   return Status::OK;
 }
 
-void GoalStateProvisionerAsyncServer::AsyncWorker(int cq_index)
+void GoalStateProvisionerAsyncServer::AsyncWorker()
 {
   void *got_tag;
   bool ok;
-  new GoalStateProvisionerAsyncInstance(&service_, cq_vector_.at(cq_index).get());
+  new GoalStateProvisionerAsyncInstance(&service_, cq_.get());
   while (true) {
-    if (!cq_vector_.at(cq_index)->Next(&got_tag, &ok)) {
+    if (!cq_->Next(&got_tag, &ok)) {
       ACA_LOG_DEBUG("Completion Queue Shut. Quitting\n");
       break;
     }
@@ -68,17 +67,7 @@ void GoalStateProvisionerAsyncServer::RunServer(int thread_pool_size)
   string GRPC_SERVER_ADDRESS = "0.0.0.0:" + g_grpc_server_port;
   builder.AddListeningPort(GRPC_SERVER_ADDRESS, grpc::InsecureServerCredentials());
   builder.RegisterService(&service_);
-
-  // new design: If the Async Server has x threads, then it shall have sqrt(x) CQs,
-  // and sqrt(x) worker threads pulling from each CQ. In total, it will still have
-  // (sqrt(x) * sqrt(x)) = x worker threads
-  int number_of_cqs = (int)(ceil(sqrt(thread_pool_size)));
-  for (int i = 0; i < number_of_cqs; i++) {
-    // std::unique_ptr<grpc_impl::ServerCompletionQueue> cq = builder.AddCompletionQueue();
-    cq_vector_.push_back(builder.AddCompletionQueue());
-  }
-  ACA_LOG_DEBUG("This async server has %ld CQs\n", cq_vector_.size());
-  // cq_ = builder.AddCompletionQueue();
+  cq_ = builder.AddCompletionQueue();
   server_ = builder.BuildAndStart();
   ACA_LOG_INFO("Async GRPC: Streaming capable GRPC server listening on %s\n",
                GRPC_SERVER_ADDRESS.c_str());
@@ -90,10 +79,7 @@ void GoalStateProvisionerAsyncServer::RunServer(int thread_pool_size)
   };
 
   for (int i = 0; i < thread_pool_size; i++) {
-    auto which_cq_to_pull_from = i % number_of_cqs;
-    ACA_LOG_DEBUG("Async worker %ld will pull from CQ %ld\n", i, which_cq_to_pull_from);
-    thread_pool_.push(std::bind(&GoalStateProvisionerAsyncServer::AsyncWorker,
-                                this, which_cq_to_pull_from));
+    thread_pool_.push(std::bind(&GoalStateProvisionerAsyncServer::AsyncWorker, this));
   }
   ACA_LOG_DEBUG("After using the thread pool, we have %ld idle threads in the pool, thread pool size: %ld\n",
                 thread_pool_.n_idle(), thread_pool_.size());
@@ -147,12 +133,11 @@ void GoalStateProvisionerAsyncInstance::PushGoalStatesStream(bool ok)
       auto message_total_operation_time =
               std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
 
-      ACA_LOG_DEBUG("[METRICS] Received goalstate at: [%ld], update finished at: [%ld]\n\
-Elapsed time for update goalstate operation took: %ld microseconds or %ld milliseconds\n",
+      ACA_LOG_DEBUG("[METRICS] Received goalstate at: [%ld], update finished at: [%ld]\nElapsed time for update goalstate operation took: %ld microseconds or %ld milliseconds\n",
                     start, end, message_total_operation_time,
                     (message_total_operation_time / 1000));
       new GoalStateProvisionerAsyncInstance(service_, cq_);
-      stream_->Write(gsOperationReply_, grpc::WriteOptions().set_buffer_hint(), this);
+      stream_->Write(gsOperationReply_, this);
       status_ = READY_TO_READ;
       gsOperationReply_.Clear();
       break;
