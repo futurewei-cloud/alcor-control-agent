@@ -838,8 +838,8 @@ int ACA_OVS_L3_Programmer::create_or_update_l3_neighbor(
     throw std::invalid_argument("tunnel_id is 0");
   }
 
-  bool is_port_on_same_host = ACA_OVS_L2_Programmer::get_instance().is_ip_on_the_same_host(
-          remote_host_ip); //aca_is_port_on_same_host(remote_host_ip);
+  bool is_port_on_same_host =
+          ACA_OVS_L2_Programmer::get_instance().is_ip_on_the_same_host(remote_host_ip);
 
   // going through our list of routers
   for (auto router_it = _routers_table.begin();

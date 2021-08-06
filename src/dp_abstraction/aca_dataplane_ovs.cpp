@@ -569,19 +569,19 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
 
   auto operation_start = chrono::steady_clock::now();
 
-  auto current_NeighborConfiguration = &(current_NeighborState.configuration());
+  auto current_NeighborConfiguration = current_NeighborState.configuration();
 
   try {
-    if (!aca_validate_fixed_ips_size(current_NeighborConfiguration->fixed_ips_size())) {
+    if (!aca_validate_fixed_ips_size(current_NeighborConfiguration.fixed_ips_size())) {
       throw std::invalid_argument("NeighborConfiguration.fixed_ips_size is less than zero");
     }
 
     // TODO: need to design the usage of current_NeighborConfiguration.revision_number()
-    assert(current_NeighborConfiguration->revision_number() > 0);
+    assert(current_NeighborConfiguration.revision_number() > 0);
 
     for (int ip_index = 0;
-         ip_index < current_NeighborConfiguration->fixed_ips_size(); ip_index++) {
-      auto current_fixed_ip = current_NeighborConfiguration->fixed_ips(ip_index);
+         ip_index < current_NeighborConfiguration.fixed_ips_size(); ip_index++) {
+      auto current_fixed_ip = current_NeighborConfiguration.fixed_ips(ip_index);
 
       if (current_fixed_ip.neighbor_type() == NeighborType::L2 ||
           current_fixed_ip.neighbor_type() == NeighborType::L3) {
@@ -592,12 +592,12 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
           throw std::invalid_argument("Virtual ip address is not in the expect format");
         }
 
-        virtual_mac_address = current_NeighborConfiguration->mac_address();
+        virtual_mac_address = current_NeighborConfiguration.mac_address();
         if (!aca_validate_mac_address(virtual_mac_address.c_str())) {
           throw std::invalid_argument("virtual_mac_address is invalid");
         }
 
-        host_ip_address = current_NeighborConfiguration->host_ip_address();
+        host_ip_address = current_NeighborConfiguration.host_ip_address();
 
         // inet_pton returns 1 for success 0 for failure
         if (inet_pton(AF_INET, host_ip_address.c_str(), &(sa.sin_addr)) != 1) {
@@ -636,9 +636,9 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
                   "Neighbor Operation:%s: id: %s, neighbor_type:%s, vpc_id:%s, network_type:%d, ip_index: %d,"
                   "virtual_ip_address:%s, virtual_mac_address:%s, neighbor_host_ip_address:%s, tunnel_id:%d\n",
                   aca_get_operation_string(current_NeighborState.operation_type()),
-                  current_NeighborConfiguration->id().c_str(),
+                  current_NeighborConfiguration.id().c_str(),
                   aca_get_neighbor_type_string(current_fixed_ip.neighbor_type()),
-                  current_NeighborConfiguration->vpc_id().c_str(), found_network_type,
+                  current_NeighborConfiguration.vpc_id().c_str(), found_network_type,
                   ip_index, virtual_ip_address.c_str(), virtual_mac_address.c_str(),
                   host_ip_address.c_str(), found_tunnel_id);
 
@@ -647,7 +647,8 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
           // for both L2 and L3 neighbor update
 
           // only need to update L2 neighbor info if it is not on the same compute host
-          bool is_neighbor_port_on_same_host = aca_is_port_on_same_host(host_ip_address);
+          bool is_neighbor_port_on_same_host =
+                  ACA_OVS_L2_Programmer::get_instance().is_ip_on_the_same_host(host_ip_address);
 
           if (is_neighbor_port_on_same_host) {
             ACA_LOG_DEBUG("neighbor host: %s is on the same compute node, don't need to update L2 neighbor info.\n",
@@ -680,16 +681,15 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
                   (current_NeighborState.operation_type() == OperationType::UPDATE) ||
                   (current_NeighborState.operation_type() == OperationType::INFO)) {
                 overall_rc = ACA_OVS_L3_Programmer::get_instance().create_or_update_l3_neighbor(
-                        current_NeighborConfiguration->id(),
-                        current_NeighborConfiguration->vpc_id(),
+                        current_NeighborConfiguration.id(),
+                        current_NeighborConfiguration.vpc_id(),
                         current_fixed_ip.subnet_id(), virtual_ip_address,
                         virtual_mac_address, host_ip_address, found_tunnel_id,
                         culminative_dataplane_programming_time);
               } else if (current_NeighborState.operation_type() == OperationType::DELETE) {
                 overall_rc = ACA_OVS_L3_Programmer::get_instance().delete_l3_neighbor(
-                        current_NeighborConfiguration->id(),
-                        current_fixed_ip.subnet_id(), virtual_ip_address,
-                        culminative_dataplane_programming_time);
+                        current_NeighborConfiguration.id(), current_fixed_ip.subnet_id(),
+                        virtual_ip_address, culminative_dataplane_programming_time);
               } else {
                 ACA_LOG_ERROR("Invalid neighbor state operation type %d\n",
                               current_NeighborState.operation_type());
@@ -725,7 +725,7 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
           cast_to_microseconds(operation_end - operation_start).count();
 
   aca_goal_state_handler::Aca_Goal_State_Handler::get_instance().add_goal_state_operation_status(
-          gsOperationReply, current_NeighborConfiguration->id(),
+          gsOperationReply, current_NeighborConfiguration.id(),
           ResourceType::NEIGHBOR, current_NeighborState.operation_type(),
           overall_rc, culminative_dataplane_programming_time,
           culminative_network_configuration_time, operation_total_time);
@@ -758,7 +758,6 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
   auto operation_start = chrono::high_resolution_clock::now();
 
   static std::chrono::_V2::high_resolution_clock::time_point got_neighbor_configuration_time;
-  static std::chrono::_V2::high_resolution_clock::time_point got_fixed_ip_size_time;
   static std::chrono::_V2::high_resolution_clock::time_point validate_fixed_ip_size_time;
   static std::chrono::_V2::high_resolution_clock::time_point assert_revision_number_time;
   static std::chrono::_V2::high_resolution_clock::time_point fixed_ip_loop_start;
@@ -774,16 +773,9 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
   got_neighbor_configuration_time = chrono::high_resolution_clock::now();
 
   try {
-    int fixed_ips_size = current_NeighborConfiguration.fixed_ips_size();
-
-    got_fixed_ip_size_time = chrono::high_resolution_clock::now();
-
-    if (fixed_ips_size <= 0) {
+    if (!aca_validate_fixed_ips_size(current_NeighborConfiguration.fixed_ips_size())) {
       throw std::invalid_argument("NeighborConfiguration.fixed_ips_size is less than zero");
     }
-    // if (!aca_validate_fixed_ips_size(current_NeighborConfiguration.fixed_ips_size())) {
-    //   throw std::invalid_argument("NeighborConfiguration.fixed_ips_size is less than zero");
-    // }
     validate_fixed_ip_size_time = chrono::high_resolution_clock::now();
     // TODO: need to design the usage of current_NeighborConfiguration.revision_number()
     assert(current_NeighborConfiguration.revision_number() > 0);
@@ -859,8 +851,7 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
 
           // only need to update L2 neighbor info if it is not on the same compute host
           bool is_neighbor_port_on_same_host =
-                  ACA_OVS_L2_Programmer::get_instance().is_ip_on_the_same_host(
-                          host_ip_address); //aca_is_port_on_same_host(host_ip_address);
+                  ACA_OVS_L2_Programmer::get_instance().is_ip_on_the_same_host(host_ip_address);
           determined_same_host_time = chrono::high_resolution_clock::now();
 
           if (is_neighbor_port_on_same_host) {
@@ -945,12 +936,8 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
           cast_to_microseconds(got_neighbor_configuration_time - init_time_vars_time)
                   .count();
 
-  auto get_fixed_ip_size_total_time =
-          cast_to_microseconds(got_fixed_ip_size_time - got_neighbor_configuration_time)
-                  .count();
-
   auto check_fixed_ip_size_total_time =
-          cast_to_microseconds(validate_fixed_ip_size_time - got_fixed_ip_size_time)
+          cast_to_microseconds(validate_fixed_ip_size_time - got_neighbor_configuration_time)
                   .count();
 
   auto assert_revision_number_total_time =
@@ -980,7 +967,6 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
           "[METRICS] Elapsed time for updating 1 neighbor state, total time is %ld microseconds, or %ld milliseconds\n\
 [METRICS] Elapsed time for initing the time stamps took %ld microseconds, or %ld milliseconds.\n\
 [METRICS] Elapsed time for getting neighbor configuration took %ld microseconds, or %ld milliseconds.\n\
-[METRICS] Elapsed time for getting fixed IP size took %ld microseconds, or %ld milliseconds.\n\
 [METRICS] Elapsed time for assuring fixed IP size took %ld microseconds, or %ld milliseconds.\n\
 [METRICS] Elapsed time for assuring revision number took %ld microseconds, or %ld milliseconds.\n\
 [METRICS] Elapsed time for determining same host took %ld microseconds, or %ld milliseconds.\n\
@@ -988,10 +974,9 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
 [METRICS] Elapsed time for updating neighbor info took %ld microseconds, or %ld milliseconds.\n",
           operation_total_time, us_to_ms(operation_total_time), init_time_vars_total_time,
           us_to_ms(init_time_vars_total_time), get_neighbor_configuration_total_time,
-          us_to_ms(get_neighbor_configuration_total_time), get_fixed_ip_size_total_time,
-          us_to_ms(get_fixed_ip_size_total_time), check_fixed_ip_size_total_time,
-          us_to_ms(check_fixed_ip_size_total_time), assert_revision_number_total_time,
-          us_to_ms(assert_revision_number_total_time),
+          us_to_ms(get_neighbor_configuration_total_time),
+          check_fixed_ip_size_total_time, us_to_ms(check_fixed_ip_size_total_time),
+          assert_revision_number_total_time, us_to_ms(assert_revision_number_total_time),
           determine_same_host_total_time, us_to_ms(determine_same_host_total_time),
           validate_info_total_time, us_to_ms(validate_info_total_time),
           update_neighbor_total_time, us_to_ms(update_neighbor_total_time));
