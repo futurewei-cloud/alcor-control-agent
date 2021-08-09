@@ -1,16 +1,16 @@
-// Copyright 2019 The Alcor Authors.
+// MIT License
+// Copyright(c) 2020 Futurewei Cloud
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+//     Permission is hereby granted,
+//     free of charge, to any person obtaining a copy of this software and associated documentation files(the "Software"), to deal in the Software without restriction,
+//     including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and / or sell copies of the Software, and to permit persons
+//     to whom the Software is furnished to do so, subject to the following conditions:
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//     The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 //
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+//     THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+//     FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+//     WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include "gtest/gtest.h"
 #define private public
@@ -22,7 +22,7 @@
 #include "aca_zeta_programming.h"
 #include "aca_util.h"
 #include <fstream>
-#include <nlohmann/json.hpp>
+// #include <nlohmann/json.hpp>
 #include <iostream>
 #include <typeinfo>
 
@@ -72,6 +72,7 @@ extern uint oam_port_2;
 uint parent_position_in_port_info = 0;
 uint child_position_in_port_info = 1;
 
+/*
 void aca_test_create_default_port_state_with_zeta_data(PortState *new_port_states,
                                                        nlohmann::json port_data)
 {
@@ -114,6 +115,7 @@ void aca_test_create_default_subnet_state_with_zeta_data(SubnetState *new_subnet
   subnetConfig_GatewayBuilder->set_mac_address(subnet1_gw_mac); // make it up
   SubnetConiguration_builder->set_allocated_gateway(subnetConfig_GatewayBuilder);
 }
+*/
 
 void create_container(string container_name, string vip_address, string vmac_address)
 {
@@ -136,6 +138,7 @@ void create_container(string container_name, string vip_address, string vmac_add
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
 }
 
+/*
 void aca_test_zeta_setup_container(string zeta_gateway_path_config_file)
 {
   ifstream ifs(zeta_gateway_path_config_file);
@@ -359,6 +362,7 @@ void aca_test_zeta_setup(string zeta_gateway_path_config_file)
           GoalState_builder, gsOperationalReply);
   ASSERT_EQ(overall_rc, EXIT_SUCCESS);
 }
+*/
 
 TEST(zeta_programming_test_cases, create_zeta_config_valid)
 {
@@ -479,6 +483,7 @@ TEST(zeta_programming_test_cases, DISABLED_create_auxgateway_test)
   EXPECT_EQ(retcode, EXIT_SUCCESS);
 }
 
+/*
 TEST(zeta_programming_test_cases, DISABLED_zeta_scale_CHILD)
 {
   // ulong culminative_network_configuration_time = 0;
@@ -532,7 +537,9 @@ TEST(zeta_programming_test_cases, DISABLED_zeta_scale_PARENT)
   // restore demo mode
   g_demo_mode = previous_demo_mode;
 }
+*/
 
+/*
 TEST(zeta_programming_test_cases, DISABLED_zeta_scale_container)
 {
   // ulong culminative_network_configuration_time = 0;
@@ -580,3 +587,4 @@ TEST(zeta_programming_test_cases, DISABLED_zeta_scale_container)
   // restore demo mode
   g_demo_mode = previous_demo_mode;
 }
+*/

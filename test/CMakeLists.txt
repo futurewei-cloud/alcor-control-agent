@@ -48,6 +48,7 @@ add_executable(
     gtest/aca_test_oam.cpp
     gtest/aca_test_zeta_programming.cpp
     gtest/aca_test_arp.cpp
+    gtest/aca_test_on_demand.cpp
 )
 
 # Link test executable against gtest & gtest_main
@@ -56,6 +57,8 @@ target_link_libraries(aca_tests pulsar)
 #target_link_libraries(aca_tests openvswitch)
 target_link_libraries(aca_tests AlcorControlAgentLib)
 target_link_libraries(aca_tests proto)
+target_link_libraries(aca_tests grpc)
+target_link_libraries(aca_tests ${_GRPC_GRPCPP_UNSECURE})
 target_link_libraries(aca_tests ${PROTOBUF_LIBRARY})
 target_link_libraries(aca_tests Threads::Threads)
 

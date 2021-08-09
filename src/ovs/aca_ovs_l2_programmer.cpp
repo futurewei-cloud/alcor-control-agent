@@ -1,16 +1,16 @@
-// Copyright 2019 The Alcor Authors.
+// MIT License
+// Copyright(c) 2020 Futurewei Cloud
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+//     Permission is hereby granted,
+//     free of charge, to any person obtaining a copy of this software and associated documentation files(the "Software"), to deal in the Software without restriction,
+//     including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and / or sell copies of the Software, and to permit persons
+//     to whom the Software is furnished to do so, subject to the following conditions:
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//     The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 //
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+//     THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+//     FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+//     WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include "aca_log.h"
 #include "aca_config.h"
@@ -34,6 +34,7 @@ extern bool g_demo_mode;
 
 namespace aca_ovs_l2_programmer
 {
+
 static int aca_set_port_vlan_workitem(const string port_name, uint vlan_id)
 {
   ACA_LOG_DEBUG("%s", "aca_set_port_vlan_workitem ---> Entering\n");
@@ -97,18 +98,29 @@ int ACA_OVS_L2_Programmer::setup_ovs_bridges_if_need()
   // check to see if br-int and br-tun is already there
   execute_ovsdb_command("br-exists br-int", not_care_culminative_time, overall_rc);
   bool br_int_existed = (overall_rc == EXIT_SUCCESS);
+  overall_rc = EXIT_SUCCESS;
 
   execute_ovsdb_command("br-exists br-tun", not_care_culminative_time, overall_rc);
   bool br_tun_existed = (overall_rc == EXIT_SUCCESS);
-
+  ACA_LOG_INFO("Environment br-int=%d and br-tun=%d\n", br_int_existed, br_tun_existed);
   overall_rc = EXIT_SUCCESS;
 
   if (br_int_existed && br_tun_existed) {
     // case 1: both br-int and br-tun existed
     ACA_LOG_DEBUG("%s", "Both br-int and br-tun existed: do nothing\n");
-  } else if (!br_int_existed && !br_int_existed) {
+    setup_ovs_bridges_mutex.unlock();
+    // -----critical section ends-----
+
+    ACA_LOG_DEBUG("ACA_OVS_L2_Programmer::setup_ovs_bridges_if_need <--- Exiting, overall_rc = %d\n",
+                  overall_rc);
+
+    return overall_rc;
+  }
+
+  if (!br_int_existed && !br_tun_existed) {
     // case 2: both br-int and br-tun not existed
     ACA_LOG_DEBUG("%s", "Both br-int and br-tun not existed: create them\n");
+    ACA_LOG_INFO("Environment br-int=%d and br-tun=%d\n", br_int_existed, br_tun_existed);
 
     execute_ovsdb_command("add-br br-int", not_care_culminative_time, overall_rc);
 
@@ -122,6 +134,11 @@ int ACA_OVS_L2_Programmer::setup_ovs_bridges_if_need()
                           not_care_culminative_time, overall_rc);
 
     // adding default flows
+    // details at: https://github.com/futurewei-cloud/alcor-control-agent/wiki/Openflow-Tables-Explain
+
+    execute_openflow_command("add-flow br-tun \"table=0,priority=50,arp,arp_op=1, actions=CONTROLLER\"",
+                             not_care_culminative_time, overall_rc);
+
     execute_openflow_command("add-flow br-tun \"table=0,priority=1,in_port=\"patch-int\" actions=resubmit(,2)\"",
                              not_care_culminative_time, overall_rc);
 
@@ -131,7 +148,7 @@ int ACA_OVS_L2_Programmer::setup_ovs_bridges_if_need()
     execute_openflow_command("add-flow br-tun \"table=2,priority=1,dl_dst=01:00:00:00:00:00/01:00:00:00:00:00 actions=resubmit(,22)\"",
                              not_care_culminative_time, overall_rc);
 
-    execute_openflow_command("add-flow br-tun \"table=20,priority=1 actions=resubmit(,22)\"",
+    execute_openflow_command("add-flow br-tun \"table=20,priority=1 actions=CONTROLLER\"",
                              not_care_culminative_time, overall_rc);
 
     execute_openflow_command("add-flow br-tun \"table=2,priority=25,icmp,icmp_type=8,in_port=\"patch-int\" actions=resubmit(,52)\"",
@@ -148,13 +165,28 @@ int ACA_OVS_L2_Programmer::setup_ovs_bridges_if_need()
 
     execute_openflow_command("add-flow br-tun \"table=0,priority=25,in_port=\"vxlan-generic\" actions=resubmit(,4)\"",
                              not_care_culminative_time, overall_rc);
-  } else {
-    // case 3: only one of the br-int or br-tun is there,
-    // Invalid environment so return an error
-    ACA_LOG_CRIT("Invalid environment br-int=%d and br-tun=%d, cannot proceed\n",
-                 br_int_existed, br_tun_existed);
-    overall_rc = EXIT_FAILURE;
+    setup_ovs_bridges_mutex.unlock();
+    // -----critical section ends-----
+
+    ACA_LOG_DEBUG("ACA_OVS_L2_Programmer::setup_ovs_bridges_if_need <--- Exiting, overall_rc = %d\n",
+                  overall_rc);
+
+    return overall_rc;
   }
+
+  // case 3: only one of the br-int or br-tun is there,
+  // Invalid environment so return an error
+  if (br_int_existed) {
+    ACA_LOG_DEBUG("You have br-int, but you don't have br-tun, please add br-tun by executing command 'ovs-vsctl add-br br-tun', or delete the existing br-int by executing command 'ovs-vsctl del-br br-int' and try again.\n",
+                  br_tun_existed);
+  }
+  if (br_tun_existed) {
+    ACA_LOG_DEBUG("You have br-tun, but you don't have br-int, please add br-int by executing command 'ovs-vsctl add-br br-int', or delete the existing br-tun by executing command 'ovs-vsctl del-br br-tun' and try again.\n",
+                  br_tun_existed);
+  }
+  ACA_LOG_CRIT("Invalid environment br-int=%d and br-tun=%d, cannot proceed\n",
+               br_int_existed, br_tun_existed);
+  overall_rc = EXIT_FAILURE;
 
   setup_ovs_bridges_mutex.unlock();
   // -----critical section ends-----
@@ -229,7 +261,11 @@ int ACA_OVS_L2_Programmer::create_port(const string vpc_id, const string port_na
             cmd_string, culminative_time);
     if (command_rc != EXIT_SUCCESS)
       overall_rc = command_rc;
-  } else {
+  }
+
+  // Disabling this code for testing, as test controller already sets the vlan,
+  // and the port names generated by TC's ovs-docker is different from the port_name used here.
+  else {
     // non-demo mode is for nova integration, where the vif and ovs port has been
     // created by nova compute agent running on the compute host
 
@@ -370,8 +406,9 @@ void ACA_OVS_L2_Programmer::execute_ovsdb_command(const std::string cmd_string,
 
   g_total_execute_ovsdb_time += ovsdb_client_time_total_time;
 
-  ACA_LOG_INFO("Elapsed time for ovsdb client call took: %ld microseconds or %ld milliseconds. rc: %d\n",
-               ovsdb_client_time_total_time, us_to_ms(ovsdb_client_time_total_time), rc);
+  ACA_LOG_INFO("Elapsed time for ovsdb client call took: %ld microseconds or %ld milliseconds. rc: %d, cmd: [%s]\n",
+               ovsdb_client_time_total_time, us_to_ms(ovsdb_client_time_total_time),
+               rc, ovsdb_cmd_string.c_str());
 
   ACA_LOG_DEBUG("ACA_OVS_L2_Programmer::execute_ovsdb_command <--- Exiting, rc = %d\n", rc);
 }

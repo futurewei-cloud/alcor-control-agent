@@ -7,6 +7,7 @@ set(SOURCES
     ./comm/aca_message_pulsar_producer.cpp
     ./comm/aca_comm_mgr.cpp
     ./comm/aca_grpc.cpp
+    ./comm/aca_grpc_client.cpp
     ./dp_abstraction/aca_goal_state_handler.cpp
     ./dp_abstraction/aca_dataplane_ovs.cpp
     ./net_config/aca_net_config.cpp
@@ -15,6 +16,7 @@ set(SOURCES
     ./ovs/aca_vlan_manager.cpp
     ./ovs/ovs_control.cpp
     ./ovs/aca_ovs_control.cpp
+    ./on_demand/aca_on_demand_engine.cpp
     ./dhcp/aca_dhcp_state_handler.cpp
     ./dhcp/aca_dhcp_server.cpp
     ./zeta/aca_zeta_oam_server.cpp
@@ -27,6 +29,7 @@ FIND_LIBRARY(PULSAR pulsar /usr/lib NO_DEFAULT_PATH)
 FIND_LIBRARY(OPENVSWITCH openvswitch /usr/local/lib NO_DEFAULT_PATH)
 FIND_LIBRARY(MESSAGEMANAGER messagemanager ${CMAKE_CURRENT_SOURCE_DIR}/../include NO_DEFAULT_PATH)
 link_libraries(${RDKAFKA} ${CPPKAFKA} ${OPENVSWITCH} ${PULSAR})
+link_libraries(/usr/lib/x86_64-linux-gnu/libuuid.so)
 include_directories(${RDKAFKA_INCLUDE_DIR} ${CPPKAFKA_INCLUDE_DIR} ${OPENVSWITCH_INCLUDE_DIR} ${PULSAR_INCLUDE_DIR})
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../include)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/proto3)

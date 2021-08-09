@@ -12,48 +12,35 @@
 //     FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
 //     WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-#ifndef PULSAR_PRODUCER_H
-#define PULSAR_PRODUCER_H
+#include <iostream>
 
-#include "pulsar/Client.h"
-#include "pulsar/Producer.h"
-#include "pulsar/ProducerConfiguration.h"
-#include "pulsar/Message.h"
-#include "pulsar/MessageBuilder.h"
-#include "pulsar/Result.h"
+#include <grpcpp/grpcpp.h>
+#include <grpc/support/log.h>
+#include "goalstateprovisioner.grpc.pb.h"
 
-using namespace std;
-using namespace pulsar;
+using namespace alcor::schema;
+using grpc::Server;
+using grpc::ServerBuilder;
+using grpc::ServerContext;
+using grpc::ServerReader;
+using grpc::ServerReaderWriter;
+using grpc::ServerWriter;
+using grpc::Status;
 
-namespace aca_message_pulsar
-{
-class ACA_Message_Pulsar_Producer {
-  private:
-  string brokers_list; //IP addresses of Pulsar brokers, format: pulsar://<pulsar_host_ip>:<port>, example:pulsar://10.213.43.188:9092
-
-  string topic_name; //A string representation of the topic name to be published, example: /hostid/00000000-0000-0000-0000-000000000000/netwconf/
-
-  ClientConfiguration client_config; //Configuration of the pulsar client
-
-  Client *ptr_client; //A pointer to the pulsar client
-
+class GoalStateProvisionerClientImpl final : public GoalStateProvisioner::Service {
   public:
-  ACA_Message_Pulsar_Producer(string brokers, string topic);
-
-  ~ACA_Message_Pulsar_Producer();
-
-  string getBrokers() const;
-
-  string getTopicName() const;
-
-  void setTopicName(string topic);
-
-  bool publish(string message);
-
-  private:
-  void setBrokers(string brokers);
+  std::unique_ptr<GoalStateProvisioner::Stub> stub_;
+  std::shared_ptr<grpc_impl::Channel> chan_;
+  void RequestGoalStates(HostRequest *request, grpc::CompletionQueue *cq);
+  explicit GoalStateProvisionerClientImpl(){};
+  void ConnectToNCM();
+  void RunClient();
+  bool a = chan_ == nullptr;
 };
 
-} // aca_message_pulsar
-
-#endif
+struct AsyncClientCall {
+  alcor::schema::HostRequestReply reply;
+  grpc::ClientContext context;
+  grpc::Status status;
+  std::unique_ptr<grpc::ClientAsyncResponseReader<alcor::schema::HostRequestReply> > response_reader;
+};

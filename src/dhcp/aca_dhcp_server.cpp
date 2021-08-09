@@ -1,16 +1,16 @@
-// Copyright 2019 The Alcor Authors.
+// MIT License
+// Copyright(c) 2020 Futurewei Cloud
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+//     Permission is hereby granted,
+//     free of charge, to any person obtaining a copy of this software and associated documentation files(the "Software"), to deal in the Software without restriction,
+//     including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and / or sell copies of the Software, and to permit persons
+//     to whom the Software is furnished to do so, subject to the following conditions:
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//     The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 //
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+//     THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+//     FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+//     WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include "aca_dhcp_server.h"
 #include "aca_log.h"
@@ -587,10 +587,10 @@ int ACA_Dhcp_Server::_pack_dhcp_opt_dns(uint8_t *option, string dns_addresses[])
   uint32_t *dns_address_options = (uint32_t *)dr->dns;
   for (int i = 0; i < DHCP_MSG_OPTS_DNS_LENGTH; i++) {
     if (dns_addresses[i] == "") {
-      dr->len = i * 4; 
+      dr->len = i * 4;
       break;
     }
-    
+
     dns_address_options[i] = ip4tol(dns_addresses[i]);
   }
   return dr->len;
@@ -611,7 +611,7 @@ void ACA_Dhcp_Server::_init_dhcp_msg_ops()
   _parse_dhcp_msg_ops[DHCP_MSG_DHCPINFORM] = &aca_dhcp_server::ACA_Dhcp_Server::_parse_dhcp_none;
 }
 
-void ACA_Dhcp_Server::_parse_dhcp_none(uint32_t /* in_port */ , dhcp_message *dhcpmsg)
+void ACA_Dhcp_Server::_parse_dhcp_none(uint32_t /* in_port */, dhcp_message *dhcpmsg)
 {
   ACA_LOG_ERROR("Wrong DHCP message type! (Message type = %d)\n",
                 _get_message_type(dhcpmsg));
@@ -670,7 +670,7 @@ ACA_Dhcp_Server::_pack_dhcp_offer(dhcp_message *dhcpdiscover, dhcp_entry_data *p
   opts_len += DHCP_OPT_CLV_HEADER + DHCP_OPT_LEN_4BYTE;
 
   //DHCP Options: server identifier
-  _pack_dhcp_opt_server_id(&pos[opts_len], DHCP_MSG_SERVER_ID); 
+  _pack_dhcp_opt_server_id(&pos[opts_len], DHCP_MSG_SERVER_ID);
   opts_len += DHCP_OPT_CLV_HEADER + DHCP_OPT_LEN_4BYTE;
 
   //DHCP Options: subnet mask
@@ -762,7 +762,7 @@ dhcp_message *ACA_Dhcp_Server::_pack_dhcp_ack(dhcp_message *dhcpreq, dhcp_entry_
   opts_len += DHCP_OPT_CLV_HEADER + DHCP_OPT_LEN_4BYTE;
 
   //DHCP Options: server identifier
-  _pack_dhcp_opt_server_id(&pos[opts_len], DHCP_MSG_SERVER_ID); 
+  _pack_dhcp_opt_server_id(&pos[opts_len], DHCP_MSG_SERVER_ID);
   opts_len += DHCP_OPT_CLV_HEADER + DHCP_OPT_LEN_4BYTE;
 
   //DHCP Options: subnet mask
@@ -810,7 +810,7 @@ dhcp_message *ACA_Dhcp_Server::_pack_dhcp_nak(dhcp_message *dhcpreq)
   opts_len += DHCP_OPT_CLV_HEADER + DHCP_OPT_LEN_1BYTE;
 
   //DHCP Options: server identifier
-  _pack_dhcp_opt_server_id(&pos[opts_len], DHCP_MSG_SERVER_ID); 
+  _pack_dhcp_opt_server_id(&pos[opts_len], DHCP_MSG_SERVER_ID);
   opts_len += DHCP_OPT_CLV_HEADER + DHCP_OPT_LEN_4BYTE;
 
   //DHCP Options: end
@@ -896,7 +896,7 @@ string ACA_Dhcp_Server::_serialize_dhcp_message(dhcp_message *dhcpmsg)
       sprintf(str, "%02x", dhcpmsg->options[i]); // end
       packet.append(str);
       break;
-    } 
+    }
     // type code
     sprintf(str, "%02x", dhcpmsg->options[i++]);
     packet.append(str);
@@ -908,14 +908,14 @@ string ACA_Dhcp_Server::_serialize_dhcp_message(dhcp_message *dhcpmsg)
   }
 
   // a byte contains two str char, we only need byte length
-  int len = packet.length() / 2; 
+  int len = packet.length() / 2;
   packet.insert(0, _serialize_dhcp_ip_header_message(dhcpmsg, len));
   return packet;
 }
 
 string ACA_Dhcp_Server::_serialize_dhcp_ip_header_message(dhcp_message *dhcpmsg, int dhcp_message_len)
 {
-//process udp header
+  //process udp header
   udphear udphdr;
   udphdr.srcIp = htonl(DHCP_MSG_IP_HEADER_SRC_IP);
   udphdr.dstIp = htonl(DHCP_MSG_IP_HEADER_DEST_IP);

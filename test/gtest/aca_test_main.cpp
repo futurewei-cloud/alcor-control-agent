@@ -1,23 +1,28 @@
-// Copyright 2019 The Alcor Authors.
+// MIT License
+// Copyright(c) 2020 Futurewei Cloud
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+//     Permission is hereby granted,
+//     free of charge, to any person obtaining a copy of this software and associated documentation files(the "Software"), to deal in the Software without restriction,
+//     including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and / or sell copies of the Software, and to permit persons
+//     to whom the Software is furnished to do so, subject to the following conditions:
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//     The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 //
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+//     THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+//     FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+//     WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include "aca_log.h"
 #include "aca_util.h"
 #include "gtest/gtest.h"
 #include "goalstate.pb.h"
+#include "aca_grpc.h"
+#include "aca_grpc_client.h"
 #include "aca_message_pulsar_producer.h"
 #include <unistd.h> /* for getopt */
+#include <grpcpp/grpcpp.h>
+#include <thread>
+#include <cmath>
 
 using namespace std;
 using namespace aca_message_pulsar;
@@ -29,6 +34,13 @@ static char EMPTY_STRING[] = "";
 string g_ofctl_command = EMPTY_STRING;
 string g_ofctl_target = EMPTY_STRING;
 string g_ofctl_options = EMPTY_STRING;
+string g_ncm_address = EMPTY_STRING;
+string g_ncm_port = EMPTY_STRING;
+string g_grpc_server_port = EMPTY_STRING;
+std::thread *g_grpc_server_thread = NULL;
+GoalStateProvisionerAsyncServer *g_grpc_server = NULL;
+std::thread *g_grpc_client_thread = NULL;
+GoalStateProvisionerClientImpl *g_grpc_client = NULL;
 
 // total time for execute_system_command in microseconds
 std::atomic_ulong g_initialize_execute_system_time(0);
@@ -56,6 +68,15 @@ uint neighbors_to_create = 10;
 
 static string mq_broker_ip = "pulsar://localhost:6650"; //for the broker running in localhost
 static string mq_test_topic = "my-topic";
+int processor_count = std::thread::hardware_concurrency();
+/*
+  From previous tests, we found that, for x number of cores,
+  it is more efficient to set the size of both thread pools
+  to be x * (2/3), which means the total size of the thread pools
+  is x * (4/3). For example, for a host with 24 cores, we would 
+  set the sizes of both thread pools to be 16.
+*/
+int thread_pools_size = (processor_count == 0) ? 1 : ((ceil(1.3 * processor_count)) / 2);
 
 //
 // Test suite: pulsar_test_cases
@@ -136,9 +157,15 @@ int main(int argc, char **argv)
 
   testing::InitGoogleTest(&argc, argv);
 
-  while ((option = getopt(argc, argv, "p:c:n:")) != -1) {
+  while ((option = getopt(argc, argv, "a:p:m:c:n:")) != -1) {
     switch (option) {
+    case 'a':
+      g_ncm_address = optarg;
+      break;
     case 'p':
+      g_ncm_port = optarg;
+      break;
+    case 'm':
       remote_ip_1 = optarg;
       break;
     case 'c':
@@ -150,6 +177,8 @@ int main(int argc, char **argv)
     default: /* the '?' case when the option is not recognized */
       fprintf(stderr,
               "Usage: %s\n"
+              "\t\t[-a NCM IP Address]\n"
+              "\t\t[-p NCM Port]\n"
               "\t\t[-m parent machine IP]\n"
               "\t\t[-c child machine IP]\n"
               "\t\t[-n neighbors to create (default: 10)]\n",
@@ -157,6 +186,18 @@ int main(int argc, char **argv)
       exit(EXIT_FAILURE);
     }
   }
+
+  g_grpc_server = new GoalStateProvisionerAsyncServer();
+  int g_grpc_server_pool_size = 3;
+  g_grpc_server_thread =
+          new std::thread(std::bind(&GoalStateProvisionerAsyncServer::RunServer,
+                                    g_grpc_server, g_grpc_server_pool_size));
+  g_grpc_server_thread->detach();
+
+  g_grpc_client = new GoalStateProvisionerClientImpl();
+  g_grpc_client_thread = new std::thread(
+          std::bind(&GoalStateProvisionerClientImpl::RunClient, g_grpc_client));
+  g_grpc_client_thread->detach();
 
   int rc = RUN_ALL_TESTS();
 

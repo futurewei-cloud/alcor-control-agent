@@ -1,3 +1,8 @@
+[![Build Status](https://travis-ci.org/futurewei-cloud/alcor-control-agent.svg?branch=master)](https://travis-ci.org/github/futurewei-cloud/alcor-control-agent)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Percentage of issues still open](http://isitmaintained.com/badge/open/futurewei-cloud/alcor-control-agent.svg)](http://isitmaintained.com/project/futurewei-cloud/alcor-control-agent "Percentage of issues still open")
+[![Average time to resolve an issue](http://isitmaintained.com/badge/resolution/futurewei-cloud/alcor-control-agent.svg)](http://isitmaintained.com/project/futurewei-cloud/alcor-control-agent "Average time to resolve an issue")
+
 # Alcor Control Agent
 Next-gen networking control plane - Alcor Control Agent
 
@@ -16,7 +21,7 @@ In this README:
 
 The Cloud Fabric Alcor Control Agent (ACA) runs on each host machine. It serves as a stateless proxy between Alcor controller and host machine networking components for control plane operations. Below are the highlevel Agent components.
 
-![Agent Components](docs/images/Agent_components.jpg)
+![Agent Components](docs/images/Agent_v2.jpg)
 
 ## Repositories
 The Alcor project is divided across a few GitHub repositories.
@@ -45,7 +50,6 @@ This main repository of Alcor Control Agent is organized as follows:
 * test: Unit and integration test code
 
 ## Notes
-* json.hpp based on https://github.com/nlohmann/json
 * ovs_control.h and ovs_control.cpp is based on https://github.com/openvswitch/ovs/blob/master/utilities/ovs-ofctl.c
 * aca_grpc.cpp is based on https://github.com/grpc/grpc/blob/v1.30.0/examples/cpp/route_guide/route_guide_server.cc
 * HashMap.h and HashNode.h is based on https://github.com/kshk123/hashMap

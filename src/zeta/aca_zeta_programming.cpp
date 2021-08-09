@@ -1,16 +1,16 @@
-// Copyright 2019 The Alcor Authors.
+// MIT License
+// Copyright(c) 2020 Futurewei Cloud
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+//     Permission is hereby granted,
+//     free of charge, to any person obtaining a copy of this software and associated documentation files(the "Software"), to deal in the Software without restriction,
+//     including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and / or sell copies of the Software, and to permit persons
+//     to whom the Software is furnished to do so, subject to the following conditions:
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//     The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 //
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+//     THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+//     FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+//     WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include "aca_zeta_programming.h"
 #include "aca_ovs_l2_programmer.h"
@@ -18,6 +18,7 @@
 #include "aca_log.h"
 #include "aca_vlan_manager.h"
 #include "aca_ovs_control.h"
+#include "aca_on_demand_engine.h"
 #include "aca_zeta_oam_server.h"
 #include <thread>
 
@@ -25,6 +26,7 @@ using namespace alcor::schema;
 using namespace aca_ovs_control;
 using namespace aca_vlan_manager;
 using namespace aca_ovs_l2_programmer;
+using namespace aca_on_demand_engine;
 
 namespace aca_zeta_programming
 {
@@ -175,7 +177,7 @@ void start_upd_listener(uint oam_port_number)
     }
     ACA_LOG_INFO("Packet length is %d\n", packet_length);
     ACA_LOG_INFO("Got this udp packet when listening to port %d\n", oam_port_number);
-    ACA_OVS_Control::get_instance().print_payload(
+    ACA_On_Demand_Engine::get_instance().print_payload(
             reinterpret_cast<const unsigned char *>(packet_content), packet_length);
     aca_zeta_oam_server::ACA_Zeta_Oam_Server::get_instance().oams_recv(
             (uint32_t)oam_port_number, packet_content);

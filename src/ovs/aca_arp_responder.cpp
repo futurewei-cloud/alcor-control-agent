@@ -1,16 +1,16 @@
-// Copyright 2019 The Alcor Authors.
+// MIT License
+// Copyright(c) 2020 Futurewei Cloud
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+//     Permission is hereby granted,
+//     free of charge, to any person obtaining a copy of this software and associated documentation files(the "Software"), to deal in the Software without restriction,
+//     including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and / or sell copies of the Software, and to permit persons
+//     to whom the Software is furnished to do so, subject to the following conditions:
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//     The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 //
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+//     THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+//     FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+//     WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include "aca_arp_responder.h"
 #include "aca_log.h"
@@ -19,6 +19,8 @@
 #include "aca_util.h"
 #include <shared_mutex>
 #include <arpa/inet.h>
+#include <errno.h>
+#include <unistd.h>
 
 using namespace std;
 
@@ -48,12 +50,12 @@ void ACA_ARP_Responder::_deinit_arp_db()
 
 void ACA_ARP_Responder::_init_arp_ofp()
 {
-  int overall_rc = EXIT_SUCCESS;
-  unsigned long not_care_culminative_time;
-
-  aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
-          "add-flow br-tun \"table=0,priority=50,arp,arp_op=1, actions=CONTROLLER\"",
-          not_care_culminative_time, overall_rc);
+  // int overall_rc = EXIT_SUCCESS;
+  // unsigned long not_care_culminative_time;
+  // remove the following
+  // aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
+  //         "add-flow br-tun \"table=0,priority=50,arp,arp_op=1, actions=CONTROLLER\"",
+  //         not_care_culminative_time, overall_rc);
   return;
 }
 
@@ -71,6 +73,13 @@ ACA_ARP_Responder &ACA_ARP_Responder::get_instance()
 {
   static ACA_ARP_Responder instance;
   return instance;
+}
+bool ACA_ARP_Responder::does_arp_entry_exist(arp_entry_data stData)
+{
+  bool entry_exist = false;
+  arp_table_data *current_arp_data = nullptr;
+  entry_exist = _arp_db.find(stData, current_arp_data);
+  return entry_exist;
 }
 
 int ACA_ARP_Responder::add_arp_entry(arp_config *arp_cfg_in)
@@ -194,7 +203,7 @@ int ACA_ARP_Responder::_validate_arp_entry(arp_config *arp_cfg_in)
 
 /************* Operation and procedure for dataplane *******************/
 
-void ACA_ARP_Responder::arp_recv(uint32_t in_port, void *vlan_hdr, void *message)
+int ACA_ARP_Responder::arp_recv(uint32_t in_port, void *vlan_hdr, void *message)
 {
   arp_message *arpmsg = nullptr;
   vlan_message *vlanmsg = nullptr;
@@ -202,7 +211,7 @@ void ACA_ARP_Responder::arp_recv(uint32_t in_port, void *vlan_hdr, void *message
   ACA_LOG_DEBUG("Receiving arp message from inport=%u\n", in_port);
   if (!message) {
     ACA_LOG_ERROR("%s", "ARP message is null!\n");
-    return;
+    return EXIT_FAILURE;
   }
 
   vlanmsg = (vlan_message *)vlan_hdr;
@@ -210,13 +219,12 @@ void ACA_ARP_Responder::arp_recv(uint32_t in_port, void *vlan_hdr, void *message
 
   if (_validate_arp_message(arpmsg)) {
     ACA_LOG_ERROR("%s", "Invalid APR message!\n");
-    return;
+    return EXIT_FAILURE;
   }
 
-  _parse_arp_request(in_port, vlanmsg, arpmsg);
-
-  return;
+  return _parse_arp_request(in_port, vlanmsg, arpmsg);
 }
+
 void ACA_ARP_Responder::arp_xmit(uint32_t in_port, void *vlanmsg, void *message, int is_found)
 {
   arp_message *arpmsg = nullptr;
@@ -248,12 +256,13 @@ void ACA_ARP_Responder::arp_xmit(uint32_t in_port, void *vlanmsg, void *message,
     options = inport + whitespace + packetpre + packet + whitespace + rs_action;
   }
 
+  ACA_LOG_DEBUG("ACA_ARP_Responder sent arp packet to ovs: %s\n", options.c_str());
   aca_ovs_control::ACA_OVS_Control::get_instance().packet_out(bridge.c_str(),
                                                               options.c_str());
 }
 
-void ACA_ARP_Responder::_parse_arp_request(uint32_t in_port, vlan_message *vlanmsg,
-                                           arp_message *arpmsg)
+int ACA_ARP_Responder::_parse_arp_request(uint32_t in_port, vlan_message *vlanmsg,
+                                          arp_message *arpmsg)
 {
   arp_entry_data stData;
   arp_table_data *current_arp_data = new arp_table_data;
@@ -274,14 +283,14 @@ void ACA_ARP_Responder::_parse_arp_request(uint32_t in_port, vlan_message *vlanm
   if (!_arp_db.find(stData, current_arp_data)) {
     ACA_LOG_DEBUG("ARP entry does not exist! (ip = %s and vlan id = %u)\n",
                   stData.ipv4_address.c_str(), stData.vlan_id);
-    arp_xmit(in_port, vlanmsg, arpmsg, 0);
-    return;
+    return ENOTSUP;
   } else {
     ACA_LOG_DEBUG("ARP entry exist (ip = %s and vlan id = %u) with mac = %s\n",
                   stData.ipv4_address.c_str(), stData.vlan_id,
                   current_arp_data->mac_address.c_str());
     arpreply = _pack_arp_reply(arpmsg, current_arp_data->mac_address);
     arp_xmit(in_port, vlanmsg, arpreply, 1);
+    return EXIT_SUCCESS;
   }
 }
 
@@ -337,6 +346,21 @@ string ACA_ARP_Responder::_get_requested_ip(arp_message *arpmsg)
   requested_ip = inet_ntoa(inaddr);
 
   return requested_ip;
+}
+
+string ACA_ARP_Responder::_get_source_ip(arp_message *arpmsg)
+{
+  string source_ip;
+  struct in_addr inaddr;
+  if (!arpmsg) {
+    ACA_LOG_ERROR("%s", "ARP message is null!\n");
+    return string();
+  }
+
+  inaddr.s_addr = arpmsg->spa;
+  source_ip = inet_ntoa(inaddr);
+
+  return source_ip;
 }
 
 string ACA_ARP_Responder::_serialize_arp_message(vlan_message *vlanmsg, arp_message *arpmsg)

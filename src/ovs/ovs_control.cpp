@@ -16,7 +16,7 @@
 #include "aca_log.h"
 #include "aca_util.h"
 #include "ovs_control.h"
-#include "aca_ovs_control.h"
+#include "aca_on_demand_engine.h"
 #include <sstream> // std::(istringstream)
 #include <string> // std::(string)
 #include <signal.h>
@@ -41,7 +41,7 @@
 #include <openvswitch/vlog.h>
 
 using namespace std;
-using namespace aca_ovs_control;
+using namespace aca_on_demand_engine;
 
 extern std::atomic_ulong g_total_execute_openflow_time;
 
@@ -398,7 +398,6 @@ int OVS_Control::flow_mod(const char *bridge, const char *flow, unsigned short i
                bridge, flow, command);
 
   auto openflow_client_start = chrono::steady_clock::now();
-
   error = parse_ofp_flow_mod_str(&fm, flow, ports_to_accept(bridge),
                                  tables_to_accept(bridge), command, &usable_protocols);
   if (error) {
@@ -407,7 +406,15 @@ int OVS_Control::flow_mod(const char *bridge, const char *flow, unsigned short i
     rc = EXIT_FAILURE;
   } else {
     // flow_mod__ returns void
+    std::chrono::_V2::steady_clock::time_point start = std::chrono::steady_clock::now();
+
     flow_mod__(bridge, &fm, 1, usable_protocols);
+    std::chrono::_V2::steady_clock::time_point end = std::chrono::steady_clock::now();
+    auto message_total_operation_time =
+            std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+    ACA_LOG_DEBUG("[flow_mod] Start flow_mod__ at: [%ld], finished at: [%ld]\nElapsed time for flow_mod__ took: %ld microseconds or %ld milliseconds\n",
+                 start, end, message_total_operation_time,
+                 (message_total_operation_time / 1000));
     rc = EXIT_SUCCESS;
   }
 
@@ -991,7 +998,11 @@ void OVS_Control::monitor_vconn(vconn *vconn, bool reply_to_echo_requests,
           error = ofputil_decode_packet_in((ofp_header *)b->data, true, NULL, NULL,
                                            &pin, &total_lenp, &buffer_idp, &continuation);
           uint32_t in_port = pin.flow_metadata.flow.in_port.ofp_port;
-          ACA_OVS_Control::get_instance().parse_packet(in_port, pin.packet);
+          /*
+            The pin.packet here has the same memory address, even after multiple calls.
+            If you intent to store it somewhere, it is advised to make a copy of it.
+          */
+          ACA_On_Demand_Engine::get_instance().parse_packet(in_port, pin.packet);
 
           if (error) {
             fprintf(stderr, "decoding packet-in failed: %s",

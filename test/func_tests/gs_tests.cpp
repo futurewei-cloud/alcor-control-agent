@@ -1,21 +1,23 @@
-// Copyright 2019 The Alcor Authors.
+// MIT License
+// Copyright(c) 2020 Futurewei Cloud
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+//     Permission is hereby granted,
+//     free of charge, to any person obtaining a copy of this software and associated documentation files(the "Software"), to deal in the Software without restriction,
+//     including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and / or sell copies of the Software, and to permit persons
+//     to whom the Software is furnished to do so, subject to the following conditions:
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//     The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 //
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+//     THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+//     FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+//     WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 // c includes
 #include "aca_log.h"
 #include "aca_util.h"
 #include "aca_comm_mgr.h"
+#include "aca_grpc.h"
+#include "aca_grpc_client.h"
 #include "goalstateprovisioner.grpc.pb.h"
 #include "goalstate.pb.h"
 #include "cppkafka/buffer.h"
@@ -28,6 +30,7 @@
 #include <string>
 #include <grpcpp/grpcpp.h>
 #include <grpc/support/log.h>
+#include <cmath>
 
 #define UNREFERENCED_PARAMETER(P) (void)(P)
 
@@ -41,11 +44,28 @@ using namespace alcor::schema;
 using aca_comm_manager::Aca_Comm_Manager;
 
 // Global variables
-string g_grpc_server = EMPTY_STRING;
+string g_grpc_server_ip = EMPTY_STRING;
 string g_grpc_port = EMPTY_STRING;
 string g_ofctl_command = EMPTY_STRING;
 string g_ofctl_target = EMPTY_STRING;
 string g_ofctl_options = EMPTY_STRING;
+string g_ncm_address = EMPTY_STRING;
+string g_ncm_port = EMPTY_STRING;
+string g_grpc_server_port = EMPTY_STRING;
+// by default, this should run as GRCP client, unless specified by the corresponding flag.
+bool g_run_as_server = false;
+GoalStateProvisionerAsyncServer *g_grpc_server = NULL;
+GoalStateProvisionerClientImpl *g_grpc_client = NULL;
+// GoalStateProvisionerServer *g_test_grcp_server = NULL;
+int processor_count = std::thread::hardware_concurrency();
+/*
+  From previous tests, we found that, for x number of cores,
+  it is more efficient to set the size of both thread pools
+  to be x * (2/3), which means the total size of the thread pools
+  is x * (4/3). For example, for a host with 24 cores, we would 
+  set the sizes of both thread pools to be 16.
+*/
+int thread_pools_size = (processor_count == 0) ? 1 : ((ceil(1.3 * processor_count)) / 2);
 
 // total time for execute_system_command in microseconds
 std::atomic_ulong g_total_execute_system_time(0);
@@ -127,6 +147,24 @@ void print_goalstateReply(GoalStateOperationReply gsOperationReply)
                 us_to_ms(gsOperationReply.message_total_operation_time()));
 
   g_total_ACA_Message_time += gsOperationReply.message_total_operation_time();
+}
+
+int RunServer()
+{
+  ACA_LOG_INFO("%s", "GS test runnig as a grpc server\n");
+
+  int pool_size = 3;
+  g_grpc_server = new GoalStateProvisionerAsyncServer();
+  auto g_grpc_server_thread = new std::thread(std::bind(
+          &GoalStateProvisionerAsyncServer::RunServer, g_grpc_server, pool_size));
+  g_grpc_server_thread->detach();
+
+  g_grpc_client = new GoalStateProvisionerClientImpl();
+  auto g_grpc_client_thread = new std::thread(
+          std::bind(&GoalStateProvisionerClientImpl::RunClient, g_grpc_client));
+  g_grpc_client_thread->detach();
+
+  return 0;
 }
 
 class GoalStateProvisionerClient {
@@ -283,51 +321,7 @@ class GoalStateProvisionerClient {
 
     ACA_LOG_INFO("[***METRICS***] Total GRPC latency/usage for sync call: %ld microseconds or %ld milliseconds\n",
                  send_goalstate_time - g_total_ACA_Message_time.load(),
-                 (send_goalstate_time - us_to_ms(g_total_ACA_Message_time.load())));
-  }
-
-  int send_goalstate_stream_one(GoalState &goalState, GoalStateOperationReply &gsOperationReply)
-  {
-    ClientContext context;
-
-    auto before_stream_create = std::chrono::steady_clock::now();
-
-    std::shared_ptr<ClientReaderWriter<GoalState, GoalStateOperationReply> > stream(
-            stub_->PushNetworkResourceStatesStream(&context));
-
-    auto after_stream_create = std::chrono::steady_clock::now();
-
-    auto stream_create_time =
-            cast_to_microseconds(after_stream_create - before_stream_create).count();
-
-    ACA_LOG_INFO("[METRICS] stream_create call took: %ld microseconds or %ld milliseconds\n",
-                 stream_create_time, us_to_ms(stream_create_time));
-
-    std::thread writer([stream, goalState]() {
-      stream->Write(goalState);
-      stream->WritesDone();
-    });
-
-    auto after_write_done = std::chrono::steady_clock::now();
-
-    auto write_done_time =
-            cast_to_microseconds(after_write_done - after_stream_create).count();
-
-    ACA_LOG_INFO("[METRICS] write_done call took: %ld microseconds or %ld milliseconds\n",
-                 write_done_time, us_to_ms(write_done_time));
-
-    while (stream->Read(&gsOperationReply)) {
-      ACA_LOG_INFO("%s", "Received one streaming GoalStateOperationReply\n");
-    }
-
-    writer.join();
-    Status status = stream->Finish();
-
-    if (status.ok()) {
-      return EXIT_SUCCESS;
-    } else {
-      return EXIT_FAILURE;
-    }
+                 us_to_ms((send_goalstate_time - g_total_ACA_Message_time.load())));
   }
 
   // working ip prefix = 1-254
@@ -341,8 +335,8 @@ class GoalStateProvisionerClient {
 
     auto before_stream_create = std::chrono::steady_clock::now();
 
-    std::shared_ptr<ClientReaderWriter<GoalState, GoalStateOperationReply> > stream(
-            stub_->PushNetworkResourceStatesStream(&context));
+    std::shared_ptr<ClientReaderWriter<GoalStateV2, GoalStateOperationReply> > stream(
+            stub_->PushGoalStatesStream(&context));
 
     auto after_stream_create = std::chrono::steady_clock::now();
 
@@ -353,13 +347,13 @@ class GoalStateProvisionerClient {
                  stream_create_time, us_to_ms(stream_create_time));
 
     std::thread writer([stream, states_to_create, ip_prefix]() {
-      GoalState GoalState_builder;
+      GoalStateV2 GoalState_builder;
 
-      SubnetState *new_subnet_states = GoalState_builder.add_subnet_states();
-      new_subnet_states->set_operation_type(OperationType::INFO);
+      SubnetState new_subnet_states;
+      new_subnet_states.set_operation_type(OperationType::INFO);
 
       SubnetConfiguration *SubnetConiguration_builder =
-              new_subnet_states->mutable_configuration();
+              new_subnet_states.mutable_configuration();
       SubnetConiguration_builder->set_revision_number(1);
       SubnetConiguration_builder->set_vpc_id(vpc_id_1);
       SubnetConiguration_builder->set_id(subnet_id_1);
@@ -371,10 +365,13 @@ class GoalStateProvisionerClient {
       subnetConfig_GatewayBuilder->set_mac_address(subnet1_gw_mac);
       SubnetConiguration_builder->set_allocated_gateway(subnetConfig_GatewayBuilder);
 
-      NeighborState *new_neighbor_states = GoalState_builder.add_neighbor_states();
-      new_neighbor_states->set_operation_type(OperationType::CREATE);
+      auto &subnet_states_map = *GoalState_builder.mutable_subnet_states();
+      subnet_states_map[subnet_id_1] = new_subnet_states;
+
+      NeighborState new_neighbor_states;
+      new_neighbor_states.set_operation_type(OperationType::CREATE);
       NeighborConfiguration *NeighborConfiguration_builder =
-              new_neighbor_states->mutable_configuration();
+              new_neighbor_states.mutable_configuration();
       NeighborConfiguration_builder->set_revision_number(1);
 
       NeighborConfiguration_builder->set_vpc_id(vpc_id_1);
@@ -385,15 +382,21 @@ class GoalStateProvisionerClient {
       FixedIp_builder->set_neighbor_type(NeighborType::L2);
       FixedIp_builder->set_subnet_id(subnet_id_1);
 
+      auto &neighbor_states_map = *GoalState_builder.mutable_neighbor_states();
+
       for (uint i = 0; i < states_to_create; i++) {
         string i_string = std::to_string(i);
         string port_name = ip_prefix + "-port-" + i_string;
         GoalStateOperationReply reply;
 
+        NeighborConfiguration_builder->set_id(port_name);
         NeighborConfiguration_builder->set_name(port_name);
         NeighborConfiguration_builder->set_host_ip_address(ip_prefix + ".0.0." + i_string);
 
         FixedIp_builder->set_ip_address(ip_prefix + ".0.0." + i_string);
+
+        GoalState_builder.clear_neighbor_states();
+        neighbor_states_map[port_name] = new_neighbor_states;
 
         stream->Write(GoalState_builder);
       }
@@ -432,7 +435,7 @@ class GoalStateProvisionerClient {
 
     ACA_LOG_INFO("[***METRICS***] Total GRPC latency/usage for stream call: %ld microseconds or %ld milliseconds\n",
                  send_goalstate_time - g_total_ACA_Message_time.load(),
-                 (send_goalstate_time - us_to_ms(g_total_ACA_Message_time.load())));
+                 us_to_ms((send_goalstate_time - g_total_ACA_Message_time.load())));
 
     if (!status.ok()) {
       ACA_LOG_ERROR("%s", "RPC call failed\n");
@@ -559,57 +562,14 @@ void parse_goalstate(GoalState parsed_struct, GoalState GoalState_builder)
 
     assert(parsed_struct.vpc_states(i).configuration().tunnel_id() ==
            GoalState_builder.vpc_states(i).configuration().tunnel_id());
-
   }
 
   fprintf(stdout, "All content matched!\n");
 }
 
-int main(int argc, char *argv[])
+int run_as_client()
 {
-  int option;
   int rc;
-  ACA_LOG_INIT(ACALOGNAME);
-
-  // Register the signal handlers
-  signal(SIGINT, aca_signal_handler);
-  signal(SIGTERM, aca_signal_handler);
-
-  while ((option = getopt(argc, argv, "s:p:d")) != -1) {
-    switch (option) {
-    case 's':
-      g_grpc_server = optarg;
-      break;
-    case 'p':
-      g_grpc_port = optarg;
-      break;
-    case 'd':
-      g_debug_mode = true;
-      break;
-    default: /* the '?' case when the option is not recognized */
-      fprintf(stderr,
-              "Usage: %s\n"
-              "\t\t[-s grpc server]\n"
-              "\t\t[-p grpc port]\n"
-              "\t\t[-d enable debug mode]\n",
-              argv[0]);
-      exit(EXIT_FAILURE);
-    }
-  }
-
-  // fill in the grpc server and protocol if it is not provided in
-  // command line arg
-  if (g_grpc_server == EMPTY_STRING) {
-    g_grpc_server = LOCALHOST;
-  }
-  if (g_grpc_port == EMPTY_STRING) {
-    g_grpc_port = GRPC_PORT;
-  }
-
-  // Verify that the version of the library that we linked against is
-  // compatible with the version of the headers we compiled against.
-  GOOGLE_PROTOBUF_VERIFY_VERSION;
-
   string port_name_postfix = "11111111-2222-3333-4444-555555555555";
   string ip_address_prefix = "10.0.0.";
   string remote_ip_address_prefix = "123.0.0.";
@@ -686,7 +646,7 @@ int main(int argc, char *argv[])
   auto before_grpc_client = std::chrono::steady_clock::now();
 
   GoalStateProvisionerClient grpc_client(grpc::CreateChannel(
-          g_grpc_server + ":" + g_grpc_port, grpc::InsecureChannelCredentials()));
+          g_grpc_server_ip + ":" + g_grpc_port, grpc::InsecureChannelCredentials()));
 
   auto after_grpc_client = std::chrono::steady_clock::now();
 
@@ -735,36 +695,69 @@ int main(int argc, char *argv[])
 
     ACA_LOG_INFO("%s", "-------------- sending 1 goal state stream --------------\n");
 
-    NeighborConfiguration_builder->set_name("portname3");
-    NeighborConfiguration_builder->set_host_ip_address("223.0.0.33");
-    FixedIp_builder->set_ip_address("33.0.0.33");
-
-    GoalStateOperationReply stream_reply;
-
-    before_send_goalstate = std::chrono::steady_clock::now();
-
-    rc = grpc_client.send_goalstate_stream_one(GoalState_builder, stream_reply);
-
-    after_send_goalstate = std::chrono::steady_clock::now();
-
-    send_goalstate_time =
-            cast_to_microseconds(after_send_goalstate - before_send_goalstate).count();
-
-    ACA_LOG_INFO("[***METRICS***] send_goalstate_stream_one call took: %ld microseconds or %ld milliseconds\n",
-                 send_goalstate_time, us_to_ms(send_goalstate_time));
-
-    print_goalstateReply(stream_reply);
-
-    if (rc == EXIT_SUCCESS) {
-      ACA_LOG_INFO("%s", "1 goal state stream grpc call succeed\n");
-    } else {
-      ACA_LOG_INFO("%s", "1 goal state stream grpc call failed!!!\n");
-    }
+    grpc_client.send_goalstate_stream(1, "31");
 
     ACA_LOG_INFO("%s", "-------------- sending 10 goal state stream --------------\n");
 
     grpc_client.send_goalstate_stream(10, "32");
   }
+  return rc;
+}
+
+int main(int argc, char *argv[])
+{
+  int option;
+  int rc;
+  ACA_LOG_INIT(ACALOGNAME);
+
+  // Register the signal handlers
+  signal(SIGINT, aca_signal_handler);
+  signal(SIGTERM, aca_signal_handler);
+
+  while ((option = getopt(argc, argv, "s:p:dm")) != -1) {
+    switch (option) {
+    case 's':
+      g_grpc_server_ip = optarg;
+      break;
+    case 'p':
+      g_grpc_port = optarg;
+      break;
+    case 'd':
+      g_debug_mode = true;
+      break;
+    case 'm':
+      g_run_as_server = true;
+      break;
+    default: /* the '?' case when the option is not recognized */
+      /* specifying port not avaiable for now */
+      fprintf(stderr,
+              "Usage: %s\n"
+              "\t\t[-s grpc server]\n"
+              "\t\t[-p grpc port]\n"
+              "\t\t[-d enable debug mode]\n"
+              "\t\t[-m If this flag is passed in, gs test runs as grpc server, which listens on localhost:54321; otherwise it runs as a grpc client]\n",
+              argv[0]);
+      exit(EXIT_FAILURE);
+    }
+  }
+
+  // fill in the grpc server and protocol if it is not provided in
+  // command line arg
+  if (g_grpc_server_ip == EMPTY_STRING) {
+    g_grpc_server_ip = LOCALHOST;
+  }
+  if (g_grpc_port == EMPTY_STRING) {
+    g_grpc_port = GRPC_PORT;
+  }
+
+  if (g_run_as_server) {
+    rc = RunServer();
+  } else {
+    rc = run_as_client();
+  }
+  // Verify that the version of the library that we linked against is
+  // compatible with the version of the headers we compiled against.
+  GOOGLE_PROTOBUF_VERIFY_VERSION;
 
   aca_cleanup();
 

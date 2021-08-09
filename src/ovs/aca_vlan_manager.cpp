@@ -1,16 +1,16 @@
-// Copyright 2019 The Alcor Authors.
+// MIT License
+// Copyright(c) 2020 Futurewei Cloud
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+//     Permission is hereby granted,
+//     free of charge, to any person obtaining a copy of this software and associated documentation files(the "Software"), to deal in the Software without restriction,
+//     including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and / or sell copies of the Software, and to permit persons
+//     to whom the Software is furnished to do so, subject to the following conditions:
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//     The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 //
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+//     THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+//     FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+//     WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include "aca_log.h"
 #include "aca_util.h"
@@ -188,10 +188,16 @@ int ACA_Vlan_Manager::create_l2_neighbor(string virtual_ip, string virtual_mac,
   string action_string = ",actions=strip_vlan,load:" + to_string(tunnel_id) +
                          "->NXM_NX_TUN_ID[],set_field:" + remote_host_ip +
                          "->tun_dst,output:" + VXLAN_GENERIC_OUTPORT_NUMBER;
+  std::chrono::_V2::steady_clock::time_point start = std::chrono::steady_clock::now();
 
   overall_rc = ACA_OVS_Control::get_instance().add_flow(
           "br-tun", (match_string + action_string).c_str());
-
+  std::chrono::_V2::steady_clock::time_point end = std::chrono::steady_clock::now();
+  auto message_total_operation_time =
+          std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+  ACA_LOG_DEBUG("[create_l2_neighbor] Start adding ovs rule at: [%ld], finished at: [%ld]\nElapsed time for adding ovs rule for l2 neighbor took: %ld microseconds or %ld milliseconds\n",
+               start, end, message_total_operation_time,
+               (message_total_operation_time / 1000));
   if (overall_rc != EXIT_SUCCESS) {
     ACA_LOG_ERROR("%s", "Failed to add L2 neighbor rule\n");
   };
@@ -202,8 +208,9 @@ int ACA_Vlan_Manager::create_l2_neighbor(string virtual_ip, string virtual_mac,
   stArpCfg.vlan_id = internal_vlan_id;
 
   ACA_ARP_Responder::get_instance().create_or_update_arp_entry(&stArpCfg);
-  
-  ACA_LOG_DEBUG("create_l2_neighbor arp entry with ip = %s, vlan id = %u and mac = %s\n",virtual_ip.c_str(),internal_vlan_id, virtual_mac.c_str());
+
+  ACA_LOG_DEBUG("create_l2_neighbor arp entry with ip = %s, vlan id = %u and mac = %s\n",
+                virtual_ip.c_str(), internal_vlan_id, virtual_mac.c_str());
 
   ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::create_l2_neighbor <--- Exiting\n");
 
@@ -241,8 +248,8 @@ int ACA_Vlan_Manager::delete_l2_neighbor(string virtual_ip, string virtual_mac,
 
   ACA_ARP_Responder::get_instance().delete_arp_entry(&stArpCfg);
 
-  ACA_LOG_DEBUG("delete_l2_neighbor arp entry with ip = %s, vlan id = %u and mac = %s\n",virtual_ip.c_str(),internal_vlan_id, virtual_mac.c_str());
-
+  ACA_LOG_DEBUG("delete_l2_neighbor arp entry with ip = %s, vlan id = %u and mac = %s\n",
+                virtual_ip.c_str(), internal_vlan_id, virtual_mac.c_str());
 
   ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::delete_l2_neighbor <--- Exiting\n");
 
@@ -336,9 +343,51 @@ bool ACA_Vlan_Manager::is_exist_zeta_gateway(string zeta_gateway_id)
     }
   }
 
-  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::get_aux_gateway_id <--- Entering\n");
+  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::get_aux_gateway_id <--- Exiting\n");
 
   return zeta_gateway_id_found;
+}
+
+uint ACA_Vlan_Manager::get_tunnelId_by_vlanId(uint vlan_id)
+{
+  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::get_tunnelId_by_vlanId ---> Entering\n");
+  bool vlan_id_found = false;
+  uint tunnel_id = 0;
+
+  for (size_t i = 0; i < _vpcs_table.hashSize; i++) {
+    auto hash_node = (_vpcs_table.hashTable[i]).head;
+    if (hash_node == nullptr) {
+      // no entry for this hashtable bucket, go look at the next bucket
+      continue;
+    } else {
+      // found entry in this hashtable bucket, need to look into the list of hash_nodes
+      //-----Start share lock to enable mutiple concurrent reads-----
+      std::shared_lock<std::shared_timed_mutex> hash_bucket_lock(
+              (_vpcs_table.hashTable[i]).mutex_);
+
+      while (hash_node != nullptr) {
+        if (hash_node->getValue()->vlan_id == vlan_id) {
+          vlan_id_found = true;
+          tunnel_id = hash_node->getKey();
+          break;
+        }
+
+        if (vlan_id_found) {
+          break; // break out of for loop on _vpcs_table
+        } else {
+          // zeta_gateway_id not found yet, look at the next hash_node
+          hash_node = hash_node->next;
+        }
+      }
+
+      hash_bucket_lock.unlock();
+      //-----End share lock to enable mutiple concurrent reads-----
+    }
+  }
+
+  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::get_tunnelId_by_vlanId <--- Exiting\n");
+
+  return tunnel_id;
 }
 
 } // namespace aca_vlan_manager

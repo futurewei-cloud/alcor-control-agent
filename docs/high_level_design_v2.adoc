@@ -1,0 +1,97 @@
+= Cloud Fabric Alcor Control Agent
+Eric Li <sze.li@futurewei.com>
+v0.1, 2021-02-15
+:toc: right
+
+[width="100%",options="header"]
+|====================
+|Title|Authors|Version
+|Cloud Fabric Alcor Control Agent v2|@er1cthe0ne|0.1
+|====================
+
+== Summary
+
+The Cloud Fabric Alcor Control Agent (ACA) v2 is based on experience gained on the successful release of Alcor and also feedback from the community. It serves as a compute host level network configuration manager, for the next generation Cloud Native SDN Platform.
+
+image::images/Agent_v2.jpg["Component diagram", width=800, link="images/Agent_components.jpg"]
+
+== Layered Architecture
+
+There are four major layers in ACA v2.
+
+=== Communication Layer
+
+The communication layer contains the gRPC and MQ implementation that's active at the same time. It includes the implementation of communication manager which transfers the goal state messages to the goal state handler for processing. The goal state handler will call into core networking programming interface to process.
+
+=== DHCP/DNS Implementation
+
+To allow flexiblity of different DHCP/DNS programs (e.g. OVS, dnsmasq etc.), ACA provides a DHCP/DNS programming interface to support any kinds of implementation. The current DHCP implementation is based on ovs with on demand DHCP responder. (https://github.com/er1cthe0ne/alcor-control-agent/blob/master/docs/dhcp_programming.adoc) 
+
+=== Dataplane Abstraction Layer
+
+To support different dataplane implementations (e.g. OVS and Mizar), abstraction layer was implemented in ACA. All the interfaces here are the same for all dataplane. 
+
+==== Core Network Programming Interface
+
+This interface is used to program VPC/Subnet/Port configurations on compute hosts. All dataplane implementation (OVS or mizar or other) will extend from this which will allow easy switching between different dataplane implementation.
+
+==== L2 Programming Interface
+
+This interface is used to program L2 switch information, it manages customer ports based on the goal state message. It also handle L2 neighbors dataplane programming.
+
+==== L3 Programming Interface
+
+This interface is used to program L3 routing information, it also including programming of subnet routing rules on routers. It manages routers and router rules based on the goal state message. It also handle L3 neighbors dataplane programming and communication.
+
+=== Work Item Executor
+
+Work item executor is used to execute the configuration updates for different dataplane implementation. It runs the workitems in parallel by default. There is a huge performance improvement when updating 10s or 100s of ports in parallel instead of updating serially based on data. 
+
+=== On-Demand Engine
+
+On-Demand Engine is responsible to deal with DHCP and ARP requests, also future on-demand routed and unknown traffic which need information from higher level Network Configuration Manager (https://github.com/er1cthe0ne/alcor/blob/design/AGA/docs/modules/ROOT/pages/infra_services/NCM_design.adoc). Those packets will be "punt" from OVS to ACA for processing. This component can be broken out into a micro program to keep the dataplane alive if ACA is down or getting upgraded.
+
+== Recommended Code Changes
+
+This session list the proposed code change location and details to support the new on demand handling of unknown packets:
+
+=== OVS tables update - Eric
+
+Outgoing unknown packet handling (implemented):
+. replace [table=20(unicast), priority=1 actions=resubmit(,22)]
+. to [table=20, priority=1(low),actions=CONTROLLER] in ACA_OVS_L2_Programmer::setup_ovs_bridges_if_need function. 
+. This is the punt rule to send the outgoing unknown packet for ACA for on demand processing.
+
+Incoming unknown packet handling (when we enable SG):
+. change ACA_Vlan_Manager::create_ovs_port to make the new port rule more specific to the new port:
+.. from: string cmd_string = "add-flow br-tun \"table=4, priority=1,tun_id=" + to_string(tunnel_id) + " actions=mod_vlan_vid:" + to_string(internal_vlan_id) + ",output:\"patch-int\"\"";
+.. to: string cmd_string = "add-flow br-tun \"table=4, priority=50,tun_id=" + to_string(tunnel_id) + ",dl_dst=" + [port virtual mac] + " actions=mod_vlan_vid:" + to_string(internal_vlan_id) + ",output:\"patch-int\"\"";
+. add [table=4, priority=1(low),actions=CONTROLLER] in ACA_OVS_L2_Programmer::setup_ovs_bridges_if_need function. 
+. This is the punt rule to send the incoming unknown packet for ACA for on demand processing, needed with we enable security group
+. Note: all the SG openflow rules are placed in br-int, we can consider placing this punt rule in br-int when there is no SG allow rule matched
+
+=== New on-demand engine class - James
+
+. put all the new files related to on-demand engine under a new folder under src/on_demand, start with aca_on_demand_engine.cpp, with a singleton class named ACA_On_Demand_Engine
+. move ACA_OVS_Control::parse_packet under aca_ovs_control.cpp to ACA_On_Demand_Engine::parse_packet
+. ACA_On_Demand_Engine::parse_packet needs to monitor and limit the processing if there are too many unknown packets generated by a particular customer port
+. update ACA_On_Demand_Engine::parse_packet to process unknown UDP/TCP/ICMP packets, on top of the current ARP and DHCP request processing
+. ACA_On_Demand_Engine::parse_packet call ACA_On_Demand_Engine::unknown_recv(vlan_id, source port IP, destination IP, source/destination port, protocol - TCP/UDP/ICMP, EtherType IPv4/IPv6)
+. ACA_On_Demand_Engine::unknown_recv will do the followings:
+.. generate a unique UUID from aca as the request ID to use below
+.. craft a HostRequest message based on the unknown packet's tunnel id, source/destination IP, source/destination port, ethertype and protocol
+.. call GoalStateProvisionerImpl::RequestGoalStates to call NCM synchronously and wait for HostRequestReply with the matching request ID
+... if NCM reply with operation_status = SUCCESS(ROUTABLE), then releasing the unknown packet to OVS
+... if NCM reply with operation_status = FAILURE(NOT_ROUTABLE), then log and drop unknown packet
+... if ACA timed out waiting for port configuration from NCM, then log and drop unknown packet, may do retry
+
+=== ARP responder update to handle unknown ARP request (Not so Easy) - James
+
+. ACA_ARP_Responder::_parse_arp_request, if ARP entry does not exist, call ACA_On_Demand_Engine::unknown_recv(vlan_id, source port IP, destination IP, source/destination port, protocol=ARP, EtherType=IPv4)
+
+=== New GRPC client to NCM - Rio
+
+. update ACA input parameter for input of NCM IP and port for GRPC communication (aca_main.cpp)
+. update ACA grpc implementation aca_grpc.cpp to connect to NCM either in the constructor or GoalStateProvisionerImpl::RunServer function
+. add new function (e.g. GoalStateProvisionerImpl::RequestGoalStates) in aca_grpc.cpp to handle RequestGoalStates grpc call to NCM, this will be called by ACA_On_Demand_Engine::unknown_recv
+. add the corresponding test case in aca_tests, start with a new test file named aca_test_on_demand.cpp to test the new GRPC client. Then add GRPC server code in gs_tests.cpp since it already have grpc client there. gs_tests will pretent to be NCM
