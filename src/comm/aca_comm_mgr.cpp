@@ -238,6 +238,7 @@ int Aca_Comm_Manager::update_goal_state(GoalStateV2 &goal_state_message,
   }
 
   auto end = chrono::steady_clock::now();
+
   auto dhcp_operation_time =
           cast_to_microseconds(end - neighbor_update_finished_time).count();
   auto message_total_operation_time = cast_to_microseconds(end - start).count();
