@@ -20,6 +20,12 @@ echo "build path is $BUILD"
 # Initialize the needed mizar submodule
 git submodule update --init --recursive
 
+# Print out the git branch and log
+echo "--- try to print branch name and git log ---"
+
+git branch
+git log
+
 # Create and Start the build contrainer
 docker build -f $BUILD/Dockerfile -t aca_build0 .
 docker rm -f a1 || true
@@ -31,6 +37,10 @@ docker start a1
 
 if [ "$1" != "test" ]; then
   # Build alcor control agent
+  echo "--- check what is in src/ovs/aca_ovs_l3_programmer.cpp ---"
+
+  docker exec a1 bash -c "cat /mnt/host/code/src/ovs/aca_ovs_l3_programmer.cpp"
+
   echo "--- building alcor-control-agent ---"
   docker exec a1 bash -c "cd /mnt/host/code && cmake . && make && \
     /etc/init.d/openvswitch-switch restart && \
