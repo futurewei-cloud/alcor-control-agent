@@ -272,7 +272,6 @@ int main(int argc, char *argv[])
   g_grpc_server_thread->detach();
 
   // Create a separate thread to run the grpc client.
-
   g_grpc_client = new GoalStateProvisionerClientImpl();
   g_grpc_client_thread = new std::thread(
           std::bind(&GoalStateProvisionerClientImpl::RunClient, g_grpc_client));
