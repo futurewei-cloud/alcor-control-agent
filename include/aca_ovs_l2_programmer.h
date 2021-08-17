@@ -17,6 +17,7 @@
 
 #include "goalstateprovisioner.grpc.pb.h"
 #include <string>
+#include <unordered_map>
 
 #define PRIORITY_HIGH 50
 #define PRIORITY_MID 25
@@ -36,6 +37,12 @@ class ACA_OVS_L2_Programmer {
   bool is_ip_on_the_same_host(const std::string hosting_port_ip);
 
   int setup_ovs_bridges_if_need();
+
+  int setup_ovs_default_flows();
+
+  int setup_ovs_controller(const std::string ctrler_ip, const int ctrler_port);
+
+  std::unordered_map<uint64_t, std::string> get_ovs_bridge_mapping();
 
   int create_port(const std::string vpc_id, const std::string port_name,
                   const std::string virtual_ip, const std::string virtual_mac,

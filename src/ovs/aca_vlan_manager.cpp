@@ -190,6 +190,7 @@ int ACA_Vlan_Manager::create_l2_neighbor(string virtual_ip, string virtual_mac,
                          "->tun_dst,output:" + VXLAN_GENERIC_OUTPORT_NUMBER;
   std::chrono::_V2::steady_clock::time_point start = std::chrono::steady_clock::now();
 
+  /*
   overall_rc = ACA_OVS_Control::get_instance().add_flow(
           "br-tun", (match_string + action_string).c_str());
   std::chrono::_V2::steady_clock::time_point end = std::chrono::steady_clock::now();
@@ -201,6 +202,9 @@ int ACA_Vlan_Manager::create_l2_neighbor(string virtual_ip, string virtual_mac,
   if (overall_rc != EXIT_SUCCESS) {
     ACA_LOG_ERROR("%s", "Failed to add L2 neighbor rule\n");
   };
+  */
+
+
 
   // create arp entry in arp responder for the l2 neighbor
   stArpCfg.mac_address = virtual_mac;

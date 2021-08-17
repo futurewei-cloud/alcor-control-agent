@@ -14,7 +14,7 @@ set(CPPKAFKA_VERSION "${CPPKAFKA_VERSION_MAJOR}.${CPPKAFKA_VERSION_MINOR}.${CPPK
 set(RDKAFKA_MIN_VERSION 0x00090400)
 
 #add_compile_options(-O0) # enable no optimization during development
-add_compile_options(-Wall -Wextra -pedantic -Wpedantic -Werror)
+add_compile_options(-Wall -Wextra -pedantic -Wpedantic -Wno-error -Wno-unused-variable -Wno-unused-parameter -Wno-sequence-point -Wno-parentheses -Wno-pedantic -Wno-reorder -Wno-sign-compare)
 
 add_subdirectory(src)
 add_subdirectory(test)

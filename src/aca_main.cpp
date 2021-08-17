@@ -18,8 +18,17 @@
 #include "aca_message_pulsar_consumer.h"
 #include "aca_grpc.h"
 #include "aca_grpc_client.h"
+
+#undef UNUSED
+#include "of_controller.h"
 #include "aca_ovs_l2_programmer.h"
+
+#undef OFP_ASSERT
+#undef CONTAINER_OF
+#undef ARRAY_SIZE
+#undef ROUND_UP
 #include "aca_ovs_control.h"
+
 #include "goalstateprovisioner.grpc.pb.h"
 #include <thread>
 #include <unistd.h> /* for getopt */
@@ -58,6 +67,10 @@ string g_ofctl_target = EMPTY_STRING;
 string g_ofctl_options = EMPTY_STRING;
 string g_ncm_address = EMPTY_STRING;
 string g_ncm_port = EMPTY_STRING;
+
+OFController *g_ovs_ctrl = NULL;
+string g_ovs_ctrl_address = "127.0.0.1";
+int g_ovs_ctrl_port = 1234;
 
 // total time for execute_system_command in microseconds
 std::atomic_ulong g_total_execute_system_time(0);
@@ -145,6 +158,16 @@ static void aca_cleanup()
   } else {
     ACA_LOG_ERROR("%s", "Unable to call delete, grpc client thread pointer is null.\n");
   }
+
+  if (g_ovs_ctrl != NULL) {
+    g_ovs_ctrl->stop();
+    delete g_ovs_ctrl;
+    g_ovs_ctrl = NULL;
+    ACA_LOG_INFO("%s", "Cleaned up ovs controller.\n");
+  } else {
+    ACA_LOG_INFO("%s", "Unable to clean up ovs controller, since it is null.\n");
+  }
+
   ACA_LOG_CLOSE();
 }
 
@@ -263,6 +286,20 @@ int main(int argc, char *argv[])
     aca_cleanup();
     return rc;
   }
+
+  // start ovs server and point br-int/br-tun's controller to local ovs server
+  std::unordered_map<std::string, std::string> switch_dpid_map =
+          aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().get_ovs_bridge_mapping();
+
+  // set bridge controller will clean up flows
+  aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().setup_ovs_controller(g_ovs_ctrl_address, g_ovs_ctrl_port);
+
+  // then add default ovs flows
+  aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().setup_ovs_default_flows();
+
+  g_ovs_ctrl = new OFController(switch_dpid_map, g_ovs_ctrl_address.c_str(), g_ovs_ctrl_port);
+  g_ovs_ctrl->start();
+
   // monitor br-int for dhcp request message
   ovs_monitor_brint_thread =
           new thread(bind(&ACA_OVS_Control::monitor,

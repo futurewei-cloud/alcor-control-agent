@@ -210,30 +210,6 @@ int ACA_OVS_L2_Programmer::setup_ovs_bridges_if_need()
                           "-- set interface patch-int type=patch options:peer=patch-tun",
                           not_care_culminative_time, overall_rc);
 
-    // adding default flows
-    // details at: https://github.com/futurewei-cloud/alcor-control-agent/wiki/Openflow-Tables-Explain
-
-    execute_openflow_command("add-flow br-tun \"table=0,priority=50,arp,arp_op=1, actions=CONTROLLER\"",
-                             not_care_culminative_time, overall_rc);
-
-    execute_openflow_command("add-flow br-tun \"table=0,priority=1,in_port=\"patch-int\" actions=resubmit(,2)\"",
-                             not_care_culminative_time, overall_rc);
-
-    execute_openflow_command("add-flow br-tun \"table=2,priority=1,dl_dst=00:00:00:00:00:00/01:00:00:00:00:00 actions=resubmit(,20)\"",
-                             not_care_culminative_time, overall_rc);
-
-    execute_openflow_command("add-flow br-tun \"table=2,priority=1,dl_dst=01:00:00:00:00:00/01:00:00:00:00:00 actions=resubmit(,22)\"",
-                             not_care_culminative_time, overall_rc);
-
-    execute_openflow_command("add-flow br-tun \"table=20,priority=1 actions=CONTROLLER\"",
-                             not_care_culminative_time, overall_rc);
-
-    execute_openflow_command("add-flow br-tun \"table=2,priority=25,icmp,icmp_type=8,in_port=\"patch-int\" actions=resubmit(,52)\"",
-                             not_care_culminative_time, overall_rc);
-
-    execute_openflow_command("add-flow br-tun \"table=52,priority=1 actions=resubmit(,20)\"",
-                             not_care_culminative_time, overall_rc);
-
     execute_ovsdb_command(
             string("--may-exist add-port br-tun vxlan-generic -- set interface vxlan-generic ofport_request=") +
                     VXLAN_GENERIC_OUTPORT_NUMBER +
@@ -272,6 +248,120 @@ int ACA_OVS_L2_Programmer::setup_ovs_bridges_if_need()
                 overall_rc);
 
   return overall_rc;
+}
+
+int ACA_OVS_L2_Programmer::setup_ovs_default_flows()
+{
+  // adding default flows
+  // details at: https://github.com/futurewei-cloud/alcor-control-agent/wiki/Openflow-Tables-Explain
+  int overall_rc = EXIT_SUCCESS;
+  ulong not_care_culminative_time;
+
+  execute_openflow_command("add-flow br-tun \"table=0,priority=50,arp,arp_op=1, actions=CONTROLLER\"",
+                           not_care_culminative_time, overall_rc);
+
+  execute_openflow_command("add-flow br-tun \"table=0,priority=1,in_port=\"patch-int\" actions=resubmit(,2)\"",
+                           not_care_culminative_time, overall_rc);
+
+  execute_openflow_command("add-flow br-tun \"table=2,priority=1,dl_dst=00:00:00:00:00:00/01:00:00:00:00:00 actions=resubmit(,20)\"",
+                           not_care_culminative_time, overall_rc);
+
+  execute_openflow_command("add-flow br-tun \"table=2,priority=1,dl_dst=01:00:00:00:00:00/01:00:00:00:00:00 actions=resubmit(,22)\"",
+                           not_care_culminative_time, overall_rc);
+
+  execute_openflow_command("add-flow br-tun \"table=20,priority=1 actions=CONTROLLER\"",
+                           not_care_culminative_time, overall_rc);
+
+  execute_openflow_command("add-flow br-tun \"table=2,priority=25,icmp,icmp_type=8,in_port=\"patch-int\" actions=resubmit(,52)\"",
+                           not_care_culminative_time, overall_rc);
+
+  execute_openflow_command("add-flow br-tun \"table=52,priority=1 actions=resubmit(,20)\"",
+                           not_care_culminative_time, overall_rc);
+
+  execute_openflow_command("add-flow br-tun \"table=0,priority=25,in_port=\"vxlan-generic\" actions=resubmit(,4)\"",
+                           not_care_culminative_time, overall_rc);
+
+  return overall_rc;
+}
+
+int ACA_OVS_L2_Programmer::setup_ovs_controller(const std::string ctrler_ip, const int ctrler_port)
+{
+  int rc = EXIT_SUCCESS;
+
+  const string ctrler_endpoint = " tcp:" + ctrler_ip + ":" + to_string(ctrler_port);
+  const string br_int_str = "br-int";
+  const string br_tun_str = "br-tun";
+  const string setup_br_int_cmd = "set-controller " + br_int_str + ctrler_endpoint;
+  const string setup_br_tun_cmd = "set-controller " + br_tun_str + ctrler_endpoint;
+
+  ACA_LOG_DEBUG("%s", "ACA_OVS_L2_Programmer::setup_ovs_controller ---> Entering\n");
+  auto ovsdb_client_start = chrono::steady_clock::now();
+
+  string br_int_cmd_string = "ovs-vsctl " + setup_br_int_cmd;
+  rc = aca_net_config::Aca_Net_Config::get_instance().execute_system_command(br_int_cmd_string);
+  if (rc != EXIT_SUCCESS) {
+    ACA_LOG_ERROR("ACA_OVS_L2_Programmer::setup_ovs_controller - failed to set br-int controller\n");
+  }
+
+  string br_tun_cmd_string = "ovs-vsctl " + setup_br_tun_cmd;
+  rc = aca_net_config::Aca_Net_Config::get_instance().execute_system_command(br_tun_cmd_string);
+  if (rc != EXIT_SUCCESS) {
+    ACA_LOG_ERROR("ACA_OVS_L2_Programmer::setup_ovs_controller - failed to set br-tun controller\n");
+  }
+
+  auto ovsdb_client_end = chrono::steady_clock::now();
+
+  auto ovsdb_client_time_total_time =
+          cast_to_microseconds(ovsdb_client_end - ovsdb_client_start).count();
+
+  g_total_execute_ovsdb_time += ovsdb_client_time_total_time;
+
+  ACA_LOG_INFO("ACA_OVS_L2_Programmer::setup_ovs_controller - Elapsed time for ovsdb client call took: %ld microseconds or %ld milliseconds\n",
+               ovsdb_client_time_total_time, us_to_ms(ovsdb_client_time_total_time));
+
+  ACA_LOG_DEBUG("ACA_OVS_L2_Programmer::setup_ovs_controller <--- Exiting\n");
+
+  return rc;
+}
+
+std::unordered_map<uint64_t, std::string> ACA_OVS_L2_Programmer::get_ovs_bridge_mapping()
+{
+  const string br_int_str = "br-int";
+  const string br_tun_str = "br-tun";
+  const string get_br_int_dpid = "get Bridge " + br_int_str + " datapath_id";
+  const string get_br_tun_dpid = "get Bridge " + br_tun_str + " datapath_id";
+  std::unordered_map<uint64_t, std::string> switch_dpid_map;
+
+  ACA_LOG_DEBUG("%s", "ACA_OVS_L2_Programmer::get_ovs_bridge_mapping ---> Entering\n");
+  auto ovsdb_client_start = chrono::steady_clock::now();
+
+  string br_int_cmd_string = "ovs-vsctl " + get_br_int_dpid;
+  // raw string output format is like a hex string "00003af45ed7aa45"
+  string br_int_dpid_raw = aca_net_config::Aca_Net_Config::get_instance().execute_system_command_with_return(br_int_cmd_string);
+  // trim the (") symbol at the start and the end to get 00003af45ed7aa45, and then convert to decimal
+  uint64_t br_int_dpid = std::stoul(br_int_dpid_raw.substr(1, br_int_dpid_raw.length() - 3), nullptr, 16);
+  ACA_LOG_DEBUG("ACA_OVS_L2_Programmer::get_ovs_bridge_mapping - adding %ld - %s mapping to switch_dpid_map\n", br_int_dpid, br_int_str.c_str());
+  switch_dpid_map[br_int_dpid] = br_int_str;
+
+  string br_tun_cmd_string = "ovs-vsctl " + get_br_tun_dpid;
+  string br_tun_dpid_raw = aca_net_config::Aca_Net_Config::get_instance().execute_system_command_with_return(br_tun_cmd_string);
+  uint64_t br_tun_dpid = std::stoul(br_tun_dpid_raw.substr(1, br_tun_dpid_raw.length() - 3), nullptr, 16);
+  ACA_LOG_DEBUG("ACA_OVS_L2_Programmer::get_ovs_bridge_mapping - adding %ld - %s mapping to switch_dpid_map\n", br_tun_dpid, br_tun_str.c_str());
+  switch_dpid_map[br_tun_dpid] = br_tun_str;
+
+  auto ovsdb_client_end = chrono::steady_clock::now();
+
+  auto ovsdb_client_time_total_time =
+          cast_to_microseconds(ovsdb_client_end - ovsdb_client_start).count();
+
+  g_total_execute_ovsdb_time += ovsdb_client_time_total_time;
+
+  ACA_LOG_INFO("ACA_OVS_L2_Programmer::get_ovs_bridge_mapping - Elapsed time for ovsdb client call took: %ld microseconds or %ld milliseconds\n",
+               ovsdb_client_time_total_time, us_to_ms(ovsdb_client_time_total_time));
+
+  ACA_LOG_DEBUG("ACA_OVS_L2_Programmer::get_ovs_bridge_mapping <--- Exiting\n");
+
+  return switch_dpid_map;
 }
 
 int ACA_OVS_L2_Programmer::create_port(const string vpc_id, const string port_name,

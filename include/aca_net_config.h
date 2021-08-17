@@ -56,6 +56,8 @@ class Aca_Net_Config {
 
   int execute_system_command(string cmd_string, ulong &culminative_time);
 
+  std::string execute_system_command_with_return(string cmd_string);
+
   // compiler will flag error when below is called
   Aca_Net_Config(Aca_Net_Config const &) = delete;
   void operator=(Aca_Net_Config const &) = delete;
