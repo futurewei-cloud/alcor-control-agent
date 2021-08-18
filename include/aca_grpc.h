@@ -97,9 +97,8 @@ class GoalStateProvisionerAsyncServer {
     For streaming rpcs, please refer to ProcessPushGoalStatesStreamAsyncCall
   */
   void ProcessPushNetworkResourceStatesAsyncCall(AsyncGoalStateProvionerCallBase *baseCall,
-                                                 bool ok, int placeHolder);
-  void ProcessPushGoalStatesStreamAsyncCall(AsyncGoalStateProvionerCallBase *baseCall,
-                                            bool ok, int placeHolder);
+                                                 bool ok);
+  void ProcessPushGoalStatesStreamAsyncCall(AsyncGoalStateProvionerCallBase *baseCall, bool ok);
 
   private:
   std::unique_ptr<Server> server_;
