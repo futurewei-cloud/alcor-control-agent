@@ -62,13 +62,13 @@ void GoalStateProvisionerAsyncServer::AsyncWorker()
 }
 
 void GoalStateProvisionerAsyncServer::ProcessPushNetworkResourceStatesAsyncCall(
-        AsyncGoalStateProvionerCallBase *baseCall, bool *ok, int /*placeHolder*/)
+        AsyncGoalStateProvionerCallBase *baseCall, bool ok, int /*placeHolder*/)
 {
   ACA_LOG_DEBUG("Start of ProcessPushNetworkResourceStateAsyncCall, OK: %ld, call_status: %ld\n",
-                *ok, baseCall->status_);
+                ok, baseCall->status_);
   PushNetworkResourceStatesAsyncCall *unaryCall =
           static_cast<PushNetworkResourceStatesAsyncCall *>(baseCall);
-  if (!(*ok)) {
+  if (!ok) {
     // maybe delete the instance and init a new one?
     ACA_LOG_DEBUG("%s\n", "Got a PushNetworkResourceStates call that is NOT OK.");
   } else {
@@ -121,13 +121,13 @@ void GoalStateProvisionerAsyncServer::ProcessPushNetworkResourceStatesAsyncCall(
 }
 
 void GoalStateProvisionerAsyncServer::ProcessPushGoalStatesStreamAsyncCall(
-        AsyncGoalStateProvionerCallBase *baseCall, bool *ok, int /*placeHolder*/)
+        AsyncGoalStateProvionerCallBase *baseCall, bool ok, int /*placeHolder*/)
 {
   ACA_LOG_DEBUG("Start of ProcessPushGoalStatesStreamAsyncCall, OK: %ld, call_status: %ld\n",
-                *ok, baseCall->status_);
+                ok, baseCall->status_);
   PushGoalStatesStreamAsyncCall *streamingCall =
           static_cast<PushGoalStatesStreamAsyncCall *>(baseCall);
-  if (!(*ok)) {
+  if (!ok) {
     // maybe delete the instance and init a new one?
     ACA_LOG_DEBUG("%s\n", "Got a PushGoalStatesStream call that is NOT OK.");
 

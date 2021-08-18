@@ -88,11 +88,11 @@ class GoalStateProvisionerAsyncServer {
   void AsyncWorker();
 
   void ProcessPushNetworkResourceStatesAsyncCall(AsyncGoalStateProvionerCallBase *baseCall,
-                                                 bool *ok, int placeHolder);
+                                                 bool ok, int placeHolder);
   void ProcessPushGoalStatesStreamAsyncCall(AsyncGoalStateProvionerCallBase *baseCall,
-                                            bool *ok, int placeHolder);
+                                            bool ok, int placeHolder);
 
-    private:
+  private:
   std::unique_ptr<Server> server_;
   std::unique_ptr<ServerCompletionQueue> cq_;
   GoalStateProvisioner::AsyncService service_;
