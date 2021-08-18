@@ -57,6 +57,22 @@ void GoalStateProvisionerAsyncServer::ProcessPushNetworkResourceStatesAsyncCall(
   if (!ok) {
     // maybe delete the instance and init a new one?
     ACA_LOG_DEBUG("%s\n", "Got a PushNetworkResourceStates call that is NOT OK.");
+    delete (PushNetworkResourceStatesAsyncCall *)baseCall;
+    PushNetworkResourceStatesAsyncCall *newPushNetworkResourceStatesAsyncCallInstance =
+            new PushNetworkResourceStatesAsyncCall;
+    newPushNetworkResourceStatesAsyncCallInstance->type_ =
+            AsyncGoalStateProvionerCallBase::CallType::PUSH_NETWORK_RESOURCE_STATES;
+    newPushNetworkResourceStatesAsyncCallInstance->status_ =
+            AsyncGoalStateProvionerCallBase::CallStatus::INIT;
+    //  Request for the call
+    service_.RequestPushNetworkResourceStates(
+            &newPushNetworkResourceStatesAsyncCallInstance->ctx_, /*Context of this call*/
+            &newPushNetworkResourceStatesAsyncCallInstance->goalState_, /*GoalState to receive*/
+            &newPushNetworkResourceStatesAsyncCallInstance->responder_, /*Responder of call*/
+            cq_.get(), /*CQ for new call*/
+            cq_.get(), /*CQ for finished call*/
+            newPushNetworkResourceStatesAsyncCallInstance /*The unique tag for the call*/
+    );
   } else {
     switch (unaryCall->status_) {
     case AsyncGoalStateProvionerCallBase::CallStatus::INIT: {
@@ -120,25 +136,34 @@ void GoalStateProvisionerAsyncServer::ProcessPushGoalStatesStreamAsyncCall(
   if (!ok) {
     // maybe delete the instance and init a new one?
     ACA_LOG_DEBUG("%s\n", "Got a PushGoalStatesStream call that is NOT OK.");
-
+    delete (PushGoalStatesStreamAsyncCall *)baseCall;
+    PushGoalStatesStreamAsyncCall *newPushGoalStatesStreamAsyncCallInstance =
+            new PushGoalStatesStreamAsyncCall;
+    newPushGoalStatesStreamAsyncCallInstance->type_ =
+            AsyncGoalStateProvionerCallBase::CallType::PUSH_GOAL_STATE_STREAM;
+    newPushGoalStatesStreamAsyncCallInstance->status_ =
+            AsyncGoalStateProvionerCallBase::CallStatus::INIT;
+    //  Request for the call
+    service_.RequestPushGoalStatesStream(
+            &newPushGoalStatesStreamAsyncCallInstance->ctx_,
+            &newPushGoalStatesStreamAsyncCallInstance->stream_, cq_.get(),
+            cq_.get(), newPushGoalStatesStreamAsyncCallInstance);
   } else {
     switch (streamingCall->status_) {
     case AsyncGoalStateProvionerCallBase::CallStatus::INIT:
       if (streamingCall->hasReadFromStream) {
         ACA_LOG_DEBUG("%s\n", "Initing a new PushGoalStatesStream, before processing the current one");
-        {
-          PushGoalStatesStreamAsyncCall *newPushGoalStatesStreamAsyncCallInstance =
-                  new PushGoalStatesStreamAsyncCall;
-          newPushGoalStatesStreamAsyncCallInstance->type_ =
-                  AsyncGoalStateProvionerCallBase::CallType::PUSH_GOAL_STATE_STREAM;
-          newPushGoalStatesStreamAsyncCallInstance->status_ =
-                  AsyncGoalStateProvionerCallBase::CallStatus::INIT;
-          //  Request for the call
-          service_.RequestPushGoalStatesStream(
-                  &newPushGoalStatesStreamAsyncCallInstance->ctx_,
-                  &newPushGoalStatesStreamAsyncCallInstance->stream_, cq_.get(),
-                  cq_.get(), newPushGoalStatesStreamAsyncCallInstance);
-        }
+        PushGoalStatesStreamAsyncCall *newPushGoalStatesStreamAsyncCallInstance =
+                new PushGoalStatesStreamAsyncCall;
+        newPushGoalStatesStreamAsyncCallInstance->type_ =
+                AsyncGoalStateProvionerCallBase::CallType::PUSH_GOAL_STATE_STREAM;
+        newPushGoalStatesStreamAsyncCallInstance->status_ =
+                AsyncGoalStateProvionerCallBase::CallStatus::INIT;
+        //  Request for the call
+        service_.RequestPushGoalStatesStream(
+                &newPushGoalStatesStreamAsyncCallInstance->ctx_,
+                &newPushGoalStatesStreamAsyncCallInstance->stream_, cq_.get(),
+                cq_.get(), newPushGoalStatesStreamAsyncCallInstance);
       }
       ACA_LOG_DEBUG("%s\n", "Processing a PushGoalStateStream call...");
       {
