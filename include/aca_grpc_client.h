@@ -17,7 +17,6 @@
 #include <grpcpp/grpcpp.h>
 #include <grpc/support/log.h>
 #include "goalstateprovisioner.grpc.pb.h"
-#include "ctpl/ctpl_stl.h"
 
 using namespace alcor::schema;
 using grpc::Server;
@@ -25,51 +24,23 @@ using grpc::ServerBuilder;
 using grpc::ServerContext;
 using grpc::ServerReader;
 using grpc::ServerReaderWriter;
-using grpc::ServerAsyncResponseWriter;
-using grpc::ServerAsyncReader;
-using grpc::ServerAsyncReaderWriter;
-using grpc::ServerCompletionQueue;
 using grpc::ServerWriter;
 using grpc::Status;
 
-class GoalStateProvisionerAsyncServer {
+class GoalStateProvisionerClientImpl final : public GoalStateProvisioner::Service {
   public:
   std::unique_ptr<GoalStateProvisioner::Stub> stub_;
   std::shared_ptr<grpc_impl::Channel> chan_;
-
-  Status ShutDownServer();
-  void RunServer(int thread_pool_size);
-  void AsyncWorker();
-
-  private:
-  std::unique_ptr<Server> server_;
-  std::unique_ptr<ServerCompletionQueue> cq_;
-  GoalStateProvisioner::AsyncService service_;
-  ctpl::thread_pool thread_pool_;
+  void RequestGoalStates(HostRequest *request, grpc::CompletionQueue *cq);
+  explicit GoalStateProvisionerClientImpl(){};
+  void ConnectToNCM();
+  void RunClient();
+  bool a = chan_ == nullptr;
 };
 
-class GoalStateProvisionerAsyncInstance {
-  public:
-  enum StreamStatus { READY_TO_CONNECT, READY_TO_READ, READY_TO_WRITE, DONE};
-  GoalStateProvisionerAsyncInstance(GoalStateProvisioner::AsyncService* service, ServerCompletionQueue* cq)
-  {
-    service_ = service;
-    cq_ = cq;
-    stream_ = new ServerAsyncReaderWriter<GoalStateOperationReply, GoalStateV2>(&ctx_);
-    status_ = READY_TO_CONNECT;
-    PushGoalStatesStream(true);
-  }
-
-  void
-  PushGoalStatesStream(bool ok);
-
-  StreamStatus status_;
-
-  private:
-  GoalStateProvisioner::AsyncService* service_;
-  ServerCompletionQueue* cq_;
-  ServerContext ctx_;
-  ServerAsyncReaderWriter<GoalStateOperationReply, GoalStateV2>* stream_;
-  GoalStateV2 goalStateV2_;
-  GoalStateOperationReply gsOperationReply_;
+struct AsyncClientCall {
+  alcor::schema::HostRequestReply reply;
+  grpc::ClientContext context;
+  grpc::Status status;
+  std::unique_ptr<grpc::ClientAsyncResponseReader<alcor::schema::HostRequestReply> > response_reader;
 };

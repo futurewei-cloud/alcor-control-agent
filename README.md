@@ -21,7 +21,7 @@ In this README:
 
 The Cloud Fabric Alcor Control Agent (ACA) runs on each host machine. It serves as a stateless proxy between Alcor controller and host machine networking components for control plane operations. Below are the highlevel Agent components.
 
-![Agent Components](docs/images/Agent_V2.jpg)
+![Agent Components](docs/images/Agent_v2.jpg)
 
 ## Repositories
 The Alcor project is divided across a few GitHub repositories.

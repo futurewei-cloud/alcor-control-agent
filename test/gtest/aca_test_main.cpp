@@ -17,10 +17,12 @@
 #include "gtest/gtest.h"
 #include "goalstate.pb.h"
 #include "aca_grpc.h"
+#include "aca_grpc_client.h"
 #include "aca_message_pulsar_producer.h"
 #include <unistd.h> /* for getopt */
 #include <grpcpp/grpcpp.h>
 #include <thread>
+#include <cmath>
 
 using namespace std;
 using namespace aca_message_pulsar;
@@ -36,7 +38,9 @@ string g_ncm_address = EMPTY_STRING;
 string g_ncm_port = EMPTY_STRING;
 string g_grpc_server_port = EMPTY_STRING;
 std::thread *g_grpc_server_thread = NULL;
-GoalStateProvisionerImpl *g_grpc_server = NULL;
+GoalStateProvisionerAsyncServer *g_grpc_server = NULL;
+std::thread *g_grpc_client_thread = NULL;
+GoalStateProvisionerClientImpl *g_grpc_client = NULL;
 
 // total time for execute_system_command in microseconds
 std::atomic_ulong g_initialize_execute_system_time(0);
@@ -64,6 +68,15 @@ uint neighbors_to_create = 10;
 
 static string mq_broker_ip = "pulsar://localhost:6650"; //for the broker running in localhost
 static string mq_test_topic = "my-topic";
+int processor_count = std::thread::hardware_concurrency();
+/*
+  From previous tests, we found that, for x number of cores,
+  it is more efficient to set the size of both thread pools
+  to be x * (2/3), which means the total size of the thread pools
+  is x * (4/3). For example, for a host with 24 cores, we would 
+  set the sizes of both thread pools to be 16.
+*/
+int thread_pools_size = (processor_count == 0) ? 1 : ((ceil(1.3 * processor_count)) / 2);
 
 //
 // Test suite: pulsar_test_cases
@@ -174,10 +187,17 @@ int main(int argc, char **argv)
     }
   }
 
-  g_grpc_server = new GoalStateProvisionerImpl();
+  g_grpc_server = new GoalStateProvisionerAsyncServer();
+  int g_grpc_server_pool_size = 3;
   g_grpc_server_thread =
-          new std::thread(std::bind(&GoalStateProvisionerImpl::RunServer, g_grpc_server));
+          new std::thread(std::bind(&GoalStateProvisionerAsyncServer::RunServer,
+                                    g_grpc_server, g_grpc_server_pool_size));
   g_grpc_server_thread->detach();
+
+  g_grpc_client = new GoalStateProvisionerClientImpl();
+  g_grpc_client_thread = new std::thread(
+          std::bind(&GoalStateProvisionerClientImpl::RunClient, g_grpc_client));
+  g_grpc_client_thread->detach();
 
   int rc = RUN_ALL_TESTS();
 

@@ -28,9 +28,15 @@
 #include <grpcpp/grpcpp.h>
 #include <unordered_map>
 #include "aca_log.h"
+#include "goalstateprovisioner.grpc.pb.h"
+#include "ctpl/ctpl_stl.h"
 
 using namespace alcor::schema;
 using namespace std;
+using namespace ctpl;
+
+extern int thread_pools_size;
+
 // using namespace grpc;
 struct on_demand_payload {
   std::chrono::_V2::steady_clock::time_point insert_time;
@@ -65,6 +71,9 @@ class ACA_On_Demand_Engine {
   /* This records when clean_remaining_payload() ran last time, 
   its initial value should be the time  when clean_remaining_payload() was first called*/
   std::chrono::_V2::steady_clock::time_point last_time_cleaned_remaining_payload;
+
+  ctpl::thread_pool thread_pool_;
+
   static ACA_On_Demand_Engine &get_instance();
 
   /*
@@ -94,6 +103,8 @@ class ACA_On_Demand_Engine {
   void unknown_recv(uint16_t vlan_id, string ip_src, string ip_dest, int port_src,
                     int port_dest, Protocol protocol, char *uuid_str);
   void process_async_grpc_replies();
+  void process_async_replies_asyncly(string request_id, OperationStatus replyStatus,
+                                     std::chrono::_V2::high_resolution_clock::time_point received_ncm_reply_time);
 /* ethernet headers are always exactly 14 bytes [1] */
 #define SIZE_ETHERNET 14
 
@@ -159,7 +170,9 @@ class ACA_On_Demand_Engine {
   ACA_On_Demand_Engine()
   {
     ACA_LOG_DEBUG("%s\n", "Constructor of a new on demand engine, need to create a new thread to process the grpc replies");
-
+    int cores = std::thread::hardware_concurrency();
+    ACA_LOG_DEBUG("This host has %ld cores, setting the size of the thread pools to be %ld\n",
+                  cores, thread_pools_size);
     on_demand_reply_processing_thread = new std::thread(
             std::bind(&ACA_On_Demand_Engine::process_async_grpc_replies, this));
 
@@ -167,6 +180,7 @@ class ACA_On_Demand_Engine {
     on_demand_payload_cleaning_thread = new std::thread(
             std::bind(&ACA_On_Demand_Engine::clean_remaining_payload, this));
     on_demand_payload_cleaning_thread->detach();
+    thread_pool_.resize(thread_pools_size);
   };
   ~ACA_On_Demand_Engine()
   {
@@ -174,6 +188,7 @@ class ACA_On_Demand_Engine {
     request_uuid_on_demand_payload_map.clear();
     delete on_demand_reply_processing_thread;
     delete on_demand_payload_cleaning_thread;
+    thread_pool_.stop();
   };
 };
 } // namespace aca_on_demand_engine

@@ -17,12 +17,14 @@
 #include "aca_ovs_control.h"
 #include "aca_message_pulsar_consumer.h"
 #include "aca_grpc.h"
+#include "aca_grpc_client.h"
 #include "aca_ovs_l2_programmer.h"
 #include "aca_ovs_control.h"
 #include "goalstateprovisioner.grpc.pb.h"
 #include <thread>
 #include <unistd.h> /* for getopt */
 #include <grpcpp/grpcpp.h>
+#include <cmath>
 
 using aca_message_pulsar::ACA_Message_Pulsar_Consumer;
 using aca_ovs_control::ACA_OVS_Control;
@@ -42,9 +44,11 @@ using namespace std;
 
 // Global variables
 std::thread *g_grpc_server_thread = NULL;
+std::thread *g_grpc_client_thread = NULL;
 std::thread *ovs_monitor_brtun_thread = NULL;
 std::thread *ovs_monitor_brint_thread = NULL;
-GoalStateProvisionerImpl *g_grpc_server = NULL;
+GoalStateProvisionerAsyncServer *g_grpc_server = NULL;
+GoalStateProvisionerClientImpl *g_grpc_client = NULL;
 string g_broker_list = EMPTY_STRING;
 string g_pulsar_topic = EMPTY_STRING;
 string g_pulsar_subsription_name = EMPTY_STRING;
@@ -68,6 +72,15 @@ std::atomic_ulong g_total_update_GS_time(0);
 
 bool g_demo_mode = false;
 bool g_debug_mode = false;
+int processor_count = std::thread::hardware_concurrency();
+/*
+  From previous tests, we found that, for x number of cores,
+  it is more efficient to set the size of both thread pools
+  to be x * (2/3), which means the total size of the thread pools
+  is x * (4/3). For example, for a host with 24 cores, we would 
+  set the sizes of both thread pools to be 16.
+*/
+int thread_pools_size = (processor_count == 0) ? 1 : ((ceil(1.3 * processor_count)) / 2);
 
 static void aca_cleanup()
 {
@@ -114,6 +127,23 @@ static void aca_cleanup()
     ACA_LOG_INFO("%s", "Cleaned up grpc server thread.\n");
   } else {
     ACA_LOG_ERROR("%s", "Unable to call delete, grpc server thread pointer is null.\n");
+  }
+
+  //stops the grpc client
+  if (g_grpc_client != NULL) {
+    delete g_grpc_client;
+    g_grpc_client = NULL;
+    ACA_LOG_INFO("%s", "Cleaned up grpc client.\n");
+  } else {
+    ACA_LOG_ERROR("%s", "Unable to call delete, grpc client pointer is null.\n");
+  }
+
+  if (g_grpc_client_thread != NULL) {
+    delete g_grpc_client_thread;
+    g_grpc_client_thread = NULL;
+    ACA_LOG_INFO("%s", "Cleaned up grpc client thread.\n");
+  } else {
+    ACA_LOG_ERROR("%s", "Unable to call delete, grpc client thread pointer is null.\n");
   }
   ACA_LOG_CLOSE();
 }
@@ -213,13 +243,24 @@ int main(int argc, char *argv[])
     g_ofctl_target = OFCTL_TARGET;
   }
 
-  g_grpc_server = new GoalStateProvisionerImpl();
-  g_grpc_server_thread =
-          new std::thread(std::bind(&GoalStateProvisionerImpl::RunServer, g_grpc_server));
+  g_grpc_server = new GoalStateProvisionerAsyncServer();
+  g_grpc_server_thread = new std::thread(std::bind(
+          &GoalStateProvisionerAsyncServer::RunServer, g_grpc_server, thread_pools_size));
   g_grpc_server_thread->detach();
 
-  aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().setup_ovs_bridges_if_need();
+  // Create a separate thread to run the grpc client.
 
+  g_grpc_client = new GoalStateProvisionerClientImpl();
+  g_grpc_client_thread = new std::thread(
+          std::bind(&GoalStateProvisionerClientImpl::RunClient, g_grpc_client));
+  g_grpc_client_thread->detach();
+
+  rc = aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().setup_ovs_bridges_if_need();
+  if (rc == EXIT_FAILURE) {
+    ACA_LOG_ERROR("%s \n", "ACA is not able to create the bridges, please check your environment");
+    aca_cleanup();
+    return rc;
+  }
   // monitor br-int for dhcp request message
   ovs_monitor_brint_thread =
           new thread(bind(&ACA_OVS_Control::monitor,

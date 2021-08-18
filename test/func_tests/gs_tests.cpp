@@ -17,6 +17,7 @@
 #include "aca_util.h"
 #include "aca_comm_mgr.h"
 #include "aca_grpc.h"
+#include "aca_grpc_client.h"
 #include "goalstateprovisioner.grpc.pb.h"
 #include "goalstate.pb.h"
 #include "cppkafka/buffer.h"
@@ -29,6 +30,7 @@
 #include <string>
 #include <grpcpp/grpcpp.h>
 #include <grpc/support/log.h>
+#include <cmath>
 
 #define UNREFERENCED_PARAMETER(P) (void)(P)
 
@@ -52,8 +54,18 @@ string g_ncm_port = EMPTY_STRING;
 string g_grpc_server_port = EMPTY_STRING;
 // by default, this should run as GRCP client, unless specified by the corresponding flag.
 bool g_run_as_server = false;
-GoalStateProvisionerImpl *g_grpc_server = NULL;
+GoalStateProvisionerAsyncServer *g_grpc_server = NULL;
+GoalStateProvisionerClientImpl *g_grpc_client = NULL;
 // GoalStateProvisionerServer *g_test_grcp_server = NULL;
+int processor_count = std::thread::hardware_concurrency();
+/*
+  From previous tests, we found that, for x number of cores,
+  it is more efficient to set the size of both thread pools
+  to be x * (2/3), which means the total size of the thread pools
+  is x * (4/3). For example, for a host with 24 cores, we would 
+  set the sizes of both thread pools to be 16.
+*/
+int thread_pools_size = (processor_count == 0) ? 1 : ((ceil(1.3 * processor_count)) / 2);
 
 // total time for execute_system_command in microseconds
 std::atomic_ulong g_total_execute_system_time(0);
@@ -137,50 +149,21 @@ void print_goalstateReply(GoalStateOperationReply gsOperationReply)
   g_total_ACA_Message_time += gsOperationReply.message_total_operation_time();
 }
 
-// Synchronous server implementation to test the grpc client's connectivity.
-class GoalStateProvisionerServer final : public GoalStateProvisioner::Service {
-  grpc::Status RequestGoalStates(ServerContext *ctx, const HostRequest *request,
-                                 HostRequestReply *response) override
-  {
-    string expected_request_id = "12345";
-    ctx->client_metadata();
-    request->CheckInitialized();
-    ACA_LOG_INFO("%s", "Test Server code called!");
-    response->mutable_operation_statuses()->Add();
-    response->mutable_operation_statuses(0)->set_request_id(
-            request->state_requests(0).request_id());
-    if (request->state_requests(0).request_id() == expected_request_id) {
-      response->mutable_operation_statuses()->at(0).set_operation_status(OperationStatus::SUCCESS);
-    } else {
-      response->mutable_operation_statuses()->at(0).set_operation_status(OperationStatus::FAILURE);
-    }
-    return grpc::Status::OK;
-  }
-};
-
 int RunServer()
 {
   ACA_LOG_INFO("%s", "GS test runnig as a grpc server\n");
 
-  std::string server_address("0.0.0.0:54321");
+  int pool_size = 3;
+  g_grpc_server = new GoalStateProvisionerAsyncServer();
+  auto g_grpc_server_thread = new std::thread(std::bind(
+          &GoalStateProvisionerAsyncServer::RunServer, g_grpc_server, pool_size));
+  g_grpc_server_thread->detach();
 
-  GoalStateProvisionerServer service;
+  g_grpc_client = new GoalStateProvisionerClientImpl();
+  auto g_grpc_client_thread = new std::thread(
+          std::bind(&GoalStateProvisionerClientImpl::RunClient, g_grpc_client));
+  g_grpc_client_thread->detach();
 
-  ServerBuilder builder;
-  // Listen on the given address without any authentication mechanism.
-  builder.AddListeningPort(server_address, grpc::InsecureServerCredentials());
-  ACA_LOG_INFO("%s", "Added listening port\n");
-
-  builder.RegisterService(&service);
-  ACA_LOG_INFO("%s", "Registered service\n");
-
-  std::unique_ptr<Server> server(builder.BuildAndStart());
-
-  ACA_LOG_INFO("Test Server listening on %s", server_address.c_str());
-  // Wait for the server to shutdown.
-  // Note that some other thread must be responsible for shutting down the server for this call to ever return.
-  server->Wait();
-  // server->Shutdown();
   return 0;
 }
 
@@ -746,6 +729,7 @@ int main(int argc, char *argv[])
       g_run_as_server = true;
       break;
     default: /* the '?' case when the option is not recognized */
+      /* specifying port not avaiable for now */
       fprintf(stderr,
               "Usage: %s\n"
               "\t\t[-s grpc server]\n"

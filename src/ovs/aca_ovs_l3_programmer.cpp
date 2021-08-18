@@ -82,6 +82,7 @@ int ACA_OVS_L3_Programmer::create_or_update_router(RouterConfiguration &current_
   char hex_ip_buffer[HEX_IP_BUFFER_SIZE];
   int addr;
   string cmd_string;
+  ulong culminative_dataplane_programming_time = 0;
 
   string router_id = current_RouterConfiguration.id();
   if (router_id.empty()) {
@@ -245,7 +246,6 @@ int ACA_OVS_L3_Programmer::create_or_update_router(RouterConfiguration &current_
 
           ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
                   cmd_string, dataplane_programming_time, overall_rc);
-
           // Should be able to ping the gateway now
 
           // add essential rule to restore from neighbor host DVR mac to destination GW mac:
@@ -288,6 +288,77 @@ int ACA_OVS_L3_Programmer::create_or_update_router(RouterConfiguration &current_
               new_routing_rule_entry.next_hop_mac =
                       current_routing_rule.routing_rule_extra_info().next_hop_mac();
 
+              auto remote_host_ip = "";
+              ulong culminative_dataplane_programming_time = 0;
+              for (int x = 0; x < parsed_struct.neighbor_states_size(); x++) {
+                  NeighborConfiguration current_NeighborConfiguration1 = parsed_struct.neighbor_states(x).configuration();
+                  ACA_LOG_INFO("current_NeighborConfiguration.host_ip_address(): %s \n", current_NeighborConfiguration1.host_ip_address().c_str());
+                  for (int y = 0; y < current_NeighborConfiguration1.fixed_ips_size(); y++) {
+                        ACA_LOG_INFO("current_NeighborConfiguration.fixed_ips(%d): neighbor_type: %d, subnet_id %s, ip_address %s \n",
+                                      y, current_NeighborConfiguration1.fixed_ips(y).neighbor_type(),
+                                      current_NeighborConfiguration1.fixed_ips(y).subnet_id().c_str(),
+                                      current_NeighborConfiguration1.fixed_ips(y).ip_address().c_str());
+                        ACA_LOG_INFO("current_routing_rule.next_hop_ip() %s\n", current_routing_rule.next_hop_ip().c_str());
+                        auto current_fixed_ip = current_NeighborConfiguration1.fixed_ips(y);
+                        string virtual_ip_address = current_fixed_ip.ip_address();
+                        string virtual_mac_address = current_NeighborConfiguration1.mac_address();
+                        string gw_mac;
+                        uint dest_tunnel_id = 0;
+
+                        if (strcmp(current_routing_rule.next_hop_ip().c_str(),current_fixed_ip.ip_address().c_str()) == 0) {
+                                for (int z = 0; z < parsed_struct.subnet_states_size(); z++) {
+                                  SubnetConfiguration config =
+                                          parsed_struct.subnet_states(z).configuration();
+                                          ACA_LOG_INFO("config.id(): %s\n", config.id().c_str());
+                                          ACA_LOG_INFO("current_fixed_ip.subnet_id(): %s\n", current_fixed_ip.subnet_id());
+                                      if (config.id() == current_NeighborConfiguration1.fixed_ips(y).subnet_id()) {
+                                          gw_mac = config.gateway().mac_address();
+                                          dest_tunnel_id = config.tunnel_id();
+                                          ACA_LOG_INFO("gw_mac: %s\n", gw_mac.c_str());
+                                          ACA_LOG_INFO("dest_tunnel_id: %d\n", dest_tunnel_id);
+                                      }
+                                }
+                                remote_host_ip = current_NeighborConfiguration1.host_ip_address().c_str();
+                                int source_vlan_id = ACA_Vlan_Manager::get_instance().get_or_create_vlan_id(
+                                        found_tunnel_id);
+
+                                int destination_vlan_id =
+                                        ACA_Vlan_Manager::get_instance().get_or_create_vlan_id(dest_tunnel_id);
+
+                                bool is_port_on_same_host = aca_is_port_on_same_host(remote_host_ip);
+
+                                ACA_LOG_INFO("current_fixed_ip.subnet_id(): %s\n", current_fixed_ip.subnet_id().c_str());
+                                ACA_LOG_INFO("current_subnet_routing_table.subnet_id(): %s\n", current_subnet_routing_table.subnet_id().c_str());
+
+                                if (is_port_on_same_host) {
+                                  if (current_fixed_ip.subnet_id() != current_subnet_routing_table.subnet_id())
+                                  {
+                                    cmd_string = "add-flow br-tun \"table=0,priority=50,ip,dl_vlan=" +
+                                              to_string(source_vlan_id) + ",nw_dst=" + current_routing_rule.destination() +
+                                              ",dl_dst=" + found_gateway_mac +
+                                              " actions=mod_vlan_vid:" + to_string(destination_vlan_id) +
+                                              ",mod_dl_src:" + gw_mac +
+                                              ",mod_dl_dst:" + virtual_mac_address + ",output:IN_PORT\"";
+                                  }
+                                } else {
+                                  cmd_string = "add-flow br-tun \"table=0,priority=50,ip,dl_vlan=" +
+                                              to_string(source_vlan_id) + ",nw_dst=" + current_routing_rule.destination() +
+                                              ",dl_dst=" + found_gateway_mac +
+                                              " actions=mod_vlan_vid:" + to_string(destination_vlan_id) +
+                                              ",mod_dl_src:" + _host_dvr_mac +
+                                              ",mod_dl_dst:" + virtual_mac_address + ",resubmit(,2)\"";
+                                }
+
+                                ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
+                                        cmd_string, culminative_dataplane_programming_time, overall_rc);
+                        }
+                  }
+                  if (strcmp(remote_host_ip, "") != 0)
+                  {
+                        break;
+                  }
+              }
+
               if (!is_routing_rule_exist) {
                 new_subnet_routing_table_entry.routing_rules.emplace(
                         current_routing_rule.id(), new_routing_rule_entry);
@@ -300,6 +371,15 @@ int ACA_OVS_L3_Programmer::create_or_update_router(RouterConfiguration &current_
               }
 
             } else if (current_routing_rule.operation_type() == OperationType::DELETE) {
+              int source_vlan_id = ACA_Vlan_Manager::get_instance().get_or_create_vlan_id(
+                                        found_tunnel_id);
+              string cmd_string = "del-flows br-tun \"table=0,priority=50,ip,dl_vlan=" + to_string(source_vlan_id) +
+                                  ",dl_dst=" + found_gateway_mac +
+                                  ",nw_dst=" + current_routing_rule.destination() +
+                                  "\" --strict";
+
+              ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
+                      cmd_string, culminative_dataplane_programming_time, overall_rc);
               if (new_subnet_routing_table_entry.routing_rules.erase(
                           current_routing_rule.id())) {
                 ACA_LOG_INFO("Successfuly cleaned up entry for router rule id %s\n",
@@ -328,7 +408,13 @@ int ACA_OVS_L3_Programmer::create_or_update_router(RouterConfiguration &current_
                          current_router_subnet_id.c_str());
             new_subnet_routing_tables[current_router_subnet_id] = new_subnet_routing_table_entry;
           }
+          ACA_LOG_DEBUG("After inserting subnet routing table entry for subnet: %s, printing out the contents:\n",
+                        current_router_subnet_id.c_str());
+          for (auto kv : new_subnet_routing_tables) {
+            ACA_LOG_DEBUG("subnet_id: %s\n", kv.first.c_str());
+          }
           subnet_info_found = true;
+          overall_rc = EXIT_SUCCESS;
           break;
         }
 
@@ -348,11 +434,22 @@ int ACA_OVS_L3_Programmer::create_or_update_router(RouterConfiguration &current_
       // -----critical section ends-----
       ACA_LOG_INFO("Added router entry for router id %s\n", router_id.c_str());
     } else {
+      ACA_LOG_DEBUG("Using existing router entry for router id %s\n", router_id.c_str());
+      ACA_LOG_DEBUG("Let's print out what we have in router %s 's subnet routing table.\n",
+                    router_id);
+      for (auto kv : _routers_table[router_id]) {
+        ACA_LOG_DEBUG("subnet_id: %s\n", kv.first.c_str());
+      }
       // -----critical section starts-----
       _routers_table_mutex.lock();
       _routers_table[router_id] = new_subnet_routing_tables;
       _routers_table_mutex.unlock();
       // -----critical section ends-----
+      ACA_LOG_DEBUG("After updating, print out what we have in router %s 's subnet routing table.\n",
+                    router_id);
+      for (auto kv : _routers_table[router_id]) {
+        ACA_LOG_DEBUG("subnet_id: %s\n", kv.first.c_str());
+      }
     }
 
   } catch (const std::invalid_argument &e) {
@@ -830,7 +927,10 @@ int ACA_OVS_L3_Programmer::create_or_update_l3_neighbor(
     ACA_LOG_DEBUG("router ID:%s\n ", router_it->first.c_str());
     // try to see if the destination subnet GW is connected to the current router
     auto found_subnet = router_it->second.find(subnet_id);
-
+    for (auto kv : router_it->second) {
+      ACA_LOG_DEBUG("[create_or_update_l3_neighbor] router ID: [%s], subnet routering table's subnet ID: [%s], subnet_id we're looking for: [%s]\n",
+                   router_it->first.c_str(), kv.first.c_str(), subnet_id.c_str());
+    }
     if (found_subnet == router_it->second.end()) {
       // subnet not found in this router, go look at the next router
       continue;
@@ -868,14 +968,14 @@ int ACA_OVS_L3_Programmer::create_or_update_l3_neighbor(
 
         // the openflow rule depends on whether the hosting ip is on this compute host or not
         if (is_port_on_same_host) {
-          cmd_string = "add-flow br-tun \"table=0,priority=50,ip,dl_vlan=" +
+          cmd_string = "add-flow br-tun \"table=0,priority=25,ip,dl_vlan=" +
                        to_string(source_vlan_id) + ",nw_dst=" + virtual_ip +
                        ",dl_dst=" + subnet_it->second.gateway_mac +
                        " actions=mod_vlan_vid:" + to_string(destination_vlan_id) +
                        ",mod_dl_src:" + destination_gw_mac +
                        ",mod_dl_dst:" + virtual_mac + ",output:IN_PORT\"";
         } else {
-          cmd_string = "add-flow br-tun \"table=0,priority=50,ip,dl_vlan=" +
+          cmd_string = "add-flow br-tun \"table=0,priority=25,ip,dl_vlan=" +
                        to_string(source_vlan_id) + ",nw_dst=" + virtual_ip +
                        ",dl_dst=" + subnet_it->second.gateway_mac +
                        " actions=mod_vlan_vid:" + to_string(destination_vlan_id) +
