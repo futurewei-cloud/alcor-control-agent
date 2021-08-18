@@ -244,8 +244,9 @@ int main(int argc, char *argv[])
   }
 
   g_grpc_server = new GoalStateProvisionerAsyncServer();
-  g_grpc_server_thread = new std::thread(std::bind(
-          &GoalStateProvisionerAsyncServer::RunServer, g_grpc_server, thread_pools_size));
+  g_grpc_server_thread =
+          new std::thread(std::bind(&GoalStateProvisionerAsyncServer::RunserverNew,
+                                    g_grpc_server, thread_pools_size));
   g_grpc_server_thread->detach();
 
   // Create a separate thread to run the grpc client.
