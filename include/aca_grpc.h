@@ -34,6 +34,51 @@ using grpc::Status;
 
 class GoalStateProvisionerAsyncServer {
   public:
+  struct AsyncGoalStateProvionerCallBase {
+    enum CallType { PUSH_NETWORK_RESOURCE_STATES, PUSH_GOAL_STATE_STREAM };
+    enum CallStatus { INIT, SENT };
+    CallStatus status_;
+    CallType type_;
+    grpc::ServerContext ctx_;
+  };
+
+  //  struct for PushNetworkResourceStates, which is a unary gRPC call
+  struct PushNetworkResourceStatesAsyncCall : public AsyncGoalStateProvionerCallBase {
+    //  Received GoalState
+    GoalState goalState_;
+    //  Reply to be sent
+    GoalStateOperationReply gsOperationReply_;
+
+    // Object to send reply to client
+    grpc::ServerAsyncResponseWriter<alcor::schema::GoalStateOperationReply> responder_;
+
+    // Constructor
+    PushNetworkResourceStatesAsyncCall() : responder_(&ctx_)
+    {
+    }
+  };
+
+  //  struct for PushNetworkResourceStates, which is a bi-directional streaming gRPC call
+  struct PushGoalStatesStreamAsyncCall : public AsyncGoalStateProvionerCallBase {
+    //  Received GoalStateV2
+    GoalStateV2 goalStateV2_;
+    //  Reply to be sent
+    GoalStateOperationReply gsOperationReply_;
+
+    //  Has this call read from the stream yet? If not,
+    //  we'd better read from the stream, or the goalStateV2_
+    //  will be empty
+    bool hasReadFromStream;
+
+    // Object to send reply to client
+    ServerAsyncReaderWriter<GoalStateOperationReply, GoalStateV2> stream_;
+
+    // Constructor
+    PushGoalStatesStreamAsyncCall() : stream_(&ctx_)
+    {
+      hasReadFromStream = false;
+    }
+  };
   std::unique_ptr<GoalStateProvisioner::Stub> stub_;
   std::shared_ptr<grpc_impl::Channel> chan_;
 
@@ -42,57 +87,18 @@ class GoalStateProvisionerAsyncServer {
   void RunserverNew(int thread_pool_size);
   void AsyncWorker();
 
-  private:
+  void ProcessPushNetworkResourceStatesAsyncCall(AsyncGoalStateProvionerCallBase *baseCall,
+                                                 bool *ok, int placeHolder);
+  void ProcessPushGoalStatesStreamAsyncCall(AsyncGoalStateProvionerCallBase *baseCall,
+                                            bool *ok, int placeHolder);
+
+    private:
   std::unique_ptr<Server> server_;
   std::unique_ptr<ServerCompletionQueue> cq_;
   GoalStateProvisioner::AsyncService service_;
   ctpl::thread_pool thread_pool_;
 };
-struct AsyncGoalStateProvionerCallBase {
-  enum CallType { PUSH_NETWORK_RESOURCE_STATES, PUSH_GOAL_STATE_STREAM };
-  enum CallStatus { INIT, SENT };
-  CallStatus status_;
-  CallType type_;
-  grpc::ServerContext ctx_;
-};
 
-//  struct for PushNetworkResourceStates, which is a unary gRPC call
-struct PushNetworkResourceStatesAsyncCall : public AsyncGoalStateProvionerCallBase {
-  //  Received GoalState
-  GoalState goalState_;
-  //  Reply to be sent
-  GoalStateOperationReply gsOperationReply_;
-
-  // Object to send reply to client
-  grpc::ServerAsyncResponseWriter<alcor::schema::GoalStateOperationReply> responder_;
-
-  // Constructor
-  PushNetworkResourceStatesAsyncCall() : responder_(&ctx_)
-  {
-  }
-};
-
-//  struct for PushNetworkResourceStates, which is a bi-directional streaming gRPC call
-struct PushGoalStatesStreamAsyncCall : public AsyncGoalStateProvionerCallBase {
-  //  Received GoalStateV2
-  GoalStateV2 goalStateV2_;
-  //  Reply to be sent
-  GoalStateOperationReply gsOperationReply_;
-
-  //  Has this call read from the stream yet? If not,
-  //  we'd better read from the stream, or the goalStateV2_
-  //  will be empty
-  bool hasReadFromStream;
-
-  // Object to send reply to client
-  ServerAsyncReaderWriter<GoalStateOperationReply, GoalStateV2> stream_;
-
-  // Constructor
-  PushGoalStatesStreamAsyncCall() : stream_(&ctx_)
-  {
-    hasReadFromStream = false;
-  }
-};
 class GoalStateProvisionerAsyncInstance {
   public:
   enum StreamStatus { READY_TO_CONNECT, READY_TO_READ, READY_TO_WRITE, DONE };
