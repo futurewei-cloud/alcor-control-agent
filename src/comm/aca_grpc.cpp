@@ -193,7 +193,8 @@ void GoalStateProvisionerAsyncServer::RunserverNew(int thread_pool_size)
         ACA_LOG_ERROR("Cannot instantiate a new unknown gRPC call type %ld, \n", call_type);
         break;
       }
-      ACA_LOG_DEBUG("%s\n", "Time to push the call to the thread pool");
+      ACA_LOG_DEBUG("Time to push the call to the thread pool, thread pool has %ld idle threads before pushing\n",
+                    thread_pool_.n_idle());
       // Push goalstate procssing into the thread pool, then call it a day.
       thread_pool_.push([call_type, asyncCallBase](int /**/) {
         ACA_LOG_DEBUG("Processing an async call with type %ld and status %ld\n",
@@ -287,6 +288,8 @@ void GoalStateProvisionerAsyncServer::RunserverNew(int thread_pool_size)
           break;
         }
       });
+      ACA_LOG_DEBUG("After pushing the call to the thread pool, thread pool has %ld idle threads before pushing\n",
+                    thread_pool_.n_idle());
     }
     ACA_LOG_DEBUG("%s\n", "Out of the for loop, this should not happen");
   }
