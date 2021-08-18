@@ -14,7 +14,6 @@
 
 #include "aca_log.h"
 #include "aca_util.h"
-#include "aca_ovs_control.h"
 #include "aca_message_pulsar_consumer.h"
 #include "aca_grpc.h"
 #include "aca_grpc_client.h"
@@ -286,8 +285,8 @@ int main(int argc, char *argv[])
     return rc;
   }
 
-  // start ovs server and point br-int/br-tun's controller to local ovs server
-  std::unordered_map<std::string, std::string> switch_dpid_map =
+  // get bridge-dpid mappings from ovs
+  std::unordered_map<uint64_t, std::string> switch_dpid_map =
           aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().get_ovs_bridge_mapping();
 
   // set bridge controller will clean up flows
@@ -296,6 +295,7 @@ int main(int argc, char *argv[])
   // then add default ovs flows
   aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().setup_ovs_default_flows();
 
+  // start local ovs server (openflow controller)
   g_ovs_ctrl = new OFController(switch_dpid_map, g_ovs_ctrl_address.c_str(), g_ovs_ctrl_port);
   g_ovs_ctrl->start();
 
@@ -311,5 +311,6 @@ int main(int argc, char *argv[])
   ACA_Message_Pulsar_Consumer network_config_consumer(g_broker_list, g_pulsar_subsription_name);
   rc = network_config_consumer.consumeDispatched(g_pulsar_topic);
   aca_cleanup();
+
   return rc;
 }
