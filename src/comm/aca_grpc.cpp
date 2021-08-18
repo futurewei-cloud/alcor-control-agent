@@ -198,7 +198,7 @@ void GoalStateProvisionerAsyncServer::ProcessPushGoalStatesStreamAsyncCall(
   }
 }
 
-void GoalStateProvisionerAsyncServer::Runserver(int thread_pool_size)
+void GoalStateProvisionerAsyncServer::RunServer(int thread_pool_size)
 {
   ACA_LOG_INFO("Start of RunServer, pool size %ld\n", thread_pool_size);
 

@@ -89,7 +89,7 @@ class GoalStateProvisionerAsyncServer {
   std::shared_ptr<grpc_impl::Channel> chan_;
 
   Status ShutDownServer();
-  void Runserver(int thread_pool_size);
+  void RunServer(int thread_pool_size);
 
   /*
     Add a corresponding function here to process a new kind of rpc call.
