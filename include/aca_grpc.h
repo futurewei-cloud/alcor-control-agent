@@ -34,6 +34,10 @@ using grpc::Status;
 
 class GoalStateProvisionerAsyncServer {
   public:
+  /*
+    Base class that represents a gRPC call.
+    When you have a new kind of rpc, add the corresponding enum to CallType
+  */
   struct AsyncGoalStateProvionerCallBase {
     enum CallType { PUSH_NETWORK_RESOURCE_STATES, PUSH_GOAL_STATE_STREAM };
     enum CallStatus { INIT, SENT };
@@ -43,6 +47,7 @@ class GoalStateProvisionerAsyncServer {
   };
 
   //  struct for PushNetworkResourceStates, which is a unary gRPC call
+  //  when adding a new unary rpc call, create a new struct just like PushNetworkResourceStatesAsyncCall
   struct PushNetworkResourceStatesAsyncCall : public AsyncGoalStateProvionerCallBase {
     //  Received GoalState
     GoalState goalState_;
@@ -59,6 +64,7 @@ class GoalStateProvisionerAsyncServer {
   };
 
   //  struct for PushNetworkResourceStates, which is a bi-directional streaming gRPC call
+  //  when adding a new streaming rpc call, create a new struct just like PushNetworkResourceStatesAsyncCall
   struct PushGoalStatesStreamAsyncCall : public AsyncGoalStateProvionerCallBase {
     //  Received GoalStateV2
     GoalStateV2 goalStateV2_;
@@ -83,10 +89,13 @@ class GoalStateProvisionerAsyncServer {
   std::shared_ptr<grpc_impl::Channel> chan_;
 
   Status ShutDownServer();
-  void RunServer(int thread_pool_size);
-  void RunserverNew(int thread_pool_size);
-  void AsyncWorker();
+  void Runserver(int thread_pool_size);
 
+  /*
+    Add a corresponding function here to process a new kind of rpc call.
+    For unary rpcs, please refer to ProcessPushNetworkResourceStatesAsyncCall
+    For streaming rpcs, please refer to ProcessPushGoalStatesStreamAsyncCall
+  */
   void ProcessPushNetworkResourceStatesAsyncCall(AsyncGoalStateProvionerCallBase *baseCall,
                                                  bool ok, int placeHolder);
   void ProcessPushGoalStatesStreamAsyncCall(AsyncGoalStateProvionerCallBase *baseCall,
@@ -97,30 +106,4 @@ class GoalStateProvisionerAsyncServer {
   std::unique_ptr<ServerCompletionQueue> cq_;
   GoalStateProvisioner::AsyncService service_;
   ctpl::thread_pool thread_pool_;
-};
-
-class GoalStateProvisionerAsyncInstance {
-  public:
-  enum StreamStatus { READY_TO_CONNECT, READY_TO_READ, READY_TO_WRITE, DONE };
-  GoalStateProvisionerAsyncInstance(GoalStateProvisioner::AsyncService *service,
-                                    ServerCompletionQueue *cq)
-  {
-    service_ = service;
-    cq_ = cq;
-    stream_ = new ServerAsyncReaderWriter<GoalStateOperationReply, GoalStateV2>(&ctx_);
-    status_ = READY_TO_CONNECT;
-    PushGoalStatesStream(true);
-  }
-
-  void PushGoalStatesStream(bool ok);
-
-  StreamStatus status_;
-
-  private:
-  GoalStateProvisioner::AsyncService *service_;
-  ServerCompletionQueue *cq_;
-  ServerContext ctx_;
-  ServerAsyncReaderWriter<GoalStateOperationReply, GoalStateV2> *stream_;
-  GoalStateV2 goalStateV2_;
-  GoalStateOperationReply gsOperationReply_;
 };
