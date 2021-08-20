@@ -34,7 +34,6 @@ extern bool g_demo_mode;
 
 namespace aca_ovs_l2_programmer
 {
-
 static int aca_set_port_vlan_workitem(const string port_name, uint vlan_id)
 {
   ACA_LOG_DEBUG("%s", "aca_set_port_vlan_workitem ---> Entering\n");
