@@ -44,6 +44,7 @@ Status GoalStateProvisionerAsyncServer::ShutDownServer()
   server_->Shutdown();
   cq_->Shutdown();
   thread_pool_.stop();
+  keepReadingFromCq_ = false;
   return Status::OK;
 }
 
@@ -228,7 +229,7 @@ void GoalStateProvisionerAsyncServer::ProcessPushGoalStatesStreamAsyncCall(
 
 void GoalStateProvisionerAsyncServer::AsyncWorkder()
 {
-  while (true) {
+  while (keepReadingFromCq_) {
     ACA_LOG_DEBUG("%s\n", "At the start of the while loop");
     AsyncGoalStateProvionerCallBase *asyncCallBase = NULL;
     bool ok = false;
@@ -263,7 +264,7 @@ void GoalStateProvisionerAsyncServer::AsyncWorkder()
       break;
     }
   }
-  ACA_LOG_DEBUG("%s\n", "Out of the for loop, this should not happen");
+  ACA_LOG_DEBUG("%s\n", "Out of the for loop, seems like this server is shutting down.");
 }
 
 void GoalStateProvisionerAsyncServer::RunServer(int thread_pool_size)

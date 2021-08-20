@@ -34,12 +34,30 @@ using grpc::Status;
 
 class GoalStateProvisionerAsyncServer {
   public:
+  ~GoalStateProvisionerAsyncServer()
+  {
+    this->keepReadingFromCq_ = false;
+  }
+
   /*
     Base class that represents a gRPC call.
     When you have a new kind of rpc, add the corresponding enum to CallType
   */
   struct AsyncGoalStateProvionerCallBase {
+    /* 
+    each CallType represents a type of rpc call defined in goalstateprovisioner.proto,
+    by having different CallTypes, we're able to identify which AsyncGoalStateProvionerCallBase
+    is which kind of call, then we can static_cast it to the correct struct
+    if you're adding a new rpc call, please add the corresponding CallType to this enum    
+    */
     enum CallType { PUSH_NETWORK_RESOURCE_STATES, PUSH_GOAL_STATE_STREAM };
+    /*
+    Currently there are two types of CallStatus, INIT and SENT
+    At the INIT state, a streaming/unary rpc call creates a new streaming/unary call instance, 
+    requests the call and then processes the received data; 
+    AT the SENT state, a streaming call doesn't do anything; but a unary call deletes its own instance,
+    since this call is already done.
+    */
     enum CallStatus { INIT, SENT };
     CallStatus status_;
     CallType type_;
@@ -101,6 +119,7 @@ class GoalStateProvisionerAsyncServer {
   void ProcessPushGoalStatesStreamAsyncCall(AsyncGoalStateProvionerCallBase *baseCall, bool ok);
 
   private:
+  bool keepReadingFromCq_ = true;
   std::unique_ptr<Server> server_;
   std::unique_ptr<ServerCompletionQueue> cq_;
   GoalStateProvisioner::AsyncService service_;
