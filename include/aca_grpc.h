@@ -90,7 +90,7 @@ class GoalStateProvisionerAsyncServer {
 
   Status ShutDownServer();
   void RunServer(int thread_pool_size);
-
+  void AsyncWorkder();
   /*
     Add a corresponding function here to process a new kind of rpc call.
     For unary rpcs, please refer to ProcessPushNetworkResourceStatesAsyncCall

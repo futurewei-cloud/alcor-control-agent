@@ -93,26 +93,24 @@ void GoalStateProvisionerAsyncServer::ProcessPushNetworkResourceStatesAsyncCall(
               newPushNetworkResourceStatesAsyncCallInstance /*The unique tag for the call*/
       );
       //  process goalstate in the thread pool
-      thread_pool_.push([unaryCall, baseCall](int /**/) {
-        ACA_LOG_DEBUG("%s\n", "Processing a PushNetworkResourceStates call...");
-        ACA_LOG_DEBUG("%s\n", "V1: Received a GSV1, need to process it");
+      ACA_LOG_DEBUG("%s\n", "Processing a PushNetworkResourceStates call...");
+      ACA_LOG_DEBUG("%s\n", "V1: Received a GSV1, need to process it");
 
-        int rc = Aca_Comm_Manager::get_instance().update_goal_state(
-                unaryCall->goalState_, unaryCall->gsOperationReply_);
-        if (rc == EXIT_SUCCESS) {
-          ACA_LOG_INFO("V1: Control Fast Path synchronized - Successfully updated host with latest goal state %d.\n",
-                       rc);
-        } else if (rc == EINPROGRESS) {
-          ACA_LOG_INFO("V1: Control Fast Path synchronized - Update host with latest goal state returned pending, rc=%d.\n",
-                       rc);
-        } else {
-          ACA_LOG_ERROR("V1: Control Fast Path synchronized - Failed to update host with latest goal state, rc=%d.\n",
-                        rc);
-        }
-        unaryCall->status_ = AsyncGoalStateProvionerCallBase::CallStatus::SENT;
-        unaryCall->responder_.Finish(unaryCall->gsOperationReply_, Status::OK, baseCall);
-        ACA_LOG_DEBUG("%s\n", "V1: responder_->Finish called");
-      });
+      int rc = Aca_Comm_Manager::get_instance().update_goal_state(
+              unaryCall->goalState_, unaryCall->gsOperationReply_);
+      if (rc == EXIT_SUCCESS) {
+        ACA_LOG_INFO("V1: Control Fast Path synchronized - Successfully updated host with latest goal state %d.\n",
+                     rc);
+      } else if (rc == EINPROGRESS) {
+        ACA_LOG_INFO("V1: Control Fast Path synchronized - Update host with latest goal state returned pending, rc=%d.\n",
+                     rc);
+      } else {
+        ACA_LOG_ERROR("V1: Control Fast Path synchronized - Failed to update host with latest goal state, rc=%d.\n",
+                      rc);
+      }
+      unaryCall->status_ = AsyncGoalStateProvionerCallBase::CallStatus::SENT;
+      unaryCall->responder_.Finish(unaryCall->gsOperationReply_, Status::OK, baseCall);
+      ACA_LOG_DEBUG("%s\n", "V1: responder_->Finish called");
 
     } break;
     case AsyncGoalStateProvionerCallBase::CallStatus::SENT: {
@@ -173,52 +171,49 @@ void GoalStateProvisionerAsyncServer::ProcessPushGoalStatesStreamAsyncCall(
           streamingCall->hasReadFromStream = true;
         } else {
           //  process goalstateV2 in the thread pool
-          thread_pool_.push([streamingCall, baseCall](int /**/) {
-            //  It has read from the stream, now to GoalStateV2 should not be empty
-            //  and we need to process it.
-            ACA_LOG_DEBUG("%s\n", "This call has already read from the stream, now we process the gsv2...");
+          //  It has read from the stream, now to GoalStateV2 should not be empty
+          //  and we need to process it.
+          ACA_LOG_DEBUG("%s\n", "This call has already read from the stream, now we process the gsv2...");
 
-            if (streamingCall->goalStateV2_.neighbor_states_size() == 1) {
-              // if there's only one neighbor state, it means that it is pushed
-              // because of the on-demand request
-              auto received_gs_time_high_res = std::chrono::high_resolution_clock::now();
-              auto neighbor_id = streamingCall->goalStateV2_.neighbor_states()
-                                         .begin()
-                                         ->first.c_str();
-              ACA_LOG_INFO("Neighbor ID: %s received at: %ld milliseconds\n", neighbor_id,
-                           std::chrono::duration_cast<std::chrono::milliseconds>(
-                                   received_gs_time_high_res.time_since_epoch())
-                                   .count());
-            }
-            std::chrono::_V2::steady_clock::time_point start =
-                    std::chrono::steady_clock::now();
-            int rc = Aca_Comm_Manager::get_instance().update_goal_state(
-                    streamingCall->goalStateV2_, streamingCall->gsOperationReply_);
-            if (rc == EXIT_SUCCESS) {
-              ACA_LOG_INFO("Control Fast Path streaming - Successfully updated host with latest goal state %d.\n",
-                           rc);
-            } else if (rc == EINPROGRESS) {
-              ACA_LOG_INFO("Control Fast Path streaming - Update host with latest goal state returned pending, rc=%d.\n",
-                           rc);
-            } else {
-              ACA_LOG_ERROR("Control Fast Path streaming - Failed to update host with latest goal state, rc=%d.\n",
-                            rc);
-            }
-            std::chrono::_V2::steady_clock::time_point end =
-                    std::chrono::steady_clock::now();
-            auto message_total_operation_time =
-                    std::chrono::duration_cast<std::chrono::microseconds>(end - start)
-                            .count();
+          if (streamingCall->goalStateV2_.neighbor_states_size() == 1) {
+            // if there's only one neighbor state, it means that it is pushed
+            // because of the on-demand request
+            auto received_gs_time_high_res = std::chrono::high_resolution_clock::now();
+            auto neighbor_id =
+                    streamingCall->goalStateV2_.neighbor_states().begin()->first.c_str();
+            ACA_LOG_INFO("Neighbor ID: %s received at: %ld milliseconds\n", neighbor_id,
+                         std::chrono::duration_cast<std::chrono::milliseconds>(
+                                 received_gs_time_high_res.time_since_epoch())
+                                 .count());
+          }
+          std::chrono::_V2::steady_clock::time_point start =
+                  std::chrono::steady_clock::now();
+          int rc = Aca_Comm_Manager::get_instance().update_goal_state(
+                  streamingCall->goalStateV2_, streamingCall->gsOperationReply_);
+          if (rc == EXIT_SUCCESS) {
+            ACA_LOG_INFO("Control Fast Path streaming - Successfully updated host with latest goal state %d.\n",
+                         rc);
+          } else if (rc == EINPROGRESS) {
+            ACA_LOG_INFO("Control Fast Path streaming - Update host with latest goal state returned pending, rc=%d.\n",
+                         rc);
+          } else {
+            ACA_LOG_ERROR("Control Fast Path streaming - Failed to update host with latest goal state, rc=%d.\n",
+                          rc);
+          }
+          std::chrono::_V2::steady_clock::time_point end =
+                  std::chrono::steady_clock::now();
+          auto message_total_operation_time =
+                  std::chrono::duration_cast<std::chrono::microseconds>(end - start)
+                          .count();
 
-            ACA_LOG_DEBUG("[METRICS] Received goalstate at: [%ld], update finished at: [%ld]\nElapsed time for update goalstate operation took: %ld microseconds or %ld milliseconds\n",
-                          start, end, message_total_operation_time,
-                          (message_total_operation_time / 1000));
+          ACA_LOG_DEBUG("[METRICS] Received goalstate at: [%ld], update finished at: [%ld]\nElapsed time for update goalstate operation took: %ld microseconds or %ld milliseconds\n",
+                        start, end, message_total_operation_time,
+                        (message_total_operation_time / 1000));
 
-            streamingCall->status_ = AsyncGoalStateProvionerCallBase::CallStatus::SENT;
-            streamingCall->hasReadFromStream = false;
-            streamingCall->stream_.Write(streamingCall->gsOperationReply_, baseCall);
-            streamingCall->gsOperationReply_.Clear();
-          });
+          streamingCall->status_ = AsyncGoalStateProvionerCallBase::CallStatus::SENT;
+          streamingCall->hasReadFromStream = false;
+          streamingCall->stream_.Write(streamingCall->gsOperationReply_, baseCall);
+          streamingCall->gsOperationReply_.Clear();
         }
       }
       break;
@@ -229,6 +224,46 @@ void GoalStateProvisionerAsyncServer::ProcessPushGoalStatesStreamAsyncCall(
       break;
     }
   }
+}
+
+void GoalStateProvisionerAsyncServer::AsyncWorkder()
+{
+  while (true) {
+    ACA_LOG_DEBUG("%s\n", "At the start of the while loop");
+    AsyncGoalStateProvionerCallBase *asyncCallBase = NULL;
+    bool ok = false;
+    if (!cq_.get()->Next((void **)&asyncCallBase, &ok)) {
+      ACA_LOG_DEBUG("Completion Queue Shut. Quitting\n");
+      break;
+    }
+    ACA_LOG_DEBUG("Got message from CQ, is it OK? %ld\n", ok);
+    auto call_type = asyncCallBase->type_;
+
+    /*
+      When adding a new rpc, please add its own case in the following switch statement,
+      also, please add a corresponding process function so that you can push it to the 
+      thread pool.
+      For unary rpc example, please refer to ProcessPushNetworkResourceStatesAsyncCall.
+      For streaming rpc example, please refer to ProcessPushGoalStatesStreamAsyncCall
+    */
+    switch (call_type) {
+    case AsyncGoalStateProvionerCallBase::CallType::PUSH_NETWORK_RESOURCE_STATES:
+      // thread_pool_.push(std::bind(&GoalStateProvisionerAsyncServer::ProcessPushNetworkResourceStatesAsyncCall,
+      //                             this, asyncCallBase, &ok, 1));
+      ProcessPushNetworkResourceStatesAsyncCall(asyncCallBase, ok);
+      break;
+    case AsyncGoalStateProvionerCallBase::CallType::PUSH_GOAL_STATE_STREAM:
+      // thread_pool_.push(std::bind(&GoalStateProvisionerAsyncServer::ProcessPushGoalStatesStreamAsyncCall,
+      //                             this, asyncCallBase, &ok, 1));
+      ProcessPushGoalStatesStreamAsyncCall(asyncCallBase, ok);
+      break;
+    default:
+      ACA_LOG_DEBUG("Unsupported async call type: %ld, please check your input\n",
+                    asyncCallBase->type_);
+      break;
+    }
+  }
+  ACA_LOG_DEBUG("%s\n", "Out of the for loop, this should not happen");
 }
 
 void GoalStateProvisionerAsyncServer::RunServer(int thread_pool_size)
@@ -285,40 +320,8 @@ void GoalStateProvisionerAsyncServer::RunServer(int thread_pool_size)
             cq_.get(), pushGoalStatesStreamAsyncCallInstance);
   }
 
-  while (true) {
-    ACA_LOG_DEBUG("%s\n", "At the start of the while loop");
-    AsyncGoalStateProvionerCallBase *asyncCallBase = NULL;
-    bool ok = false;
-    if (!cq_.get()->Next((void **)&asyncCallBase, &ok)) {
-      ACA_LOG_DEBUG("Completion Queue Shut. Quitting\n");
-      break;
-    }
-    ACA_LOG_DEBUG("Got message from CQ, is it OK? %ld\n", ok);
-    auto call_type = asyncCallBase->type_;
-
-    /*
-      When adding a new rpc, please add its own case in the following switch statement,
-      also, please add a corresponding process function so that you can push it to the 
-      thread pool.
-      For unary rpc example, please refer to ProcessPushNetworkResourceStatesAsyncCall.
-      For streaming rpc example, please refer to ProcessPushGoalStatesStreamAsyncCall
-    */
-    switch (call_type) {
-    case AsyncGoalStateProvionerCallBase::CallType::PUSH_NETWORK_RESOURCE_STATES:
-      // thread_pool_.push(std::bind(&GoalStateProvisionerAsyncServer::ProcessPushNetworkResourceStatesAsyncCall,
-      //                             this, asyncCallBase, &ok, 1));
-      ProcessPushNetworkResourceStatesAsyncCall(asyncCallBase, ok);
-      break;
-    case AsyncGoalStateProvionerCallBase::CallType::PUSH_GOAL_STATE_STREAM:
-      // thread_pool_.push(std::bind(&GoalStateProvisionerAsyncServer::ProcessPushGoalStatesStreamAsyncCall,
-      //                             this, asyncCallBase, &ok, 1));
-      ProcessPushGoalStatesStreamAsyncCall(asyncCallBase, ok);
-      break;
-    default:
-      ACA_LOG_DEBUG("Unsupported async call type: %ld, please check your input\n",
-                    asyncCallBase->type_);
-      break;
-    }
+  for (int i = 0; i < thread_pool_size; i++) {
+    ACA_LOG_DEBUG("Pushing the %ldth async worker into the pool", i);
+    thread_pool_.push(std::bind(&GoalStateProvisionerAsyncServer::AsyncWorkder, this));
   }
-  ACA_LOG_DEBUG("%s\n", "Out of the for loop, this should not happen");
 }
