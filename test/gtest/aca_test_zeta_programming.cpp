@@ -224,7 +224,7 @@ void aca_test_zeta_setup_container(string zeta_gateway_path_config_file)
     string ip_node = (*it)["ip_node"];
     string vip = (*it)["ips_port"][0]["ip"];
     string vmac = (*it)["mac_port"];
-    if (aca_is_port_on_same_host(ip_node)) { //  if this ip_node is an ip on one of the interfaces on this machine ...
+    if (ACA_OVS_L2_Programmer::get_instance().is_ip_on_the_same_host(host_ip_address);) { //  if this ip_node is an ip on one of the interfaces on this machine ...
       cout << "IP: " << ip_node
            << " is on this same machine, add port states to it." << endl;
       PortState *new_port_states = GoalState_builder.add_port_states();
@@ -348,7 +348,7 @@ void aca_test_zeta_setup(string zeta_gateway_path_config_file)
   for (nlohmann::json::iterator it = port_response_array.begin();
        it != port_response_array.end(); ++it) {
     string ip_node = (*it)["ip_node"];
-    if (aca_is_port_on_same_host(ip_node)) { //  if this ip_node is an ip on one of the interfaces on this machine ...
+    if (ACA_OVS_L2_Programmer::get_instance().is_ip_on_the_same_host(host_ip_address);) { //  if this ip_node is an ip on one of the interfaces on this machine ...
       cout << "IP: " << ip_node
            << " is on this same machine, add port states to it." << endl;
       PortState *new_port_states = GoalState_builder.add_port_states();

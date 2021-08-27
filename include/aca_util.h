@@ -186,19 +186,6 @@ aca_validate_tunnel_id(const uint tunnel_id, alcor::schema::NetworkType network_
   }
 }
 
-static inline bool aca_is_port_on_same_host(const std::string hosting_port_ip)
-{
-  if (hosting_port_ip.empty()) {
-    return false;
-  }
-
-  const std::string IFCONFIG_PREFIX = "ifconfig ";
-  std::string cmd_string = IFCONFIG_PREFIX + " | grep " + hosting_port_ip;
-  int rc = aca_net_config::Aca_Net_Config::get_instance().execute_system_command(cmd_string);
-
-  return (rc == EXIT_SUCCESS);
-}
-
 static inline string aca_convert_cidr_to_netmask(const std::string cidr)
 {
   if (cidr.empty()) {

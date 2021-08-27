@@ -21,6 +21,16 @@
 #include <chrono>
 #include <thread>
 #include <errno.h>
+#include <boost/algorithm/string/classification.hpp> // Include boost::for is_any_of
+#include <boost/algorithm/string/split.hpp> // Include for boost::split
+#include <arpa/inet.h>
+#include <sys/socket.h>
+#include <netdb.h>
+#include <ifaddrs.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <linux/if_link.h>
 
 using namespace std;
 using namespace aca_vlan_manager;
@@ -34,7 +44,6 @@ extern bool g_demo_mode;
 
 namespace aca_ovs_l2_programmer
 {
-
 static int aca_set_port_vlan_workitem(const string port_name, uint vlan_id)
 {
   ACA_LOG_DEBUG("%s", "aca_set_port_vlan_workitem ---> Entering\n");
@@ -82,6 +91,74 @@ ACA_OVS_L2_Programmer &ACA_OVS_L2_Programmer::get_instance()
   // It is instantiated on first use.
   static ACA_OVS_L2_Programmer instance;
   return instance;
+}
+
+bool ACA_OVS_L2_Programmer::is_ip_on_the_same_host(const std::string host_ip)
+{
+  return std::find(this->host_ips_vector.begin(), this->host_ips_vector.end(),
+                   host_ip) != this->host_ips_vector.end();
+}
+
+void ACA_OVS_L2_Programmer::get_local_host_ips()
+{
+  struct ifaddrs *ifaddr, *ifa;
+  int family, s, n;
+  char host[NI_MAXHOST];
+
+  if (getifaddrs(&ifaddr) == -1) {
+    perror("getifaddrs");
+    exit(EXIT_FAILURE);
+  }
+
+  /* Walk through linked list, maintaining head pointer so we
+       can free list later */
+
+  for (ifa = ifaddr, n = 0; ifa != NULL; ifa = ifa->ifa_next, n++) {
+    if (ifa->ifa_addr == NULL)
+      continue;
+
+    family = ifa->ifa_addr->sa_family;
+
+    /* Display interface name and family (including symbolic
+           form of the latter for the common families) */
+
+    ACA_LOG_INFO("%-8s %s (%d)\n", ifa->ifa_name,
+                 (family == AF_PACKET) ? "AF_PACKET" :
+                 (family == AF_INET)   ? "AF_INET" :
+                 (family == AF_INET6)  ? "AF_INET6" :
+                                         "???",
+                 family);
+
+    /* For an AF_INET* interface address, display the address */
+
+    if (family == AF_INET || family == AF_INET6) {
+      s = getnameinfo(ifa->ifa_addr,
+                      (family == AF_INET) ? sizeof(struct sockaddr_in) :
+                                            sizeof(struct sockaddr_in6),
+                      host, NI_MAXHOST, NULL, 0, NI_NUMERICHOST);
+      if (s != 0) {
+        ACA_LOG_WARN("getnameinfo() failed: %s\n", gai_strerror(s));
+        exit(EXIT_FAILURE);
+      }
+
+      ACA_LOG_INFO("\t\taddress: <%s>\n", host);
+      std::string host_ip_string = std::string(host);
+      host_ips_vector.push_back(host_ip_string);
+    }
+  }
+
+  freeifaddrs(ifaddr);
+
+  vector<string>::iterator it = host_ips_vector.begin();
+  while (it != host_ips_vector.end()) {
+    ACA_LOG_DEBUG("Current Host IP: [%s]\n", it->c_str());
+    if (it->empty()) {
+      ACA_LOG_DEBUG("Removing empty IP: [%s]\n", it->c_str());
+      it = host_ips_vector.erase(it);
+    } else {
+      it++;
+    }
+  }
 }
 
 int ACA_OVS_L2_Programmer::setup_ovs_bridges_if_need()
