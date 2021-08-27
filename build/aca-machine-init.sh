@@ -106,17 +106,24 @@ echo "5--- cloning grpc repo ---" && \
     cd ~
 
 echo "6--- installing openvswitch dependancies ---" && \
-    apt-get install libevent-dev && \
+    apt-get install -y libevent-dev && \
     mkdir -p /var/local/git/openvswitch && \
     cd /var/local/git/openvswitch && \
     git clone -b "branch-2.12" https://github.com/openvswitch/ovs.git /var/local/git/openvswitch && \
+    ./boot.sh && \
+    ./configure --prefix=/usr/local --localstatedir=/var --sysconfdir=/etc --enable-shared --enable-ndebug && \
+    make && \
+    make install && \
+    cd /var/local/git/openvswitch && \
     wget https://www.openvswitch.org/releases/openvswitch-2.9.8.tar.gz && \
     tar -xvzf openvswitch-2.9.8.tar.gz && \
     cd openvswitch-2.9.8 && \
-    ./configure && make && \  # compile ovs 2.9.8 release version
-    make install && \         # install ovs lib and header files
+    ./configure && make && \
+    make install && \
     cp /var/local/git/openvswitch/openvswitch-2.9.8/lib/vconn-provider.h /usr/local/include/openvswitch && \
     cp /var/local/git/openvswitch/include/openvswitch/namemap.h /usr/local/include/openvswitch && \
+    rm -rf /var/local/git/openvswitch && \
+    test -f /usr/bin/ovs-vsctl && rm -rf /usr/local/sbin/ov* /usr/local/bin/ov* /usr/local/bin/vtep* && \
     cd ~
 
 PULSAR_RELEASE_TAG='pulsar-2.6.1'
