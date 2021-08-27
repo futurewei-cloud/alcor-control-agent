@@ -108,22 +108,22 @@ RUN echo "4--- cloning grpc repo ---" && \
     rm -rf /var/local/git/grpc && \
     cd ~
 
-ENV OVS_RELEASE_TAG branch-2.12
 RUN echo "5--- installing openvswitch dependancies ---" && \
-    git clone -b ${OVS_RELEASE_TAG} https://github.com/openvswitch/ovs.git /var/local/git/openvswitch && \
+    apt-get install libevent-dev && \
+    mkdir -p /var/local/git/openvswitch && \
     cd /var/local/git/openvswitch && \
-    ./boot.sh && \
-    ./configure --prefix=/usr/local --localstatedir=/var --sysconfdir=/etc --enable-shared --enable-ndebug && \
-    make && \
-    make install && \
-    mkdir -p /usr/local/include/openvswitch && \
-    cp /var/local/git/openvswitch/lib/vconn-provider.h /usr/local/include/openvswitch/vconn-provider.h && \
-    rm -rf /var/local/git/openvswitch && \
-    test -f /usr/bin/ovs-vsctl && rm -rf /usr/local/sbin/ov* /usr/local/bin/ov* /usr/local/bin/vtep* && \
+    git clone -b "branch-2.12" https://github.com/openvswitch/ovs.git /var/local/git/openvswitch && \
+    wget https://www.openvswitch.org/releases/openvswitch-2.9.8.tar.gz && \
+    tar -xvzf openvswitch-2.9.8.tar.gz && \
+    cd openvswitch-2.9.8 && \
+    ./configure && make && \  # compile ovs 2.9.8 release version
+    make install && \         # install ovs lib and header files
+    cp /var/local/git/openvswitch/openvswitch-2.9.8/lib/vconn-provider.h /usr/local/include/openvswitch && \
+    cp /var/local/git/openvswitch/include/openvswitch/namemap.h /usr/local/include/openvswitch && \
     cd ~
 
 ENV PULSAR_RELEASE_TAG='pulsar-2.6.1'
-RUN echo "7--- installing pulsar dependacies ---" && \
+RUN echo "6--- installing pulsar dependacies ---" && \
     mkdir -p /var/local/git/pulsar && \
     wget https://archive.apache.org/dist/pulsar/${PULSAR_RELEASE_TAG}/DEB/apache-pulsar-client.deb -O /var/local/git/pulsar/apache-pulsar-client.deb && \
     wget https://archive.apache.org/dist/pulsar/${PULSAR_RELEASE_TAG}/DEB/apache-pulsar-client-dev.deb -O /var/local/git/pulsar/apache-pulsar-client-dev.deb && \
