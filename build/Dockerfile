@@ -109,7 +109,7 @@ RUN echo "4--- cloning grpc repo ---" && \
     cd ~
 
 RUN echo "5--- installing openvswitch dependancies ---" && \
-    apt-get install libevent-dev && \
+    apt-get install -y libevent-dev && \
     mkdir -p /var/local/git/openvswitch && \
     cd /var/local/git/openvswitch && \
     git clone -b "branch-2.12" https://github.com/openvswitch/ovs.git /var/local/git/openvswitch && \
