@@ -116,8 +116,8 @@ RUN echo "5--- installing openvswitch dependancies ---" && \
     wget https://www.openvswitch.org/releases/openvswitch-2.9.8.tar.gz && \
     tar -xvzf openvswitch-2.9.8.tar.gz && \
     cd openvswitch-2.9.8 && \
-    ./configure && make && \  # compile ovs 2.9.8 release version
-    make install && \         # install ovs lib and header files
+    ./configure && make && \
+    make install && \
     cp /var/local/git/openvswitch/openvswitch-2.9.8/lib/vconn-provider.h /usr/local/include/openvswitch && \
     cp /var/local/git/openvswitch/include/openvswitch/namemap.h /usr/local/include/openvswitch && \
     cd ~
