@@ -93,6 +93,11 @@ ACA_OVS_L2_Programmer &ACA_OVS_L2_Programmer::get_instance()
   return instance;
 }
 
+void ACA_OVS_L2_Programmer::set_openflow_controller(OFController* ofctrl)
+{
+  this->ofctrl = ofctrl;
+}
+
 bool ACA_OVS_L2_Programmer::is_ip_on_the_same_host(const std::string host_ip)
 {
   return std::find(this->host_ips_vector.begin(), this->host_ips_vector.end(),
@@ -246,40 +251,6 @@ int ACA_OVS_L2_Programmer::setup_ovs_bridges_if_need()
 
   ACA_LOG_DEBUG("ACA_OVS_L2_Programmer::setup_ovs_bridges_if_need <--- Exiting, overall_rc = %d\n",
                 overall_rc);
-
-  return overall_rc;
-}
-
-int ACA_OVS_L2_Programmer::setup_ovs_default_flows()
-{
-  // adding default flows
-  // details at: https://github.com/futurewei-cloud/alcor-control-agent/wiki/Openflow-Tables-Explain
-  int overall_rc = EXIT_SUCCESS;
-  ulong not_care_culminative_time;
-
-  execute_openflow_command("add-flow br-tun \"table=0,priority=50,arp,arp_op=1, actions=CONTROLLER\"",
-                           not_care_culminative_time, overall_rc);
-
-  execute_openflow_command("add-flow br-tun \"table=0,priority=1,in_port=\"patch-int\" actions=resubmit(,2)\"",
-                           not_care_culminative_time, overall_rc);
-
-  execute_openflow_command("add-flow br-tun \"table=2,priority=1,dl_dst=00:00:00:00:00:00/01:00:00:00:00:00 actions=resubmit(,20)\"",
-                           not_care_culminative_time, overall_rc);
-
-  execute_openflow_command("add-flow br-tun \"table=2,priority=1,dl_dst=01:00:00:00:00:00/01:00:00:00:00:00 actions=resubmit(,22)\"",
-                           not_care_culminative_time, overall_rc);
-
-  execute_openflow_command("add-flow br-tun \"table=20,priority=1 actions=CONTROLLER\"",
-                           not_care_culminative_time, overall_rc);
-
-  execute_openflow_command("add-flow br-tun \"table=2,priority=25,icmp,icmp_type=8,in_port=\"patch-int\" actions=resubmit(,52)\"",
-                           not_care_culminative_time, overall_rc);
-
-  execute_openflow_command("add-flow br-tun \"table=52,priority=1 actions=resubmit(,20)\"",
-                           not_care_culminative_time, overall_rc);
-
-  execute_openflow_command("add-flow br-tun \"table=0,priority=25,in_port=\"vxlan-generic\" actions=resubmit(,4)\"",
-                           not_care_culminative_time, overall_rc);
 
   return overall_rc;
 }
@@ -608,6 +579,35 @@ void ACA_OVS_L2_Programmer::execute_openflow_command(const std::string cmd_strin
                us_to_ms(openflow_client_time_total_time), rc);
 
   ACA_LOG_DEBUG("ACA_OVS_L2_Programmer::execute_openflow_command <--- Exiting, rc = %d\n", rc);
+}
+
+void ACA_OVS_L2_Programmer::execute_openflow(ulong &culminative_time,
+                                             const std::string bridge,
+                                             const std::string flow_string,
+                                             const std::string action)
+{
+  ACA_LOG_DEBUG("%s", "ACA_OVS_L2_Programmer::execute_openflow ---> Entering\n");
+  auto openflow_client_start = chrono::steady_clock::now();
+
+  if (NULL != ofctrl) {
+    ofctrl->execute_flow(bridge, flow_string, action);
+  } else {
+    ACA_LOG_ERROR("%s", "ACA_OVS_L2_Programmer::execute_openflow didn't find OF controller\n");
+  }
+
+  auto openflow_client_end = chrono::steady_clock::now();
+  auto openflow_client_time_total_time =
+          cast_to_microseconds(openflow_client_end - openflow_client_start).count();
+
+  culminative_time += openflow_client_time_total_time;
+
+  g_total_execute_openflow_time += openflow_client_time_total_time;
+
+  ACA_LOG_INFO("Elapsed time for openflow client call took: %ld microseconds or %ld milliseconds.\n",
+               openflow_client_time_total_time,
+               us_to_ms(openflow_client_time_total_time));
+
+  ACA_LOG_DEBUG("%s", "ACA_OVS_L2_Programmer::execute_openflow ---> Exiting\n");
 }
 
 } // namespace aca_ovs_l2_programmer

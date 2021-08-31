@@ -15,9 +15,15 @@
 #include "aca_log.h"
 #include "aca_util.h"
 #include "aca_vlan_manager.h"
-#include "aca_ovs_control.h"
 #include "aca_ovs_l2_programmer.h"
 #include "aca_arp_responder.h"
+
+#undef OFP_ASSERT
+#undef CONTAINER_OF
+#undef ARRAY_SIZE
+#undef ROUND_UP
+#include "aca_ovs_control.h"
+
 #include <errno.h>
 #include <algorithm>
 #include <shared_mutex>
@@ -119,11 +125,13 @@ int ACA_Vlan_Manager::create_ovs_port(string /*vpc_id*/, string ovs_port,
     int internal_vlan_id = current_vpc_table_entry->vlan_id;
 
     string cmd_string =
-            "add-flow br-tun \"table=4, priority=1,tun_id=" + to_string(tunnel_id) +
-            " actions=mod_vlan_vid:" + to_string(internal_vlan_id) + ",output:\"patch-int\"\"";
+            "table=4, priority=1,tun_id=" + to_string(tunnel_id) +
+            " actions=mod_vlan_vid:" + to_string(internal_vlan_id) + ",output:\"patch-int\"";
 
-    ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
-            cmd_string, culminative_time, overall_rc);
+    ACA_OVS_L2_Programmer::get_instance().execute_openflow(culminative_time,
+                                                           "br-tun",
+                                                           cmd_string,
+                                                           "add");
     current_vpc_table_entry->ovs_ports.insert(ovs_port, nullptr);
   }
 
@@ -154,11 +162,13 @@ int ACA_Vlan_Manager::delete_ovs_port(string /*vpc_id*/, string ovs_port,
       // also delete the rule assoicated with the VPC:
       // table 4 = incoming vxlan, allow incoming vxlan traffic matching tunnel_id
       // to stamp with internal vlan and deliver to br-int
-      string cmd_string = "del-flows br-tun \"table=4, priority=1,tun_id=" +
-                          to_string(tunnel_id) + "\" --strict";
+      string cmd_string = "table=4, priority=1,tun_id=" +
+                          to_string(tunnel_id);
 
-      ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
-              cmd_string, culminative_time, overall_rc);
+      ACA_OVS_L2_Programmer::get_instance().execute_openflow(culminative_time,
+                                                             "br-tun",
+                                                             cmd_string,
+                                                             "del");
     }
   }
 

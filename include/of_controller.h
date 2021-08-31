@@ -59,9 +59,9 @@ public:
 
     void remove_switch_from_conn_map(int ofconn_id);
 
-    void send_packet(OFConnection *ofconn, ofmsg_ptr_t &&p);
+    void setup_default_flows();
 
-    void send_bundle_flow_mods(OFConnection *ofconn, std::vector<ofmsg_ptr_t> flow_mods);
+    void execute_flow(const std::string br, const std::string flow_str, const std::string action = "add");
 
 private:
     // tracking xid (ovs transaction id)
@@ -77,4 +77,8 @@ private:
     std::unordered_map<uint64_t, std::string> switch_dpid_map;
 
     std::mutex switch_map_mutex;
+
+    void send_packet(OFConnection *ofconn, ofmsg_ptr_t &&p);
+
+    void send_bundle_flow_mods(OFConnection *ofconn, std::vector<ofmsg_ptr_t> flow_mods);
 };

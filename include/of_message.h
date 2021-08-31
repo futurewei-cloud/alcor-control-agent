@@ -74,6 +74,6 @@ private:
 };
 
 ofmsg_ptr_t create_add_flow(const std::string& flow, bool bundle = false);
-ofmsg_ptr_t create_mod_flow(const std::string& flow, bool strict, bool bundle = false);
-ofmsg_ptr_t create_del_flow(const std::string& match, bool strict, bool bundle = false);
+ofmsg_ptr_t create_mod_flow(const std::string& flow, bool strict);
+ofmsg_ptr_t create_del_flow(const std::string& match, bool strict);
 std::vector<ofmsg_ptr_t> create_add_flows(const std::vector<std::string>& flows, bool bundle = false);

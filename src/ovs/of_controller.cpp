@@ -164,3 +164,45 @@ void OFController::send_bundle_flow_mods(OFConnection *ofconn, std::vector<ofmsg
     ACA_LOG_INFO("OFController::send_bundle_flow_mods - ovs connection id=%d send bundle commit request of bundle_id %ld\n",
                  ofconn->get_id(), bundle.get_bundle_id());
 }
+
+void OFController::setup_default_flows() {
+    // all default flows are added to 'br-tun' only
+    OFConnection* ofconn_br_tun = get_instance("br-tun");
+
+    if (NULL != ofconn_br_tun) {
+        send_packet(ofconn_br_tun, create_add_flow("table=0,priority=50,arp,arp_op=1, actions=CONTROLLER"));
+        send_packet(ofconn_br_tun, create_add_flow("table=0,priority=1,in_port=\"patch-int\" actions=resubmit(,2)"));
+        send_packet(ofconn_br_tun, create_add_flow("table=2,priority=1,dl_dst=00:00:00:00:00:00/01:00:00:00:00:00 actions=resubmit(,20)"));
+        send_packet(ofconn_br_tun, create_add_flow("table=2,priority=1,dl_dst=01:00:00:00:00:00/01:00:00:00:00:00 actions=resubmit(,22)"));
+        send_packet(ofconn_br_tun, create_add_flow("table=20,priority=1 actions=CONTROLLER"));
+        send_packet(ofconn_br_tun, create_add_flow("table=2,priority=25,icmp,icmp_type=8,in_port=\"patch-int\" actions=resubmit(,52)"));
+        send_packet(ofconn_br_tun, create_add_flow("table=52,priority=1 actions=resubmit(,20)"));
+        send_packet(ofconn_br_tun, create_add_flow("table=0,priority=25,in_port=\"vxlan-generic\" actions=resubmit(,4)"));
+    } else {
+        ACA_LOG_ERROR("OFController::setup_default_flows - ovs connection of br-tun not found\n");
+    }
+
+    ofconn_br_tun = NULL;
+}
+
+void OFController::execute_flow(const std::string br, const std::string flow_str, const std::string action) {
+    OFConnection* ofconn_br = get_instance(br);
+
+    if (NULL != ofconn_br) {
+        if (action == "add") {
+            send_packet(ofconn_br, create_add_flow(flow_str));
+        } else if (action == "mod") {
+            // --strict mod
+            send_packet(ofconn_br, create_mod_flow(flow_str, true));
+        } else if (action == "del") {
+            // --strict del
+            send_packet(ofconn_br, create_del_flow(flow_str, true));
+        } else {
+            ACA_LOG_ERROR("OFController::execute_flow - action %s not supported in flow %s\n", action.c_str(), flow_str.c_str());
+        }
+    } else {
+        ACA_LOG_ERROR("OFController::execute_flow - ovs connection of br-tun not found\n");
+    }
+
+    ofconn_br = NULL;
+}

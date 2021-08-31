@@ -16,6 +16,8 @@
 #define ACA_OVS_L2_PROGRAMMER_H
 
 #include "goalstateprovisioner.grpc.pb.h"
+#undef UNUSED
+#include "of_controller.h"
 #include <string>
 #include <unordered_map>
 
@@ -38,9 +40,9 @@ class ACA_OVS_L2_Programmer {
 
   int setup_ovs_bridges_if_need();
 
-  int setup_ovs_default_flows();
-
   int setup_ovs_controller(const std::string ctrler_ip, const int ctrler_port);
+
+  void set_openflow_controller(OFController* ofctrl);
 
   std::unordered_map<uint64_t, std::string> get_ovs_bridge_mapping();
 
@@ -64,11 +66,18 @@ class ACA_OVS_L2_Programmer {
   void execute_openflow_command(const std::string cmd_string,
                                 ulong &culminative_time, int &overall_rc);
 
+  void execute_openflow(ulong &culminative_time,
+                        const std::string bridge,
+                        const std::string flow_string,
+                        const std::string action = "add");
+
   // compiler will flag the error when below is called.
   ACA_OVS_L2_Programmer(ACA_OVS_L2_Programmer const &) = delete;
   void operator=(ACA_OVS_L2_Programmer const &) = delete;
 
   private:
+  OFController* ofctrl;
+
   ACA_OVS_L2_Programmer(){};
   ~ACA_OVS_L2_Programmer(){};
 };

@@ -292,12 +292,12 @@ int main(int argc, char *argv[])
   // set bridge controller will clean up flows
   aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().setup_ovs_controller(g_ovs_ctrl_address, g_ovs_ctrl_port);
 
-  // then add default ovs flows
-  aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().setup_ovs_default_flows();
-
   // start local ovs server (openflow controller)
   g_ovs_ctrl = new OFController(switch_dpid_map, g_ovs_ctrl_address.c_str(), g_ovs_ctrl_port);
   g_ovs_ctrl->start();
+
+  // pass ovs_ctrl to l2 programmer
+  aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().set_openflow_controller(g_ovs_ctrl);
 
   // monitor br-int for dhcp request message
   ovs_monitor_brint_thread =

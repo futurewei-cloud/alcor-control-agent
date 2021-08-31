@@ -20,8 +20,13 @@
 #include <arpa/inet.h>
 #include <sstream>
 #include <iomanip>
-#include "aca_ovs_control.h"
 #include "aca_ovs_l2_programmer.h"
+
+#undef OFP_ASSERT
+#undef CONTAINER_OF
+#undef ARRAY_SIZE
+#undef ROUND_UP
+#include "aca_ovs_control.h"
 
 using namespace std;
 using namespace aca_dhcp_programming_if;
@@ -63,24 +68,24 @@ void ACA_Dhcp_Server::_deinit_dhcp_db()
 void ACA_Dhcp_Server::_init_dhcp_ofp()
 {
   unsigned long not_care_culminative_time;
-  int overall_rc = EXIT_SUCCESS;
 
   // adding dhcp default flows
-  aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
-          "add-flow br-int \"table=0,priority=25,udp,udp_src=68,udp_dst=67,actions=CONTROLLER\"",
-          not_care_culminative_time, overall_rc);
+  aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().execute_openflow(not_care_culminative_time,
+          "br-int",
+          "table=0,priority=25,udp,udp_src=68,udp_dst=67,actions=CONTROLLER",
+          "add");
   return;
 }
 
 void ACA_Dhcp_Server::_deinit_dhcp_ofp()
 {
   unsigned long not_care_culminative_time;
-  int overall_rc = EXIT_SUCCESS;
 
   // deleting dhcp default flows
-  aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
-          "del-flows br-int \"udp,udp_src=68,udp_dst=67\"",
-          not_care_culminative_time, overall_rc);
+  aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().execute_openflow(not_care_culminative_time,
+          "br-int",
+          "udp,udp_src=68,udp_dst=67",
+          "del");
   return;
 }
 
