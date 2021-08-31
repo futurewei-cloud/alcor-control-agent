@@ -38,6 +38,11 @@ void OFController::message_callback(OFConnection* ofconn, uint8_t type, void* da
             // parse which bridge is the connection from
             std::string bridge_name = switch_dpid_map[dpid];
             add_switch_to_conn_map(bridge_name, ofconn->get_id(), ofconn);
+
+            // when br-tun is connected, setup default flow
+            if (bridge_name == "br-tun") {
+                setup_default_flows();
+            }
         }
     } else if (type == fluid_msg::of13::OFPT_BARRIER_REPLY) {
         auto t = std::chrono::high_resolution_clock::now();
