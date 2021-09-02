@@ -61,7 +61,9 @@ public:
 
     void remove_switch_from_conn_map(int ofconn_id);
 
-    void setup_default_flows();
+    void setup_default_br_int_flows();
+
+    void setup_default_br_tun_flows();
 
     void execute_flow(const std::string br, const std::string flow_str, const std::string action = "add");
 

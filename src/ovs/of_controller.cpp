@@ -40,9 +40,13 @@ void OFController::message_callback(OFConnection* ofconn, uint8_t type, void* da
             std::string bridge_name = switch_dpid_map[dpid];
             add_switch_to_conn_map(bridge_name, ofconn->get_id(), ofconn);
 
-            // when br-tun is connected, setup default flow
+            // setup default flows for each bridge
+            if (bridge_name == "br-int") {
+                setup_default_br_int_flows();
+            }
+
             if (bridge_name == "br-tun") {
-                setup_default_flows();
+                setup_default_br_tun_flows();
             }
         }
     } else if (type == fluid_msg::of13::OFPT_BARRIER_REPLY) {
@@ -186,11 +190,23 @@ void OFController::send_bundle_flow_mods(OFConnection *ofconn, std::vector<ofmsg
                  ofconn->get_id(), bundle.get_bundle_id());
 }
 
-void OFController::setup_default_flows() {
-    // all default flows are added to 'br-tun' only
+void OFController::setup_default_br_int_flows() {
+    OFConnection* ofconn_br_int = get_instance("br-int");
+
+    if (NULL != ofconn_br_int) {
+        send_flow(ofconn_br_int, create_add_flow("table=0,priority=0, actions=NORMAL"));
+    } else {
+        ACA_LOG_ERROR("OFController::setup_default_br_int_flows - ovs connection not found\n");
+    }
+
+    ofconn_br_int = NULL;
+}
+
+void OFController::setup_default_br_tun_flows() {
     OFConnection* ofconn_br_tun = get_instance("br-tun");
 
     if (NULL != ofconn_br_tun) {
+        send_flow(ofconn_br_tun, create_add_flow("table=0,priority=0, actions=NORMAL"));
         send_flow(ofconn_br_tun, create_add_flow("table=0,priority=50,arp,arp_op=1, actions=CONTROLLER"));
         send_flow(ofconn_br_tun, create_add_flow("table=0,priority=1,in_port=" + port_id_map["patch-int"] + " actions=resubmit(,2)"));
         send_flow(ofconn_br_tun, create_add_flow("table=2,priority=1,dl_dst=00:00:00:00:00:00/01:00:00:00:00:00 actions=resubmit(,20)"));
@@ -200,7 +216,7 @@ void OFController::setup_default_flows() {
         send_flow(ofconn_br_tun, create_add_flow("table=52,priority=1 actions=resubmit(,20)"));
         send_flow(ofconn_br_tun, create_add_flow("table=0,priority=25,in_port=" + port_id_map["vxlan-generic"] + " actions=resubmit(,4)"));
     } else {
-        ACA_LOG_ERROR("OFController::setup_default_flows - ovs connection of br-tun not found\n");
+        ACA_LOG_ERROR("OFController::setup_default_br_tun_flows - ovs connection not found\n");
     }
 
     ofconn_br_tun = NULL;
