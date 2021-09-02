@@ -123,10 +123,11 @@ int ACA_Vlan_Manager::create_ovs_port(string /*vpc_id*/, string ovs_port,
   // to stamp with internal vlan and deliver to br-int
   if (current_vpc_table_entry->ovs_ports.empty()) {
     int internal_vlan_id = current_vpc_table_entry->vlan_id;
+    string patch_int_port_id = ACA_OVS_L2_Programmer::get_instance().get_system_port_id("patch-int");
 
     string cmd_string =
             "table=4, priority=1,tun_id=" + to_string(tunnel_id) +
-            " actions=mod_vlan_vid:" + to_string(internal_vlan_id) + ",output:\"patch-int\"";
+            " actions=mod_vlan_vid:" + to_string(internal_vlan_id) + ",output:" + patch_int_port_id;
 
     ACA_OVS_L2_Programmer::get_instance().execute_openflow(culminative_time,
                                                            "br-tun",

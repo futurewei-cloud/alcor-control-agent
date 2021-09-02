@@ -221,8 +221,6 @@ int ACA_OVS_L2_Programmer::setup_ovs_bridges_if_need()
                     " type=vxlan options:df_default=true options:egress_pkt_mark=0 options:in_key=flow options:out_key=flow options:remote_ip=flow",
             not_care_culminative_time, overall_rc);
 
-    execute_openflow_command("add-flow br-tun \"table=0,priority=25,in_port=\"vxlan-generic\" actions=resubmit(,4)\"",
-                             not_care_culminative_time, overall_rc);
     setup_ovs_bridges_mutex.unlock();
     // -----critical section ends-----
 
@@ -295,12 +293,16 @@ int ACA_OVS_L2_Programmer::setup_ovs_controller(const std::string ctrler_ip, con
   return rc;
 }
 
+std::string ACA_OVS_L2_Programmer::get_system_port_id(std::string port_name)
+{
+  return port_id_map[port_name];
+}
+
 std::unordered_map<std::string, std::string> ACA_OVS_L2_Programmer::get_system_port_ids()
 {
   // these 2 system ports belong to br-tun
   const string patch_int_port = "patch-int";
   const string vxlan_generic_port = "vxlan-generic";
-  std::unordered_map<std::string, std::string> port_id_map;
 
   ACA_LOG_DEBUG("%s", "ACA_OVS_L2_Programmer::get_system_port_ids ---> Entering\n");
   auto ovsdb_client_start = chrono::steady_clock::now();
@@ -645,26 +647,26 @@ void ACA_OVS_L2_Programmer::execute_openflow(ulong &culminative_time,
 
 void ACA_OVS_L2_Programmer::packet_out(const char *bridge, const char *options)
 {
-    ACA_LOG_DEBUG("%s", "ACA_OVS_L2_Programmer::packet_out ---> Entering\n");
-    auto openflow_client_start = chrono::steady_clock::now();
+  ACA_LOG_DEBUG("%s", "ACA_OVS_L2_Programmer::packet_out ---> Entering\n");
+  auto openflow_client_start = chrono::steady_clock::now();
 
-    if (NULL != ofctrl) {
-        ofctrl->packet_out(bridge, options);
-    } else {
-        ACA_LOG_ERROR("%s", "ACA_OVS_L2_Programmer::packet_out didn't find OF controller\n");
-    }
+  if (NULL != ofctrl) {
+      ofctrl->packet_out(bridge, options);
+  } else {
+      ACA_LOG_ERROR("%s", "ACA_OVS_L2_Programmer::packet_out didn't find OF controller\n");
+  }
 
-    auto openflow_client_end = chrono::steady_clock::now();
-    auto openflow_client_time_total_time =
-            cast_to_microseconds(openflow_client_end - openflow_client_start).count();
+  auto openflow_client_end = chrono::steady_clock::now();
+  auto openflow_client_time_total_time =
+          cast_to_microseconds(openflow_client_end - openflow_client_start).count();
 
-    g_total_execute_openflow_time += openflow_client_time_total_time;
+  g_total_execute_openflow_time += openflow_client_time_total_time;
 
-    ACA_LOG_INFO("Elapsed time for openflow client call took: %ld microseconds or %ld milliseconds.\n",
-                 openflow_client_time_total_time,
-                 us_to_ms(openflow_client_time_total_time));
+  ACA_LOG_INFO("Elapsed time for openflow client call took: %ld microseconds or %ld milliseconds.\n",
+               openflow_client_time_total_time,
+               us_to_ms(openflow_client_time_total_time));
 
-    ACA_LOG_DEBUG("%s", "ACA_OVS_L2_Programmer::packet_out ---> Exiting\n");
+  ACA_LOG_DEBUG("%s", "ACA_OVS_L2_Programmer::packet_out ---> Exiting\n");
 }
 
 } // namespace aca_ovs_l2_programmer

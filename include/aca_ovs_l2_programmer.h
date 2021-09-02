@@ -38,6 +38,8 @@ class ACA_OVS_L2_Programmer {
 
   std::unordered_map<std::string, std::string> get_system_port_ids();
 
+  std::string get_system_port_id(std::string port_name);
+
   bool is_ip_on_the_same_host(const std::string hosting_port_ip);
 
   int setup_ovs_bridges_if_need();
@@ -81,6 +83,7 @@ class ACA_OVS_L2_Programmer {
 
   private:
   OFController* ofctrl;
+  std::unordered_map<std::string, std::string> port_id_map;
 
   ACA_OVS_L2_Programmer(){};
   ~ACA_OVS_L2_Programmer(){};
