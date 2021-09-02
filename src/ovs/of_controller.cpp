@@ -3,6 +3,7 @@
 #include "of_controller.h"
 #include "aca_log.h"
 #include "aca_util.h"
+#include "aca_on_demand_engine.h"
 
 using namespace fluid_base;
 using namespace fluid_msg;
@@ -47,6 +48,13 @@ void OFController::message_callback(OFConnection* ofconn, uint8_t type, void* da
     } else if (type == fluid_msg::of13::OFPT_BARRIER_REPLY) {
         auto t = std::chrono::high_resolution_clock::now();
         ACA_LOG_INFO("OFController::message_callback - recv OFPT_BARRIER_REPLY on %ld\n", t.time_since_epoch().count());
+    } else if (type == fluid_msg::of13::OFPT_PACKET_IN) {
+        fluid_msg::of13::PacketIn *pin = new of13::PacketIn();
+        pin->unpack((uint8_t *) data);
+        uint32_t in_port = pin->match().in_port()->value();
+
+        // pass new allocated memory of packet-in to ACA_On_Demand_Engine to determine which type of request it is
+        aca_on_demand_engine::ACA_On_Demand_Engine::get_instance().parse_packet(in_port, (void*)pin->data());
     } else if (type == 33) { // OFPRAW_OFPT14_BUNDLE_CONTROL
         auto t = std::chrono::high_resolution_clock::now();
 
@@ -140,7 +148,7 @@ void OFController::remove_switch_from_conn_map(int ofconn_id) {
                  ofconn_id);
 }
 
-void OFController::send_packet(OFConnection *ofconn, ofmsg_ptr_t &&p) {
+void OFController::send_flow(OFConnection *ofconn, ofmsg_ptr_t &&p) {
     p->set_xid(xid.fetch_add(1));
     auto buf = p->pack();
 
@@ -149,6 +157,14 @@ void OFController::send_packet(OFConnection *ofconn, ofmsg_ptr_t &&p) {
     }
 
     ofconn->send(buf->data(), buf->len());
+}
+
+void OFController::send_packet_out(OFConnection *ofconn, OFRawBuf* po) {
+    if (!po) {
+        return;
+    }
+
+    ofconn->send(po->data(), po->len());
 }
 
 void OFController::send_bundle_flow_mods(OFConnection *ofconn, std::vector<ofmsg_ptr_t> flow_mods) {
@@ -175,14 +191,14 @@ void OFController::setup_default_flows() {
     OFConnection* ofconn_br_tun = get_instance("br-tun");
 
     if (NULL != ofconn_br_tun) {
-        send_packet(ofconn_br_tun, create_add_flow("table=0,priority=50,arp,arp_op=1, actions=CONTROLLER"));
-        send_packet(ofconn_br_tun, create_add_flow("table=0,priority=1,in_port=\"patch-int\" actions=resubmit(,2)"));
-        send_packet(ofconn_br_tun, create_add_flow("table=2,priority=1,dl_dst=00:00:00:00:00:00/01:00:00:00:00:00 actions=resubmit(,20)"));
-        send_packet(ofconn_br_tun, create_add_flow("table=2,priority=1,dl_dst=01:00:00:00:00:00/01:00:00:00:00:00 actions=resubmit(,22)"));
-        send_packet(ofconn_br_tun, create_add_flow("table=20,priority=1 actions=CONTROLLER"));
-        send_packet(ofconn_br_tun, create_add_flow("table=2,priority=25,icmp,icmp_type=8,in_port=\"patch-int\" actions=resubmit(,52)"));
-        send_packet(ofconn_br_tun, create_add_flow("table=52,priority=1 actions=resubmit(,20)"));
-        send_packet(ofconn_br_tun, create_add_flow("table=0,priority=25,in_port=\"vxlan-generic\" actions=resubmit(,4)"));
+        send_flow(ofconn_br_tun, create_add_flow("table=0,priority=50,arp,arp_op=1, actions=CONTROLLER"));
+        send_flow(ofconn_br_tun, create_add_flow("table=0,priority=1,in_port=" + port_id_map["patch-int"] + " actions=resubmit(,2)"));
+        send_flow(ofconn_br_tun, create_add_flow("table=2,priority=1,dl_dst=00:00:00:00:00:00/01:00:00:00:00:00 actions=resubmit(,20)"));
+        send_flow(ofconn_br_tun, create_add_flow("table=2,priority=1,dl_dst=01:00:00:00:00:00/01:00:00:00:00:00 actions=resubmit(,22)"));
+        send_flow(ofconn_br_tun, create_add_flow("table=20,priority=1 actions=CONTROLLER"));
+        send_flow(ofconn_br_tun, create_add_flow("table=2,priority=25,icmp,icmp_type=8,in_port=" + port_id_map["patch-int"] + " actions=resubmit(,52)"));
+        send_flow(ofconn_br_tun, create_add_flow("table=52,priority=1 actions=resubmit(,20)"));
+        send_flow(ofconn_br_tun, create_add_flow("table=0,priority=25,in_port=" + port_id_map["vxlan-generic"] + " actions=resubmit(,4)"));
     } else {
         ACA_LOG_ERROR("OFController::setup_default_flows - ovs connection of br-tun not found\n");
     }
@@ -195,18 +211,30 @@ void OFController::execute_flow(const std::string br, const std::string flow_str
 
     if (NULL != ofconn_br) {
         if (action == "add") {
-            send_packet(ofconn_br, create_add_flow(flow_str));
+            send_flow(ofconn_br, create_add_flow(flow_str));
         } else if (action == "mod") {
             // --strict mod
-            send_packet(ofconn_br, create_mod_flow(flow_str, true));
+            send_flow(ofconn_br, create_mod_flow(flow_str, true));
         } else if (action == "del") {
             // --strict del
-            send_packet(ofconn_br, create_del_flow(flow_str, true));
+            send_flow(ofconn_br, create_del_flow(flow_str, true));
         } else {
             ACA_LOG_ERROR("OFController::execute_flow - action %s not supported in flow %s\n", action.c_str(), flow_str.c_str());
         }
     } else {
-        ACA_LOG_ERROR("OFController::execute_flow - ovs connection of br-tun not found\n");
+        ACA_LOG_ERROR("OFController::execute_flow - ovs connection to bridge %s not found\n", br.c_str());
+    }
+
+    ofconn_br = NULL;
+}
+
+void OFController::packet_out(const char* br, const char* opt) {
+    OFConnection* ofconn_br = get_instance(std::string(br));
+
+    if (NULL != ofconn_br) {
+        send_packet_out(ofconn_br, create_packet_out(br, opt));
+    } else {
+        ACA_LOG_ERROR("OFController::packet_out - ovs connection to bridge %s not found\n", br);
     }
 
     ofconn_br = NULL;

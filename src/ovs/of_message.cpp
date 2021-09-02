@@ -259,12 +259,32 @@ ofmsg_ptr_t create_del_flow(const std::string& flow, bool strict) {
     return std::make_shared<FlowModMessage>(op_type, flow);
 }
 
-std::vector<ofmsg_ptr_t> create_add_flows(const std::vector<std::string>& flows)
-{
+std::vector<ofmsg_ptr_t> create_add_flows(const std::vector<std::string>& flows) {
     std::vector<ofmsg_ptr_t> ret;
     for (const auto &flow : flows) {
         ret.emplace_back(std::make_shared<FlowModMessage>(ADD_FLOW, flow));
     }
 
     return ret;
+}
+
+OFRawBuf* create_packet_out(const char* bridge, const char* option) {
+    enum ofputil_protocol usable_protocols;
+    struct ofputil_packet_out po;
+
+    struct ofpbuf *opo;
+    char *error;
+
+    error = parse_ofp_packet_out_str(&po, option, NULL, &usable_protocols);
+    if (error) {
+        ACA_LOG_ERROR("OFMessage - create_packet_out had error %s\n", error);
+    }
+
+    opo = ofputil_encode_packet_out(&po, DEFAULT_OF_VERSION);
+    OFPBuf* buf = new OFPBuf(opo);
+
+    free(CONST_CAST(void *, po.packet));
+    free(po.ofpacts);
+
+    return (OFRawBuf*)buf;
 }

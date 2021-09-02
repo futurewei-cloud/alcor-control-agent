@@ -325,8 +325,10 @@ void ACA_Dhcp_Server::dhcps_xmit(uint32_t inport, void *message)
   //bridge = "br-int" opts = "in_port=controller packet=<hex-string> actions=normal"
   options = in_port + whitespace + packetpre + packet + whitespace + action;
 
-  aca_ovs_control::ACA_OVS_Control::get_instance().packet_out(bridge.c_str(),
-                                                              options.c_str());
+  //aca_ovs_control::ACA_OVS_Control::get_instance().packet_out(bridge.c_str(),
+  //                                                            options.c_str());
+  aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().packet_out(bridge.c_str(),
+                                                                          options.c_str());
 
   delete dhcpmsg;
 }

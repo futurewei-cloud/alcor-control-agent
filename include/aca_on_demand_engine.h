@@ -25,6 +25,7 @@
 #include <openvswitch/ofp-util.h>
 #include <string>
 #include <thread>
+#include <netinet/ether.h>
 #include "hashmap/HashMap.h"
 #include <grpcpp/grpcpp.h>
 #include <unordered_map>

@@ -14,9 +14,7 @@
 
 #include "aca_config.h"
 #include "aca_net_config.h"
-#include "aca_on_demand_engine.h"
 #include "aca_vlan_manager.h"
-#include "aca_ovs_control.h"
 #include "aca_grpc.h"
 #include "aca_grpc_client.h"
 #include "aca_log.h"
@@ -35,7 +33,6 @@
 #include <stdexcept>
 #include <inttypes.h>
 #include <net/ethernet.h>
-#include <netinet/ether.h>
 #include <netinet/ip.h>
 #include <arpa/inet.h>
 #include <uuid/uuid.h>
@@ -43,6 +40,12 @@
 #include "goalstateprovisioner.pb.h"
 #include "aca_dhcp_server.h"
 #include "aca_arp_responder.h"
+#include "aca_ovs_l2_programmer.h"
+#undef OFP_ASSERT
+#undef CONTAINER_OF
+#undef ARRAY_SIZE
+#undef ROUND_UP
+#include "aca_on_demand_engine.h"
 
 using namespace std;
 using namespace aca_vlan_manager;
@@ -326,7 +329,9 @@ void ACA_On_Demand_Engine::on_demand(string uuid_for_call, OperationStatus statu
         ch++;
       }
       options = inport + whitespace + packetpre + serialized_packet + whitespace + action;
-      aca_ovs_control::ACA_OVS_Control::get_instance().packet_out(
+      //aca_ovs_control::ACA_OVS_Control::get_instance().packet_out(
+      //        bridge.c_str(), options.c_str());
+      aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().packet_out(
               bridge.c_str(), options.c_str());
       ACA_LOG_DEBUG("On-demand packet with protocol %d sent to ovs: %s\n",
                     protocol, options.c_str());

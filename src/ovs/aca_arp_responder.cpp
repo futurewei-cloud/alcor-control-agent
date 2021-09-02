@@ -258,8 +258,10 @@ void ACA_ARP_Responder::arp_xmit(uint32_t in_port, void *vlanmsg, void *message,
   }
 
   ACA_LOG_DEBUG("ACA_ARP_Responder sent arp packet to ovs: %s\n", options.c_str());
-  aca_ovs_control::ACA_OVS_Control::get_instance().packet_out(bridge.c_str(),
-                                                              options.c_str());
+  //aca_ovs_control::ACA_OVS_Control::get_instance().packet_out(bridge.c_str(),
+  //                                                            options.c_str());
+  aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().packet_out(bridge.c_str(),
+                                                                          options.c_str());
 }
 
 int ACA_ARP_Responder::_parse_arp_request(uint32_t in_port, vlan_message *vlanmsg,

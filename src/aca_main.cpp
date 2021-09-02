@@ -30,6 +30,7 @@
 
 #include "goalstateprovisioner.grpc.pb.h"
 #include <thread>
+#include <chrono>
 #include <unistd.h> /* for getopt */
 #include <grpcpp/grpcpp.h>
 #include <cmath>
@@ -53,8 +54,8 @@ using namespace std;
 // Global variables
 std::thread *g_grpc_server_thread = NULL;
 std::thread *g_grpc_client_thread = NULL;
-std::thread *ovs_monitor_brtun_thread = NULL;
-std::thread *ovs_monitor_brint_thread = NULL;
+//std::thread *ovs_monitor_brtun_thread = NULL;
+//std::thread *ovs_monitor_brint_thread = NULL;
 GoalStateProvisionerAsyncServer *g_grpc_server = NULL;
 GoalStateProvisionerClientImpl *g_grpc_client = NULL;
 string g_broker_list = EMPTY_STRING;
@@ -83,7 +84,7 @@ std::atomic_ulong g_total_vpcs_table_mutex_time(0);
 std::atomic_ulong g_total_update_GS_time(0);
 
 bool g_demo_mode = false;
-bool g_debug_mode = false;
+bool g_debug_mode = true;
 int processor_count = std::thread::hardware_concurrency();
 /*
   From previous tests, we found that, for x number of cores,
@@ -228,7 +229,7 @@ int main(int argc, char *argv[])
     case 'd':
       g_debug_mode = true;
       break;
-    default: /* the '?' case when the option is not recognized */
+    default: //the '?' case when the option is not recognized
       fprintf(stderr,
               "Usage: %s\n"
               "\t\t[-a NCM IP Address]\n"
@@ -285,28 +286,32 @@ int main(int argc, char *argv[])
     return rc;
   }
 
-  // get bridge-dpid mappings from ovs
+  // get bridge and dpid mappings from ovs
   std::unordered_map<uint64_t, std::string> switch_dpid_map =
           aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().get_ovs_bridge_mapping();
+
+  // get system port name and ofportid mappings from ovs
+  std::unordered_map<std::string, std::string> port_id_map =
+          aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().get_system_port_ids();
 
   // set bridge controller will clean up flows
   aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().setup_ovs_controller(g_ovs_ctrl_address, g_ovs_ctrl_port);
 
   // start local ovs server (openflow controller)
-  g_ovs_ctrl = new OFController(switch_dpid_map, g_ovs_ctrl_address.c_str(), g_ovs_ctrl_port);
+  g_ovs_ctrl = new OFController(switch_dpid_map, port_id_map, g_ovs_ctrl_address.c_str(), g_ovs_ctrl_port);
   g_ovs_ctrl->start();
 
-  // pass ovs_ctrl to l2 programmer
+  // pass ovs_ctrl handle to l2 programmer
   aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().set_openflow_controller(g_ovs_ctrl);
 
-  // monitor br-int for dhcp request message
-  ovs_monitor_brint_thread =
-          new thread(bind(&ACA_OVS_Control::monitor,
-                          &ACA_OVS_Control::get_instance(), "br-int", "resume"));
-  ovs_monitor_brint_thread->detach();
+  //// monitor br-int for dhcp request message
+  //ovs_monitor_brint_thread =
+  //        new thread(bind(&ACA_OVS_Control::monitor,
+  //                        &ACA_OVS_Control::get_instance(), "br-int", "resume"));
+  //ovs_monitor_brint_thread->detach();
 
-  // monitor br-tun for arp request message
-  ACA_OVS_Control::get_instance().monitor("br-tun", "resume");
+  //// monitor br-tun for arp request message
+  //ACA_OVS_Control::get_instance().monitor("br-tun", "resume");
 
   ACA_Message_Pulsar_Consumer network_config_consumer(g_broker_list, g_pulsar_subsription_name);
   rc = network_config_consumer.consumeDispatched(g_pulsar_topic);

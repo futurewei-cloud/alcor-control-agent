@@ -36,6 +36,8 @@ class ACA_OVS_L2_Programmer {
 
   void get_local_host_ips();
 
+  std::unordered_map<std::string, std::string> get_system_port_ids();
+
   bool is_ip_on_the_same_host(const std::string hosting_port_ip);
 
   int setup_ovs_bridges_if_need();
@@ -70,6 +72,8 @@ class ACA_OVS_L2_Programmer {
                         const std::string bridge,
                         const std::string flow_string,
                         const std::string action = "add");
+
+  void packet_out(const char *bridge, const char *options);
 
   // compiler will flag the error when below is called.
   ACA_OVS_L2_Programmer(ACA_OVS_L2_Programmer const &) = delete;

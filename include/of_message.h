@@ -77,3 +77,4 @@ ofmsg_ptr_t create_add_flow(const std::string& flow, bool bundle = false);
 ofmsg_ptr_t create_mod_flow(const std::string& flow, bool strict);
 ofmsg_ptr_t create_del_flow(const std::string& match, bool strict);
 std::vector<ofmsg_ptr_t> create_add_flows(const std::vector<std::string>& flows, bool bundle = false);
+OFRawBuf* create_packet_out(const char* bridge, const char* option);
