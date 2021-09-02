@@ -180,14 +180,11 @@ int ACA_Vlan_Manager::delete_ovs_port(string /*vpc_id*/, string ovs_port,
 
 int ACA_Vlan_Manager::create_l2_neighbor(string virtual_ip, string virtual_mac,
                                          string remote_host_ip, uint tunnel_id,
-                                         ulong & /*culminative_time*/)
+                                         ulong & culminative_time)
 {
   ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::create_l2_neighbor ---> Entering\n");
-
   int overall_rc;
-
   int internal_vlan_id = get_or_create_vlan_id(tunnel_id);
-
   arp_config stArpCfg;
 
   // match internal vlan based on VPC and destination neighbor mac,
@@ -199,30 +196,26 @@ int ACA_Vlan_Manager::create_l2_neighbor(string virtual_ip, string virtual_mac,
   string action_string = ",actions=strip_vlan,load:" + to_string(tunnel_id) +
                          "->NXM_NX_TUN_ID[],set_field:" + remote_host_ip +
                          "->tun_dst,output:" + VXLAN_GENERIC_OUTPORT_NUMBER;
-  std::chrono::_V2::steady_clock::time_point start = std::chrono::steady_clock::now();
 
-  /*
-  overall_rc = ACA_OVS_Control::get_instance().add_flow(
-          "br-tun", (match_string + action_string).c_str());
+  std::chrono::_V2::steady_clock::time_point start = std::chrono::steady_clock::now();
+  aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().execute_openflow(culminative_time,
+                                                                                "br-tun",
+                                                                                match_string + action_string,
+                                                                                "add");
   std::chrono::_V2::steady_clock::time_point end = std::chrono::steady_clock::now();
+
   auto message_total_operation_time =
           std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
   ACA_LOG_DEBUG("[create_l2_neighbor] Start adding ovs rule at: [%ld], finished at: [%ld]\nElapsed time for adding ovs rule for l2 neighbor took: %ld microseconds or %ld milliseconds\n",
                 start, end, message_total_operation_time,
                 (message_total_operation_time / 1000));
-  if (overall_rc != EXIT_SUCCESS) {
-    ACA_LOG_ERROR("%s", "Failed to add L2 neighbor rule\n");
-  };
-  */
-
-
 
   // create arp entry in arp responder for the l2 neighbor
   stArpCfg.mac_address = virtual_mac;
   stArpCfg.ipv4_address = virtual_ip;
   stArpCfg.vlan_id = internal_vlan_id;
 
-  ACA_ARP_Responder::get_instance().create_or_update_arp_entry(&stArpCfg);
+  overall_rc = ACA_ARP_Responder::get_instance().create_or_update_arp_entry(&stArpCfg);
 
   ACA_LOG_DEBUG("create_l2_neighbor arp entry with ip = %s, vlan id = %u and mac = %s\n",
                 virtual_ip.c_str(), internal_vlan_id, virtual_mac.c_str());

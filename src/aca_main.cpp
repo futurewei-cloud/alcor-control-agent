@@ -313,8 +313,10 @@ int main(int argc, char *argv[])
   //// monitor br-tun for arp request message
   //ACA_OVS_Control::get_instance().monitor("br-tun", "resume");
 
-  ACA_Message_Pulsar_Consumer network_config_consumer(g_broker_list, g_pulsar_subsription_name);
-  rc = network_config_consumer.consumeDispatched(g_pulsar_topic);
+  //ACA_Message_Pulsar_Consumer network_config_consumer(g_broker_list, g_pulsar_subsription_name);
+  //rc = network_config_consumer.consumeDispatched(g_pulsar_topic);
+
+  pause();
   aca_cleanup();
 
   return rc;
