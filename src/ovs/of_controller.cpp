@@ -159,7 +159,7 @@ void OFController::send_flow(OFConnection *ofconn, ofmsg_ptr_t &&p) {
     ofconn->send(buf->data(), buf->len());
 }
 
-void OFController::send_packet_out(OFConnection *ofconn, OFRawBuf* po) {
+void OFController::send_packet_out(OFConnection *ofconn, ofbuf_ptr_t &&po) {
     if (!po) {
         return;
     }
@@ -232,7 +232,7 @@ void OFController::packet_out(const char* br, const char* opt) {
     OFConnection* ofconn_br = get_instance(std::string(br));
 
     if (NULL != ofconn_br) {
-        send_packet_out(ofconn_br, create_packet_out(br, opt));
+        send_packet_out(ofconn_br, create_packet_out(opt));
     } else {
         ACA_LOG_ERROR("OFController::packet_out - ovs connection to bridge %s not found\n", br);
     }

@@ -87,7 +87,7 @@ private:
 
     void send_flow(OFConnection *ofconn, ofmsg_ptr_t &&p);
 
-    void send_packet_out(OFConnection *ofconn, OFRawBuf* po);
+    void send_packet_out(OFConnection *ofconn, ofbuf_ptr_t &&po);
 
     void send_bundle_flow_mods(OFConnection *ofconn, std::vector<ofmsg_ptr_t> flow_mods);
 };

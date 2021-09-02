@@ -62,7 +62,7 @@ public:
         _xid = id;
     }
 
-    std::shared_ptr<OFRawBuf> pack_ofpbuf(struct ofpbuf* buf) {
+    ofbuf_ptr_t pack_ofpbuf(struct ofpbuf* buf) {
         auto header = static_cast<struct ofp_header*>(buf->data);
         header->xid = htonl(_xid);
 
@@ -91,7 +91,7 @@ public:
 
     ~FlowModMessage() override = default;
 
-    std::shared_ptr<OFRawBuf> pack() override {
+    ofbuf_ptr_t pack() override {
         int command = OFPFC_ADD;
         std::string cmd_str = "ADD";
 
@@ -160,7 +160,7 @@ public:
         //OFPact ofpacts(fm.ofpacts);
         free(CONST_CAST(struct ofpact *, fm.ofpacts));
 
-        return pack_ofpbuf(buf);
+        return std::make_shared<OFPBuf>(buf);
     }
 
 private:
@@ -169,7 +169,7 @@ private:
     enum ofputil_protocol _of_ver;
 };
 
-std::shared_ptr<OFRawBuf> BundleFlowModMessage::pack_open_req() {
+ofbuf_ptr_t BundleFlowModMessage::pack_open_req() {
     struct ofputil_bundle_ctrl_msg bundle_ctrl;
     // needs to handshake OFPBCT_OPEN_REQUEST first for ovs to get ready for the following bundle
     bundle_ctrl.type = OFPBCT_OPEN_REQUEST;
@@ -189,7 +189,7 @@ std::shared_ptr<OFRawBuf> BundleFlowModMessage::pack_open_req() {
     return std::make_shared<OFPBuf>(buf);
 }
 
-std::shared_ptr<OFRawBuf> BundleFlowModMessage::pack_commit_req() {
+ofbuf_ptr_t BundleFlowModMessage::pack_commit_req() {
     struct ofputil_bundle_ctrl_msg bundle_ctrl;
     // bundle_id has to be consistent with open request
     bundle_ctrl.bundle_id = _bundle_id;
@@ -205,8 +205,8 @@ std::shared_ptr<OFRawBuf> BundleFlowModMessage::pack_commit_req() {
     return std::make_shared<OFPBuf>(buf);
 }
 
-std::vector<std::shared_ptr<OFRawBuf> > BundleFlowModMessage::pack_flow_mods() {
-    std::vector<std::shared_ptr<OFRawBuf> > ret_buf;
+std::vector<ofbuf_ptr_t> BundleFlowModMessage::pack_flow_mods() {
+    std::vector<ofbuf_ptr_t> ret_buf;
 
     for (auto of_msg : _flow_mods) {
         struct ofputil_bundle_add_msg bundle_flow_mod;
@@ -268,11 +268,9 @@ std::vector<ofmsg_ptr_t> create_add_flows(const std::vector<std::string>& flows)
     return ret;
 }
 
-OFRawBuf* create_packet_out(const char* bridge, const char* option) {
+ofbuf_ptr_t create_packet_out(const char* option) {
     enum ofputil_protocol usable_protocols;
     struct ofputil_packet_out po;
-
-    struct ofpbuf *opo;
     char *error;
 
     error = parse_ofp_packet_out_str(&po, option, NULL, &usable_protocols);
@@ -280,11 +278,7 @@ OFRawBuf* create_packet_out(const char* bridge, const char* option) {
         ACA_LOG_ERROR("OFMessage - create_packet_out had error %s\n", error);
     }
 
-    opo = ofputil_encode_packet_out(&po, DEFAULT_OF_VERSION);
-    OFPBuf* buf = new OFPBuf(opo);
+    auto buf = ofputil_encode_packet_out(&po, DEFAULT_OF_VERSION);
 
-    free(CONST_CAST(void *, po.packet));
-    free(po.ofpacts);
-
-    return (OFRawBuf*)buf;
+    return std::make_shared<OFPBuf>(buf);
 }
