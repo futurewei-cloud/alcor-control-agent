@@ -58,7 +58,10 @@ void OFController::message_callback(OFConnection* ofconn, uint8_t type, void* da
         uint32_t in_port = pin->match().in_port()->value();
 
         // pass new allocated memory of packet-in to ACA_On_Demand_Engine to determine which type of request it is
-        aca_on_demand_engine::ACA_On_Demand_Engine::get_instance().parse_packet(in_port, (void*)pin->data());
+        aca_on_demand_engine::ACA_On_Demand_Engine::get_instance().thread_pool_.push(
+                std::bind(&aca_on_demand_engine::ACA_On_Demand_Engine::parse_packet,
+                          &aca_on_demand_engine::ACA_On_Demand_Engine::get_instance(),
+                          in_port, (void *)pin->data()));
     } else if (type == 33) { // OFPRAW_OFPT14_BUNDLE_CONTROL
         auto t = std::chrono::high_resolution_clock::now();
 
