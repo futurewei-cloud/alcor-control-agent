@@ -13,6 +13,8 @@
 #     WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 FROM fwnetworking/ubuntu:18.04
+RUN rm -rf /var/local/git && mkdir -p /var/local/git
+
 RUN echo "1--- installing common dependencies ---" && \
     apt-get update -y && apt-get install -y \
     rpcbind \

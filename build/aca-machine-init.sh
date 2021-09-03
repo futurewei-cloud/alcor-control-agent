@@ -17,6 +17,9 @@
 BUILD="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 echo "build path is $BUILD"
 
+rm -rf /var/local/git
+mkdir -p /var/local/git
+
 # TODO: remove the unneeded dependencies
 echo "1--- installing common dependencies ---" && \
     apt-get update -y && apt-get install -y \
@@ -204,7 +207,7 @@ echo "7--- installing pulsar dependacies ---" && \
 echo "8--- building alcor-control-agent"
 cd $BUILD/.. && cmake . && make
 
-if [ "$1" == "delete-bridges" ]; then
+if [ -n "$1" -a "$1" = "delete-bridges" ]; then
   echo "9--- deleting br-tun and br-int if requested"
   PATH=$PATH:/usr/local/share/openvswitch/scripts \
       LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib

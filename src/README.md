@@ -69,15 +69,15 @@ You will need approval from at least one maintainer, who will merge your codes t
 ## Run the build script to set up the build container and compile the alcor-control-agent
 Assuming alcor-control-agent was cloned into ~/alcor-control-agent directory:
 ```Shell
-cd ~/alcor-control-agent
-./build/build.sh
+cd ~/alcor-control-agent/build
+sudo ./build.sh
 ```
 
 ## You can also setup a physical machine or VM to compile the alcor-control-agent
 Assuming alcor-control-agent was cloned into ~/alcor-control-agent directory:
 ```Shell
-cd ~/alcor-control-agent
-./build/aca-machine-init.sh
+cd ~/alcor-control-agent/build
+sudo ./aca-machine-init.sh
 ```
 
 ## Running alcor-control-agent and tests
