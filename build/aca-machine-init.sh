@@ -18,14 +18,23 @@ BUILD="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 echo "build path is $BUILD"
 
 # TODO: remove the unneeded dependencies
-echo "1--- installing mizar dependencies ---" && \
+echo "1--- installing common dependencies ---" && \
     apt-get update -y && apt-get install -y \
     rpcbind \
     rsyslog \
     build-essential \
+    make \
+    g++ \
+    unzip \
+    cmake \
     clang-9 \
     llvm-9 \
     libelf-dev \
+    doxygen \
+    zlib1g-dev \
+    libssl-dev \
+    libboost-program-options-dev \
+    libboost-all-dev \
     iproute2  \
     net-tools \
     iputils-ping \
@@ -35,7 +44,15 @@ echo "1--- installing mizar dependencies ---" && \
     python3-pip \
     netcat \
     libcmocka-dev \
-    lcov
+    lcov \
+    git \
+    autoconf \
+    automake \
+    dh-autoreconf \
+    pkg-config \
+    libtool \
+    wget \
+    uuid-dev
 pip3 install httpserver netaddr
 
 echo "2--- installing librdkafka ---" && \
