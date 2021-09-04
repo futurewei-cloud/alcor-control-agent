@@ -20,6 +20,8 @@
 #include "pulsar/ConsumerConfiguration.h"
 #include "pulsar/Message.h"
 #include "pulsar/Result.h"
+#include "pulsar/ConsumerType.h"
+//#include "pulsar/KeySharedPolicy.h"
 
 
 using namespace pulsar;
@@ -58,6 +60,8 @@ class ACA_Message_Pulsar_Consumer {
     void setBrokers(string brokers);
 
     void setLastTopicName(string topic);
+
+    void listener(Consumer consumer, const Message& message);
 };
 
 } // namespace aca_message_pulsar

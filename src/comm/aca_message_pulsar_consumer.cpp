@@ -65,6 +65,44 @@ void ACA_Message_Pulsar_Consumer::setSubscriptionName(string subscription_name)
   this->subscription_name = subscription_name;
 }
 
+
+// void listener(Consumer consumer, const Message& message){
+//   alcor::schema::GoalState deserialized_GoalState;
+//   alcor::schema::GoalStateOperationReply gsOperationalReply;
+//   int rc;
+//   int overall_rc = EXIT_SUCCESS;
+//   Result result;
+//   Message message;
+//   Consumer consumer;
+
+//   ACA_LOG_DEBUG("\n<=====incoming message: %s\n",
+//                 message.getDataAsString().c_str());
+
+//   rc = Aca_Comm_Manager::get_instance().deserialize(
+//           (unsigned char *)message.getData(), message.getLength(), deserialized_GoalState);
+//   if (rc == EXIT_SUCCESS) {
+//     rc = Aca_Comm_Manager::get_instance().update_goal_state(
+//                 deserialized_GoalState, gsOperationalReply);
+
+//   // TODO: send gsOperationalReply back to controller 
+
+//     if (rc != EXIT_SUCCESS) {
+//       ACA_LOG_ERROR("Failed to update host with latest goal state, rc=%d.\n", rc);
+//       overall_rc = rc;
+//     } else {
+//       ACA_LOG_INFO("Successfully updated host with latest goal state %d.\n", rc);
+//     }
+
+//   } else {
+//     ACA_LOG_ERROR("Deserialization failed with error code %d.\n", rc);
+//     overall_rc = rc;
+//   }
+
+//   // Now acknowledge message
+//   consumer.acknowledge(message.getMessageId());
+// }
+
+
 bool ACA_Message_Pulsar_Consumer::consumeDispatched(string topic)
 {
   alcor::schema::GoalState deserialized_GoalState;
@@ -74,6 +112,7 @@ bool ACA_Message_Pulsar_Consumer::consumeDispatched(string topic)
   Result result;
   Message message;
   Consumer consumer;
+  //this->consumer_config.setConsumerType(ConsumerKeyShared).setKeySharedPolicy(KeySharedPolicy).setMessageListener(messageListener)
   result = this->ptr_client->subscribe(topic,this->subscription_name,this->consumer_config,consumer);
 
   if (result != Result::ResultOk){
