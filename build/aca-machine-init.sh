@@ -172,6 +172,11 @@ OPENFLOW_HEADERS="include/openflow/intel-ext.h \
     include/openflow/openflow-common.h \
     include/openflow/openflow.h "
 echo "6--- installing openvswitch dependancies ---" && \
+    rm -f /tmp/get-pip.py > /dev/null 2>&1 && \
+    apt-get install -y python2.7 && \
+    wget https://bootstrap.pypa.io/pip/2.7/get-pip.py -O /tmp/get-pip.py && \
+    python2.7 /tmp/get-pip.py && \
+    pip2 install six && \
     apt-get install -y libevent-dev && \
     mkdir -p /var/local/git/openvswitch && \
     git clone -b "branch-2.12" https://github.com/openvswitch/ovs.git /var/local/git/openvswitch && \
