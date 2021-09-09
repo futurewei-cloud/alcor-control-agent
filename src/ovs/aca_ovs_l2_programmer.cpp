@@ -93,11 +93,6 @@ ACA_OVS_L2_Programmer &ACA_OVS_L2_Programmer::get_instance()
   return instance;
 }
 
-void ACA_OVS_L2_Programmer::set_openflow_controller(OFController* ofctrl)
-{
-  this->ofctrl = ofctrl;
-}
-
 bool ACA_OVS_L2_Programmer::is_ip_on_the_same_host(const std::string host_ip)
 {
   return std::find(this->host_ips_vector.begin(), this->host_ips_vector.end(),
@@ -264,8 +259,15 @@ int ACA_OVS_L2_Programmer::setup_ovs_controller(const std::string ctrler_ip, con
   const string setup_br_tun_cmd = "set-controller " + br_tun_str + ctrler_endpoint;
 
   ACA_LOG_DEBUG("%s", "ACA_OVS_L2_Programmer::setup_ovs_controller ---> Entering\n");
-  auto ovsdb_client_start = chrono::steady_clock::now();
 
+  // get bridge and dpid mappings from ovs
+  std::unordered_map<uint64_t, std::string> switch_dpid_map = get_ovs_bridge_mapping();
+
+  // get system port name and ofportid mappings from ovs
+  std::unordered_map<std::string, std::string> port_id_map = get_system_port_ids();
+
+  // set bridge controller will clean up flows
+  auto ovsdb_client_start = chrono::steady_clock::now();
   string br_int_cmd_string = "ovs-vsctl " + setup_br_int_cmd;
   rc = aca_net_config::Aca_Net_Config::get_instance().execute_system_command(br_int_cmd_string);
   if (rc != EXIT_SUCCESS) {
@@ -279,18 +281,35 @@ int ACA_OVS_L2_Programmer::setup_ovs_controller(const std::string ctrler_ip, con
   }
 
   auto ovsdb_client_end = chrono::steady_clock::now();
-
   auto ovsdb_client_time_total_time =
           cast_to_microseconds(ovsdb_client_end - ovsdb_client_start).count();
-
   g_total_execute_ovsdb_time += ovsdb_client_time_total_time;
 
   ACA_LOG_INFO("ACA_OVS_L2_Programmer::setup_ovs_controller - Elapsed time for ovsdb client call took: %ld microseconds or %ld milliseconds\n",
                ovsdb_client_time_total_time, us_to_ms(ovsdb_client_time_total_time));
 
+  // start local ovs server (openflow controller)
+  ofctrl = new OFController(switch_dpid_map, port_id_map, ctrler_ip.c_str(), ctrler_port);
+  ofctrl->start();
+
   ACA_LOG_DEBUG("ACA_OVS_L2_Programmer::setup_ovs_controller <--- Exiting\n");
 
   return rc;
+}
+
+void ACA_OVS_L2_Programmer::clean_up_ovs_controller()
+{
+  if (ofctrl != NULL)
+  {
+    ofctrl->stop();
+    delete ofctrl;
+    ofctrl = NULL;
+    ACA_LOG_INFO("%s", "ACA_OVS_L2_Programmer::clean_up_ovs_controller - cleaned up ovs controller.\n");
+  }
+  else
+  {
+    ACA_LOG_INFO("%s", "ACA_OVS_L2_Programmer::clean_up_ovs_controller - unable to clean up ovs controller, since it is null.\n");
+  }
 }
 
 std::string ACA_OVS_L2_Programmer::get_system_port_id(std::string port_name)

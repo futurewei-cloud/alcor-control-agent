@@ -54,8 +54,6 @@ using namespace std;
 // Global variables
 std::thread *g_grpc_server_thread = NULL;
 std::thread *g_grpc_client_thread = NULL;
-//std::thread *ovs_monitor_brtun_thread = NULL;
-//std::thread *ovs_monitor_brint_thread = NULL;
 GoalStateProvisionerAsyncServer *g_grpc_server = NULL;
 GoalStateProvisionerClientImpl *g_grpc_client = NULL;
 string g_broker_list = EMPTY_STRING;
@@ -67,8 +65,6 @@ string g_ofctl_target = EMPTY_STRING;
 string g_ofctl_options = EMPTY_STRING;
 string g_ncm_address = EMPTY_STRING;
 string g_ncm_port = EMPTY_STRING;
-
-OFController *g_ovs_ctrl = NULL;
 string g_ovs_ctrl_address = "127.0.0.1";
 int g_ovs_ctrl_port = 1234;
 
@@ -124,7 +120,6 @@ static void aca_cleanup()
   // Stop sets a private variable running_ to False
   // The Dispatch checks the variable in a loop and stops when running is
   // no longer set to True.
-
   if (g_grpc_server != NULL) {
     g_grpc_server->ShutDownServer();
     delete g_grpc_server;
@@ -142,7 +137,7 @@ static void aca_cleanup()
     ACA_LOG_ERROR("%s", "Unable to call delete, grpc server thread pointer is null.\n");
   }
 
-  //stops the grpc client
+  // Stop the grpc client
   if (g_grpc_client != NULL) {
     delete g_grpc_client;
     g_grpc_client = NULL;
@@ -159,14 +154,8 @@ static void aca_cleanup()
     ACA_LOG_ERROR("%s", "Unable to call delete, grpc client thread pointer is null.\n");
   }
 
-  if (g_ovs_ctrl != NULL) {
-    g_ovs_ctrl->stop();
-    delete g_ovs_ctrl;
-    g_ovs_ctrl = NULL;
-    ACA_LOG_INFO("%s", "Cleaned up ovs controller.\n");
-  } else {
-    ACA_LOG_INFO("%s", "Unable to clean up ovs controller, since it is null.\n");
-  }
+  // Stop the ovs controller and clean up
+  aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().clean_up_ovs_controller();
 
   ACA_LOG_CLOSE();
 }
@@ -286,23 +275,8 @@ int main(int argc, char *argv[])
     return rc;
   }
 
-  // get bridge and dpid mappings from ovs
-  std::unordered_map<uint64_t, std::string> switch_dpid_map =
-          aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().get_ovs_bridge_mapping();
-
-  // get system port name and ofportid mappings from ovs
-  std::unordered_map<std::string, std::string> port_id_map =
-          aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().get_system_port_ids();
-
-  // set bridge controller will clean up flows
+  // setup ovs controller with server ip address and port number, will be used for openflow operations
   aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().setup_ovs_controller(g_ovs_ctrl_address, g_ovs_ctrl_port);
-
-  // start local ovs server (openflow controller)
-  g_ovs_ctrl = new OFController(switch_dpid_map, port_id_map, g_ovs_ctrl_address.c_str(), g_ovs_ctrl_port);
-  g_ovs_ctrl->start();
-
-  // pass ovs_ctrl handle to l2 programmer
-  aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().set_openflow_controller(g_ovs_ctrl);
 
   //// monitor br-int for dhcp request message
   //ovs_monitor_brint_thread =

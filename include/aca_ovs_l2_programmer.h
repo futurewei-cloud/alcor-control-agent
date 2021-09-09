@@ -32,13 +32,7 @@ class ACA_OVS_L2_Programmer {
   public:
   static ACA_OVS_L2_Programmer &get_instance();
 
-  std::vector<std::string> host_ips_vector;
-
   void get_local_host_ips();
-
-  std::unordered_map<std::string, std::string> get_system_port_ids();
-
-  std::string get_system_port_id(std::string port_name);
 
   bool is_ip_on_the_same_host(const std::string hosting_port_ip);
 
@@ -46,9 +40,9 @@ class ACA_OVS_L2_Programmer {
 
   int setup_ovs_controller(const std::string ctrler_ip, const int ctrler_port);
 
-  void set_openflow_controller(OFController* ofctrl);
+  void clean_up_ovs_controller();
 
-  std::unordered_map<uint64_t, std::string> get_ovs_bridge_mapping();
+  std::string get_system_port_id(std::string port_name);
 
   int create_port(const std::string vpc_id, const std::string port_name,
                   const std::string virtual_ip, const std::string virtual_mac,
@@ -84,9 +78,15 @@ class ACA_OVS_L2_Programmer {
   private:
   OFController* ofctrl;
   std::unordered_map<std::string, std::string> port_id_map;
+  std::vector<std::string> host_ips_vector;
 
   ACA_OVS_L2_Programmer(){};
+
   ~ACA_OVS_L2_Programmer(){};
+
+  std::unordered_map<uint64_t, std::string> get_ovs_bridge_mapping();
+
+  std::unordered_map<std::string, std::string> get_system_port_ids();
 };
 } // namespace aca_ovs_l2_programmer
 #endif // #ifndef ACA_OVS_L2_PROGRAMMER_H
