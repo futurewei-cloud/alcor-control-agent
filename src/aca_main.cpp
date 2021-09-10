@@ -80,7 +80,7 @@ std::atomic_ulong g_total_vpcs_table_mutex_time(0);
 std::atomic_ulong g_total_update_GS_time(0);
 
 bool g_demo_mode = false;
-bool g_debug_mode = true;
+bool g_debug_mode = false;
 int processor_count = std::thread::hardware_concurrency();
 /*
   From previous tests, we found that, for x number of cores,
