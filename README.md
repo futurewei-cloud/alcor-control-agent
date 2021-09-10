@@ -51,5 +51,6 @@ This main repository of Alcor Control Agent is organized as follows:
 
 ## Notes
 * ovs_control.h and ovs_control.cpp is based on https://github.com/openvswitch/ovs/blob/master/utilities/ovs-ofctl.c
+* libfluid-base/*.h(*.cpp) and libfluid-msg/*.h(*.cpp) are based on https://github.com/OpenNetworkingFoundation/libfluid, the usage of derived class is based on https://github.com/OpenNetworkingFoundation/libfluid/tree/master/examples/controller 
 * aca_grpc.cpp is based on https://github.com/grpc/grpc/blob/v1.30.0/examples/cpp/route_guide/route_guide_server.cc
 * HashMap.h and HashNode.h is based on https://github.com/kshk123/hashMap
