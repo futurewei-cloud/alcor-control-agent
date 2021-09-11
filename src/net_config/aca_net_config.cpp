@@ -16,6 +16,9 @@
 #include "aca_util.h"
 #include "aca_config.h"
 #include "aca_net_config.h"
+
+#include <stdexcept>
+#include <stdio.h>
 #include <errno.h>
 
 using namespace std;
@@ -338,6 +341,34 @@ int Aca_Net_Config::execute_system_command(string cmd_string, ulong &culminative
                 us_to_ms(execute_system_elapse_time));
 
   return rc;
+}
+
+std::string Aca_Net_Config::execute_system_command_with_return(string cmd_string)
+{
+    char buffer[128];
+    std::string result = "";
+
+    FILE* pipe = popen(cmd_string.c_str(), "r");
+    if (!pipe)
+    {
+        ACA_LOG_ERROR("Aca_Net_Config::execute_system_command_with_return - failed to read output from popen\n");
+    }
+
+    try
+    {
+        while (fgets(buffer, sizeof buffer, pipe) != NULL)
+        {
+            result += buffer;
+        }
+    }
+    catch (...)
+    {
+        pclose(pipe);
+        ACA_LOG_ERROR("Aca_Net_Config::execute_system_command_with_return - failed to pclose cmd pipe\n");
+    }
+    pclose(pipe);
+
+    return result;
 }
 
 } // namespace aca_net_config

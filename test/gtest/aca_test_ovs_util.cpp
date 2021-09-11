@@ -15,7 +15,6 @@
 #include "aca_log.h"
 #include "aca_util.h"
 #include "aca_config.h"
-#include "aca_ovs_control.h"
 #include "aca_vlan_manager.h"
 #include "aca_ovs_l2_programmer.h"
 #include "aca_ovs_l3_programmer.h"
@@ -25,6 +24,12 @@
 #include <unistd.h> /* for getopt */
 #include <iostream>
 #include <string>
+
+#undef OFP_ASSERT
+#undef CONTAINER_OF
+#undef ARRAY_SIZE
+#undef ROUND_UP
+#include "aca_ovs_control.h"
 
 using namespace std;
 using namespace alcor::schema;

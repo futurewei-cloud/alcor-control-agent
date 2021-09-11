@@ -17,7 +17,7 @@ set(_GRPC_GRPCPP_UNSECURE gRPC::grpc++_unsecure)
 set(_GRPC_CPP_PLUGIN_EXECUTABLE $<TARGET_FILE:gRPC::grpc_cpp_plugin>)
 
 # Proto file
-get_filename_component(aca_proto "../../alcor/schema/proto3/*.proto" ABSOLUTE)
+get_filename_component(aca_proto "${CMAKE_CURRENT_SOURCE_DIR}/../../alcor/schema/proto3/*.proto" ABSOLUTE)
 get_filename_component(aca_proto_path "${aca_proto}" PATH)
 
 set(aca_proto_srcs "${CMAKE_CURRENT_BINARY_DIR}/goalstateprovisioner.pb.cc")

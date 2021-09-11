@@ -18,15 +18,20 @@
 #include <errno.h>
 #include <sstream>
 #include <iomanip>
-#include "aca_ovs_l2_programmer.h"
 #include "aca_util.h"
-#include "aca_ovs_control.h"
 #include "aca_vlan_manager.h"
 #include "aca_zeta_programming.h"
 #include <math.h>
 
+#undef OFP_ASSERT
+#undef CONTAINER_OF
+#undef ARRAY_SIZE
+#undef ROUND_UP
+#include "aca_ovs_l2_programmer.h"
+//#include "aca_ovs_control.h"
+
 using namespace std;
-using namespace aca_ovs_control;
+//using namespace aca_ovs_control;
 
 namespace aca_zeta_oam_server
 {
@@ -289,16 +294,18 @@ int ACA_Zeta_Oam_Server::_add_direct_path(oam_match match, oam_action action)
 
 int ACA_Zeta_Oam_Server::_del_direct_path(oam_match match)
 {
+  unsigned long not_care_culminative_time;
   int overall_rc;
   string vlan_id = to_string(aca_vlan_manager::ACA_Vlan_Manager::get_instance().get_or_create_vlan_id(
           match.vni));
 
-  string opt = "table=20,priority=50,ip,nw_proto=" + match.proto +
+  string opt = "del-flows br-tun \"table=20,priority=50,ip,nw_proto=" + match.proto +
                ",nw_src=" + match.sip + ",nw_dst=" + match.dip +
-               ",tp_src=" + match.sport + ",tp_dst=" + match.dport + ",dl_vlan=" + vlan_id;
+               ",tp_src=" + match.sport + ",tp_dst=" + match.dport + ",dl_vlan=" + vlan_id + "\" --strict";
 
   // delete flow
-  overall_rc = ACA_OVS_Control::get_instance().del_flows("br-tun", opt.c_str());
+  aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
+          opt, not_care_culminative_time, overall_rc);
 
   if (overall_rc == EXIT_SUCCESS) {
     ACA_LOG_INFO("%s", "Delete direct path succeeded!\n");

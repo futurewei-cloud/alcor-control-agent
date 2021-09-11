@@ -62,10 +62,11 @@ void ACA_ARP_Responder::_init_arp_ofp()
 void ACA_ARP_Responder::_deinit_arp_ofp()
 {
   unsigned long not_care_culminative_time;
-  int overall_rc = EXIT_SUCCESS;
 
-  aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
-          "del-flows br-tun \"arp,arp_op=1\"", not_care_culminative_time, overall_rc);
+  aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().execute_openflow(not_care_culminative_time,
+          "br-tun",
+          "arp,arp_op=1",
+          "del");
   return;
 }
 
@@ -257,8 +258,10 @@ void ACA_ARP_Responder::arp_xmit(uint32_t in_port, void *vlanmsg, void *message,
   }
 
   ACA_LOG_DEBUG("ACA_ARP_Responder sent arp packet to ovs: %s\n", options.c_str());
-  aca_ovs_control::ACA_OVS_Control::get_instance().packet_out(bridge.c_str(),
-                                                              options.c_str());
+  //aca_ovs_control::ACA_OVS_Control::get_instance().packet_out(bridge.c_str(),
+  //                                                            options.c_str());
+  aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().packet_out(bridge.c_str(),
+                                                                          options.c_str());
 }
 
 int ACA_ARP_Responder::_parse_arp_request(uint32_t in_port, vlan_message *vlanmsg,

@@ -18,10 +18,15 @@
 #include "aca_zeta_oam_server.h"
 #include "aca_util.h"
 #include <string.h>
-#include "aca_ovs_control.h"
 #include "aca_vlan_manager.h"
 #include "aca_zeta_programming.h"
 #include "aca_ovs_l2_programmer.h"
+
+#undef OFP_ASSERT
+#undef CONTAINER_OF
+#undef ARRAY_SIZE
+#undef ROUND_UP
+#include "aca_ovs_control.h"
 
 using namespace aca_zeta_oam_server;
 using namespace aca_ovs_control;

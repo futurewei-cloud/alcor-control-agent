@@ -14,14 +14,19 @@
 
 #include "aca_util.h"
 #include "gtest/gtest.h"
-#include "aca_ovs_control.h"
-#include "ovs_control.h"
+//#include "ovs_control.h"
 #include "aca_ovs_l2_programmer.h"
 #include <string>
 
+#undef OFP_ASSERT
+#undef CONTAINER_OF
+#undef ARRAY_SIZE
+#undef ROUND_UP
+#include "aca_ovs_control.h"
+
 using namespace std;
 using namespace aca_ovs_control;
-using namespace ovs_control;
+//using namespace ovs_control;
 using aca_ovs_l2_programmer::ACA_OVS_L2_Programmer;
 
 extern string vmac_address_1;
