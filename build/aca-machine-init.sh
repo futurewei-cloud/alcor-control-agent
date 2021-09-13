@@ -199,7 +199,7 @@ echo "6--- installing openvswitch dependancies ---" && \
     test -f /usr/bin/ovs-vsctl && rm -rf /usr/local/sbin/ov* /usr/local/bin/ov* /usr/local/bin/vtep* && \
     cd ~
 
-PULSAR_RELEASE_TAG='pulsar-2.6.1'
+PULSAR_RELEASE_TAG='pulsar-2.8.0'
 echo "7--- installing pulsar dependacies ---" && \
     mkdir -p /var/local/git/pulsar && \
     wget https://archive.apache.org/dist/pulsar/${PULSAR_RELEASE_TAG}/DEB/apache-pulsar-client.deb -O /var/local/git/pulsar/apache-pulsar-client.deb && \
@@ -210,8 +210,12 @@ echo "7--- installing pulsar dependacies ---" && \
     cd ~
 
 echo "8--- building alcor-control-agent"
-cd $BUILD/.. && cmake . && make
-
+cd $BUILD/.. && cmake . && \
+# after cmake ., modify the generated link.txt s so that the "-lssl" and "-lcrypto" appears after the openvswitch, so that it can compile
+sed -i 's/\(-ldl -lrt -lm -lpthread\)/-lssl -lcrypto \1/' src/CMakeFiles/AlcorControlAgent.dir/link.txt && \
+sed -i 's/\(-ldl -lrt -lm -lpthread\)/-lssl -lcrypto \1/' test/CMakeFiles/aca_tests.dir/link.txt && \
+sed -i 's/\(-ldl -lrt -lm -lpthread\)/-lssl -lcrypto \1/' test/CMakeFiles/gs_tests.dir/link.txt && \
+make
 if [ -n "$1" -a "$1" = "delete-bridges" ]; then
   echo "9--- deleting br-tun and br-int if requested"
   PATH=$PATH:/usr/local/share/openvswitch/scripts \
