@@ -176,7 +176,7 @@ int Aca_Comm_Manager::update_goal_state(GoalStateV2 &goal_state_message,
                 goal_state_message.ByteSizeLong(),
                 goal_state_message.router_states_size());
 
-  this->print_goal_state(goal_state_message);
+//   this->print_goal_state(goal_state_message);
   auto t1 = std::chrono::high_resolution_clock::now();
 
   ACA_LOG_DEBUG("[METRICS] Printout took: [%ld] nanoseconds\n", (t1 - t0).count());
@@ -242,7 +242,12 @@ int Aca_Comm_Manager::update_goal_state(GoalStateV2 &goal_state_message,
   auto dhcp_operation_time =
           cast_to_microseconds(end - neighbor_update_finished_time).count();
   auto message_total_operation_time = cast_to_microseconds(end - start).count();
-
+  std::cout<<"[METRICS] Elapsed time for message total operation took: "<<message_total_operation_time<<" microseconds or "<<us_to_ms(message_total_operation_time)<<" milliseconds"<<std::endl<<
+"[METRICS] Elapsed time for gs printout operation took: "<<gs_printout_operation_time<<" microseconds or "<<us_to_ms(gs_printout_operation_time)<<" milliseconds"<<std::endl<<
+"[METRICS] Elapsed time for router operation took: "<<router_operation_time<<" microseconds or "<<us_to_ms(router_operation_time)<<" milliseconds"<<std::endl<<
+"[METRICS] Elapsed time for port operation took: "<<port_operation_time<<" microseconds or "<<us_to_ms(port_operation_time)<<" milliseconds"<<std::endl<<
+"[METRICS] Elapsed time for neighbor operation took: "<<neighbor_operation_time<<" microseconds or "<<us_to_ms(neighbor_operation_time)<<" milliseconds"<<std::endl<<
+"[METRICS] Elapsed time for dhcp operation took: "<<dhcp_operation_time<<" microseconds or "<<us_to_ms(dhcp_operation_time)<<" milliseconds"<<std::endl;
   ACA_LOG_DEBUG("[METRICS] Elapsed time for message total operation took: %ld microseconds or %ld milliseconds\n\
 [METRICS] Elapsed time for gs printout operation took: %ld microseconds or %ld milliseconds\n\
 [METRICS] Elapsed time for router operation took: %ld microseconds or %ld milliseconds\n\
