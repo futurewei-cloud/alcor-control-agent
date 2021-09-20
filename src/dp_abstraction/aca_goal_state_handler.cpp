@@ -287,6 +287,7 @@ int Aca_Goal_State_Handler::update_neighbor_states(GoalStateV2 &parsed_struct,
   std::vector<std::future<int> > workitem_future;
   int rc;
   int overall_rc = EXIT_SUCCESS;
+  int count = 0;
 
   for (auto &[neighbor_id, current_NeighborState] : parsed_struct.neighbor_states()) {
     ACA_LOG_DEBUG("=====>parsing neighbor state: %s\n", neighbor_id.c_str());
@@ -295,9 +296,22 @@ int Aca_Goal_State_Handler::update_neighbor_states(GoalStateV2 &parsed_struct,
             std::launch::async, &Aca_Goal_State_Handler::update_neighbor_state_workitem_v2,
             this, current_NeighborState, std::ref(parsed_struct),
             std::ref(gsOperationReply)));
+    if (count % 10000 == 0){
+      ACA_LOG_INFO("%s\n", "Need to get the results of these 10000 neighbor updates before proceeding");
+      for (int i = 0 ; i < workitem_future.size(); i++){
+        rc = workitem_future[i].get();
+        if (rc != EXIT_SUCCESS){
+          overall_rc = rc;
+        }
+      }
+      workitem_future.clear();
+      count = 0;
+    }else{
+      count++;
+    }
   }
 
-  for (int i = 0; i < parsed_struct.neighbor_states_size(); i++) {
+  for (int i = 0; i < workitem_future.size(); i++) {
     rc = workitem_future[i].get();
     if (rc != EXIT_SUCCESS)
       overall_rc = rc;
