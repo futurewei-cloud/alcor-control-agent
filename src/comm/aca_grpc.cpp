@@ -285,6 +285,9 @@ void GoalStateProvisionerAsyncServer::RunServer(int thread_pool_size)
   ServerBuilder builder;
   string GRPC_SERVER_ADDRESS = "0.0.0.0:" + g_grpc_server_port;
   builder.AddListeningPort(GRPC_SERVER_ADDRESS, grpc::InsecureServerCredentials());
+  builder.SetMaxMessageSize(INT_MAX);
+  builder.SetMaxReceiveMessageSize(INT_MAX);
+  builder.SetMaxSendMessageSize(INT_MAX);
   builder.RegisterService(&service_);
   cq_ = builder.AddCompletionQueue();
   server_ = builder.BuildAndStart();
