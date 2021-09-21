@@ -21,7 +21,7 @@
 using namespace alcor::schema;
 
 std::mutex gs_reply_mutex; // mutex for writing gs reply object
-
+const int resource_state_processing_batch_size = 10000; // batch size of concurrently processing a kind of resource states.
 namespace aca_goal_state_handler
 {
 Aca_Goal_State_Handler::Aca_Goal_State_Handler()
@@ -139,6 +139,7 @@ int Aca_Goal_State_Handler::update_port_states(GoalState &parsed_struct,
   std::vector<std::future<int> > workitem_future;
   int rc;
   int overall_rc = EXIT_SUCCESS;
+  int count = 0;
 
   for (int i = 0; i < parsed_struct.port_states_size(); i++) {
     ACA_LOG_DEBUG("=====>parsing port states #%d\n", i);
@@ -148,14 +149,24 @@ int Aca_Goal_State_Handler::update_port_states(GoalState &parsed_struct,
     workitem_future.push_back(std::async(
             std::launch::async, &Aca_Goal_State_Handler::update_port_state_workitem, this,
             current_PortState, std::ref(parsed_struct), std::ref(gsOperationReply)));
-
+    if (count % resource_state_processing_batch_size == 0){
+      for (int i = 0; i < workitem_future.size(); i++) {
+        rc = workitem_future[i].get();
+        if (rc != EXIT_SUCCESS)
+          overall_rc = rc;
+      }
+      workitem_future.clear();
+      count = 0;
+    }else{
+      count ++;
+    }
     // keeping below just in case if we want to call it serially
     // rc = update_port_state_workitem(current_PortState, parsed_struct, gsOperationReply);
     // if (rc != EXIT_SUCCESS)
     //   overall_rc = rc;
   } // for (int i = 0; i < parsed_struct.port_states_size(); i++)
 
-  for (int i = 0; i < parsed_struct.port_states_size(); i++) {
+  for (int i = 0; i < workitem_future.size(); i++) {
     rc = workitem_future[i].get();
     if (rc != EXIT_SUCCESS)
       overall_rc = rc;
@@ -180,7 +191,7 @@ int Aca_Goal_State_Handler::update_port_states(GoalStateV2 &parsed_struct,
   std::vector<std::future<int> > workitem_future;
   int rc;
   int overall_rc = EXIT_SUCCESS;
-
+  int count = 0;
   // below is a c++ 17 feature
   for (auto &[port_id, current_PortState] : parsed_struct.port_states()) {
     ACA_LOG_DEBUG("=====>parsing port state: %s\n", port_id.c_str());
@@ -188,14 +199,24 @@ int Aca_Goal_State_Handler::update_port_states(GoalStateV2 &parsed_struct,
     workitem_future.push_back(std::async(
             std::launch::async, &Aca_Goal_State_Handler::update_port_state_workitem_v2, this,
             current_PortState, std::ref(parsed_struct), std::ref(gsOperationReply)));
-
+    if (count % resource_state_processing_batch_size == 0){
+      for (int i = 0; i < workitem_future.size(); i++) {
+        rc = workitem_future[i].get();
+        if (rc != EXIT_SUCCESS)
+          overall_rc = rc;
+      }
+      workitem_future.clear();
+      count = 0;
+    }else{
+      count ++;
+    }
     // keeping below just in case if we want to call it serially
     // rc = update_port_state_workitem(current_PortState, parsed_struct, gsOperationReply);
     // if (rc != EXIT_SUCCESS)
     //   overall_rc = rc;
   } // for (int i = 0; i < parsed_struct.port_states_size(); i++)
 
-  for (int i = 0; i < parsed_struct.port_states_size(); i++) {
+  for (int i = 0; i < workitem_future.size(); i++) {
     rc = workitem_future[i].get();
     if (rc != EXIT_SUCCESS)
       overall_rc = rc;
@@ -218,6 +239,7 @@ int Aca_Goal_State_Handler::update_neighbor_states(GoalState &parsed_struct,
   std::vector<std::future<int> > workitem_future;
   int rc;
   int overall_rc = EXIT_SUCCESS;
+  int count = 0;
 
   for (int i = 0; i < parsed_struct.neighbor_states_size(); i++) {
     ACA_LOG_DEBUG("=====>parsing neighbor states #%d\n", i);
@@ -228,9 +250,20 @@ int Aca_Goal_State_Handler::update_neighbor_states(GoalState &parsed_struct,
             std::launch::async, &Aca_Goal_State_Handler::update_neighbor_state_workitem,
             this, current_NeighborState, std::ref(parsed_struct),
             std::ref(gsOperationReply)));
+    if (count % resource_state_processing_batch_size == 0){
+      for (int i = 0; i < workitem_future.size(); i++) {
+        rc = workitem_future[i].get();
+        if (rc != EXIT_SUCCESS)
+          overall_rc = rc;
+      }
+      workitem_future.clear();
+      count = 0;
+    }else{
+      count ++;
+    }
   }
 
-  for (int i = 0; i < parsed_struct.neighbor_states_size(); i++) {
+  for (int i = 0; i < workitem_future.size(); i++) {
     rc = workitem_future[i].get();
     if (rc != EXIT_SUCCESS)
       overall_rc = rc;
@@ -253,6 +286,7 @@ int Aca_Goal_State_Handler::update_router_states(GoalState &parsed_struct,
   std::vector<std::future<int> > workitem_future;
   int rc;
   int overall_rc = EXIT_SUCCESS;
+  int count = 0;
 
   for (int i = 0; i < parsed_struct.router_states_size(); i++) {
     ACA_LOG_DEBUG("=====>parsing router states #%d\n", i);
@@ -262,9 +296,20 @@ int Aca_Goal_State_Handler::update_router_states(GoalState &parsed_struct,
     workitem_future.push_back(std::async(
             std::launch::async, &Aca_Goal_State_Handler::update_router_state_workitem, this,
             current_RouterState, std::ref(parsed_struct), std::ref(gsOperationReply)));
+    if (count % resource_state_processing_batch_size == 0){
+      for (int i = 0; i < workitem_future.size(); i++) {
+        rc = workitem_future[i].get();
+        if (rc != EXIT_SUCCESS)
+          overall_rc = rc;
+      }
+      workitem_future.clear();
+      count = 0;
+    }else{
+      count ++;
+    }
   }
 
-  for (int i = 0; i < parsed_struct.router_states_size(); i++) {
+  for (int i = 0; i < workitem_future.size(); i++) {
     rc = workitem_future[i].get();
     if (rc != EXIT_SUCCESS)
       overall_rc = rc;
@@ -296,8 +341,7 @@ int Aca_Goal_State_Handler::update_neighbor_states(GoalStateV2 &parsed_struct,
             std::launch::async, &Aca_Goal_State_Handler::update_neighbor_state_workitem_v2,
             this, current_NeighborState, std::ref(parsed_struct),
             std::ref(gsOperationReply)));
-    if (count % 10000 == 0){
-      ACA_LOG_INFO("%s\n", "Need to get the results of these 10000 neighbor updates before proceeding");
+    if (count % resource_state_processing_batch_size == 0){
       for (int i = 0 ; i < workitem_future.size(); i++){
         rc = workitem_future[i].get();
         if (rc != EXIT_SUCCESS){
@@ -334,6 +378,7 @@ int Aca_Goal_State_Handler::update_router_states(GoalStateV2 &parsed_struct,
   std::vector<std::future<int> > workitem_future;
   int rc;
   int overall_rc = EXIT_SUCCESS;
+  int count = 0;
 
   for (auto &[router_id, current_RouterState] : parsed_struct.router_states()) {
     ACA_LOG_DEBUG("=====>parsing router state: %s\n", router_id.c_str());
@@ -341,9 +386,20 @@ int Aca_Goal_State_Handler::update_router_states(GoalStateV2 &parsed_struct,
     workitem_future.push_back(std::async(
             std::launch::async, &Aca_Goal_State_Handler::update_router_state_workitem_v2, this,
             current_RouterState, std::ref(parsed_struct), std::ref(gsOperationReply)));
+    if (count % resource_state_processing_batch_size == 0){
+      for (int i = 0; i < workitem_future.size(); i++) {
+        rc = workitem_future[i].get();
+        if (rc != EXIT_SUCCESS)
+          overall_rc = rc;
+      }
+      workitem_future.clear();
+      count = 0;
+    }else{
+      count ++;
+    }
   }
 
-  for (int i = 0; i < parsed_struct.router_states_size(); i++) {
+  for (int i = 0; i < workitem_future.size(); i++) {
     rc = workitem_future[i].get();
     if (rc != EXIT_SUCCESS)
       overall_rc = rc;
