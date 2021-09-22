@@ -20,7 +20,8 @@
 #define STDOUT_FILENO   1   /* Standard output.  */
 
 #include <openvswitch/ofp-errors.h>
-#include <openvswitch/ofp-packet.h>
+//#include <openvswitch/ofp-packet.h>
+#include <openvswitch/ofp-util.h>
 #include <string>
 
 // OVS monitor implementation class

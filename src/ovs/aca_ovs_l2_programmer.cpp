@@ -21,6 +21,16 @@
 #include <chrono>
 #include <thread>
 #include <errno.h>
+#include <boost/algorithm/string/classification.hpp> // Include boost::for is_any_of
+#include <boost/algorithm/string/split.hpp> // Include for boost::split
+#include <arpa/inet.h>
+#include <sys/socket.h>
+#include <netdb.h>
+#include <ifaddrs.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <linux/if_link.h>
 
 using namespace std;
 using namespace aca_vlan_manager;
@@ -34,7 +44,6 @@ extern bool g_demo_mode;
 
 namespace aca_ovs_l2_programmer
 {
-
 static int aca_set_port_vlan_workitem(const string port_name, uint vlan_id)
 {
   ACA_LOG_DEBUG("%s", "aca_set_port_vlan_workitem ---> Entering\n");
@@ -82,6 +91,74 @@ ACA_OVS_L2_Programmer &ACA_OVS_L2_Programmer::get_instance()
   // It is instantiated on first use.
   static ACA_OVS_L2_Programmer instance;
   return instance;
+}
+
+bool ACA_OVS_L2_Programmer::is_ip_on_the_same_host(const std::string host_ip)
+{
+  return std::find(this->host_ips_vector.begin(), this->host_ips_vector.end(),
+                   host_ip) != this->host_ips_vector.end();
+}
+
+void ACA_OVS_L2_Programmer::get_local_host_ips()
+{
+  struct ifaddrs *ifaddr, *ifa;
+  int family, s, n;
+  char host[NI_MAXHOST];
+
+  if (getifaddrs(&ifaddr) == -1) {
+    perror("getifaddrs");
+    exit(EXIT_FAILURE);
+  }
+
+  /* Walk through linked list, maintaining head pointer so we
+       can free list later */
+
+  for (ifa = ifaddr, n = 0; ifa != NULL; ifa = ifa->ifa_next, n++) {
+    if (ifa->ifa_addr == NULL)
+      continue;
+
+    family = ifa->ifa_addr->sa_family;
+
+    /* Display interface name and family (including symbolic
+           form of the latter for the common families) */
+
+    ACA_LOG_INFO("%-8s %s (%d)\n", ifa->ifa_name,
+                 (family == AF_PACKET) ? "AF_PACKET" :
+                 (family == AF_INET)   ? "AF_INET" :
+                 (family == AF_INET6)  ? "AF_INET6" :
+                                         "???",
+                 family);
+
+    /* For an AF_INET* interface address, display the address */
+
+    if (family == AF_INET || family == AF_INET6) {
+      s = getnameinfo(ifa->ifa_addr,
+                      (family == AF_INET) ? sizeof(struct sockaddr_in) :
+                                            sizeof(struct sockaddr_in6),
+                      host, NI_MAXHOST, NULL, 0, NI_NUMERICHOST);
+      if (s != 0) {
+        ACA_LOG_WARN("getnameinfo() failed: %s\n", gai_strerror(s));
+        exit(EXIT_FAILURE);
+      }
+
+      ACA_LOG_INFO("\t\taddress: <%s>\n", host);
+      std::string host_ip_string = std::string(host);
+      host_ips_vector.push_back(host_ip_string);
+    }
+  }
+
+  freeifaddrs(ifaddr);
+
+  vector<string>::iterator it = host_ips_vector.begin();
+  while (it != host_ips_vector.end()) {
+    ACA_LOG_DEBUG("Current Host IP: [%s]\n", it->c_str());
+    if (it->empty()) {
+      ACA_LOG_DEBUG("Removing empty IP: [%s]\n", it->c_str());
+      it = host_ips_vector.erase(it);
+    } else {
+      it++;
+    }
+  }
 }
 
 int ACA_OVS_L2_Programmer::setup_ovs_bridges_if_need()
@@ -133,38 +210,12 @@ int ACA_OVS_L2_Programmer::setup_ovs_bridges_if_need()
                           "-- set interface patch-int type=patch options:peer=patch-tun",
                           not_care_culminative_time, overall_rc);
 
-    // adding default flows
-    // details at: https://github.com/futurewei-cloud/alcor-control-agent/wiki/Openflow-Tables-Explain
-
-    execute_openflow_command("add-flow br-tun \"table=0,priority=50,arp,arp_op=1, actions=CONTROLLER\"",
-                             not_care_culminative_time, overall_rc);
-
-    execute_openflow_command("add-flow br-tun \"table=0,priority=1,in_port=\"patch-int\" actions=resubmit(,2)\"",
-                             not_care_culminative_time, overall_rc);
-
-    execute_openflow_command("add-flow br-tun \"table=2,priority=1,dl_dst=00:00:00:00:00:00/01:00:00:00:00:00 actions=resubmit(,20)\"",
-                             not_care_culminative_time, overall_rc);
-
-    execute_openflow_command("add-flow br-tun \"table=2,priority=1,dl_dst=01:00:00:00:00:00/01:00:00:00:00:00 actions=resubmit(,22)\"",
-                             not_care_culminative_time, overall_rc);
-
-    execute_openflow_command("add-flow br-tun \"table=20,priority=1 actions=CONTROLLER\"",
-                             not_care_culminative_time, overall_rc);
-
-    execute_openflow_command("add-flow br-tun \"table=2,priority=25,icmp,icmp_type=8,in_port=\"patch-int\" actions=resubmit(,52)\"",
-                             not_care_culminative_time, overall_rc);
-
-    execute_openflow_command("add-flow br-tun \"table=52,priority=1 actions=resubmit(,20)\"",
-                             not_care_culminative_time, overall_rc);
-
     execute_ovsdb_command(
             string("--may-exist add-port br-tun vxlan-generic -- set interface vxlan-generic ofport_request=") +
                     VXLAN_GENERIC_OUTPORT_NUMBER +
                     " type=vxlan options:df_default=true options:egress_pkt_mark=0 options:in_key=flow options:out_key=flow options:remote_ip=flow",
             not_care_culminative_time, overall_rc);
 
-    execute_openflow_command("add-flow br-tun \"table=0,priority=25,in_port=\"vxlan-generic\" actions=resubmit(,4)\"",
-                             not_care_culminative_time, overall_rc);
     setup_ovs_bridges_mutex.unlock();
     // -----critical section ends-----
 
@@ -195,6 +246,147 @@ int ACA_OVS_L2_Programmer::setup_ovs_bridges_if_need()
                 overall_rc);
 
   return overall_rc;
+}
+
+int ACA_OVS_L2_Programmer::setup_ovs_controller(const std::string ctrler_ip, const int ctrler_port)
+{
+  int rc = EXIT_SUCCESS;
+
+  const string ctrler_endpoint = " tcp:" + ctrler_ip + ":" + to_string(ctrler_port);
+  const string br_int_str = "br-int";
+  const string br_tun_str = "br-tun";
+  const string setup_br_int_cmd = "set-controller " + br_int_str + ctrler_endpoint;
+  const string setup_br_tun_cmd = "set-controller " + br_tun_str + ctrler_endpoint;
+
+  ACA_LOG_DEBUG("%s", "ACA_OVS_L2_Programmer::setup_ovs_controller ---> Entering\n");
+
+  // get bridge and dpid mappings from ovs
+  std::unordered_map<uint64_t, std::string> switch_dpid_map = get_ovs_bridge_mapping();
+
+  // get system port name and ofportid mappings from ovs
+  std::unordered_map<std::string, std::string> port_id_map = get_system_port_ids();
+
+  // set bridge controller will clean up flows
+  auto ovsdb_client_start = chrono::steady_clock::now();
+  string br_int_cmd_string = "ovs-vsctl " + setup_br_int_cmd;
+  rc = aca_net_config::Aca_Net_Config::get_instance().execute_system_command(br_int_cmd_string);
+  if (rc != EXIT_SUCCESS) {
+    ACA_LOG_ERROR("ACA_OVS_L2_Programmer::setup_ovs_controller - failed to set br-int controller\n");
+  }
+
+  string br_tun_cmd_string = "ovs-vsctl " + setup_br_tun_cmd;
+  rc = aca_net_config::Aca_Net_Config::get_instance().execute_system_command(br_tun_cmd_string);
+  if (rc != EXIT_SUCCESS) {
+    ACA_LOG_ERROR("ACA_OVS_L2_Programmer::setup_ovs_controller - failed to set br-tun controller\n");
+  }
+
+  auto ovsdb_client_end = chrono::steady_clock::now();
+  auto ovsdb_client_time_total_time =
+          cast_to_microseconds(ovsdb_client_end - ovsdb_client_start).count();
+  g_total_execute_ovsdb_time += ovsdb_client_time_total_time;
+
+  ACA_LOG_INFO("ACA_OVS_L2_Programmer::setup_ovs_controller - Elapsed time for ovsdb client call took: %ld microseconds or %ld milliseconds\n",
+               ovsdb_client_time_total_time, us_to_ms(ovsdb_client_time_total_time));
+
+  // start local ovs server (openflow controller)
+  ofctrl = new OFController(switch_dpid_map, port_id_map, ctrler_ip.c_str(), ctrler_port);
+  ofctrl->start();
+
+  ACA_LOG_DEBUG("ACA_OVS_L2_Programmer::setup_ovs_controller <--- Exiting\n");
+
+  return rc;
+}
+
+void ACA_OVS_L2_Programmer::clean_up_ovs_controller()
+{
+  if (ofctrl != NULL)
+  {
+    ofctrl->stop();
+    delete ofctrl;
+    ofctrl = NULL;
+    ACA_LOG_INFO("%s", "ACA_OVS_L2_Programmer::clean_up_ovs_controller - cleaned up ovs controller.\n");
+  }
+  else
+  {
+    ACA_LOG_INFO("%s", "ACA_OVS_L2_Programmer::clean_up_ovs_controller - unable to clean up ovs controller, since it is null.\n");
+  }
+}
+
+std::string ACA_OVS_L2_Programmer::get_system_port_id(std::string port_name)
+{
+  return port_id_map[port_name];
+}
+
+std::unordered_map<std::string, std::string> ACA_OVS_L2_Programmer::get_system_port_ids()
+{
+  // these 2 system ports belong to br-tun
+  const string patch_int_port = "patch-int";
+  const string vxlan_generic_port = "vxlan-generic";
+
+  ACA_LOG_DEBUG("%s", "ACA_OVS_L2_Programmer::get_system_port_ids ---> Entering\n");
+  auto ovsdb_client_start = chrono::steady_clock::now();
+
+  string patch_int_ofport_query = "ovs-vsctl get Interface " + patch_int_port + " ofport";
+  string patch_int_ofport_id = aca_net_config::Aca_Net_Config::get_instance().execute_system_command_with_return(patch_int_ofport_query);
+  ACA_LOG_DEBUG("ACA_OVS_L2_Programmer::get_system_port_ids - adding %s - %s mapping to port_id_map\n", patch_int_port.c_str(), patch_int_ofport_id.c_str());
+  port_id_map[patch_int_port] = patch_int_ofport_id;
+
+  string vxlan_ofport_query = "ovs-vsctl get Interface " + vxlan_generic_port + " ofport";
+  string vxlan_ofport_id = aca_net_config::Aca_Net_Config::get_instance().execute_system_command_with_return(vxlan_ofport_query);
+  ACA_LOG_DEBUG("ACA_OVS_L2_Programmer::get_system_port_ids - adding %s - %s mapping to port_id_map\n", vxlan_generic_port.c_str(), vxlan_ofport_id.c_str());
+  port_id_map[vxlan_generic_port] = vxlan_ofport_id;
+
+  auto ovsdb_client_end = chrono::steady_clock::now();
+  auto ovsdb_client_time_total_time =
+          cast_to_microseconds(ovsdb_client_end - ovsdb_client_start).count();
+
+  g_total_execute_ovsdb_time += ovsdb_client_time_total_time;
+
+  ACA_LOG_INFO("ACA_OVS_L2_Programmer::get_system_port_ids - Elapsed time for ovsdb client call took: %ld microseconds or %ld milliseconds\n",
+               ovsdb_client_time_total_time, us_to_ms(ovsdb_client_time_total_time));
+
+  ACA_LOG_DEBUG("ACA_OVS_L2_Programmer::get_system_port_ids <--- Exiting\n");
+
+  return port_id_map;
+}
+
+std::unordered_map<uint64_t, std::string> ACA_OVS_L2_Programmer::get_ovs_bridge_mapping()
+{
+  const string br_int_str = "br-int";
+  const string br_tun_str = "br-tun";
+  const string get_br_int_dpid = "get Bridge " + br_int_str + " datapath_id";
+  const string get_br_tun_dpid = "get Bridge " + br_tun_str + " datapath_id";
+  std::unordered_map<uint64_t, std::string> switch_dpid_map;
+
+  ACA_LOG_DEBUG("%s", "ACA_OVS_L2_Programmer::get_ovs_bridge_mapping ---> Entering\n");
+  auto ovsdb_client_start = chrono::steady_clock::now();
+
+  string br_int_cmd_string = "ovs-vsctl " + get_br_int_dpid;
+  // raw string output format is like a hex string "00003af45ed7aa45"
+  string br_int_dpid_raw = aca_net_config::Aca_Net_Config::get_instance().execute_system_command_with_return(br_int_cmd_string);
+  // trim the (") symbol at the start and the end to get 00003af45ed7aa45, and then convert to decimal
+  uint64_t br_int_dpid = std::stoul(br_int_dpid_raw.substr(1, br_int_dpid_raw.length() - 3), nullptr, 16);
+  ACA_LOG_DEBUG("ACA_OVS_L2_Programmer::get_ovs_bridge_mapping - adding %ld - %s mapping to switch_dpid_map\n", br_int_dpid, br_int_str.c_str());
+  switch_dpid_map[br_int_dpid] = br_int_str;
+
+  string br_tun_cmd_string = "ovs-vsctl " + get_br_tun_dpid;
+  string br_tun_dpid_raw = aca_net_config::Aca_Net_Config::get_instance().execute_system_command_with_return(br_tun_cmd_string);
+  uint64_t br_tun_dpid = std::stoul(br_tun_dpid_raw.substr(1, br_tun_dpid_raw.length() - 3), nullptr, 16);
+  ACA_LOG_DEBUG("ACA_OVS_L2_Programmer::get_ovs_bridge_mapping - adding %ld - %s mapping to switch_dpid_map\n", br_tun_dpid, br_tun_str.c_str());
+  switch_dpid_map[br_tun_dpid] = br_tun_str;
+
+  auto ovsdb_client_end = chrono::steady_clock::now();
+  auto ovsdb_client_time_total_time =
+          cast_to_microseconds(ovsdb_client_end - ovsdb_client_start).count();
+
+  g_total_execute_ovsdb_time += ovsdb_client_time_total_time;
+
+  ACA_LOG_INFO("ACA_OVS_L2_Programmer::get_ovs_bridge_mapping - Elapsed time for ovsdb client call took: %ld microseconds or %ld milliseconds\n",
+               ovsdb_client_time_total_time, us_to_ms(ovsdb_client_time_total_time));
+
+  ACA_LOG_DEBUG("ACA_OVS_L2_Programmer::get_ovs_bridge_mapping <--- Exiting\n");
+
+  return switch_dpid_map;
 }
 
 int ACA_OVS_L2_Programmer::create_port(const string vpc_id, const string port_name,
@@ -441,6 +633,59 @@ void ACA_OVS_L2_Programmer::execute_openflow_command(const std::string cmd_strin
                us_to_ms(openflow_client_time_total_time), rc);
 
   ACA_LOG_DEBUG("ACA_OVS_L2_Programmer::execute_openflow_command <--- Exiting, rc = %d\n", rc);
+}
+
+void ACA_OVS_L2_Programmer::execute_openflow(ulong &culminative_time,
+                                             const std::string bridge,
+                                             const std::string flow_string,
+                                             const std::string action)
+{
+  ACA_LOG_DEBUG("%s", "ACA_OVS_L2_Programmer::execute_openflow ---> Entering\n");
+  auto openflow_client_start = chrono::steady_clock::now();
+
+  if (NULL != ofctrl) {
+    ofctrl->execute_flow(bridge, flow_string, action);
+  } else {
+    ACA_LOG_ERROR("%s", "ACA_OVS_L2_Programmer::execute_openflow didn't find OF controller\n");
+  }
+
+  auto openflow_client_end = chrono::steady_clock::now();
+  auto openflow_client_time_total_time =
+          cast_to_microseconds(openflow_client_end - openflow_client_start).count();
+
+  culminative_time += openflow_client_time_total_time;
+
+  g_total_execute_openflow_time += openflow_client_time_total_time;
+
+  ACA_LOG_INFO("Elapsed time for openflow client call took: %ld microseconds or %ld milliseconds.\n",
+               openflow_client_time_total_time,
+               us_to_ms(openflow_client_time_total_time));
+
+  ACA_LOG_DEBUG("%s", "ACA_OVS_L2_Programmer::execute_openflow ---> Exiting\n");
+}
+
+void ACA_OVS_L2_Programmer::packet_out(const char *bridge, const char *options)
+{
+  ACA_LOG_DEBUG("%s", "ACA_OVS_L2_Programmer::packet_out ---> Entering\n");
+  auto openflow_client_start = chrono::steady_clock::now();
+
+  if (NULL != ofctrl) {
+      ofctrl->packet_out(bridge, options);
+  } else {
+      ACA_LOG_ERROR("%s", "ACA_OVS_L2_Programmer::packet_out didn't find OF controller\n");
+  }
+
+  auto openflow_client_end = chrono::steady_clock::now();
+  auto openflow_client_time_total_time =
+          cast_to_microseconds(openflow_client_end - openflow_client_start).count();
+
+  g_total_execute_openflow_time += openflow_client_time_total_time;
+
+  ACA_LOG_INFO("Elapsed time for openflow client call took: %ld microseconds or %ld milliseconds.\n",
+               openflow_client_time_total_time,
+               us_to_ms(openflow_client_time_total_time));
+
+  ACA_LOG_DEBUG("%s", "ACA_OVS_L2_Programmer::packet_out ---> Exiting\n");
 }
 
 } // namespace aca_ovs_l2_programmer

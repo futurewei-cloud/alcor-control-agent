@@ -14,14 +14,23 @@
 
 #include "aca_log.h"
 #include "aca_util.h"
-#include "aca_ovs_control.h"
 #include "aca_message_pulsar_consumer.h"
 #include "aca_grpc.h"
 #include "aca_grpc_client.h"
+
+#undef UNUSED
+#include "of_controller.h"
 #include "aca_ovs_l2_programmer.h"
+
+#undef OFP_ASSERT
+#undef CONTAINER_OF
+#undef ARRAY_SIZE
+#undef ROUND_UP
 #include "aca_ovs_control.h"
+
 #include "goalstateprovisioner.grpc.pb.h"
 #include <thread>
+#include <chrono>
 #include <unistd.h> /* for getopt */
 #include <grpcpp/grpcpp.h>
 #include <cmath>
@@ -45,8 +54,6 @@ using namespace std;
 // Global variables
 std::thread *g_grpc_server_thread = NULL;
 std::thread *g_grpc_client_thread = NULL;
-std::thread *ovs_monitor_brtun_thread = NULL;
-std::thread *ovs_monitor_brint_thread = NULL;
 GoalStateProvisionerAsyncServer *g_grpc_server = NULL;
 GoalStateProvisionerClientImpl *g_grpc_client = NULL;
 string g_broker_list = EMPTY_STRING;
@@ -58,6 +65,8 @@ string g_ofctl_target = EMPTY_STRING;
 string g_ofctl_options = EMPTY_STRING;
 string g_ncm_address = EMPTY_STRING;
 string g_ncm_port = EMPTY_STRING;
+string g_ovs_ctrl_address = "127.0.0.1";
+int g_ovs_ctrl_port = 1234;
 
 // total time for execute_system_command in microseconds
 std::atomic_ulong g_total_execute_system_time(0);
@@ -111,7 +120,6 @@ static void aca_cleanup()
   // Stop sets a private variable running_ to False
   // The Dispatch checks the variable in a loop and stops when running is
   // no longer set to True.
-
   if (g_grpc_server != NULL) {
     g_grpc_server->ShutDownServer();
     delete g_grpc_server;
@@ -129,7 +137,7 @@ static void aca_cleanup()
     ACA_LOG_ERROR("%s", "Unable to call delete, grpc server thread pointer is null.\n");
   }
 
-  //stops the grpc client
+  // Stop the grpc client
   if (g_grpc_client != NULL) {
     delete g_grpc_client;
     g_grpc_client = NULL;
@@ -145,6 +153,10 @@ static void aca_cleanup()
   } else {
     ACA_LOG_ERROR("%s", "Unable to call delete, grpc client thread pointer is null.\n");
   }
+
+  // Stop the ovs controller and clean up
+  aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().clean_up_ovs_controller();
+
   ACA_LOG_CLOSE();
 }
 
@@ -206,7 +218,7 @@ int main(int argc, char *argv[])
     case 'd':
       g_debug_mode = true;
       break;
-    default: /* the '?' case when the option is not recognized */
+    default: //the '?' case when the option is not recognized
       fprintf(stderr,
               "Usage: %s\n"
               "\t\t[-a NCM IP Address]\n"
@@ -249,11 +261,12 @@ int main(int argc, char *argv[])
   g_grpc_server_thread->detach();
 
   // Create a separate thread to run the grpc client.
-
   g_grpc_client = new GoalStateProvisionerClientImpl();
   g_grpc_client_thread = new std::thread(
           std::bind(&GoalStateProvisionerClientImpl::RunClient, g_grpc_client));
   g_grpc_client_thread->detach();
+
+  aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().get_local_host_ips();
 
   rc = aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().setup_ovs_bridges_if_need();
   if (rc == EXIT_FAILURE) {
@@ -261,17 +274,24 @@ int main(int argc, char *argv[])
     aca_cleanup();
     return rc;
   }
-  // monitor br-int for dhcp request message
-  ovs_monitor_brint_thread =
-          new thread(bind(&ACA_OVS_Control::monitor,
-                          &ACA_OVS_Control::get_instance(), "br-int", "resume"));
-  ovs_monitor_brint_thread->detach();
 
-  // monitor br-tun for arp request message
-  ACA_OVS_Control::get_instance().monitor("br-tun", "resume");
+  // setup ovs controller with server ip address and port number, will be used for openflow operations
+  aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().setup_ovs_controller(g_ovs_ctrl_address, g_ovs_ctrl_port);
+
+  //// monitor br-int for dhcp request message
+  //ovs_monitor_brint_thread =
+  //        new thread(bind(&ACA_OVS_Control::monitor,
+  //                        &ACA_OVS_Control::get_instance(), "br-int", "resume"));
+  //ovs_monitor_brint_thread->detach();
+
+  //// monitor br-tun for arp request message
+  //ACA_OVS_Control::get_instance().monitor("br-tun", "resume");
 
   ACA_Message_Pulsar_Consumer network_config_consumer(g_broker_list, g_pulsar_subsription_name);
   rc = network_config_consumer.consumeDispatched(g_pulsar_topic);
+
+  pause();
   aca_cleanup();
+
   return rc;
 }

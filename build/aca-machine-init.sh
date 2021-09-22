@@ -1,3 +1,5 @@
+#!/bin/bash
+
 # MIT License
 # Copyright(c) 2020 Futurewei Cloud
 #
@@ -12,20 +14,30 @@
 #     FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
 #     WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-#!/bin/bash
-
 BUILD="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 echo "build path is $BUILD"
 
+rm -rf /var/local/git
+mkdir -p /var/local/git
+
 # TODO: remove the unneeded dependencies
-echo "1--- installing mizar dependencies ---" && \
+echo "1--- installing common dependencies ---" && \
     apt-get update -y && apt-get install -y \
     rpcbind \
     rsyslog \
     build-essential \
+    make \
+    g++ \
+    unzip \
+    cmake \
     clang-9 \
     llvm-9 \
     libelf-dev \
+    doxygen \
+    zlib1g-dev \
+    libssl-dev \
+    libboost-program-options-dev \
+    libboost-all-dev \
     iproute2  \
     net-tools \
     iputils-ping \
@@ -35,7 +47,15 @@ echo "1--- installing mizar dependencies ---" && \
     python3-pip \
     netcat \
     libcmocka-dev \
-    lcov
+    lcov \
+    git \
+    autoconf \
+    automake \
+    dh-autoreconf \
+    pkg-config \
+    libtool \
+    wget \
+    uuid-dev
 pip3 install httpserver netaddr
 
 echo "2--- installing librdkafka ---" && \
@@ -105,20 +125,81 @@ echo "5--- cloning grpc repo ---" && \
     rm -rf /var/local/git/grpc && \
     cd ~
 
-OVS_RELEASE_TAG="branch-2.12"
+OVS_INCLUDE_HEADERS="include/openvswitch/compiler.h \
+    include/openvswitch/dynamic-string.h \
+    include/openvswitch/hmap.h \
+    include/openvswitch/flow.h \
+    include/openvswitch/geneve.h \
+    include/openvswitch/json.h \
+    include/openvswitch/list.h \
+    include/openvswitch/netdev.h \
+    include/openvswitch/match.h \
+    include/openvswitch/meta-flow.h \
+    include/openvswitch/ofpbuf.h \
+    include/openvswitch/ofp-actions.h \
+    include/openvswitch/ofp-ed-props.h \
+    include/openvswitch/ofp-errors.h \
+    include/openvswitch/ofp-msgs.h \
+    include/openvswitch/ofp-parse.h \
+    include/openvswitch/ofp-print.h \
+    include/openvswitch/ofp-prop.h \
+    include/openvswitch/ofp-util.h \
+    include/openvswitch/packets.h \
+    include/openvswitch/poll-loop.h \
+    include/openvswitch/rconn.h \
+    include/openvswitch/shash.h \
+    include/openvswitch/thread.h \
+    include/openvswitch/token-bucket.h \
+    include/openvswitch/tun-metadata.h \
+    include/openvswitch/type-props.h \
+    include/openvswitch/types.h \
+    include/openvswitch/util.h \
+    include/openvswitch/uuid.h \
+    include/openvswitch/version.h \
+    include/openvswitch/vconn.h \
+    include/openvswitch/vlog.h \
+    include/openvswitch/nsh.h "
+OPENFLOW_HEADERS="include/openflow/intel-ext.h \
+    include/openflow/netronome-ext.h \
+    include/openflow/nicira-ext.h \
+    include/openflow/openflow-1.0.h \
+    include/openflow/openflow-1.1.h \
+    include/openflow/openflow-1.2.h \
+    include/openflow/openflow-1.3.h \
+    include/openflow/openflow-1.4.h \
+    include/openflow/openflow-1.5.h \
+    include/openflow/openflow-1.6.h \
+    include/openflow/openflow-common.h \
+    include/openflow/openflow.h "
 echo "6--- installing openvswitch dependancies ---" && \
-    git clone -b $OVS_RELEASE_TAG https://github.com/openvswitch/ovs.git /var/local/git/openvswitch && \
+    sudo rm -f /tmp/get-pip.py > /dev/null 2>&1 && \
+    sudo apt-get install -y python2.7 && \
+    sudo wget https://bootstrap.pypa.io/pip/2.7/get-pip.py -O /tmp/get-pip.py && \
+    sudo python2.7 /tmp/get-pip.py && \
+    sudo pip2 install six && \
+    apt-get install -y libevent-dev && \
+    mkdir -p /var/local/git/openvswitch && \
+    git clone -b "branch-2.12" https://github.com/openvswitch/ovs.git /var/local/git/openvswitch && \
     cd /var/local/git/openvswitch && \
     ./boot.sh && \
     ./configure --prefix=/usr/local --localstatedir=/var --sysconfdir=/etc --enable-shared --enable-ndebug && \
     make && \
     make install && \
-    cp /var/local/git/openvswitch/lib/vconn-provider.h /usr/local/include/openvswitch/vconn-provider.h && \
+    cp ./lib/vconn-provider.h /usr/local/include/openvswitch && \
+    cp ./include/openvswitch/namemap.h /usr/local/include/openvswitch && \
+    cd /var/local/git/openvswitch && \
+    wget https://www.openvswitch.org/releases/openvswitch-2.9.8.tar.gz && \
+    tar -xvzf openvswitch-2.9.8.tar.gz && \
+    cd openvswitch-2.9.8 && \
+    ./configure && make && \
+    cp $OVS_INCLUDE_HEADERS /usr/local/include/openvswitch && \
+    cp $OPENFLOW_HEADERS /usr/local/include/openflow && \
+    cp ./lib/.libs/libopenvswitch.a /usr/local/lib/ && \
     rm -rf /var/local/git/openvswitch && \
     test -f /usr/bin/ovs-vsctl && rm -rf /usr/local/sbin/ov* /usr/local/bin/ov* /usr/local/bin/vtep* && \
     cd ~
 
-PULSAR_RELEASE_TAG='pulsar-2.6.1'
+PULSAR_RELEASE_TAG='pulsar-2.8.0'
 echo "7--- installing pulsar dependacies ---" && \
     mkdir -p /var/local/git/pulsar && \
     wget https://archive.apache.org/dist/pulsar/${PULSAR_RELEASE_TAG}/DEB/apache-pulsar-client.deb -O /var/local/git/pulsar/apache-pulsar-client.deb && \
@@ -129,9 +210,13 @@ echo "7--- installing pulsar dependacies ---" && \
     cd ~
 
 echo "8--- building alcor-control-agent"
-cd $BUILD/.. && cmake . && make
-
-if [ "$1" == "delete-bridges" ]; then
+cd $BUILD/.. && cmake . && \
+# after cmake ., modify the generated link.txt s so that the "-lssl" and "-lcrypto" appears after the openvswitch, so that it can compile
+sed -i 's/\(-ldl -lrt -lm -lpthread\)/-lssl -lcrypto \1/' src/CMakeFiles/AlcorControlAgent.dir/link.txt && \
+sed -i 's/\(-ldl -lrt -lm -lpthread\)/-lssl -lcrypto \1/' test/CMakeFiles/aca_tests.dir/link.txt && \
+sed -i 's/\(-ldl -lrt -lm -lpthread\)/-lssl -lcrypto \1/' test/CMakeFiles/gs_tests.dir/link.txt && \
+make
+if [ -n "$1" -a "$1" = "delete-bridges" ]; then
   echo "9--- deleting br-tun and br-int if requested"
   PATH=$PATH:/usr/local/share/openvswitch/scripts \
       LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib

@@ -16,7 +16,10 @@
 #define ACA_OVS_L2_PROGRAMMER_H
 
 #include "goalstateprovisioner.grpc.pb.h"
+#undef UNUSED
+#include "of_controller.h"
 #include <string>
+#include <unordered_map>
 
 #define PRIORITY_HIGH 50
 #define PRIORITY_MID 25
@@ -29,7 +32,17 @@ class ACA_OVS_L2_Programmer {
   public:
   static ACA_OVS_L2_Programmer &get_instance();
 
+  void get_local_host_ips();
+
+  bool is_ip_on_the_same_host(const std::string hosting_port_ip);
+
   int setup_ovs_bridges_if_need();
+
+  int setup_ovs_controller(const std::string ctrler_ip, const int ctrler_port);
+
+  void clean_up_ovs_controller();
+
+  std::string get_system_port_id(std::string port_name);
 
   int create_port(const std::string vpc_id, const std::string port_name,
                   const std::string virtual_ip, const std::string virtual_mac,
@@ -51,13 +64,29 @@ class ACA_OVS_L2_Programmer {
   void execute_openflow_command(const std::string cmd_string,
                                 ulong &culminative_time, int &overall_rc);
 
+  void execute_openflow(ulong &culminative_time,
+                        const std::string bridge,
+                        const std::string flow_string,
+                        const std::string action = "add");
+
+  void packet_out(const char *bridge, const char *options);
+
   // compiler will flag the error when below is called.
   ACA_OVS_L2_Programmer(ACA_OVS_L2_Programmer const &) = delete;
   void operator=(ACA_OVS_L2_Programmer const &) = delete;
 
   private:
+  OFController* ofctrl;
+  std::unordered_map<std::string, std::string> port_id_map;
+  std::vector<std::string> host_ips_vector;
+
   ACA_OVS_L2_Programmer(){};
+
   ~ACA_OVS_L2_Programmer(){};
+
+  std::unordered_map<uint64_t, std::string> get_ovs_bridge_mapping();
+
+  std::unordered_map<std::string, std::string> get_system_port_ids();
 };
 } // namespace aca_ovs_l2_programmer
 #endif // #ifndef ACA_OVS_L2_PROGRAMMER_H

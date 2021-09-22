@@ -1,3 +1,5 @@
+#!/bin/bash
+
 # MIT License
 # Copyright(c) 2020 Futurewei Cloud
 #
@@ -11,8 +13,6 @@
 #     THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 #     FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
 #     WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-
-#!/bin/bash
 
 BUILD="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 echo "build path is $BUILD"
@@ -32,14 +32,20 @@ docker start a1
 if [ "$1" != "test" ]; then
   # Build alcor control agent
   echo "--- building alcor-control-agent ---"
-  docker exec a1 bash -c "cd /mnt/host/code && cmake . && make && \
+  docker exec a1 bash -c "cd /mnt/host/code && cmake . && \ 
+    sed -i 's/\(-ldl -lrt -lm -lpthread\)/-lssl -lcrypto \1/' src/CMakeFiles/AlcorControlAgent.dir/link.txt && \
+    sed -i 's/\(-ldl -lrt -lm -lpthread\)/-lssl -lcrypto \1/' test/CMakeFiles/aca_tests.dir/link.txt && \
+    sed -i 's/\(-ldl -lrt -lm -lpthread\)/-lssl -lcrypto \1/' test/CMakeFiles/gs_tests.dir/link.txt && make && \
     /etc/init.d/openvswitch-switch restart && \
     ovs-vswitchd --pidfile --detach"
 else
   sed -i.bak -E 's/("add-br )([a-z]+-[a-z]+)(")/\1\2 -- set bridge \2 datapath_type=netdev\3/g' $BUILD/../src/ovs/aca_ovs_l2_programmer.cpp
   # Build alcor control agent
   echo "--- building alcor-control-agent pre test ---"
-  docker exec a1 bash -c "cd /mnt/host/code && cmake . && make"
+  docker exec a1 bash -c "cd /mnt/host/code && cmake . && \
+    sed -i 's/\(-ldl -lrt -lm -lpthread\)/-lssl -lcrypto \1/' src/CMakeFiles/AlcorControlAgent.dir/link.txt && \
+    sed -i 's/\(-ldl -lrt -lm -lpthread\)/-lssl -lcrypto \1/' test/CMakeFiles/aca_tests.dir/link.txt && \
+    sed -i 's/\(-ldl -lrt -lm -lpthread\)/-lssl -lcrypto \1/' test/CMakeFiles/gs_tests.dir/link.txt && make"
 
   echo "--- Start ACA Unit test ---"
   echo "    --- rebuilding br-tun and br-int"
@@ -73,7 +79,11 @@ else
   mv -f $BUILD/../src/ovs/aca_ovs_l2_programmer.cpp.bak $BUILD/../src/ovs/aca_ovs_l2_programmer.cpp
   # Build alcor control agent
   echo "--- building alcor-control-agent post test ---"
-  docker exec a1 bash -c "cd /mnt/host/code && make"
+  docker exec a1 bash -c "cd /mnt/host/code && \
+    sed -i 's/\(-ldl -lrt -lm -lpthread\)/-lssl -lcrypto \1/' src/CMakeFiles/AlcorControlAgent.dir/link.txt && \
+    sed -i 's/\(-ldl -lrt -lm -lpthread\)/-lssl -lcrypto \1/' test/CMakeFiles/aca_tests.dir/link.txt && \
+    sed -i 's/\(-ldl -lrt -lm -lpthread\)/-lssl -lcrypto \1/' test/CMakeFiles/gs_tests.dir/link.txt && \
+    make"
 
 fi
 

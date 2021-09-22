@@ -16,21 +16,57 @@ set(SOURCES
     ./ovs/aca_vlan_manager.cpp
     ./ovs/ovs_control.cpp
     ./ovs/aca_ovs_control.cpp
+    ./ovs/aca_arp_responder.cpp
+    ./ovs/libfluid-base/base/BaseOFClient.cc
+    ./ovs/libfluid-base/base/BaseOFConnection.cc
+    ./ovs/libfluid-base/base/BaseOFServer.cc
+    ./ovs/libfluid-base/base/EventLoop.cc
+    ./ovs/libfluid-base/OFClient.cc
+    ./ovs/libfluid-base/OFConnection.cc
+    ./ovs/libfluid-base/OFServer.cc
+    ./ovs/libfluid-base/OFServerSettings.cc
+    ./ovs/libfluid-base/TLS.cc
+    ./ovs/libfluid-msg/of10/of10action.cc
+    ./ovs/libfluid-msg/of10/of10common.cc
+    ./ovs/libfluid-msg/of10/of10match.cc
+    ./ovs/libfluid-msg/of13/of13action.cc
+    ./ovs/libfluid-msg/of13/of13common.cc
+    ./ovs/libfluid-msg/of13/of13instruction.cc
+    ./ovs/libfluid-msg/of13/of13match.cc
+    ./ovs/libfluid-msg/of13/of13meter.cc
+    ./ovs/libfluid-msg/ofcommon/action.cc
+    ./ovs/libfluid-msg/ofcommon/common.cc
+    ./ovs/libfluid-msg/ofcommon/msg.cc
+    ./ovs/libfluid-msg/util/ethaddr.cc
+    ./ovs/libfluid-msg/util/ipaddr.cc
+    ./ovs/libfluid-msg/of10msg.cc
+    ./ovs/libfluid-msg/of13msg.cc
+    ./ovs/of_message.cpp
+    ./ovs/of_controller.cpp
     ./on_demand/aca_on_demand_engine.cpp
     ./dhcp/aca_dhcp_state_handler.cpp
     ./dhcp/aca_dhcp_server.cpp
     ./zeta/aca_zeta_oam_server.cpp
-    ./zeta/aca_zeta_programming.cpp  
-    ./ovs/aca_arp_responder.cpp 
+    ./zeta/aca_zeta_programming.cpp
 )
+
+#Find libevent installation
+find_path(LIBEVENT_INCLUDE_DIR
+        NAMES event2/thread.h
+        HINTS /usr/include
+        REQUIRED)
+
+FIND_LIBRARY(LIBUUID_LIBRARIES uuid)
 FIND_LIBRARY(RDKAFKA rdkafka /usr/lib/x86_64-linux-gnu NO_DEFAULT_PATH)
 FIND_LIBRARY(CPPKAFKA cppkafka /usr/local/lib NO_DEFAULT_PATH)
 FIND_LIBRARY(PULSAR pulsar /usr/lib NO_DEFAULT_PATH)
-FIND_LIBRARY(OPENVSWITCH openvswitch /usr/local/lib NO_DEFAULT_PATH)
 FIND_LIBRARY(MESSAGEMANAGER messagemanager ${CMAKE_CURRENT_SOURCE_DIR}/../include NO_DEFAULT_PATH)
-link_libraries(${RDKAFKA} ${CPPKAFKA} ${OPENVSWITCH} ${PULSAR})
+link_libraries(${RDKAFKA} ${CPPKAFKA} ${PULSAR})
 link_libraries(/usr/lib/x86_64-linux-gnu/libuuid.so)
-include_directories(${RDKAFKA_INCLUDE_DIR} ${CPPKAFKA_INCLUDE_DIR} ${OPENVSWITCH_INCLUDE_DIR} ${PULSAR_INCLUDE_DIR})
+link_libraries(/usr/lib/x86_64-linux-gnu/libevent_pthreads.so)
+link_libraries(/usr/lib/x86_64-linux-gnu/libpthread.so)
+link_libraries(/usr/local/lib/libopenvswitch.a) #this was installed by aca-machine-init.sh
+include_directories(${RDKAFKA_INCLUDE_DIR} ${CPPKAFKA_INCLUDE_DIR} ${PULSAR_INCLUDE_DIR} ${LIBEVENT_INCLUDE_DIR})
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../include)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/proto3)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/grpc)
@@ -52,12 +88,15 @@ set(_GRPC_GRPCPP_UNSECURE gRPC::grpc++_unsecure)
 set(_GRPC_CPP_PLUGIN_EXECUTABLE $<TARGET_FILE:gRPC::grpc_cpp_plugin>)
 
 add_library(AlcorControlAgentLib STATIC ${SOURCES})
+target_link_libraries(AlcorControlAgentLib event) #Libevent linking is '-levent', thus linked lib is 'event' in the cmd
+target_link_libraries(AlcorControlAgentLib ssl)
+target_link_libraries(AlcorControlAgentLib crypto)
+target_link_libraries(AlcorControlAgentLib rt)
 
 add_executable(AlcorControlAgent aca_main.cpp)
 target_link_libraries(AlcorControlAgent cppkafka)
 target_link_libraries(AlcorControlAgent rdkafka)
 target_link_libraries(AlcorControlAgent pulsar)
-target_link_libraries(AlcorControlAgent openvswitch)
 target_link_libraries(AlcorControlAgent AlcorControlAgentLib)
 target_link_libraries(AlcorControlAgent proto)
 target_link_libraries(AlcorControlAgent grpc)

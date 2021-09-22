@@ -13,6 +13,8 @@
 #     WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 FROM fwnetworking/ubuntu:18.04
+RUN rm -rf /var/local/git && mkdir -p /var/local/git
+
 RUN echo "1--- installing common dependencies ---" && \
     apt-get update -y && apt-get install -y \
     rpcbind \
@@ -108,22 +110,83 @@ RUN echo "4--- cloning grpc repo ---" && \
     rm -rf /var/local/git/grpc && \
     cd ~
 
-ENV OVS_RELEASE_TAG branch-2.12
+ENV OVS_INCLUDE_HEADERS='include/openvswitch/compiler.h \
+    include/openvswitch/dynamic-string.h \
+    include/openvswitch/hmap.h \
+    include/openvswitch/flow.h \
+    include/openvswitch/geneve.h \
+    include/openvswitch/json.h \
+    include/openvswitch/list.h \
+    include/openvswitch/netdev.h \
+    include/openvswitch/match.h \
+    include/openvswitch/meta-flow.h \
+    include/openvswitch/ofpbuf.h \
+    include/openvswitch/ofp-actions.h \
+    include/openvswitch/ofp-ed-props.h \
+    include/openvswitch/ofp-errors.h \
+    include/openvswitch/ofp-msgs.h \
+    include/openvswitch/ofp-parse.h \
+    include/openvswitch/ofp-print.h \
+    include/openvswitch/ofp-prop.h \
+    include/openvswitch/ofp-util.h \
+    include/openvswitch/packets.h \
+    include/openvswitch/poll-loop.h \
+    include/openvswitch/rconn.h \
+    include/openvswitch/shash.h \
+    include/openvswitch/thread.h \
+    include/openvswitch/token-bucket.h \
+    include/openvswitch/tun-metadata.h \
+    include/openvswitch/type-props.h \
+    include/openvswitch/types.h \
+    include/openvswitch/util.h \
+    include/openvswitch/uuid.h \
+    include/openvswitch/version.h \
+    include/openvswitch/vconn.h \
+    include/openvswitch/vlog.h \
+    include/openvswitch/nsh.h '
+ENV OPENFLOW_HEADERS='include/openflow/intel-ext.h \
+    include/openflow/netronome-ext.h \
+    include/openflow/nicira-ext.h \
+    include/openflow/openflow-1.0.h \
+    include/openflow/openflow-1.1.h \
+    include/openflow/openflow-1.2.h \
+    include/openflow/openflow-1.3.h \
+    include/openflow/openflow-1.4.h \
+    include/openflow/openflow-1.5.h \
+    include/openflow/openflow-1.6.h \
+    include/openflow/openflow-common.h \
+    include/openflow/openflow.h '
 RUN echo "5--- installing openvswitch dependancies ---" && \
-    git clone -b ${OVS_RELEASE_TAG} https://github.com/openvswitch/ovs.git /var/local/git/openvswitch && \
+    rm -f /tmp/get-pip.py > /dev/null 2>&1 && \
+    apt-get install -y python2.7 && \
+    wget https://bootstrap.pypa.io/pip/2.7/get-pip.py -O /tmp/get-pip.py && \
+    python2.7 /tmp/get-pip.py && \
+    pip2 install six && \
+    apt-get install -y libevent-dev && \
+    mkdir -p /var/local/git/openvswitch && \
+    cd /var/local/git/openvswitch && \
+    git clone -b "branch-2.12" https://github.com/openvswitch/ovs.git /var/local/git/openvswitch && \
     cd /var/local/git/openvswitch && \
     ./boot.sh && \
     ./configure --prefix=/usr/local --localstatedir=/var --sysconfdir=/etc --enable-shared --enable-ndebug && \
     make && \
     make install && \
-    mkdir -p /usr/local/include/openvswitch && \
-    cp /var/local/git/openvswitch/lib/vconn-provider.h /usr/local/include/openvswitch/vconn-provider.h && \
+    cp ./lib/vconn-provider.h /usr/local/include/openvswitch && \
+    cp ./include/openvswitch/namemap.h /usr/local/include/openvswitch && \
+    cd /var/local/git/openvswitch && \
+    wget https://www.openvswitch.org/releases/openvswitch-2.9.8.tar.gz && \
+    tar -xvzf openvswitch-2.9.8.tar.gz && \
+    cd openvswitch-2.9.8 && \
+    ./configure && make && \
+    cp ${OVS_INCLUDE_HEADERS} /usr/local/include/openvswitch && \
+    cp ${OPENFLOW_HEADERS} /usr/local/include/openflow && \
+    cp ./lib/.libs/libopenvswitch.a /usr/local/lib/ && \
     rm -rf /var/local/git/openvswitch && \
     test -f /usr/bin/ovs-vsctl && rm -rf /usr/local/sbin/ov* /usr/local/bin/ov* /usr/local/bin/vtep* && \
     cd ~
 
 ENV PULSAR_RELEASE_TAG='pulsar-2.6.1'
-RUN echo "7--- installing pulsar dependacies ---" && \
+RUN echo "6--- installing pulsar dependacies ---" && \
     mkdir -p /var/local/git/pulsar && \
     wget https://archive.apache.org/dist/pulsar/${PULSAR_RELEASE_TAG}/DEB/apache-pulsar-client.deb -O /var/local/git/pulsar/apache-pulsar-client.deb && \
     wget https://archive.apache.org/dist/pulsar/${PULSAR_RELEASE_TAG}/DEB/apache-pulsar-client-dev.deb -O /var/local/git/pulsar/apache-pulsar-client-dev.deb && \

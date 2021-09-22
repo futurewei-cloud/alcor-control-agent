@@ -21,9 +21,11 @@
 
 #include "common.pb.h"
 #include <openvswitch/ofp-errors.h>
-#include <openvswitch/ofp-packet.h>
+//#include <openvswitch/ofp-packet.h>
+#include <openvswitch/ofp-util.h>
 #include <string>
 #include <thread>
+#include <netinet/ether.h>
 #include "hashmap/HashMap.h"
 #include <grpcpp/grpcpp.h>
 #include <unordered_map>
