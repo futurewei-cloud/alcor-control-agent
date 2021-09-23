@@ -884,12 +884,16 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
               if ((current_NeighborState.operation_type() == OperationType::CREATE) ||
                   (current_NeighborState.operation_type() == OperationType::UPDATE) ||
                   (current_NeighborState.operation_type() == OperationType::INFO)) {
+                auto create_l3_neighbor_start = chrono::high_resolution_clock::now();
                 overall_rc = ACA_OVS_L3_Programmer::get_instance().create_or_update_l3_neighbor(
                         current_NeighborConfiguration.id(),
                         current_NeighborConfiguration.vpc_id(),
                         current_fixed_ip.subnet_id(), virtual_ip_address,
                         virtual_mac_address, host_ip_address, found_tunnel_id,
                         culminative_dataplane_programming_time);
+              auto create_l3_neighbor_end = chrono::high_resolution_clock::now();
+              auto create_l3_auto_neighbor_total_time =cast_to_microseconds(create_l3_neighbor_end - create_l3_neighbor_start).count();
+              std::cout<<"Creating one L3 neighbor took " << create_l3_auto_neighbor_total_time << " us, which is " << us_to_ms(create_l3_auto_neighbor_total_time) << "ms";
               } else if (current_NeighborState.operation_type() == OperationType::DELETE) {
                 overall_rc = ACA_OVS_L3_Programmer::get_instance().delete_l3_neighbor(
                         current_NeighborConfiguration.id(), current_fixed_ip.subnet_id(),
