@@ -139,7 +139,7 @@ int Aca_Goal_State_Handler::update_port_states(GoalState &parsed_struct,
   std::vector<std::future<int> > workitem_future;
   int rc;
   int overall_rc = EXIT_SUCCESS;
-  int count = 0;
+  int count = 1;
 
   for (int i = 0; i < parsed_struct.port_states_size(); i++) {
     ACA_LOG_DEBUG("=====>parsing port states #%d\n", i);
@@ -191,7 +191,7 @@ int Aca_Goal_State_Handler::update_port_states(GoalStateV2 &parsed_struct,
   std::vector<std::future<int> > workitem_future;
   int rc;
   int overall_rc = EXIT_SUCCESS;
-  int count = 0;
+  int count = 1;
   // below is a c++ 17 feature
   for (auto &[port_id, current_PortState] : parsed_struct.port_states()) {
     ACA_LOG_DEBUG("=====>parsing port state: %s\n", port_id.c_str());
@@ -239,7 +239,7 @@ int Aca_Goal_State_Handler::update_neighbor_states(GoalState &parsed_struct,
   std::vector<std::future<int> > workitem_future;
   int rc;
   int overall_rc = EXIT_SUCCESS;
-  int count = 0;
+  int count = 1;
 
   for (int i = 0; i < parsed_struct.neighbor_states_size(); i++) {
     ACA_LOG_DEBUG("=====>parsing neighbor states #%d\n", i);
@@ -286,7 +286,7 @@ int Aca_Goal_State_Handler::update_router_states(GoalState &parsed_struct,
   std::vector<std::future<int> > workitem_future;
   int rc;
   int overall_rc = EXIT_SUCCESS;
-  int count = 0;
+  int count = 1;
 
   for (int i = 0; i < parsed_struct.router_states_size(); i++) {
     ACA_LOG_DEBUG("=====>parsing router states #%d\n", i);
@@ -332,7 +332,7 @@ int Aca_Goal_State_Handler::update_neighbor_states(GoalStateV2 &parsed_struct,
   std::vector<std::future<int> > workitem_future;
   int rc;
   int overall_rc = EXIT_SUCCESS;
-  int count = 0;
+  int count = 1;
 
   for (auto &[neighbor_id, current_NeighborState] : parsed_struct.neighbor_states()) {
     ACA_LOG_DEBUG("=====>parsing neighbor state: %s\n", neighbor_id.c_str());
@@ -379,7 +379,7 @@ int Aca_Goal_State_Handler::update_router_states(GoalStateV2 &parsed_struct,
   std::vector<std::future<int> > workitem_future;
   int rc;
   int overall_rc = EXIT_SUCCESS;
-  int count = 0;
+  int count = 1;
 
   for (auto &[router_id, current_RouterState] : parsed_struct.router_states()) {
     ACA_LOG_DEBUG("=====>parsing router state: %s\n", router_id.c_str());
