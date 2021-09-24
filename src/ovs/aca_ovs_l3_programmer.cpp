@@ -917,7 +917,7 @@ int ACA_OVS_L3_Programmer::create_or_update_l3_neighbor(
         const string virtual_ip, const string virtual_mac,
         const string remote_host_ip, uint tunnel_id, ulong &culminative_time)
 {
-  ACA_LOG_DEBUG("%s", "ACA_OVS_L3_Programmer::create_or_update_l3_neighbor ---> Entering\n");
+  // ACA_LOG_DEBUG("%s", "ACA_OVS_L3_Programmer::create_or_update_l3_neighbor ---> Entering\n");
 
   int overall_rc = EXIT_SUCCESS;
   bool found_subnet_in_router = false;
@@ -959,13 +959,13 @@ int ACA_OVS_L3_Programmer::create_or_update_l3_neighbor(
   // going through our list of routers
   for (auto router_it = _routers_table.begin();
        router_it != _routers_table.end(); router_it++) {
-    ACA_LOG_DEBUG("router ID:%s\n ", router_it->first.c_str());
+    // ACA_LOG_DEBUG("router ID:%s\n ", router_it->first.c_str());
     // try to see if the destination subnet GW is connected to the current router
     auto found_subnet = router_it->second.find(subnet_id);
-    for (auto kv : router_it->second) {
-      ACA_LOG_DEBUG("[create_or_update_l3_neighbor] router ID: [%s], subnet routering table's subnet ID: [%s], subnet_id we're looking for: [%s]\n",
-                    router_it->first.c_str(), kv.first.c_str(), subnet_id.c_str());
-    }
+    // for (auto kv : router_it->second) {
+    //   ACA_LOG_DEBUG("[create_or_update_l3_neighbor] router ID: [%s], subnet routering table's subnet ID: [%s], subnet_id we're looking for: [%s]\n",
+    //                 router_it->first.c_str(), kv.first.c_str(), subnet_id.c_str());
+    // }
     if (found_subnet == router_it->second.end()) {
       // subnet not found in this router, go look at the next router
       continue;
@@ -989,7 +989,7 @@ int ACA_OVS_L3_Programmer::create_or_update_l3_neighbor(
           // because routing rule are for source packet transformation
           continue;
         }
-        ACA_LOG_DEBUG("Found L3 neighbor subnet_id:%s\n ", subnet_it->first.c_str());
+        // ACA_LOG_DEBUG("Found L3 neighbor subnet_id:%s\n ", subnet_it->first.c_str());
 
         source_vlan_id = ACA_Vlan_Manager::get_instance().get_or_create_vlan_id(
                 subnet_it->second.tunnel_id);
@@ -1031,12 +1031,12 @@ int ACA_OVS_L3_Programmer::create_or_update_l3_neighbor(
   }
 
   if (!found_subnet_in_router) {
-    ACA_LOG_ERROR("subnet_id %s not found in our local routers\n", subnet_id.c_str());
+    // ACA_LOG_ERROR("subnet_id %s not found in our local routers\n", subnet_id.c_str());
     overall_rc = ENOENT;
   }
 
-  ACA_LOG_DEBUG("ACA_OVS_L3_Programmer::create_or_update_l3_neighbor <--- Exiting, overall_rc = %d\n",
-                overall_rc);
+  // ACA_LOG_DEBUG("ACA_OVS_L3_Programmer::create_or_update_l3_neighbor <--- Exiting, overall_rc = %d\n",
+                // overall_rc);
 
   return overall_rc;
 }
