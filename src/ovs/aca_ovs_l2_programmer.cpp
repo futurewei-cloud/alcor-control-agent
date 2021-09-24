@@ -394,7 +394,7 @@ int ACA_OVS_L2_Programmer::create_port(const string vpc_id, const string port_na
                                        const string virtual_ip, const string virtual_mac,
                                        uint tunnel_id, ulong &culminative_time)
 {
-  ACA_LOG_DEBUG("%s", "ACA_OVS_L2_Programmer::create_port ---> Entering\n");
+  // ACA_LOG_DEBUG("%s", "ACA_OVS_L2_Programmer::create_port ---> Entering\n");
 
   int overall_rc = EXIT_SUCCESS;
 
@@ -482,7 +482,7 @@ int ACA_OVS_L2_Programmer::create_port(const string vpc_id, const string port_na
     }
   }
 */
-  ACA_LOG_DEBUG("ACA_OVS_L2_Programmer::create_port <--- Exiting, overall_rc = %d\n", overall_rc);
+  // ACA_LOG_DEBUG("ACA_OVS_L2_Programmer::create_port <--- Exiting, overall_rc = %d\n", overall_rc);
 
   return overall_rc;
 }

@@ -386,8 +386,8 @@ int ACA_Dataplane_OVS::update_port_state_workitem(const PortState current_PortSt
       SubnetConfiguration current_SubnetConfiguration =
               current_SubnetState.configuration();
 
-      ACA_LOG_DEBUG("current_SubnetConfiguration subnet ID: %s.\n",
-                    current_SubnetConfiguration.id().c_str());
+      // ACA_LOG_DEBUG("current_SubnetConfiguration subnet ID: %s.\n",
+      //               current_SubnetConfiguration.id().c_str());
 
       found_network_type = current_SubnetConfiguration.network_type();
       found_tunnel_id = current_SubnetConfiguration.tunnel_id();
@@ -404,8 +404,8 @@ int ACA_Dataplane_OVS::update_port_state_workitem(const PortState current_PortSt
       // substr can throw out_of_range and bad_alloc exceptions
       found_prefix_len = found_cidr.substr(slash_pos + 1);
     } else {
-      ACA_LOG_ERROR("Not able to find the info for port with subnet ID: %s.\n",
-                    current_PortConfiguration.fixed_ips(0).subnet_id().c_str());
+      // ACA_LOG_ERROR("Not able to find the info for port with subnet ID: %s.\n",
+      //               current_PortConfiguration.fixed_ips(0).subnet_id().c_str());
       overall_rc = -EXIT_FAILURE;
     }
 
@@ -417,8 +417,8 @@ int ACA_Dataplane_OVS::update_port_state_workitem(const PortState current_PortSt
       VpcState current_VpcState = vpcStateFound->second;
       VpcConfiguration current_VpcConfiguration = current_VpcState.configuration();
 
-      ACA_LOG_DEBUG("current_VpcConfiguration VPC ID: %s.\n",
-                    current_VpcConfiguration.id().c_str());
+      // ACA_LOG_DEBUG("current_VpcConfiguration VPC ID: %s.\n",
+      //               current_VpcConfiguration.id().c_str());
 
       for (int j = 0; j < current_VpcConfiguration.gateway_ids_size(); j++) {
         auto gatewayStateFound = parsed_struct.gateway_states().find(
@@ -456,13 +456,13 @@ int ACA_Dataplane_OVS::update_port_state_workitem(const PortState current_PortSt
 
       port_cidr = virtual_ip_address + "/" + found_prefix_len;
 
-      ACA_LOG_DEBUG("Port Operation: %s: port_id: %s, vpc_id:%s, network_type:%d, "
-                    "virtual_ip_address:%s, virtual_mac_address:%s, generated_port_name: %s, port_cidr: %s, tunnel_id: %d\n",
-                    aca_get_operation_string(current_PortState.operation_type()),
-                    current_PortConfiguration.id().c_str(),
-                    current_PortConfiguration.vpc_id().c_str(), found_network_type,
-                    virtual_ip_address.c_str(), virtual_mac_address.c_str(),
-                    generated_port_name.c_str(), port_cidr.c_str(), found_tunnel_id);
+      // ACA_LOG_DEBUG("Port Operation: %s: port_id: %s, vpc_id:%s, network_type:%d, "
+      //               "virtual_ip_address:%s, virtual_mac_address:%s, generated_port_name: %s, port_cidr: %s, tunnel_id: %d\n",
+      //               aca_get_operation_string(current_PortState.operation_type()),
+      //               current_PortConfiguration.id().c_str(),
+      //               current_PortConfiguration.vpc_id().c_str(), found_network_type,
+      //               virtual_ip_address.c_str(), virtual_mac_address.c_str(),
+      //               generated_port_name.c_str(), port_cidr.c_str(), found_tunnel_id);
 
       overall_rc = ACA_OVS_L2_Programmer::get_instance().create_port(
               current_PortConfiguration.vpc_id(), generated_port_name, port_cidr,
@@ -490,12 +490,12 @@ int ACA_Dataplane_OVS::update_port_state_workitem(const PortState current_PortSt
       // another delete scenario is supported here
       // VM was created with without port specified, then delete the VM
       // ACA will receive port operation delete
-      ACA_LOG_DEBUG("Port Operation: %s: port_id: %s vpc_id:%s, network_type:%d, "
-                    "generated_port_name: %s, tunnel_id: %d\n",
-                    aca_get_operation_string(current_PortState.operation_type()),
-                    current_PortConfiguration.id().c_str(),
-                    current_PortConfiguration.vpc_id().c_str(), found_network_type,
-                    generated_port_name.c_str(), found_tunnel_id);
+      // ACA_LOG_DEBUG("Port Operation: %s: port_id: %s vpc_id:%s, network_type:%d, "
+      //               "generated_port_name: %s, tunnel_id: %d\n",
+      //               aca_get_operation_string(current_PortState.operation_type()),
+      //               current_PortConfiguration.id().c_str(),
+      //               current_PortConfiguration.vpc_id().c_str(), found_network_type,
+      //               generated_port_name.c_str(), found_tunnel_id);
 
       overall_rc = ACA_OVS_L2_Programmer::get_instance().delete_port(
               current_PortConfiguration.vpc_id(), generated_port_name,
@@ -540,13 +540,13 @@ int ACA_Dataplane_OVS::update_port_state_workitem(const PortState current_PortSt
           current_PortState.operation_type(), overall_rc, culminative_dataplane_programming_time,
           culminative_network_configuration_time, operation_total_time);
 
-  if (overall_rc == EXIT_SUCCESS) {
-    ACA_LOG_INFO("%s", "Successfully configured the port state.\n");
-  } else if (overall_rc == EINPROGRESS) {
-    ACA_LOG_INFO("Port state returned pending: rc=%d\n", overall_rc);
-  } else {
-    ACA_LOG_ERROR("Unable to configure the port state: rc=%d\n", overall_rc);
-  }
+  // if (overall_rc == EXIT_SUCCESS) {
+  //   ACA_LOG_INFO("%s", "Successfully configured the port state.\n");
+  // } else if (overall_rc == EINPROGRESS) {
+  //   ACA_LOG_INFO("Port state returned pending: rc=%d\n", overall_rc);
+  // } else {
+  //   ACA_LOG_ERROR("Unable to configure the port state: rc=%d\n", overall_rc);
+  // }
 
   return overall_rc;
 }

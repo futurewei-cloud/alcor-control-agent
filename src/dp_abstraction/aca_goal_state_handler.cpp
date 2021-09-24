@@ -156,7 +156,7 @@ int Aca_Goal_State_Handler::update_port_states(GoalState &parsed_struct,
           overall_rc = rc;
       }
       workitem_future.clear();
-      count = 0;
+      count = 1;;
     }else{
       count ++;
     }
@@ -194,7 +194,7 @@ int Aca_Goal_State_Handler::update_port_states(GoalStateV2 &parsed_struct,
   int count = 1;
   // below is a c++ 17 feature
   for (auto &[port_id, current_PortState] : parsed_struct.port_states()) {
-    ACA_LOG_DEBUG("=====>parsing port state: %s\n", port_id.c_str());
+    // ACA_LOG_DEBUG("=====>parsing port state: %s\n", port_id.c_str());
 
     workitem_future.push_back(std::async(
             std::launch::async, &Aca_Goal_State_Handler::update_port_state_workitem_v2, this,
@@ -206,7 +206,7 @@ int Aca_Goal_State_Handler::update_port_states(GoalStateV2 &parsed_struct,
           overall_rc = rc;
       }
       workitem_future.clear();
-      count = 0;
+      count = 1;;
     }else{
       count ++;
     }
@@ -257,7 +257,7 @@ int Aca_Goal_State_Handler::update_neighbor_states(GoalState &parsed_struct,
           overall_rc = rc;
       }
       workitem_future.clear();
-      count = 0;
+      count = 1;;
     }else{
       count ++;
     }
@@ -303,7 +303,7 @@ int Aca_Goal_State_Handler::update_router_states(GoalState &parsed_struct,
           overall_rc = rc;
       }
       workitem_future.clear();
-      count = 0;
+      count = 1;;
     }else{
       count ++;
     }
@@ -350,7 +350,7 @@ int Aca_Goal_State_Handler::update_neighbor_states(GoalStateV2 &parsed_struct,
         }
       }
       workitem_future.clear();
-      count = 0;
+      count = 1;;
     }else{
       count++;
     }
@@ -394,7 +394,7 @@ int Aca_Goal_State_Handler::update_router_states(GoalStateV2 &parsed_struct,
           overall_rc = rc;
       }
       workitem_future.clear();
-      count = 0;
+      count = 1;;
     }else{
       count ++;
     }
