@@ -156,8 +156,8 @@ int Aca_Goal_State_Handler::update_port_states(GoalState &parsed_struct,
           overall_rc = rc;
       }
       workitem_future.clear();
-      count = 1;;
-    }else{
+      count = 1;
+    } else {
       count ++;
     }
     // keeping below just in case if we want to call it serially
@@ -199,15 +199,15 @@ int Aca_Goal_State_Handler::update_port_states(GoalStateV2 &parsed_struct,
     workitem_future.push_back(std::async(
             std::launch::async, &Aca_Goal_State_Handler::update_port_state_workitem_v2, this,
             current_PortState, std::ref(parsed_struct), std::ref(gsOperationReply)));
-    if (count % resource_state_processing_batch_size == 0){
+    if (count % resource_state_processing_batch_size == 0) {
       for (int i = 0; i < workitem_future.size(); i++) {
         rc = workitem_future[i].get();
         if (rc != EXIT_SUCCESS)
           overall_rc = rc;
       }
       workitem_future.clear();
-      count = 1;;
-    }else{
+      count = 1;
+    } else {
       count ++;
     }
     // keeping below just in case if we want to call it serially
@@ -250,15 +250,15 @@ int Aca_Goal_State_Handler::update_neighbor_states(GoalState &parsed_struct,
             std::launch::async, &Aca_Goal_State_Handler::update_neighbor_state_workitem,
             this, current_NeighborState, std::ref(parsed_struct),
             std::ref(gsOperationReply)));
-    if (count % resource_state_processing_batch_size == 0){
+    if (count % resource_state_processing_batch_size == 0) {
       for (int i = 0; i < workitem_future.size(); i++) {
         rc = workitem_future[i].get();
         if (rc != EXIT_SUCCESS)
           overall_rc = rc;
       }
       workitem_future.clear();
-      count = 1;;
-    }else{
+      count = 1;
+    } else {
       count ++;
     }
   }
@@ -296,15 +296,15 @@ int Aca_Goal_State_Handler::update_router_states(GoalState &parsed_struct,
     workitem_future.push_back(std::async(
             std::launch::async, &Aca_Goal_State_Handler::update_router_state_workitem, this,
             current_RouterState, std::ref(parsed_struct), std::ref(gsOperationReply)));
-    if (count % resource_state_processing_batch_size == 0){
+    if (count % resource_state_processing_batch_size == 0) {
       for (int i = 0; i < workitem_future.size(); i++) {
         rc = workitem_future[i].get();
         if (rc != EXIT_SUCCESS)
           overall_rc = rc;
       }
       workitem_future.clear();
-      count = 1;;
-    }else{
+      count = 1;
+    } else {
       count ++;
     }
   }
@@ -341,7 +341,7 @@ int Aca_Goal_State_Handler::update_neighbor_states(GoalStateV2 &parsed_struct,
             std::launch::async, &Aca_Goal_State_Handler::update_neighbor_state_workitem_v2,
             this, current_NeighborState, std::ref(parsed_struct),
             std::ref(gsOperationReply)));
-    if (count % resource_state_processing_batch_size == 0){
+    if (count % resource_state_processing_batch_size == 0) {
       for (int i = 0 ; i < workitem_future.size(); i++){
         rc = workitem_future[i].get();
         if (rc != EXIT_SUCCESS){
@@ -349,8 +349,8 @@ int Aca_Goal_State_Handler::update_neighbor_states(GoalStateV2 &parsed_struct,
         }
       }
       workitem_future.clear();
-      count = 1;;
-    }else{
+      count = 1;
+    } else {
       count++;
     }
   }
@@ -393,8 +393,8 @@ int Aca_Goal_State_Handler::update_router_states(GoalStateV2 &parsed_struct,
           overall_rc = rc;
       }
       workitem_future.clear();
-      count = 1;;
-    }else{
+      count = 1;
+    } else {
       count ++;
     }
   }
