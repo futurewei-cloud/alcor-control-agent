@@ -194,7 +194,7 @@ int Aca_Goal_State_Handler::update_port_states(GoalStateV2 &parsed_struct,
   int count = 1;
   // below is a c++ 17 feature
   for (auto &[port_id, current_PortState] : parsed_struct.port_states()) {
-    // ACA_LOG_DEBUG("=====>parsing port state: %s\n", port_id.c_str());
+    ACA_LOG_DEBUG("=====>parsing port state: %s\n", port_id.c_str());
 
     workitem_future.push_back(std::async(
             std::launch::async, &Aca_Goal_State_Handler::update_port_state_workitem_v2, this,
@@ -335,14 +335,13 @@ int Aca_Goal_State_Handler::update_neighbor_states(GoalStateV2 &parsed_struct,
   int count = 1;
 
   for (auto &[neighbor_id, current_NeighborState] : parsed_struct.neighbor_states()) {
-    // ACA_LOG_DEBUG("=====>parsing neighbor state: %s\n", neighbor_id.c_str());
+    ACA_LOG_DEBUG("=====>parsing neighbor state: %s\n", neighbor_id.c_str());
 
     workitem_future.push_back(std::async(
             std::launch::async, &Aca_Goal_State_Handler::update_neighbor_state_workitem_v2,
             this, current_NeighborState, std::ref(parsed_struct),
             std::ref(gsOperationReply)));
     if (count % resource_state_processing_batch_size == 0){
-      // ACA_LOG_INFO("Count = %ld, batch size is: %ld, need to wait for this batch finishes", count, resource_state_processing_batch_size);
       for (int i = 0 ; i < workitem_future.size(); i++){
         rc = workitem_future[i].get();
         if (rc != EXIT_SUCCESS){

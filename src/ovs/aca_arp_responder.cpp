@@ -124,8 +124,8 @@ int ACA_ARP_Responder::create_or_update_arp_entry(arp_config *arp_cfg_in)
     ARP_TABLE_DATA_SET(current_arp_data, arp_cfg_in);
 
     if (!_arp_db.find(stData, current_arp_data)) {
-      // ACA_LOG_DEBUG("Entry not exist! (ip = %s and vlan id = %u)\n",
-      //               arp_cfg_in->ipv4_address.c_str(), arp_cfg_in->vlan_id);
+      ACA_LOG_DEBUG("Entry not exist! (ip = %s and vlan id = %u)\n",
+                    arp_cfg_in->ipv4_address.c_str(), arp_cfg_in->vlan_id);
       add_arp_entry(arp_cfg_in);
     } else {
       current_arp_data->mac_address = arp_cfg_in->mac_address;

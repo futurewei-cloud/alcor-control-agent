@@ -386,8 +386,8 @@ int ACA_Dataplane_OVS::update_port_state_workitem(const PortState current_PortSt
       SubnetConfiguration current_SubnetConfiguration =
               current_SubnetState.configuration();
 
-      // ACA_LOG_DEBUG("current_SubnetConfiguration subnet ID: %s.\n",
-      //               current_SubnetConfiguration.id().c_str());
+      ACA_LOG_DEBUG("current_SubnetConfiguration subnet ID: %s.\n",
+                    current_SubnetConfiguration.id().c_str());
 
       found_network_type = current_SubnetConfiguration.network_type();
       found_tunnel_id = current_SubnetConfiguration.tunnel_id();
@@ -404,8 +404,8 @@ int ACA_Dataplane_OVS::update_port_state_workitem(const PortState current_PortSt
       // substr can throw out_of_range and bad_alloc exceptions
       found_prefix_len = found_cidr.substr(slash_pos + 1);
     } else {
-      // ACA_LOG_ERROR("Not able to find the info for port with subnet ID: %s.\n",
-      //               current_PortConfiguration.fixed_ips(0).subnet_id().c_str());
+      ACA_LOG_ERROR("Not able to find the info for port with subnet ID: %s.\n",
+                    current_PortConfiguration.fixed_ips(0).subnet_id().c_str());
       overall_rc = -EXIT_FAILURE;
     }
 
@@ -417,8 +417,8 @@ int ACA_Dataplane_OVS::update_port_state_workitem(const PortState current_PortSt
       VpcState current_VpcState = vpcStateFound->second;
       VpcConfiguration current_VpcConfiguration = current_VpcState.configuration();
 
-      // ACA_LOG_DEBUG("current_VpcConfiguration VPC ID: %s.\n",
-      //               current_VpcConfiguration.id().c_str());
+      ACA_LOG_DEBUG("current_VpcConfiguration VPC ID: %s.\n",
+                    current_VpcConfiguration.id().c_str());
 
       for (int j = 0; j < current_VpcConfiguration.gateway_ids_size(); j++) {
         auto gatewayStateFound = parsed_struct.gateway_states().find(
@@ -456,13 +456,13 @@ int ACA_Dataplane_OVS::update_port_state_workitem(const PortState current_PortSt
 
       port_cidr = virtual_ip_address + "/" + found_prefix_len;
 
-      // ACA_LOG_DEBUG("Port Operation: %s: port_id: %s, vpc_id:%s, network_type:%d, "
-      //               "virtual_ip_address:%s, virtual_mac_address:%s, generated_port_name: %s, port_cidr: %s, tunnel_id: %d\n",
-      //               aca_get_operation_string(current_PortState.operation_type()),
-      //               current_PortConfiguration.id().c_str(),
-      //               current_PortConfiguration.vpc_id().c_str(), found_network_type,
-      //               virtual_ip_address.c_str(), virtual_mac_address.c_str(),
-      //               generated_port_name.c_str(), port_cidr.c_str(), found_tunnel_id);
+      ACA_LOG_DEBUG("Port Operation: %s: port_id: %s, vpc_id:%s, network_type:%d, "
+                    "virtual_ip_address:%s, virtual_mac_address:%s, generated_port_name: %s, port_cidr: %s, tunnel_id: %d\n",
+                    aca_get_operation_string(current_PortState.operation_type()),
+                    current_PortConfiguration.id().c_str(),
+                    current_PortConfiguration.vpc_id().c_str(), found_network_type,
+                    virtual_ip_address.c_str(), virtual_mac_address.c_str(),
+                    generated_port_name.c_str(), port_cidr.c_str(), found_tunnel_id);
 
       overall_rc = ACA_OVS_L2_Programmer::get_instance().create_port(
               current_PortConfiguration.vpc_id(), generated_port_name, port_cidr,
@@ -490,12 +490,12 @@ int ACA_Dataplane_OVS::update_port_state_workitem(const PortState current_PortSt
       // another delete scenario is supported here
       // VM was created with without port specified, then delete the VM
       // ACA will receive port operation delete
-      // ACA_LOG_DEBUG("Port Operation: %s: port_id: %s vpc_id:%s, network_type:%d, "
-      //               "generated_port_name: %s, tunnel_id: %d\n",
-      //               aca_get_operation_string(current_PortState.operation_type()),
-      //               current_PortConfiguration.id().c_str(),
-      //               current_PortConfiguration.vpc_id().c_str(), found_network_type,
-      //               generated_port_name.c_str(), found_tunnel_id);
+      ACA_LOG_DEBUG("Port Operation: %s: port_id: %s vpc_id:%s, network_type:%d, "
+                    "generated_port_name: %s, tunnel_id: %d\n",
+                    aca_get_operation_string(current_PortState.operation_type()),
+                    current_PortConfiguration.id().c_str(),
+                    current_PortConfiguration.vpc_id().c_str(), found_network_type,
+                    generated_port_name.c_str(), found_tunnel_id);
 
       overall_rc = ACA_OVS_L2_Programmer::get_instance().delete_port(
               current_PortConfiguration.vpc_id(), generated_port_name,
@@ -540,13 +540,13 @@ int ACA_Dataplane_OVS::update_port_state_workitem(const PortState current_PortSt
           current_PortState.operation_type(), overall_rc, culminative_dataplane_programming_time,
           culminative_network_configuration_time, operation_total_time);
 
-  // if (overall_rc == EXIT_SUCCESS) {
-  //   ACA_LOG_INFO("%s", "Successfully configured the port state.\n");
-  // } else if (overall_rc == EINPROGRESS) {
-  //   ACA_LOG_INFO("Port state returned pending: rc=%d\n", overall_rc);
-  // } else {
-  //   ACA_LOG_ERROR("Unable to configure the port state: rc=%d\n", overall_rc);
-  // }
+  if (overall_rc == EXIT_SUCCESS) {
+    ACA_LOG_INFO("%s", "Successfully configured the port state.\n");
+  } else if (overall_rc == EINPROGRESS) {
+    ACA_LOG_INFO("Port state returned pending: rc=%d\n", overall_rc);
+  } else {
+    ACA_LOG_ERROR("Unable to configure the port state: rc=%d\n", overall_rc);
+  }
 
   return overall_rc;
 }
@@ -755,22 +755,8 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
   ulong culminative_dataplane_programming_time = 0;
   ulong culminative_network_configuration_time = 0;
 
-  // auto operation_start = chrono::high_resolution_clock::now();
-
-  // static std::chrono::_V2::high_resolution_clock::time_point got_neighbor_configuration_time;
-  // static std::chrono::_V2::high_resolution_clock::time_point validate_fixed_ip_size_time;
-  // static std::chrono::_V2::high_resolution_clock::time_point assert_revision_number_time;
-  // static std::chrono::_V2::high_resolution_clock::time_point fixed_ip_loop_start;
-  // static std::chrono::_V2::high_resolution_clock::time_point update_neighbor_time;
-  // static std::chrono::_V2::high_resolution_clock::time_point found_subnet_info_time;
-  // static std::chrono::_V2::high_resolution_clock::time_point determined_same_host_time;
-
-  // auto init_time_vars_time = chrono::high_resolution_clock::now();
-
   alcor::schema::NeighborConfiguration current_NeighborConfiguration =
           current_NeighborState.configuration();
-
-  // got_neighbor_configuration_time = chrono::high_resolution_clock::now();
 
   try {
     if (!aca_validate_fixed_ips_size(current_NeighborConfiguration.fixed_ips_size())) {
@@ -779,11 +765,9 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
     // validate_fixed_ip_size_time = chrono::high_resolution_clock::now();
     // TODO: need to design the usage of current_NeighborConfiguration.revision_number()
     assert(current_NeighborConfiguration.revision_number() > 0);
-    // assert_revision_number_time = chrono::high_resolution_clock::now();
+
     for (int ip_index = 0;
          ip_index < current_NeighborConfiguration.fixed_ips_size(); ip_index++) {
-      ACA_LOG_DEBUG("In fixed ip loop, index: %ld\n", ip_index);
-      // fixed_ip_loop_start = chrono::high_resolution_clock::now();
       auto current_fixed_ip = current_NeighborConfiguration.fixed_ips(ip_index);
 
       if (current_fixed_ip.neighbor_type() == NeighborType::L2 ||
@@ -816,8 +800,8 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
           SubnetConfiguration current_SubnetConfiguration =
                   current_SubnetState.configuration();
 
-          // ACA_LOG_DEBUG("current_SubnetConfiguration subnet ID: %s.\n",
-          //               current_SubnetConfiguration.id().c_str());
+          ACA_LOG_DEBUG("current_SubnetConfiguration subnet ID: %s.\n",
+                        current_SubnetConfiguration.id().c_str());
 
           found_network_type = current_SubnetConfiguration.network_type();
 
@@ -828,22 +812,21 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
 
           subnet_info_found = true;
         }
-        // found_subnet_info_time = chrono::high_resolution_clock::now();
 
         if (!subnet_info_found) {
           ACA_LOG_ERROR("Not able to find the info for neighbor ip_index: %d with subnet ID: %s.\n",
                         ip_index, current_fixed_ip.subnet_id().c_str());
           overall_rc = -EXIT_FAILURE;
         } else {
-          // ACA_LOG_DEBUG(
-          //         "Neighbor Operation:%s: id: %s, neighbor_type:%s, vpc_id:%s, network_type:%d, ip_index: %d,"
-          //         "virtual_ip_address:%s, virtual_mac_address:%s, neighbor_host_ip_address:%s, tunnel_id:%d\n",
-          //         aca_get_operation_string(current_NeighborState.operation_type()),
-          //         current_NeighborConfiguration.id().c_str(),
-          //         aca_get_neighbor_type_string(current_fixed_ip.neighbor_type()),
-          //         current_NeighborConfiguration.vpc_id().c_str(), found_network_type,
-          //         ip_index, virtual_ip_address.c_str(), virtual_mac_address.c_str(),
-          //         host_ip_address.c_str(), found_tunnel_id);
+          ACA_LOG_DEBUG(
+                  "Neighbor Operation:%s: id: %s, neighbor_type:%s, vpc_id:%s, network_type:%d, ip_index: %d,"
+                  "virtual_ip_address:%s, virtual_mac_address:%s, neighbor_host_ip_address:%s, tunnel_id:%d\n",
+                  aca_get_operation_string(current_NeighborState.operation_type()),
+                  current_NeighborConfiguration.id().c_str(),
+                  aca_get_neighbor_type_string(current_fixed_ip.neighbor_type()),
+                  current_NeighborConfiguration.vpc_id().c_str(), found_network_type,
+                  ip_index, virtual_ip_address.c_str(), virtual_mac_address.c_str(),
+                  host_ip_address.c_str(), found_tunnel_id);
 
           // with Alcor DVR, a cross subnet packet will be routed to the destination subnet.
           // that means a L3 neighbor will become a L2 neighbor, therefore, call the below
@@ -852,11 +835,10 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
           // only need to update L2 neighbor info if it is not on the same compute host
           bool is_neighbor_port_on_same_host =
                   ACA_OVS_L2_Programmer::get_instance().is_ip_on_the_same_host(host_ip_address);
-          // determined_same_host_time = chrono::high_resolution_clock::now();
 
           if (is_neighbor_port_on_same_host) {
-            // ACA_LOG_DEBUG("neighbor host: %s is on the same compute node, don't need to update L2 neighbor info.\n",
-            //               host_ip_address.c_str());
+            ACA_LOG_DEBUG("neighbor host: %s is on the same compute node, don't need to update L2 neighbor info.\n",
+                          host_ip_address.c_str());
             overall_rc = EXIT_SUCCESS;
           } else {
             if ((current_NeighborState.operation_type() == OperationType::CREATE) ||
@@ -884,29 +866,26 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
               if ((current_NeighborState.operation_type() == OperationType::CREATE) ||
                   (current_NeighborState.operation_type() == OperationType::UPDATE) ||
                   (current_NeighborState.operation_type() == OperationType::INFO)) {
-                // auto create_l3_neighbor_start = chrono::high_resolution_clock::now();
+
                 overall_rc = ACA_OVS_L3_Programmer::get_instance().create_or_update_l3_neighbor(
                         current_NeighborConfiguration.id(),
                         current_NeighborConfiguration.vpc_id(),
                         current_fixed_ip.subnet_id(), virtual_ip_address,
                         virtual_mac_address, host_ip_address, found_tunnel_id,
                         culminative_dataplane_programming_time);
-              // auto create_l3_neighbor_end = chrono::high_resolution_clock::now();
-              // auto create_l3_auto_neighbor_total_time =cast_to_microseconds(create_l3_neighbor_end - create_l3_neighbor_start).count();
-              // std::cout<<"Creating one L3 neighbor took " << create_l3_auto_neighbor_total_time << " us, which is " << us_to_ms(create_l3_auto_neighbor_total_time) << "ms";
+                        
               } else if (current_NeighborState.operation_type() == OperationType::DELETE) {
                 overall_rc = ACA_OVS_L3_Programmer::get_instance().delete_l3_neighbor(
                         current_NeighborConfiguration.id(), current_fixed_ip.subnet_id(),
                         virtual_ip_address, culminative_dataplane_programming_time);
               } else {
-                // ACA_LOG_ERROR("Invalid neighbor state operation type %d\n",
-                //               current_NeighborState.operation_type());
+                ACA_LOG_ERROR("Invalid neighbor state operation type %d\n",
+                              current_NeighborState.operation_type());
                 overall_rc = -EXIT_FAILURE;
               }
             }
           }
         }
-        // update_neighbor_time = chrono::high_resolution_clock::now();
       } else {
         ACA_LOG_ERROR("Unknown neighbor_type: %d.\n",
                       current_NeighborState.operation_type());
@@ -927,64 +906,13 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
     ACA_LOG_CRIT("%s", "Unknown exception caught while parsing neighbor configuration.\n");
     overall_rc = -EFAULT;
   }
-/*
-  auto operation_end = chrono::high_resolution_clock::now();
-
-  auto operation_total_time =
-          cast_to_microseconds(operation_end - operation_start).count();
-
-  auto init_time_vars_total_time =
-          cast_to_microseconds(init_time_vars_time - operation_start).count();
-
-  auto get_neighbor_configuration_total_time =
-          cast_to_microseconds(got_neighbor_configuration_time - init_time_vars_time)
-                  .count();
-
-  auto check_fixed_ip_size_total_time =
-          cast_to_microseconds(validate_fixed_ip_size_time - got_neighbor_configuration_time)
-                  .count();
-
-  auto assert_revision_number_total_time =
-          cast_to_microseconds(assert_revision_number_time - validate_fixed_ip_size_time)
-                  .count();
-
-  auto validate_info_total_time =
-          cast_to_microseconds(found_subnet_info_time - fixed_ip_loop_start).count();
-
-  auto determine_same_host_total_time =
-          cast_to_microseconds(determined_same_host_time - found_subnet_info_time)
-                  .count();
-  auto update_neighbor_total_time =
-          cast_to_microseconds(update_neighbor_time - determined_same_host_time).count();
-  aca_goal_state_handler::Aca_Goal_State_Handler::get_instance().add_goal_state_operation_status(
-          gsOperationReply, current_NeighborConfiguration.id(),
-          ResourceType::NEIGHBOR, current_NeighborState.operation_type(),
-          overall_rc, culminative_dataplane_programming_time,
-          culminative_network_configuration_time, operation_total_time);
 
   if (overall_rc == EXIT_SUCCESS) {
     ACA_LOG_INFO("%s", "Successfully configured the neighbor state.\n");
   } else {
     ACA_LOG_ERROR("Unable to configure the neighbor state: rc=%d\n", overall_rc);
   }
-  ACA_LOG_DEBUG(
-          "[METRICS] Elapsed time for updating 1 neighbor state, total time is %ld microseconds, or %ld milliseconds\n\
-[METRICS] Elapsed time for initing the time stamps took %ld microseconds, or %ld milliseconds.\n\
-[METRICS] Elapsed time for getting neighbor configuration took %ld microseconds, or %ld milliseconds.\n\
-[METRICS] Elapsed time for assuring fixed IP size took %ld microseconds, or %ld milliseconds.\n\
-[METRICS] Elapsed time for assuring revision number took %ld microseconds, or %ld milliseconds.\n\
-[METRICS] Elapsed time for determining same host took %ld microseconds, or %ld milliseconds.\n\
-[METRICS] Elapsed time for validate info took %ld microseconds, or %ld milliseconds.\n\
-[METRICS] Elapsed time for updating neighbor info took %ld microseconds, or %ld milliseconds.\n",
-          operation_total_time, us_to_ms(operation_total_time), init_time_vars_total_time,
-          us_to_ms(init_time_vars_total_time), get_neighbor_configuration_total_time,
-          us_to_ms(get_neighbor_configuration_total_time),
-          check_fixed_ip_size_total_time, us_to_ms(check_fixed_ip_size_total_time),
-          assert_revision_number_total_time, us_to_ms(assert_revision_number_total_time),
-          determine_same_host_total_time, us_to_ms(determine_same_host_total_time),
-          validate_info_total_time, us_to_ms(validate_info_total_time),
-          update_neighbor_total_time, us_to_ms(update_neighbor_total_time));
-*/
+  
   return overall_rc;
 }
 

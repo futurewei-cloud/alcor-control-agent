@@ -60,7 +60,7 @@ void ACA_Vlan_Manager::clear_all_data()
 // this function assumes there is no existing entry for vpc_id
 void ACA_Vlan_Manager::create_entry(uint tunnel_id)
 {
-  // ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::create_entry ---> Entering\n");
+  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::create_entry ---> Entering\n");
 
   vpc_table_entry *new_vpc_table_entry = new vpc_table_entry;
   // fetch the value first to used for new_vpc_table_entry->vlan_id
@@ -72,12 +72,12 @@ void ACA_Vlan_Manager::create_entry(uint tunnel_id)
 
   _vpcs_table.insert(tunnel_id, new_vpc_table_entry);
 
-  // ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::create_entry <--- Exiting\n");
+  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::create_entry <--- Exiting\n");
 }
 
 uint ACA_Vlan_Manager::get_or_create_vlan_id(uint tunnel_id)
 {
-  // ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::get_or_create_vlan_id ---> Entering\n");
+  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::get_or_create_vlan_id ---> Entering\n");
 
   vpc_table_entry *new_vpc_table_entry = nullptr;
   // -----critical section starts-----
@@ -91,7 +91,7 @@ uint ACA_Vlan_Manager::get_or_create_vlan_id(uint tunnel_id)
   // -----critical section ends-----
   uint acquired_vlan_id = new_vpc_table_entry->vlan_id;
 
-  // ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::get_or_create_vlan_id <--- Exiting\n");
+  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::get_or_create_vlan_id <--- Exiting\n");
 
   return acquired_vlan_id;
 }
@@ -182,7 +182,7 @@ int ACA_Vlan_Manager::create_l2_neighbor(string virtual_ip, string virtual_mac,
                                          string remote_host_ip, uint tunnel_id,
                                          ulong & culminative_time)
 {
-  // ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::create_l2_neighbor ---> Entering\n");
+  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::create_l2_neighbor ---> Entering\n");
   int overall_rc;
   int internal_vlan_id = get_or_create_vlan_id(tunnel_id);
   arp_config stArpCfg;
@@ -197,18 +197,10 @@ int ACA_Vlan_Manager::create_l2_neighbor(string virtual_ip, string virtual_mac,
                          "->NXM_NX_TUN_ID[],set_field:" + remote_host_ip +
                          "->tun_dst,output:" + VXLAN_GENERIC_OUTPORT_NUMBER;
 
-  // std::chrono::_V2::steady_clock::time_point start = std::chrono::steady_clock::now();
   aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().execute_openflow(culminative_time,
                                                                                 "br-tun",
                                                                                 match_string + action_string,
                                                                                 "add");
-  // std::chrono::_V2::steady_clock::time_point end = std::chrono::steady_clock::now();
-
-  // auto message_total_operation_time =
-  //         std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
-  // ACA_LOG_DEBUG("[create_l2_neighbor] Start adding ovs rule at: [%ld], finished at: [%ld]\nElapsed time for adding ovs rule for l2 neighbor took: %ld microseconds or %ld milliseconds\n",
-  //               start, end, message_total_operation_time,
-                // (message_total_operation_time / 1000));
 
   // create arp entry in arp responder for the l2 neighbor
   stArpCfg.mac_address = virtual_mac;
@@ -217,10 +209,10 @@ int ACA_Vlan_Manager::create_l2_neighbor(string virtual_ip, string virtual_mac,
 
   overall_rc = ACA_ARP_Responder::get_instance().create_or_update_arp_entry(&stArpCfg);
 
-  // ACA_LOG_DEBUG("create_l2_neighbor arp entry with ip = %s, vlan id = %u and mac = %s\n",
-  //               virtual_ip.c_str(), internal_vlan_id, virtual_mac.c_str());
+  ACA_LOG_DEBUG("create_l2_neighbor arp entry with ip = %s, vlan id = %u and mac = %s\n",
+                virtual_ip.c_str(), internal_vlan_id, virtual_mac.c_str());
 
-  // ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::create_l2_neighbor <--- Exiting\n");
+  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::create_l2_neighbor <--- Exiting\n");
 
   return overall_rc;
 }
