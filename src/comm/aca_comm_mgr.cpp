@@ -143,7 +143,7 @@ int Aca_Comm_Manager::update_goal_state(GoalState &goal_state_message,
           cast_to_microseconds(end - neighbor_update_finished_time).count();
   auto message_total_operation_time = cast_to_microseconds(end - start).count();
 
-  ACA_LOG_DEBUG("[METRICS] Elapsed time for message total operation took: %ld microseconds or %ld milliseconds\n\
+  ACA_LOG_INFO("[METRICS] Elapsed time for message total operation took: %ld microseconds or %ld milliseconds\n\
 [METRICS] Elapsed time for router operation took: %ld microseconds or %ld milliseconds\n\
 [METRICS] Elapsed time for port operation took: %ld microseconds or %ld milliseconds\n\
 [METRICS] Elapsed time for neighbor operation took: %ld microseconds or %ld milliseconds\n\
@@ -234,7 +234,7 @@ int Aca_Comm_Manager::update_goal_state(GoalStateV2 &goal_state_message,
           cast_to_microseconds(end - neighbor_update_finished_time).count();
   auto message_total_operation_time = cast_to_microseconds(end - start).count();
 
-  ACA_LOG_DEBUG("[METRICS] Elapsed time for message total operation took: %ld microseconds or %ld milliseconds\n\
+  ACA_LOG_INFO("[METRICS] Elapsed time for message total operation took: %ld microseconds or %ld milliseconds\n\
 [METRICS] Elapsed time for gs printout operation took: %ld microseconds or %ld milliseconds\n\
 [METRICS] Elapsed time for router operation took: %ld microseconds or %ld milliseconds\n\
 [METRICS] Elapsed time for port operation took: %ld microseconds or %ld milliseconds\n\
