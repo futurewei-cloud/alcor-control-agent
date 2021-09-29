@@ -628,9 +628,9 @@ void ACA_OVS_L2_Programmer::execute_openflow_command(const std::string cmd_strin
 
   g_total_execute_openflow_time += openflow_client_time_total_time;
 
-  // ACA_LOG_INFO("Elapsed time for openflow client call took: %ld microseconds or %ld milliseconds. rc: %d\n",
-  //              openflow_client_time_total_time,
-  //              us_to_ms(openflow_client_time_total_time), rc);
+  ACA_LOG_INFO("Elapsed time for openflow client call took: %ld microseconds or %ld milliseconds. rc: %d\n",
+               openflow_client_time_total_time,
+               us_to_ms(openflow_client_time_total_time), rc);
 
   ACA_LOG_DEBUG("ACA_OVS_L2_Programmer::execute_openflow_command <--- Exiting, rc = %d\n", rc);
 }
@@ -657,9 +657,9 @@ void ACA_OVS_L2_Programmer::execute_openflow(ulong &culminative_time,
 
   g_total_execute_openflow_time += openflow_client_time_total_time;
 
-  ACA_LOG_INFO("Elapsed time for openflow client call took: %ld microseconds or %ld milliseconds.\n",
-               openflow_client_time_total_time,
-               us_to_ms(openflow_client_time_total_time));
+  // ACA_LOG_INFO("Elapsed time for openflow client call took: %ld microseconds or %ld milliseconds.\n",
+  //              openflow_client_time_total_time,
+  //              us_to_ms(openflow_client_time_total_time));
 
   ACA_LOG_DEBUG("%s", "ACA_OVS_L2_Programmer::execute_openflow ---> Exiting\n");
 }
