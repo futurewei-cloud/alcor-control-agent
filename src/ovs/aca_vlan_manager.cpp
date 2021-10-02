@@ -197,18 +197,10 @@ int ACA_Vlan_Manager::create_l2_neighbor(string virtual_ip, string virtual_mac,
                          "->NXM_NX_TUN_ID[],set_field:" + remote_host_ip +
                          "->tun_dst,output:" + VXLAN_GENERIC_OUTPORT_NUMBER;
 
-  std::chrono::_V2::steady_clock::time_point start = std::chrono::steady_clock::now();
   aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().execute_openflow(culminative_time,
                                                                                 "br-tun",
                                                                                 match_string + action_string,
                                                                                 "add");
-  std::chrono::_V2::steady_clock::time_point end = std::chrono::steady_clock::now();
-
-  auto message_total_operation_time =
-          std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
-  ACA_LOG_DEBUG("[create_l2_neighbor] Start adding ovs rule at: [%ld], finished at: [%ld]\nElapsed time for adding ovs rule for l2 neighbor took: %ld microseconds or %ld milliseconds\n",
-                start, end, message_total_operation_time,
-                (message_total_operation_time / 1000));
 
   // create arp entry in arp responder for the l2 neighbor
   stArpCfg.mac_address = virtual_mac;
