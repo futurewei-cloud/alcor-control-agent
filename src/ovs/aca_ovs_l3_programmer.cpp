@@ -851,25 +851,35 @@ int ACA_OVS_L3_Programmer::create_or_update_router(RouterConfiguration &current_
                 string virtual_ip_address = current_fixed_ip.ip_address();
                 string virtual_mac_address =
                         current_NeighborConfiguration1.mac_address();
+                string subnet_id_of_fixed_ip = current_fixed_ip.subnet_id();
                 string gw_mac;
                 uint dest_tunnel_id = 0;
 
                 if (strcmp(current_routing_rule.next_hop_ip().c_str(),
                             current_fixed_ip.ip_address().c_str()) == 0) {
-                  for (auto each_subnet : parsed_struct.subnet_states()) {
-                    SubnetConfiguration config =
-                            each_subnet.second.configuration();
-                    ACA_LOG_INFO("config.id(): %s\n", config.id().c_str());
-                    ACA_LOG_INFO("current_fixed_ip.subnet_id(): %s\n",
-                                  current_fixed_ip.subnet_id());
-                    if (config.id() ==
-                        current_NeighborConfiguration1.fixed_ips(y).subnet_id()) {
-                      gw_mac = config.gateway().mac_address();
-                      dest_tunnel_id = config.tunnel_id();
-                      ACA_LOG_INFO("gw_mac: %s\n", gw_mac.c_str());
-                      ACA_LOG_INFO("dest_tunnel_id: %d\n", dest_tunnel_id);
-                    }
+                  auto subnet_iterator = parsed_struct.subnet_states().find(subnet_id_of_fixed_ip);
+                  if(subnet_iterator != parsed_struct.subnet_states().end()){
+                    gw_mac = subnet_iterator->second.configuration().gateway().mac_address();
+                    dest_tunnel_id = subnet_iterator->second.configuration().tunnel_id();
+                    ACA_LOG_INFO("gw_mac: %s\n", gw_mac.c_str());
+                    ACA_LOG_INFO("dest_tunnel_id: %d\n", dest_tunnel_id);
+                  }else{
+                    ACA_LOG_INFO("Founding find subnet ID: [%s] in the goalstate", subnet_id_of_fixed_ip);
                   }
+                  // for (auto each_subnet : parsed_struct.subnet_states()) {
+                  //   SubnetConfiguration config =
+                  //           each_subnet.second.configuration();
+                  //   ACA_LOG_INFO("config.id(): %s\n", config.id().c_str());
+                  //   ACA_LOG_INFO("current_fixed_ip.subnet_id(): %s\n",
+                  //                 current_fixed_ip.subnet_id());
+                  //   if (config.id() ==
+                  //       current_NeighborConfiguration1.fixed_ips(y).subnet_id()) {
+                  //     gw_mac = config.gateway().mac_address();
+                  //     dest_tunnel_id = config.tunnel_id();
+                  //     ACA_LOG_INFO("gw_mac: %s\n", gw_mac.c_str());
+                  //     ACA_LOG_INFO("dest_tunnel_id: %d\n", dest_tunnel_id);
+                  //   }
+                  // }
                   remote_host_ip =
                           current_NeighborConfiguration1.host_ip_address().c_str();
                   int source_vlan_id =
