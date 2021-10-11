@@ -38,10 +38,10 @@ void OFController::stop() {
 }
 
 void OFController::message_callback(OFConnection* ofconn, uint8_t type, void* data, size_t len) {
-    if (type == fluid_msg::of13::OFPT_FEATURES_REPLY) {
+    if (type == fluid_msg::of10::OFPT_FEATURES_REPLY) {
         ACA_LOG_INFO("OFController::message_callback - ovs connection id=%d up\n", ofconn->get_id());
 
-        fluid_msg::of13::FeaturesReply reply;
+        fluid_msg::of10::FeaturesReply reply;
         auto err = reply.unpack((uint8_t *) data);
         if (err != 0) {
             ACA_LOG_ERROR("%s", "OFController::message_callback - failed to parse feature reply\n");
@@ -63,13 +63,14 @@ void OFController::message_callback(OFConnection* ofconn, uint8_t type, void* da
                 setup_default_br_tun_flows();
             }
         }
-    } else if (type == fluid_msg::of13::OFPT_BARRIER_REPLY) {
+    } else if (type == fluid_msg::of10::OFPT_BARRIER_REPLY) {
         auto t = std::chrono::high_resolution_clock::now();
         ACA_LOG_INFO("OFController::message_callback - recv OFPT_BARRIER_REPLY on %ld\n", t.time_since_epoch().count());
-    } else if (type == fluid_msg::of13::OFPT_PACKET_IN) {
-        fluid_msg::of13::PacketIn *pin = new of13::PacketIn();
+    } else if (type == fluid_msg::of10::OFPT_PACKET_IN) {
+        fluid_msg::of10::PacketIn *pin = new of10::PacketIn();
         pin->unpack((uint8_t *) data);
-        uint32_t in_port = pin->match().in_port()->value();
+        // uint32_t in_port = pin->match().in_port()->value();
+        uint32_t in_port = pin->in_port();
 
         // pass new allocated memory of packet-in to ACA_On_Demand_Engine to determine which type of request it is
         aca_on_demand_engine::ACA_On_Demand_Engine::get_instance().thread_pool_.push(

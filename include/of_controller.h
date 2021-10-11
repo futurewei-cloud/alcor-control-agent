@@ -56,7 +56,7 @@ public:
             switch_dpid_map(switch_dpid_map),
             port_id_map(port_id_map),
             OFServer(address, port, nthreads, secure,
-                     OFServerSettings().supported_version(4) // OF version 0x04 is OF 1.3
+                     OFServerSettings().supported_version(1) // OF version 0x04 is OF 1.3
                          .echo_interval(30)) { }
 
     ~OFController() = default;
