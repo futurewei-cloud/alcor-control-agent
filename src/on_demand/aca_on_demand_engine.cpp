@@ -228,7 +228,7 @@ void ACA_On_Demand_Engine::unknown_recv(uint16_t vlan_id, string ip_src,
   new_state_requests->set_ethertype(EtherType::IPV4);
   std::chrono::_V2::steady_clock::time_point call_ncm_time =
           std::chrono::steady_clock::now();
-  ACA_LOG_DEBUG("For UUID: [%s], calling NCM for info of IP [%s] at: [%ld], tunnel_id: []\n",
+  ACA_LOG_DEBUG("For UUID: [%s], calling NCM for info of IP [%s] at: [%ld], tunnel_id: [%ld]\n",
                 uuid_str, ip_dest.c_str(), call_ncm_time, tunnel_id);
   std::chrono::_V2::high_resolution_clock::time_point start =
           std::chrono::high_resolution_clock::now();
@@ -376,6 +376,7 @@ void ACA_On_Demand_Engine::parse_packet(uint32_t in_port, void *packet)
     // get the vlan id from vlan header
     if (vlanmsg) {
       vlan_id = ntohs(vlanmsg->vlan_tci) & 0x0fff;
+      ACA_LOG_INFO("vlan_id: %ld\n", vlan_id);
     }
   }
 
@@ -387,6 +388,11 @@ void ACA_On_Demand_Engine::parse_packet(uint32_t in_port, void *packet)
     /* compute arp message offset */
     unsigned char *arp_hdr = (unsigned char *)(base + SIZE_ETHERNET + vlan_len);
     /* arp request procedure,type = 1 */
+    // ACA_LOG_INFO("ntohs(*(uint16_t *)(arp_hdr + 6)) == %ld\n", ntohs(*(uint16_t *)(arp_hdr + 6)));
+    // ACA_LOG_INFO("arp_hdr + 6: %s", (arp_hdr + 6));
+    // for (int i = 0; i <= 6; i ++ ) {
+    //   ACA_LOG_INFO("arp_hdr + %ld = %ld\n", i , ntohs(*(uint16_t *)(arp_hdr + 6)));
+    // }
     if (ntohs(*(uint16_t *)(arp_hdr + 6)) == 0x0001) {
       if (aca_arp_responder::ACA_ARP_Responder::get_instance().arp_recv(
                   in_port, vlan_hdr, arp_hdr) == ENOTSUP) {
