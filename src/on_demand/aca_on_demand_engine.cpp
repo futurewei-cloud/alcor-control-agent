@@ -133,7 +133,7 @@ void ACA_On_Demand_Engine::process_async_replies_asyncly(
 
     on_demand(request_id, replyStatus, request_payload->in_port,
               request_payload->packet, request_payload->packet_size,
-              request_payload->protocol, request_payload->insert_time);
+              request_payload->protocol, request_payload->insert_time, request_payload->of_connection_id);
     std::chrono::_V2::steady_clock::time_point start = std::chrono::steady_clock::now();
     /* Critical section begins */
     _payload_map_mutex.lock();
@@ -242,7 +242,7 @@ void ACA_On_Demand_Engine::unknown_recv(uint16_t vlan_id, string ip_src,
 void ACA_On_Demand_Engine::on_demand(string uuid_for_call, OperationStatus status,
                                      uint32_t in_port, void *packet,
                                      int packet_size, Protocol protocol,
-                                     std::chrono::_V2::steady_clock::time_point insert_time)
+                                     std::chrono::_V2::steady_clock::time_point insert_time, int of_connection_id)
 {
   ACA_LOG_INFO("%s\n", "Inside of on_demand function");
   string bridge = "br-tun";
@@ -315,7 +315,7 @@ void ACA_On_Demand_Engine::on_demand(string uuid_for_call, OperationStatus statu
 
       int parse_arp_request_rc =
               aca_arp_responder::ACA_ARP_Responder::get_instance()._parse_arp_request(
-                      in_port, vlanmsg, arpmsg);
+                      in_port, vlanmsg, arpmsg, of_connection_id);
       if (parse_arp_request_rc == EXIT_SUCCESS) {
         ACA_LOG_DEBUG("%s", "On-demand arp request packet sent to arp_responder.\n");
 
@@ -343,7 +343,7 @@ void ACA_On_Demand_Engine::on_demand(string uuid_for_call, OperationStatus statu
   }
 }
 
-void ACA_On_Demand_Engine::parse_packet(uint32_t in_port, void *packet)
+void ACA_On_Demand_Engine::parse_packet(uint32_t in_port, void *packet, int of_connection_id)
 {
   const struct ether_header *eth_header;
   /* The packet is larger than the ether_header struct,
@@ -537,6 +537,7 @@ void ACA_On_Demand_Engine::parse_packet(uint32_t in_port, void *packet)
     data->packet_size = packet_size;
     data->protocol = _protocol;
     data->insert_time = std::chrono::steady_clock::now();
+    data->of_connection_id = of_connection_id;
     std::chrono::_V2::steady_clock::time_point start = std::chrono::steady_clock::now();
 
     /* Sleep until the size is less than the max limit. */

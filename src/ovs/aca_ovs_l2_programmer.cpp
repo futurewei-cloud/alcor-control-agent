@@ -688,4 +688,28 @@ void ACA_OVS_L2_Programmer::packet_out(const char *bridge, const char *options)
   ACA_LOG_DEBUG("%s", "ACA_OVS_L2_Programmer::packet_out ---> Exiting\n");
 }
 
+void ACA_OVS_L2_Programmer::packet_out(int of_connection_id, const char *options)
+{
+  ACA_LOG_DEBUG("%s", "ACA_OVS_L2_Programmer::packet_out ---> Entering\n");
+  auto openflow_client_start = chrono::steady_clock::now();
+
+  if (NULL != ofctrl) {
+      ofctrl->packet_out(of_connection_id, options);
+  } else {
+      ACA_LOG_ERROR("%s", "ACA_OVS_L2_Programmer::packet_out didn't find OF controller\n");
+  }
+
+  auto openflow_client_end = chrono::steady_clock::now();
+  auto openflow_client_time_total_time =
+          cast_to_microseconds(openflow_client_end - openflow_client_start).count();
+
+  g_total_execute_openflow_time += openflow_client_time_total_time;
+
+  ACA_LOG_INFO("Elapsed time for openflow client call took: %ld microseconds or %ld milliseconds.\n",
+               openflow_client_time_total_time,
+               us_to_ms(openflow_client_time_total_time));
+
+  ACA_LOG_DEBUG("%s", "ACA_OVS_L2_Programmer::packet_out ---> Exiting\n");
+}
+
 } // namespace aca_ovs_l2_programmer

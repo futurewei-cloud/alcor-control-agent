@@ -67,6 +67,7 @@ void OFController::message_callback(OFConnection* ofconn, uint8_t type, void* da
         auto t = std::chrono::high_resolution_clock::now();
         ACA_LOG_INFO("OFController::message_callback - recv OFPT_BARRIER_REPLY on %ld\n", t.time_since_epoch().count());
     } else if (type == fluid_msg::of10::OFPT_PACKET_IN) {
+        ACA_LOG_INFO("OFController::message_callback - PACKET_IN from connection %ld", ofconn->get_id());
         fluid_msg::of10::PacketIn *pin = new of10::PacketIn();
         pin->unpack((uint8_t *) data);
         // uint32_t in_port = pin->match().in_port()->value();
@@ -76,7 +77,7 @@ void OFController::message_callback(OFConnection* ofconn, uint8_t type, void* da
         aca_on_demand_engine::ACA_On_Demand_Engine::get_instance().thread_pool_.push(
                 std::bind(&aca_on_demand_engine::ACA_On_Demand_Engine::parse_packet,
                           &aca_on_demand_engine::ACA_On_Demand_Engine::get_instance(),
-                          in_port, (void *)pin->data()));
+                          in_port, (void *)pin->data(), ofconn->get_id()));
     } else if (type == 33) { // OFPRAW_OFPT14_BUNDLE_CONTROL
         auto t = std::chrono::high_resolution_clock::now();
 
@@ -123,6 +124,20 @@ OFConnection* OFController::get_instance(std::string bridge) {
     return ofconn;
 }
 
+OFConnection* OFController::get_instance(int of_connection_id) {
+    OFConnection* ofconn = NULL;
+
+    switch_id_connection_map_mutex.lock();
+    ofconn = switch_id_connection_map[of_connection_id];
+    switch_id_connection_map_mutex.unlock();
+
+    if (NULL == ofconn) {
+        ACA_LOG_ERROR("OFController::get_instance - switch %ld not found\n", of_connection_id);
+    }
+
+    return ofconn;
+}
+
 void OFController::add_switch_to_conn_map(std::string bridge, int ofconn_id, OFConnection* ofconn) {
     switch_map_mutex.lock();
     if (switch_conn_map.find(bridge) != switch_conn_map.end()) {
@@ -137,6 +152,18 @@ void OFController::add_switch_to_conn_map(std::string bridge, int ofconn_id, OFC
     }
     switch_id_map[ofconn_id] = bridge;
     switch_map_mutex.unlock();
+
+    switch_id_connection_map_mutex.lock();
+
+    if(switch_id_connection_map.find(ofconn_id) != switch_id_connection_map.end()){
+        // if exsiting already, remove then insert to update
+        remove_switch_from_conn_map(ofconn_id);
+    }
+
+    switch_id_connection_map[ofconn_id] = ofconn;
+
+    switch_id_connection_map_mutex.unlock();
+
 
     ACA_LOG_INFO("OFController::add_switch_to_conn_map - ovs connection id=%d bridge=%s added to switch map\n",
                  ofconn->get_id(), bridge.c_str());
@@ -165,6 +192,14 @@ void OFController::remove_switch_from_conn_map(int ofconn_id) {
         switch_id_map.erase(ofconn_id);
     }
     switch_map_mutex.unlock();
+
+    switch_id_connection_map_mutex.lock();
+
+    if (switch_id_connection_map.find(ofconn_id) != switch_id_connection_map.end()){
+        switch_id_connection_map.erase(ofconn_id);
+    }
+
+    switch_id_connection_map_mutex.unlock();
 
     ACA_LOG_INFO("OFController::remove_switch_from_conn_map - ovs connection id=%d removed from switch map\n",
                  ofconn_id);
@@ -269,6 +304,18 @@ void OFController::packet_out(const char* br, const char* opt) {
         send_packet_out(ofconn_br, create_packet_out(opt));
     } else {
         ACA_LOG_ERROR("OFController::packet_out - ovs connection to bridge %s not found\n", br);
+    }
+
+    ofconn_br = NULL;
+}
+
+void OFController::packet_out(int of_connection_id, const char* opt) {
+    OFConnection* ofconn_br = get_instance(of_connection_id);
+
+    if (NULL != ofconn_br) {
+        send_packet_out(ofconn_br, create_packet_out(opt));
+    } else {
+        ACA_LOG_ERROR("OFController::packet_out - ovs connection to bridge %ld not found\n", of_connection_id);
     }
 
     ofconn_br = NULL;

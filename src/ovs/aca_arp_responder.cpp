@@ -223,10 +223,10 @@ int ACA_ARP_Responder::arp_recv(uint32_t in_port, void *vlan_hdr, void *message)
     return EXIT_FAILURE;
   }
 
-  return _parse_arp_request(in_port, vlanmsg, arpmsg);
+  return _parse_arp_request(in_port, vlanmsg, arpmsg, 0);
 }
 
-void ACA_ARP_Responder::arp_xmit(uint32_t in_port, void *vlanmsg, void *message, int is_found)
+void ACA_ARP_Responder::arp_xmit(uint32_t in_port, void *vlanmsg, void *message, int is_found, int of_connection_id)
 {
   arp_message *arpmsg = nullptr;
   string bridge = "br-tun";
@@ -260,12 +260,14 @@ void ACA_ARP_Responder::arp_xmit(uint32_t in_port, void *vlanmsg, void *message,
   ACA_LOG_DEBUG("ACA_ARP_Responder sent arp packet to ovs: %s\n", options.c_str());
   //aca_ovs_control::ACA_OVS_Control::get_instance().packet_out(bridge.c_str(),
   //                                                            options.c_str());
-  aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().packet_out(bridge.c_str(),
+  // aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().packet_out(bridge.c_str(),
+  //                                                                         options.c_str());
+  aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().packet_out(of_connection_id,
                                                                           options.c_str());
 }
 
 int ACA_ARP_Responder::_parse_arp_request(uint32_t in_port, vlan_message *vlanmsg,
-                                          arp_message *arpmsg)
+                                          arp_message *arpmsg, int of_connection_id)
 {
   arp_entry_data stData;
   arp_table_data *current_arp_data = new arp_table_data;
@@ -292,7 +294,7 @@ int ACA_ARP_Responder::_parse_arp_request(uint32_t in_port, vlan_message *vlanms
                   stData.ipv4_address.c_str(), stData.vlan_id,
                   current_arp_data->mac_address.c_str());
     arpreply = _pack_arp_reply(arpmsg, current_arp_data->mac_address);
-    arp_xmit(in_port, vlanmsg, arpreply, 1);
+    arp_xmit(in_port, vlanmsg, arpreply, 1, of_connection_id);
     return EXIT_SUCCESS;
   }
 }

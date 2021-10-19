@@ -71,6 +71,8 @@ class ACA_OVS_L2_Programmer {
 
   void packet_out(const char *bridge, const char *options);
 
+  void packet_out(int of_connection_id, const char *options);
+
   // compiler will flag the error when below is called.
   ACA_OVS_L2_Programmer(ACA_OVS_L2_Programmer const &) = delete;
   void operator=(ACA_OVS_L2_Programmer const &) = delete;

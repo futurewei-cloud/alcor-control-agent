@@ -1012,7 +1012,7 @@ void OVS_Control::monitor_vconn(vconn *vconn, bool reply_to_echo_requests,
             The pin.packet here has the same memory address, even after multiple calls.
             If you intent to store it somewhere, it is advised to make a copy of it.
           */
-                    ACA_On_Demand_Engine::get_instance().parse_packet(in_port, pin.packet);
+                    ACA_On_Demand_Engine::get_instance().parse_packet(in_port, pin.packet, 0);
 
                     if (error) {
                         fprintf(stderr, "decoding packet-in failed: %s",

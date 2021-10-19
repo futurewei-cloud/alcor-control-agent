@@ -47,6 +47,7 @@ struct on_demand_payload {
   void *packet;
   int packet_size;
   alcor::schema::Protocol protocol;
+  int of_connection_id;
 };
 // ACA on-demand engine implementation class
 namespace aca_on_demand_engine
@@ -86,7 +87,7 @@ class ACA_On_Demand_Engine {
    * example:
    *    ACA_ON_Demand_Engine::get_instance().parse_packet(1, packet) 
    */
-  void parse_packet(uint32_t in_port, void *packet);
+  void parse_packet(uint32_t in_port, void *packet, int of_connection_id);
 
   void clean_remaining_payload();
   /*
@@ -101,7 +102,7 @@ class ACA_On_Demand_Engine {
   void print_hex_ascii_line(const u_char *payload, int len, int offset);
   void on_demand(string uuid_for_call, OperationStatus status, uint32_t in_port,
                  void *packet, int packet_size, Protocol protocol,
-                 std::chrono::_V2::steady_clock::time_point insert_time);
+                 std::chrono::_V2::steady_clock::time_point insert_time, int of_connection_id);
   void unknown_recv(uint16_t vlan_id, string ip_src, string ip_dest, int port_src,
                     int port_dest, Protocol protocol, char *uuid_str);
   void process_async_grpc_replies();
