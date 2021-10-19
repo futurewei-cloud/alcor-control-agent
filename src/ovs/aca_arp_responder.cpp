@@ -204,7 +204,7 @@ int ACA_ARP_Responder::_validate_arp_entry(arp_config *arp_cfg_in)
 
 /************* Operation and procedure for dataplane *******************/
 
-int ACA_ARP_Responder::arp_recv(uint32_t in_port, void *vlan_hdr, void *message)
+int ACA_ARP_Responder::arp_recv(uint32_t in_port, void *vlan_hdr, void *message, int of_connection_id)
 {
   arp_message *arpmsg = nullptr;
   vlan_message *vlanmsg = nullptr;
@@ -223,7 +223,7 @@ int ACA_ARP_Responder::arp_recv(uint32_t in_port, void *vlan_hdr, void *message)
     return EXIT_FAILURE;
   }
 
-  return _parse_arp_request(in_port, vlanmsg, arpmsg, 0);
+  return _parse_arp_request(in_port, vlanmsg, arpmsg, of_connection_id);
 }
 
 void ACA_ARP_Responder::arp_xmit(uint32_t in_port, void *vlanmsg, void *message, int is_found, int of_connection_id)

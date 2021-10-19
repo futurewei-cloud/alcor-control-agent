@@ -395,7 +395,7 @@ void ACA_On_Demand_Engine::parse_packet(uint32_t in_port, void *packet, int of_c
     // }
     if (ntohs(*(uint16_t *)(arp_hdr + 6)) == 0x0001) {
       if (aca_arp_responder::ACA_ARP_Responder::get_instance().arp_recv(
-                  in_port, vlan_hdr, arp_hdr) == ENOTSUP) {
+                  in_port, vlan_hdr, arp_hdr, of_connection_id) == ENOTSUP) {
         _protocol = Protocol::ARP;
         arp_message *arpmsg = (arp_message *)arp_hdr;
         ip_src = aca_arp_responder::ACA_ARP_Responder::get_instance()._get_source_ip(arpmsg);
