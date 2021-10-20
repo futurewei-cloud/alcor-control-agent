@@ -21,7 +21,7 @@
 #include "pulsar/Message.h"
 #include "pulsar/Result.h"
 #include "pulsar/ConsumerType.h"
-//#include "pulsar/KeySharedPolicy.h"
+#include "pulsar/KeySharedPolicy.h"
 
 
 using namespace pulsar;
@@ -31,37 +31,58 @@ namespace aca_message_pulsar
 {
 class ACA_Message_Pulsar_Consumer {
   private:
-    string brokers_list; //IP addresses of pulsar brokers, format: pulsar:://<pulsar_host_ip>:<port>, example: pulsar://10.213.43.188:9092
+    string brokers_list; // IP addresses of pulsar brokers, format: pulsar:://<pulsar_host_ip>:<port>, example: pulsar://10.213.43.188:9092
 
-    string subscription_name; //Subscription name of the pulsar consumer
+    string multicast_subscription_name; // Subscription name of the multicast pulsar consumer
+    string unicast_subscription_name; // Subscription name of the unicast pulsar consumer
 
-    string topic_name; //A string representation of the topic to be consumed, for example: /hostid/00000000-0000-0000-0000-000000000000/netwconf/
+    string multicast_topic_name; //A string representation of the topic to be consumed, for example: /hostid/00000000-0000-0000-0000-000000000000/netwconf/
+    string unicast_topic_name; 
 
-    ConsumerConfiguration consumer_config; //Configuration of the pulsar consumer
+    ConsumerConfiguration multicast_consumer_config; //Configuration of the mulitcast pulsar consumer
+    ConsumerConfiguration unicast_consumer_config; //Configuration of the unicast pulsar consumer
 
-    Client *ptr_client; //A pointer to the pulsar client
+    Client *ptr_multicast_client; //A pointer to the multicast pulsar client
+    Client *ptr_unicast_client; //A pointer to the unicast pulsar client
+
+    Consumer multicast_consumer;
+    Consumer unicast_consumer;
+
+  private:
+    void setMulticastSubscriptionName(string subscription_name);
+
+    void setUnicastSubscriptionName(string subscription_name);
+
+    void setBrokers(string brokers);
+
+    void setMulticastTopicName(string topic);
+
+    void setUnicastTopicName(string topic);
+
+    
 
   public:
-    ACA_Message_Pulsar_Consumer(string brokers, string subscription_name);
+    ACA_Message_Pulsar_Consumer(string topic, string brokers, string subscription_name);
 
     ~ACA_Message_Pulsar_Consumer();
 
     string getBrokers() const;
 
-    string getLastTopicName() const;
+    string getMulticastTopicName() const;
 
-    string getSubscriptionName() const;
+    string getUnicastTopicName() const;
 
-    void setSubscriptionName(string subscription_name);
+    string getMulticastSubscriptionName() const;
 
-    bool consumeDispatched(string topic);
+    string getUnicastSubscriptionName() const;
 
-  private:
-    void setBrokers(string brokers);
+    bool multicastConsumerDispatched();
 
-    void setLastTopicName(string topic);
+    bool unicastConsumerDispatched(int stickyHash);
 
-    void listener(Consumer consumer, const Message& message);
+    //static void listener(Consumer consumer, const Message& message);
+
+  
 };
 
 } // namespace aca_message_pulsar

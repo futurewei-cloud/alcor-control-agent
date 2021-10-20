@@ -103,6 +103,7 @@ target_link_libraries(AlcorControlAgent grpc)
 target_link_libraries(AlcorControlAgent ${PROTOBUF_LIBRARY})
 target_link_libraries(AlcorControlAgent ${_GRPC_GRPCPP_UNSECURE})
 
+
 add_dependencies(AlcorControlAgentLib proto grpc)
 add_subdirectory(proto3)
 add_subdirectory(grpc)

@@ -77,6 +77,7 @@ bool ACA_Message_Pulsar_Producer::publish(string message)
 
   // Flush all produced messages
   producer.flush();
+  producer.close();
   return EXIT_SUCCESS;
 
 }

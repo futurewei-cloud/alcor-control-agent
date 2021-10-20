@@ -42,7 +42,7 @@ using std::string;
 // Defines
 #define ACALOGNAME "AlcorControlAgent"
 static char EMPTY_STRING[] = "";
-static char BROKER_LIST[] = "pulsar://localhost:6502";
+static char BROKER_LIST[] = "pulsar://localhost:6650";
 static char PULSAR_TOPIC[] = "Host-ts-1";
 static char PULSAR_SUBSCRIPTION_NAME[] = "Test-Subscription";
 static char GRPC_SERVER_PORT[] = "50001";
@@ -287,9 +287,10 @@ int main(int argc, char *argv[])
   //// monitor br-tun for arp request message
   //ACA_OVS_Control::get_instance().monitor("br-tun", "resume");
 
-  ACA_Message_Pulsar_Consumer network_config_consumer(g_broker_list, g_pulsar_subsription_name);
-  rc = network_config_consumer.consumeDispatched(g_pulsar_topic);
-
+  ACA_Message_Pulsar_Consumer network_config_consumer(g_pulsar_topic, g_broker_list, g_pulsar_subsription_name);
+  network_config_consumer.multicastConsumerDispatched();
+  //network_config_consumer.unicastConsumerDispatched(0);
+  
   pause();
   aca_cleanup();
 
