@@ -98,13 +98,15 @@ void OFController::connection_callback(OFConnection* ofconn, OFConnection::Event
     } else if (type == OFConnection::EVENT_CLOSED) {
         std::string bridge = switch_id_map[ofconn->get_id()];
         ACA_LOG_WARN("OFController::connection_callback - ovs connection id=%d closed by user, remove %s from switch map\n", ofconn->get_id(), bridge.c_str());
-        remove_switch_from_conn_map(ofconn->get_id());
-        remove_switch_from_conn_map(bridge);
+        remove_switch_from_conn_maps(bridge, ofconn->get_id());
+        // remove_switch_from_conn_map(ofconn->get_id());
+        // remove_switch_from_conn_map(bridge);
     } else if (type == OFConnection::EVENT_DEAD) {
         std::string bridge = switch_id_map[ofconn->get_id()];
         ACA_LOG_WARN("OFController::connection_callback - ovs connection id=%d closed due to inactivity, remove %s from switch map\n", ofconn->get_id(), bridge.c_str());
-        remove_switch_from_conn_map(ofconn->get_id());
-        remove_switch_from_conn_map(bridge);
+        remove_switch_from_conn_maps(bridge, ofconn->get_id());
+        // remove_switch_from_conn_map(ofconn->get_id());
+        // remove_switch_from_conn_map(bridge);
     }
 }
 
@@ -124,22 +126,53 @@ OFConnection* OFController::get_instance(std::string bridge) {
 
 void OFController::add_switch_to_conn_map(std::string bridge, int ofconn_id, OFConnection* ofconn) {
     switch_map_mutex.lock();
-    if (switch_conn_map.find(bridge) != switch_conn_map.end()) {
-        // if existing already, remove then insert to update
-        remove_switch_from_conn_map(bridge);
+    auto ofconn_iter = switch_conn_map.find(bridge);
+
+    // if found, remove
+    if (ofconn_iter != switch_conn_map.end()) {
+        if (NULL != ofconn_iter->second) { // k is bridge name, v is OFConnection*
+            ofconn_iter->second->close();
+        }
+        switch_conn_map.erase(bridge);
     }
+
     switch_conn_map[bridge] = ofconn;
 
     if (switch_id_map.find(ofconn_id) != switch_id_map.end()) {
-        // if existing already, remove then insert to update
-        remove_switch_from_conn_map(ofconn_id);
+        switch_id_map.erase(ofconn_id);
     }
+
     switch_id_map[ofconn_id] = bridge;
     switch_map_mutex.unlock();
 
     ACA_LOG_INFO("OFController::add_switch_to_conn_map - ovs connection id=%d bridge=%s added to switch map\n",
                  ofconn->get_id(), bridge.c_str());
 }
+
+void OFController::remove_switch_from_conn_maps(std::string bridge, int ofconn_id){
+    switch_map_mutex.lock();
+
+    // if found, remove
+    if (switch_id_map.find(ofconn_id) != switch_id_map.end()) {
+        switch_id_map.erase(ofconn_id);
+    }
+
+    auto ofconn_iter = switch_conn_map.find(bridge);
+
+    // if found, remove
+    if (ofconn_iter != switch_conn_map.end()) {
+        if (NULL != ofconn_iter->second) { // k is bridge name, v is OFConnection*
+            ofconn_iter->second->close();
+        }
+        switch_conn_map.erase(bridge);
+    }
+
+    switch_map_mutex.unlock();
+
+    ACA_LOG_INFO("OFController::remove_switch_from_conn_map - ovs connection bridge=%s removed from switch map\n",
+                 bridge.c_str());
+}
+
 
 void OFController::remove_switch_from_conn_map(std::string bridge) {
     switch_map_mutex.lock();
