@@ -129,9 +129,9 @@ OFConnection* OFController::get_instance(std::string bridge) {
 OFConnection* OFController::get_instance(int of_connection_id) {
     OFConnection* ofconn = NULL;
 
-    switch_id_connection_map_mutex.lock();
+    switch_map_mutex.lock();
     ofconn = switch_id_connection_map[of_connection_id];
-    switch_id_connection_map_mutex.unlock();
+    switch_map_mutex.unlock();
 
     if (NULL == ofconn) {
         ACA_LOG_ERROR("OFController::get_instance - switch %ld not found\n", of_connection_id);

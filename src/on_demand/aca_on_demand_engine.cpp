@@ -332,7 +332,7 @@ void ACA_On_Demand_Engine::on_demand(string uuid_for_call, OperationStatus statu
       //aca_ovs_control::ACA_OVS_Control::get_instance().packet_out(
       //        bridge.c_str(), options.c_str());
       aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().packet_out(
-              bridge.c_str(), options.c_str());
+              of_connection_id, options.c_str());
       ACA_LOG_DEBUG("On-demand packet with protocol %d sent to ovs: %s\n",
                     protocol, options.c_str());
     }
