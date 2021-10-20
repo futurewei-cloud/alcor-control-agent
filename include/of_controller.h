@@ -77,6 +77,8 @@ public:
 
     void remove_switch_from_conn_map(int ofconn_id);
 
+    void remove_switch_from_conn_maps(std::string bridge, int ofconn_id);
+
     void setup_default_br_int_flows();
 
     void setup_default_br_tun_flows();
