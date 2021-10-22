@@ -149,6 +149,7 @@ void OFController::add_switch_to_conn_map(std::string bridge, int ofconn_id, OFC
         if (NULL != ofconn_iter->second) { // k is bridge name, v is OFConnection*
             ofconn_iter->second->close();
         }
+        ACA_LOG_DEBUG("Removed ofconn_name: %s from switch_conn_map, when adding a new connection with the same name\n", bridge.c_str());
         switch_conn_map.erase(bridge);
     }
 
@@ -162,6 +163,7 @@ void OFController::add_switch_to_conn_map(std::string bridge, int ofconn_id, OFC
 
     // if found, remove
     if (switch_id_connection_map.find(ofconn_id) != switch_id_connection_map.end()){
+        ACA_LOG_DEBUG("Removed ofconn_id: %ld from id_connection_map, when adding a new connection with the same ID\n", ofconn_id);
         switch_id_connection_map.erase(ofconn_id);
     }
 
