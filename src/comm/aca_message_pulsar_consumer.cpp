@@ -36,8 +36,6 @@ void listener(Consumer consumer, const Message& message){
   alcor::schema::GoalStateOperationReply gsOperationalReply;
   int rc;
   Result result;
-  printf("\n<=====incoming message: %s\n",
-                message.getDataAsString().c_str());
 
   ACA_LOG_DEBUG("\n<=====incoming message: %s\n",
                 message.getDataAsString().c_str());
@@ -79,7 +77,7 @@ ACA_Message_Pulsar_Consumer::ACA_Message_Pulsar_Consumer(string topic, string br
   ACA_LOG_DEBUG("Multicast consumer subscription name: %s\n", this->multicast_subscription_name.c_str());
 
   // Create the clients
-  this->ptr_multicast_client= new Client(brokers);
+  //this->ptr_multicast_client= new Client(brokers);
   this->ptr_unicast_client = new Client(brokers);
 }
 
@@ -122,8 +120,8 @@ bool ACA_Message_Pulsar_Consumer::unicastConsumerDispatched(int stickyHash){
 
   keySharedPolicy.setKeySharedMode(STICKY);
   // Set sticky ranges with specified hash value
-  // StickyRange stickyRange = std::make_pair(stickyHash,stickyHash);
-  // keySharedPolicy.getStickyRanges();
+  StickyRange stickyRange = std::make_pair(stickyHash,stickyHash);
+  keySharedPolicy.setStickyRanges({stickyRange});
 
   //Use key shared mode
   this->unicast_consumer_config.setConsumerType(ConsumerKeyShared).setKeySharedPolicy(keySharedPolicy).setMessageListener(listener);
