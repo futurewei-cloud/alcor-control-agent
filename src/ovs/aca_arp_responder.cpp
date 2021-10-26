@@ -283,10 +283,12 @@ int ACA_ARP_Responder::_parse_arp_request(uint32_t in_port, vlan_message *vlanms
     stData.vlan_id = 0;
   }
 
-  
   // auto requested_ip = _get_requested_ip(arpmsg);
 
   current_arp_data->mac_address = "6c:dd:ee:00:11:22";
+
+  // put this .find here just to make sure that there's a lookup operation.
+  assert(!_arp_db.find(stData, current_arp_data));
 
   arpreply = _pack_arp_reply(arpmsg, current_arp_data->mac_address);
   arp_xmit(in_port, vlanmsg, arpreply, 1, of_connection_id);
