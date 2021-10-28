@@ -219,11 +219,11 @@ int ACA_Vlan_Manager::create_l2_neighbor(string virtual_ip, string virtual_mac,
 
 // called when a L2 neighbor is deleted
 int ACA_Vlan_Manager::delete_l2_neighbor(string virtual_ip, string virtual_mac,
-                                         uint tunnel_id, ulong & /*culminative_time*/)
+                                         uint tunnel_id, ulong & culminative_time)
 {
   ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::delete_l2_neighbor ---> Entering\n");
 
-  int rc;
+  int rc = EXIT_SUCCESS;
   int overall_rc = EXIT_SUCCESS;
 
   int internal_vlan_id = get_or_create_vlan_id(tunnel_id);
@@ -234,7 +234,10 @@ int ACA_Vlan_Manager::delete_l2_neighbor(string virtual_ip, string virtual_mac,
   string match_string = "table=20,priority=50,dl_vlan=" + to_string(internal_vlan_id) +
                         ",dl_dst:" + virtual_mac;
 
-  rc = ACA_OVS_Control::get_instance().del_flows("br-tun", match_string.c_str());
+  aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().execute_openflow(culminative_time,
+                                                                                "br-tun",
+                                                                                match_string,
+                                                                                "del");
 
   if (rc != EXIT_SUCCESS) {
     ACA_LOG_ERROR("Failed to delete L2 neighbor rule, rc: %d\n", rc);
