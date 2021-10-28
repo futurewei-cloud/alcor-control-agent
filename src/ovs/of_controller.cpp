@@ -99,14 +99,10 @@ void OFController::connection_callback(OFConnection* ofconn, OFConnection::Event
         std::string bridge = switch_id_map[ofconn->get_id()];
         ACA_LOG_WARN("OFController::connection_callback - ovs connection id=%d closed by user, remove %s from switch map\n", ofconn->get_id(), bridge.c_str());
         remove_switch_from_conn_maps(bridge, ofconn->get_id());
-        // remove_switch_from_conn_map(ofconn->get_id());
-        // remove_switch_from_conn_map(bridge);
     } else if (type == OFConnection::EVENT_DEAD) {
         std::string bridge = switch_id_map[ofconn->get_id()];
         ACA_LOG_WARN("OFController::connection_callback - ovs connection id=%d closed due to inactivity, remove %s from switch map\n", ofconn->get_id(), bridge.c_str());
         remove_switch_from_conn_maps(bridge, ofconn->get_id());
-        // remove_switch_from_conn_map(ofconn->get_id());
-        // remove_switch_from_conn_map(bridge);
     }
 }
 
@@ -124,6 +120,8 @@ OFConnection* OFController::get_instance(std::string bridge) {
     return ofconn;
 }
 
+// Adding a connection should be an atomic action, meaning that both adding to
+// switch_con_map and switch_id_map should be added under the same lock
 void OFController::add_switch_to_conn_map(std::string bridge, int ofconn_id, OFConnection* ofconn) {
     switch_map_mutex.lock();
     auto ofconn_iter = switch_conn_map.find(bridge);
@@ -149,6 +147,8 @@ void OFController::add_switch_to_conn_map(std::string bridge, int ofconn_id, OFC
                  ofconn->get_id(), bridge.c_str());
 }
 
+// Removing a connection should be an atomic action, meaning that both removing from
+// switch_con_map and switch_id_map should be added under the same lock
 void OFController::remove_switch_from_conn_maps(std::string bridge, int ofconn_id){
     switch_map_mutex.lock();
 
