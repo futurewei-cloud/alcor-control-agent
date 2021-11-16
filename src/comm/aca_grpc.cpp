@@ -218,13 +218,15 @@ void GoalStateProvisionerAsyncServer::ProcessPushGoalStatesStreamAsyncCall(
       }
       break;
     case AsyncGoalStateProvionerCallBase::CallStatus::SENT:
-      ACA_LOG_DEBUG("%s\n", "Nothing to do when a PushGoalStatesStream call in at SENT state");
+      ACA_LOG_DEBUG("%s\n", "In SENT state, calling .Finish");
       streamingCall->stream_.Finish(Status::OK, baseCall);
-//       streamingCall->gsOperationReply_.Clear();
+      ACA_LOG_DEBUG("%s\n", "In SENT state, calling gsOperationReply_.Clear()");
+      streamingCall->gsOperationReply_.Clear();
+      ACA_LOG_DEBUG("%s\n", "In SENT state, calling delete baseCall");
+      delete (PushGoalStatesStreamAsyncCall *)baseCall;
       break;
     default:
       ACA_LOG_DEBUG("%s\n", "PushGoalStatesStream call in at DEFAULT state");
-      delete baseCall;
       break;
     }
   }
