@@ -214,6 +214,7 @@ void GoalStateProvisionerAsyncServer::ProcessPushGoalStatesStreamAsyncCall(
           streamingCall->status_ = AsyncGoalStateProvionerCallBase::CallStatus::SENT;
           streamingCall->hasReadFromStream = false;
           streamingCall->stream_.Write(streamingCall->gsOperationReply_, baseCall);
+        //   this call will make ACA crash if we need to call the stream.Finish
         //   streamingCall->gsOperationReply_.Clear();
         }
       }
@@ -221,7 +222,6 @@ void GoalStateProvisionerAsyncServer::ProcessPushGoalStatesStreamAsyncCall(
     case AsyncGoalStateProvionerCallBase::CallStatus::SENT:
       ACA_LOG_DEBUG("%s\n", "Nothing to do when a PushGoalStatesStream call in at SENT state");
       streamingCall->stream_.Finish(Status::OK, baseCall);
-      streamingCall->gsOperationReply_.Clear();
       delete baseCall;
       break;
     default:
