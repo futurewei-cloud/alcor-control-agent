@@ -223,6 +223,7 @@ void GoalStateProvisionerAsyncServer::ProcessPushGoalStatesStreamAsyncCall(
 //       streamingCall->gsOperationReply_.Clear();
       break;
     default:
+      ACA_LOG_DEBUG("%s\n", "PushGoalStatesStream call in at DEFAULT state");
       delete baseCall;
       break;
     }
