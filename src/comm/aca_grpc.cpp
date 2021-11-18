@@ -218,15 +218,11 @@ void GoalStateProvisionerAsyncServer::ProcessPushGoalStatesStreamAsyncCall(
       }
       break;
     case AsyncGoalStateProvionerCallBase::CallStatus::SENT:
-      ACA_LOG_DEBUG("%s\n", "In SENT state, calling .Finish");
       streamingCall->status_ = AsyncGoalStateProvionerCallBase::CallStatus::DESTROY;
       streamingCall->stream_.Finish(Status::OK, baseCall);
       break;
     case AsyncGoalStateProvionerCallBase::CallStatus::DESTROY:
-      ACA_LOG_DEBUG("%s\n", "In DESTROY state, calling .Finish");
-      ACA_LOG_DEBUG("%s\n", "In DESTROY state, calling gsOperationReply_.Clear()");
       streamingCall->gsOperationReply_.Clear();
-      ACA_LOG_DEBUG("%s\n", "In DESTROY state, calling delete baseCall");
       delete (PushGoalStatesStreamAsyncCall *)baseCall;
       break;
     default:
