@@ -87,7 +87,7 @@ TEST(pulsar_test_cases, DISABLED_pulsar_consumer_test)
 
     int seralizedLength=10000;
     unsigned char serializedGoalState[seralizedLength];
-    string GoalStateString = "Test Message";
+    string GoalStateString;
     GoalState mGoalState=buildGoalState();
 
     aca_test_reset_environment();
@@ -101,10 +101,18 @@ TEST(pulsar_test_cases, DISABLED_pulsar_consumer_test)
     EXPECT_EQ(overall_rc, EXIT_SUCCESS);
     overall_rc = EXIT_SUCCESS;
 
-    if(mGoalState.SerializePartialToArray(serializedGoalState,seralizedLength)){
+    cmd_string = "ovs-docker set-vlan br-int eth1 con3 1";
+    overall_rc = Aca_Net_Config::get_instance().execute_system_command(cmd_string);
+    EXPECT_EQ(overall_rc, EXIT_SUCCESS);
+    overall_rc = EXIT_SUCCESS;
+
+//    if(mGoalState.SerializePartialToArray(serializedGoalState,seralizedLength)){
+//        ACA_LOG_INFO("%s","Successfully covert protobuf struct to message\n");
+//    }
+    if(mGoalState.SerializeToString(&GoalStateString)){
         ACA_LOG_INFO("%s","Successfully covert protobuf struct to message\n");
     }
-    GoalStateString.append(reinterpret_cast<const char*> (serializedGoalState));
+//    GoalStateString.append(reinterpret_cast<const char*> (serializedGoalState));
     ACA_Message_Pulsar_Producer producer(mq_broker_ip, mq_test_topic);
     retcode = producer.publish(GoalStateString);
     EXPECT_EQ(retcode, EXIT_SUCCESS);
