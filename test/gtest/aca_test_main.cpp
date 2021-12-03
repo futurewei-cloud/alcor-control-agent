@@ -19,6 +19,10 @@
 #include "aca_grpc.h"
 #include "aca_grpc_client.h"
 #include "aca_message_pulsar_producer.h"
+#include "aca_message_pulsar_consumer.h"
+#include "aca_ovs_control.h"
+#include "aca_net_config.h"
+#include "aca_comm_mgr.h"
 #include <unistd.h> /* for getopt */
 #include <grpcpp/grpcpp.h>
 #include <thread>
@@ -26,7 +30,8 @@
 
 using namespace std;
 using namespace aca_message_pulsar;
-
+using aca_net_config::Aca_Net_Config;
+using aca_comm_manager::Aca_Comm_Manager;
 #define ACALOGNAME "AlcorControlAgentTest"
 
 // Global variables
@@ -62,12 +67,37 @@ std::atomic_ulong g_total_update_GS_time(0);
 bool g_debug_mode = true;
 bool g_demo_mode = false;
 
-string remote_ip_1 = "172.17.0.2"; // for docker network
-string remote_ip_2 = "172.17.0.3"; // for docker network
+extern string project_id;
+extern string vpc_id_1;
+extern string vpc_id_2;
+extern string subnet_id_1;
+extern string subnet_id_2;
+extern string port_id_1;
+extern string port_id_2;
+extern string port_id_3;
+extern string port_id_4;
+extern string port_name_1;
+extern string port_name_2;
+extern string port_name_3;
+extern string port_name_4;
+extern string vmac_address_1;
+extern string vmac_address_2;
+extern string vmac_address_3;
+extern string vmac_address_4;
+extern string vip_address_1;
+extern string vip_address_2;
+extern string vip_address_3;
+extern string vip_address_4;
+extern string subnet1_gw_ip;
+extern string subnet2_gw_ip;
+extern string subnet1_gw_mac;
+extern string subnet2_gw_mac;
+static string subnet1_cidr = "10.10.0.0/24";
+static string subnet2_cidr = "10.10.1.0/24";
+extern string remote_ip_1="172.17.0.2"; // for docker network
+extern string remote_ip_2= "172.17.0.3"; // for docker network
 uint neighbors_to_create = 10;
 
-static string mq_broker_ip = "pulsar://localhost:6650"; //for the broker running in localhost
-static string mq_test_topic = "Host-ts-1";
 int processor_count = std::thread::hardware_concurrency();
 /*
   From previous tests, we found that, for x number of cores,
@@ -78,29 +108,6 @@ int processor_count = std::thread::hardware_concurrency();
 */
 int thread_pools_size = (processor_count == 0) ? 1 : ((ceil(1.3 * processor_count)) / 2);
 
-//
-// Test suite: pulsar_test_cases
-//
-// Testing the pulsar implementation where AlcorControlAgent is the consumer
-// and aca_test is acting as producer
-// Note: it will require a pulsar setup on localhost therefore this test is DISABLED by default
-//   it can be executed by:
-//
-//     aca_tests --gtest_also_run_disabled_tests --gtest_filter=*DISABLED_pulsar_consumer_test
-//
-TEST(pulsar_test_cases, DISABLED_pulsar_consumer_test)
-{
-  int retcode = 0;
-  const int MESSAGES_TO_SEND = 10;
-  string message = "Test Message";
-
-  ACA_Message_Pulsar_Producer producer(mq_broker_ip, mq_test_topic);
-
-  for (int i = 0; i < MESSAGES_TO_SEND; i++) {
-    retcode = producer.publish(message);
-    EXPECT_EQ(retcode, EXIT_SUCCESS);
-  }
-}
 
 static void aca_cleanup()
 {
