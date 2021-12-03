@@ -50,8 +50,12 @@ class ACA_Message_Pulsar_Producer {
 
   bool publish(string message);
 
+  bool publish(string message, string orderingKey);
+
+
   private:
   void setBrokers(string brokers);
+
 };
 
 } // aca_message_pulsar

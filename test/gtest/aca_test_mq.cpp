@@ -75,8 +75,8 @@ aca_test_1_port_CREATE_plus_N_neighbors_CREATE_V2(NeighborType input_neighbor_ty
 static string mq_broker_ip = "pulsar://localhost:6650"; //for the broker running in localhost
 static string mq_test_topic = "Host-ts-1";
 static string mq_subscription = "test_subscription";
-static string mq_key="3dda2801-d675-4688-a63f-dcda8d327f50"; // 3dda2801-d675-4688-a63f-dcda8d327f50  9192a4d4-ffff-4ece-b3f0-8d36e3d88001
-static int mq_hash=21485; //  21485  49755
+static string mq_key="9192a4d4-ffff-4ece-b3f0-8d36e3d88001"; // 3dda2801-d675-4688-a63f-dcda8d327f50  9192a4d4-ffff-4ece-b3f0-8d36e3d88001
+static int mq_hash=49775; //  21485  49755
 
 //
 // Test suite: pulsar_test_cases
