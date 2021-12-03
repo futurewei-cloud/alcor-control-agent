@@ -74,13 +74,20 @@ aca_test_1_port_CREATE_plus_N_neighbors_CREATE_V2(NeighborType input_neighbor_ty
 
 static string mq_broker_ip = "pulsar://localhost:6650"; //for the broker running in localhost
 static string mq_test_topic = "Host-ts-1";
-
+static string mq_subscription = "test_subscription";
+static string mq_key="3dda2801-d675-4688-a63f-dcda8d327f50"; // 3dda2801-d675-4688-a63f-dcda8d327f50  9192a4d4-ffff-4ece-b3f0-8d36e3d88001
+static int mq_hash=21485; //  21485  49755
 
 //
 // Test suite: pulsar_test_cases
 //
-// Note: it requires a pulsar setup on localhost therefore this test is DISABLED by default
-//
+// Note: it requires a pulsar setup on localhost therefore this test is DISABLED by default.
+// You will need three terminals:
+//      Terminal(1): run pulsar standalone.
+//      Terminal(2): run pulsar consumer test case.
+//      Terminal(3): run pulsar producer test cases.
+
+
 // This case tests the pulsar consumer implementation.
 // First run this case by executing:
 //    ./aca_tests --gtest_also_run_disabled_tests --gtest_filter=*DISABLED_pulsar_consumer_test
@@ -93,7 +100,7 @@ TEST(pulsar_test_cases, DISABLED_pulsar_consumer_test)
     int length=1000;
     ulong not_care_culminative_time;
     string cmd_string;
-    string testSubscription="testv2";
+
     unsigned char serializedGoalState[length];
 
     bool previous_demo_mode = g_demo_mode;
@@ -103,8 +110,33 @@ TEST(pulsar_test_cases, DISABLED_pulsar_consumer_test)
 
     ACA_Message_Pulsar_Consumer consumer(mq_test_topic,
                                                         mq_broker_ip,
-                                                        testSubscription);
+                                         mq_subscription);
     consumer.multicastConsumerDispatched();
+    pause();
+
+    g_demo_mode = previous_demo_mode;
+}
+
+//    sudo ./aca_tests --gtest_also_run_disabled_tests --gtest_filter=*DISABLED_pulsar_unicast_consumer_test
+TEST(pulsar_test_cases, DISABLED_pulsar_unicast_consumer_test)
+{
+    int retcode = 0;
+    int overall_rc=0;
+    int length=1000;
+    ulong not_care_culminative_time;
+    string cmd_string;
+
+    unsigned char serializedGoalState[length];
+
+    bool previous_demo_mode = g_demo_mode;
+    g_demo_mode = true;
+
+    aca_test_reset_environment();
+
+    ACA_Message_Pulsar_Consumer consumer(mq_test_topic,
+                                         mq_broker_ip,
+                                         mq_subscription);
+    consumer.unicastConsumerDispatched(mq_hash);
     pause();
 
     g_demo_mode = previous_demo_mode;
@@ -162,6 +194,55 @@ TEST(pulsar_test_cases, DISABLED_pulsar_producer_test)
     overall_rc = EXIT_SUCCESS;
 
 }
+//      sudo ./aca_tests --gtest_also_run_disabled_tests --gtest_filter=*DISABLED_pulsar_hash_producer_test
+TEST(pulsar_test_cases, DISABLED_pulsar_hash_producer_test)
+{
+    int retcode = 0;
+    int overall_rc=0;
+    int length=1000;
+    ulong not_care_culminative_time;
+    string cmd_string;
+    string GoalStateString;
+    unsigned char serializedGoalState[length];
+
+    GoalState GoalState_builder;
+    PortState *new_port_states = GoalState_builder.add_port_states();
+    SubnetState *new_subnet_states = GoalState_builder.add_subnet_states();
+
+    ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
+            "del-br br-int", not_care_culminative_time, overall_rc);
+
+    ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
+            "del-br br-tun", not_care_culminative_time, overall_rc);
+
+    overall_rc = ACA_OVS_L2_Programmer::get_instance().setup_ovs_bridges_if_need();
+    ASSERT_EQ(overall_rc, EXIT_SUCCESS);
+    overall_rc = EXIT_SUCCESS;
+
+    // fill in port state structs
+    aca_test_create_default_port_state(new_port_states);
+
+    // fill in subnet state structs
+    aca_test_create_default_subnet_state(new_subnet_states);
+
+    if(GoalState_builder.SerializeToString(&GoalStateString)){
+        ACA_LOG_INFO("%s","Successfully covert protobuf struct to message\n");
+    }
+
+    ACA_Message_Pulsar_Producer producer(mq_broker_ip, mq_test_topic);
+    retcode = producer.publish(GoalStateString,mq_key);
+    EXPECT_EQ(retcode, EXIT_SUCCESS);
+
+    ACA_LOG_INFO("%s","Waiting for GoalState update.\n");
+    sleep(2);
+
+    ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
+            "get Interface " + port_name_1 + " ofport", not_care_culminative_time, overall_rc);
+    EXPECT_EQ(overall_rc, EXIT_SUCCESS);
+    overall_rc = EXIT_SUCCESS;
+
+}
+
 // This case tests the pulsar producer implementation and publishes a GoalStateV2 to the subscribed topic.
 // First run pulsar_consumer_test then execute
 //      sudo ./aca_tests --gtest_also_run_disabled_tests --gtest_filter=*DISABLED_pulsar_producer_testv2
