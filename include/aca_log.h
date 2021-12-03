@@ -35,9 +35,9 @@ extern bool g_debug_mode;
 /* debug-level message */
 #define ACA_LOG_DEBUG(f_, ...)                                                 \
   do {                                                                         \
-    syslog(LOG_DEBUG, "[%s:%d] " f_, __func__, __LINE__,                     \
-		       ##__VA_ARGS__);                                                     \
     if (g_debug_mode) {                                                        \
+      syslog(LOG_DEBUG, "[%s:%d] " f_, __func__, __LINE__,                     \
+		       ##__VA_ARGS__);                                                     \
       fprintf(stdout, f_, ##__VA_ARGS__);                                      \
     }                                                                          \
   } while (0)

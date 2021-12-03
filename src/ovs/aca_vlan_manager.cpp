@@ -197,18 +197,10 @@ int ACA_Vlan_Manager::create_l2_neighbor(string virtual_ip, string virtual_mac,
                          "->NXM_NX_TUN_ID[],set_field:" + remote_host_ip +
                          "->tun_dst,output:" + VXLAN_GENERIC_OUTPORT_NUMBER;
 
-  std::chrono::_V2::steady_clock::time_point start = std::chrono::steady_clock::now();
   aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().execute_openflow(culminative_time,
                                                                                 "br-tun",
                                                                                 match_string + action_string,
                                                                                 "add");
-  std::chrono::_V2::steady_clock::time_point end = std::chrono::steady_clock::now();
-
-  auto message_total_operation_time =
-          std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
-  ACA_LOG_DEBUG("[create_l2_neighbor] Start adding ovs rule at: [%ld], finished at: [%ld]\nElapsed time for adding ovs rule for l2 neighbor took: %ld microseconds or %ld milliseconds\n",
-                start, end, message_total_operation_time,
-                (message_total_operation_time / 1000));
 
   // create arp entry in arp responder for the l2 neighbor
   stArpCfg.mac_address = virtual_mac;
@@ -227,11 +219,11 @@ int ACA_Vlan_Manager::create_l2_neighbor(string virtual_ip, string virtual_mac,
 
 // called when a L2 neighbor is deleted
 int ACA_Vlan_Manager::delete_l2_neighbor(string virtual_ip, string virtual_mac,
-                                         uint tunnel_id, ulong & /*culminative_time*/)
+                                         uint tunnel_id, ulong & culminative_time)
 {
   ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::delete_l2_neighbor ---> Entering\n");
 
-  int rc;
+  int rc = EXIT_SUCCESS;
   int overall_rc = EXIT_SUCCESS;
 
   int internal_vlan_id = get_or_create_vlan_id(tunnel_id);
@@ -242,7 +234,10 @@ int ACA_Vlan_Manager::delete_l2_neighbor(string virtual_ip, string virtual_mac,
   string match_string = "table=20,priority=50,dl_vlan=" + to_string(internal_vlan_id) +
                         ",dl_dst:" + virtual_mac;
 
-  rc = ACA_OVS_Control::get_instance().del_flows("br-tun", match_string.c_str());
+  aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().execute_openflow(culminative_time,
+                                                                                "br-tun",
+                                                                                match_string,
+                                                                                "del");
 
   if (rc != EXIT_SUCCESS) {
     ACA_LOG_ERROR("Failed to delete L2 neighbor rule, rc: %d\n", rc);

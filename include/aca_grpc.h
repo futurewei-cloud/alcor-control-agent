@@ -58,7 +58,7 @@ class GoalStateProvisionerAsyncServer {
     AT the SENT state, a streaming call doesn't do anything; but a unary call deletes its own instance,
     since this call is already done.
     */
-    enum CallStatus { INIT, SENT };
+    enum CallStatus { INIT, SENT, DESTROY };
     CallStatus status_;
     CallType type_;
     grpc::ServerContext ctx_;
