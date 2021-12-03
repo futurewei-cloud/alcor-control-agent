@@ -50,7 +50,7 @@ class ACA_Message_Pulsar_Producer {
 
   bool publish(string message);
 
-  bool publish(string message, string orderingKey);
+  bool publish(string message, string key);
 
 
   private:

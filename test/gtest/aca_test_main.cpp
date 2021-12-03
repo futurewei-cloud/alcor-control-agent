@@ -67,35 +67,8 @@ std::atomic_ulong g_total_update_GS_time(0);
 bool g_debug_mode = true;
 bool g_demo_mode = false;
 
-extern string project_id;
-extern string vpc_id_1;
-extern string vpc_id_2;
-extern string subnet_id_1;
-extern string subnet_id_2;
-extern string port_id_1;
-extern string port_id_2;
-extern string port_id_3;
-extern string port_id_4;
-extern string port_name_1;
-extern string port_name_2;
-extern string port_name_3;
-extern string port_name_4;
-extern string vmac_address_1;
-extern string vmac_address_2;
-extern string vmac_address_3;
-extern string vmac_address_4;
-extern string vip_address_1;
-extern string vip_address_2;
-extern string vip_address_3;
-extern string vip_address_4;
-extern string subnet1_gw_ip;
-extern string subnet2_gw_ip;
-extern string subnet1_gw_mac;
-extern string subnet2_gw_mac;
-static string subnet1_cidr = "10.10.0.0/24";
-static string subnet2_cidr = "10.10.1.0/24";
-extern string remote_ip_1="172.17.0.2"; // for docker network
-extern string remote_ip_2= "172.17.0.3"; // for docker network
+string remote_ip_1="172.17.0.2"; // for docker network
+string remote_ip_2= "172.17.0.3"; // for docker network
 uint neighbors_to_create = 10;
 
 int processor_count = std::thread::hardware_concurrency();
