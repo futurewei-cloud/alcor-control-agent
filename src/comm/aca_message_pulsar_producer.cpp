@@ -95,7 +95,7 @@ bool ACA_Message_Pulsar_Producer::publish(string message, string orderingKey)
     }
 
     // Create a message
-    Message msg = MessageBuilder().setContent(message).setOrderingKey(key).build();
+    Message msg = MessageBuilder().setContent(message).setOrderingKey(orderingKey).build();
     result = producer.send(msg);
     if(result != ResultOk){
         ACA_LOG_ERROR("Failed to send message %s.\n", message.c_str());
