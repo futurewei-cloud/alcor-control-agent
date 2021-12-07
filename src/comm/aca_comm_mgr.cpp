@@ -39,6 +39,38 @@ Aca_Comm_Manager &Aca_Comm_Manager::get_instance()
 }
 
 int Aca_Comm_Manager::deserialize(const unsigned char *mq_buffer,
+                                  size_t buffer_length, GoalStateV2 &parsed_struct)
+{
+    int rc;
+
+    if (mq_buffer == NULL) {
+        rc = -EINVAL;
+        ACA_LOG_ERROR("Empty mq_buffer data rc: %d\n", rc);
+        return rc;
+    }
+
+    if (parsed_struct.IsInitialized() == false) {
+        rc = -EINVAL;
+        ACA_LOG_ERROR("Uninitialized parsed_struct rc: %d\n", rc);
+        return rc;
+    }
+
+    // Verify that the version of the library that we linked against is
+    // compatible with the version of the headers we compiled against.
+    GOOGLE_PROTOBUF_VERIFY_VERSION;
+
+    if (parsed_struct.ParseFromArray(mq_buffer, buffer_length)) {
+        ACA_LOG_INFO("%s", "Successfully converted message to protobuf struct\n");
+
+        return EXIT_SUCCESS;
+    } else {
+        rc = -EXIT_FAILURE;
+        ACA_LOG_ERROR("Failed to convert message to protobuf struct rc: %d\n", rc);
+        return rc;
+    }
+}
+
+int Aca_Comm_Manager::deserialize(const unsigned char *mq_buffer,
                                   size_t buffer_length, GoalState &parsed_struct)
 {
   int rc;

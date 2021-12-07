@@ -28,6 +28,9 @@ class Aca_Comm_Manager {
   int deserialize(const unsigned char *mq_buffer, size_t buffer_length,
                   alcor::schema::GoalState &parsed_struct);
 
+  int deserialize(const unsigned char *mq_buffer, size_t buffer_length,
+                  alcor::schema::GoalStateV2 &parsed_struct);
+
   int update_goal_state(alcor::schema::GoalState &goal_state_message,
                         alcor::schema::GoalStateOperationReply &gsOperationReply);
 
@@ -47,6 +50,7 @@ class Aca_Comm_Manager {
   void print_goal_state(alcor::schema::GoalState parsed_struct);
 
   void print_goal_state(alcor::schema::GoalStateV2 parsed_struct);
+
 };
 } // namespace aca_comm_manager
 #endif
