@@ -32,7 +32,7 @@ namespace aca_message_pulsar
 {
 
 void listener(Consumer consumer, const Message& message){
-  alcor::schema::GoalState deserialized_GoalState;
+  alcor::schema::GoalStateV2 deserialized_GoalState;
   alcor::schema::GoalStateOperationReply gsOperationalReply;
   int rc;
   Result result;
@@ -46,7 +46,6 @@ void listener(Consumer consumer, const Message& message){
     rc = Aca_Comm_Manager::get_instance().update_goal_state(
                 deserialized_GoalState, gsOperationalReply);
 
-  // TODO: send gsOperationalReply back to controller 
 
     if (rc != EXIT_SUCCESS) {
       ACA_LOG_ERROR("Failed to update host with latest goal state, rc=%d.\n", rc);
@@ -120,6 +119,7 @@ bool ACA_Message_Pulsar_Consumer::unicastConsumerDispatched(int stickyHash){
 
   keySharedPolicy.setKeySharedMode(STICKY);
   // Set sticky ranges with specified hash value
+
   StickyRange stickyRange = std::make_pair(stickyHash,stickyHash);
   keySharedPolicy.setStickyRanges({stickyRange});
 
