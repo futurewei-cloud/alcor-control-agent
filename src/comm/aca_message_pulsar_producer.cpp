@@ -82,7 +82,7 @@ bool ACA_Message_Pulsar_Producer::publish(string message)
 
 }
 
-bool ACA_Message_Pulsar_Producer::publish(string message, string orderingKey)
+bool ACA_Message_Pulsar_Producer::publish(string message, string key)
 {
     Result result;
 

@@ -455,7 +455,7 @@ int ACA_OVS_L3_Programmer::create_or_update_router(RouterConfiguration &current_
     if (!is_router_exist || (current_RouterConfiguration.update_type() == UpdateType::FULL)) {
       // -----critical section starts-----
       _routers_table_mutex.lock();
-      _routers_table.emplace(router_id, new_subnet_routing_tables);
+      _routers_table[router_id] = new_subnet_routing_tables;
       _routers_table_mutex.unlock();
       // -----critical section ends-----
       ACA_LOG_INFO("Added router entry for router id %s\n", router_id.c_str());
@@ -880,7 +880,7 @@ int ACA_OVS_L3_Programmer::create_or_update_router(RouterConfiguration &current_
     if (!is_router_exist || (current_RouterConfiguration.update_type() == UpdateType::FULL)) {
       // -----critical section starts-----
       _routers_table_mutex.lock();
-      _routers_table.emplace(router_id, new_subnet_routing_tables);
+      _routers_table[router_id] = new_subnet_routing_tables;
       _routers_table_mutex.unlock();
       // -----critical section ends-----
       ACA_LOG_INFO("Added router entry for router id %s\n", router_id.c_str());
@@ -962,10 +962,7 @@ int ACA_OVS_L3_Programmer::create_or_update_l3_neighbor(
     ACA_LOG_DEBUG("router ID:%s\n ", router_it->first.c_str());
     // try to see if the destination subnet GW is connected to the current router
     auto found_subnet = router_it->second.find(subnet_id);
-    for (auto kv : router_it->second) {
-      ACA_LOG_DEBUG("[create_or_update_l3_neighbor] router ID: [%s], subnet routering table's subnet ID: [%s], subnet_id we're looking for: [%s]\n",
-                    router_it->first.c_str(), kv.first.c_str(), subnet_id.c_str());
-    }
+
     if (found_subnet == router_it->second.end()) {
       // subnet not found in this router, go look at the next router
       continue;
