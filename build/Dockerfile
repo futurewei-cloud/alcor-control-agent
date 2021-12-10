@@ -185,7 +185,7 @@ RUN echo "5--- installing openvswitch dependancies ---" && \
     test -f /usr/bin/ovs-vsctl && rm -rf /usr/local/sbin/ov* /usr/local/bin/ov* /usr/local/bin/vtep* && \
     cd ~
 
-ENV PULSAR_RELEASE_TAG='pulsar-2.6.1'
+ENV PULSAR_RELEASE_TAG='pulsar-2.8.1'
 RUN echo "6--- installing pulsar dependacies ---" && \
     mkdir -p /var/local/git/pulsar && \
     wget https://archive.apache.org/dist/pulsar/${PULSAR_RELEASE_TAG}/DEB/apache-pulsar-client.deb -O /var/local/git/pulsar/apache-pulsar-client.deb && \

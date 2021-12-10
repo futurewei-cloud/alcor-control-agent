@@ -42,7 +42,7 @@ using std::string;
 // Defines
 #define ACALOGNAME "AlcorControlAgent"
 static char EMPTY_STRING[] = "";
-static char BROKER_LIST[] = "pulsar://localhost:6502";
+static char BROKER_LIST[] = "pulsar://localhost:6650";
 static char PULSAR_TOPIC[] = "Host-ts-1";
 static char PULSAR_SUBSCRIPTION_NAME[] = "Test-Subscription";
 static char GRPC_SERVER_PORT[] = "50001";
@@ -59,6 +59,7 @@ GoalStateProvisionerClientImpl *g_grpc_client = NULL;
 string g_broker_list = EMPTY_STRING;
 string g_pulsar_topic = EMPTY_STRING;
 string g_pulsar_subsription_name = EMPTY_STRING;
+string g_pulsar_hashed_key = "0";
 string g_grpc_server_port = EMPTY_STRING;
 string g_ofctl_command = EMPTY_STRING;
 string g_ofctl_target = EMPTY_STRING;
@@ -183,7 +184,7 @@ int main(int argc, char *argv[])
   signal(SIGINT, aca_signal_handler);
   signal(SIGTERM, aca_signal_handler);
 
-  while ((option = getopt(argc, argv, "a:p:b:h:g:s:c:t:o:md")) != -1) {
+  while ((option = getopt(argc, argv, "a:p:b:h:g:k:s:c:t:o:md")) != -1) {
     switch (option) {
     case 'a':
       g_ncm_address = optarg;
@@ -199,6 +200,9 @@ int main(int argc, char *argv[])
       break;
     case 'g':
       g_pulsar_subsription_name = optarg;
+      break;
+    case 'k':
+      g_pulsar_hashed_key = optarg;
       break;
     case 's':
       g_grpc_server_port = optarg;
@@ -226,6 +230,7 @@ int main(int argc, char *argv[])
               "\t\t[-b pulsar broker list]\n"
               "\t\t[-h pulsar host topic to listen]\n"
               "\t\t[-g pulsar subscription name]\n"
+              "\t\t[-k pulsar hashed key]\n"
               "\t\t[-s gRPC server port\n"
               "\t\t[-c ofctl command]\n"
               "\t\t[-m enable demo mode]\n"
@@ -287,8 +292,9 @@ int main(int argc, char *argv[])
   //// monitor br-tun for arp request message
   //ACA_OVS_Control::get_instance().monitor("br-tun", "resume");
 
-  ACA_Message_Pulsar_Consumer network_config_consumer(g_broker_list, g_pulsar_subsription_name);
-  rc = network_config_consumer.consumeDispatched(g_pulsar_topic);
+  ACA_Message_Pulsar_Consumer network_config_consumer(g_pulsar_topic, g_broker_list, g_pulsar_subsription_name);
+  //network_config_consumer.multicastConsumerDispatched();
+  network_config_consumer.unicastConsumerDispatched(atoi(g_pulsar_hashed_key.c_str()));
 
   pause();
   aca_cleanup();
