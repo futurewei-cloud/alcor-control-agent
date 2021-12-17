@@ -39,6 +39,38 @@ Aca_Comm_Manager &Aca_Comm_Manager::get_instance()
 }
 
 int Aca_Comm_Manager::deserialize(const unsigned char *mq_buffer,
+                                  size_t buffer_length, GoalStateV2 &parsed_struct)
+{
+    int rc;
+
+    if (mq_buffer == NULL) {
+        rc = -EINVAL;
+        ACA_LOG_ERROR("Empty mq_buffer data rc: %d\n", rc);
+        return rc;
+    }
+
+    if (parsed_struct.IsInitialized() == false) {
+        rc = -EINVAL;
+        ACA_LOG_ERROR("Uninitialized parsed_struct rc: %d\n", rc);
+        return rc;
+    }
+
+    // Verify that the version of the library that we linked against is
+    // compatible with the version of the headers we compiled against.
+    GOOGLE_PROTOBUF_VERIFY_VERSION;
+
+    if (parsed_struct.ParseFromArray(mq_buffer, buffer_length)) {
+        ACA_LOG_INFO("%s", "Successfully converted message to protobuf struct\n");
+
+        return EXIT_SUCCESS;
+    } else {
+        rc = -EXIT_FAILURE;
+        ACA_LOG_ERROR("Failed to convert message to protobuf struct rc: %d\n", rc);
+        return rc;
+    }
+}
+
+int Aca_Comm_Manager::deserialize(const unsigned char *mq_buffer,
                                   size_t buffer_length, GoalState &parsed_struct)
 {
   int rc;
@@ -143,7 +175,7 @@ int Aca_Comm_Manager::update_goal_state(GoalState &goal_state_message,
           cast_to_microseconds(end - neighbor_update_finished_time).count();
   auto message_total_operation_time = cast_to_microseconds(end - start).count();
 
-  ACA_LOG_DEBUG("[METRICS] Elapsed time for message total operation took: %ld microseconds or %ld milliseconds\n\
+  ACA_LOG_INFO("[METRICS] Elapsed time for message total operation took: %ld microseconds or %ld milliseconds\n\
 [METRICS] Elapsed time for router operation took: %ld microseconds or %ld milliseconds\n\
 [METRICS] Elapsed time for port operation took: %ld microseconds or %ld milliseconds\n\
 [METRICS] Elapsed time for neighbor operation took: %ld microseconds or %ld milliseconds\n\
@@ -168,18 +200,9 @@ int Aca_Comm_Manager::update_goal_state(GoalStateV2 &goal_state_message,
   int exec_command_rc;
   int rc = EXIT_SUCCESS;
   auto start = chrono::steady_clock::now();
-  auto t0 = std::chrono::high_resolution_clock::now();
-  ACA_LOG_DEBUG("Starting to update goal state with format_version: %u\n",
-                goal_state_message.format_version());
-
-  ACA_LOG_DEBUG("[METRICS] Goal state message size is: %lu bytes, router_state_size: [%d]\n",
-                goal_state_message.ByteSizeLong(),
-                goal_state_message.router_states_size());
 
   this->print_goal_state(goal_state_message);
-  auto t1 = std::chrono::high_resolution_clock::now();
 
-  ACA_LOG_DEBUG("[METRICS] Printout took: [%ld] nanoseconds\n", (t1 - t0).count());
   auto gs_printout_finished_time = chrono::steady_clock::now();
   auto gs_printout_operation_time =
           cast_to_microseconds(gs_printout_finished_time - start).count();
@@ -243,7 +266,7 @@ int Aca_Comm_Manager::update_goal_state(GoalStateV2 &goal_state_message,
           cast_to_microseconds(end - neighbor_update_finished_time).count();
   auto message_total_operation_time = cast_to_microseconds(end - start).count();
 
-  ACA_LOG_DEBUG("[METRICS] Elapsed time for message total operation took: %ld microseconds or %ld milliseconds\n\
+  ACA_LOG_INFO("[METRICS] Elapsed time for message total operation took: %ld microseconds or %ld milliseconds\n\
 [METRICS] Elapsed time for gs printout operation took: %ld microseconds or %ld milliseconds\n\
 [METRICS] Elapsed time for router operation took: %ld microseconds or %ld milliseconds\n\
 [METRICS] Elapsed time for port operation took: %ld microseconds or %ld milliseconds\n\

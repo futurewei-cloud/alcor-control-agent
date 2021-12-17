@@ -19,6 +19,10 @@
 #include "aca_grpc.h"
 #include "aca_grpc_client.h"
 #include "aca_message_pulsar_producer.h"
+#include "aca_message_pulsar_consumer.h"
+#include "aca_ovs_control.h"
+#include "aca_net_config.h"
+#include "aca_comm_mgr.h"
 #include <unistd.h> /* for getopt */
 #include <grpcpp/grpcpp.h>
 #include <thread>
@@ -26,7 +30,8 @@
 
 using namespace std;
 using namespace aca_message_pulsar;
-
+using aca_net_config::Aca_Net_Config;
+using aca_comm_manager::Aca_Comm_Manager;
 #define ACALOGNAME "AlcorControlAgentTest"
 
 // Global variables
@@ -62,12 +67,15 @@ std::atomic_ulong g_total_update_GS_time(0);
 bool g_debug_mode = true;
 bool g_demo_mode = false;
 
-string remote_ip_1 = "172.17.0.2"; // for docker network
-string remote_ip_2 = "172.17.0.3"; // for docker network
+string remote_ip_1="172.17.0.2"; // for docker network
+string remote_ip_2= "172.17.0.3"; // for docker network
 uint neighbors_to_create = 10;
 
+<<<<<<< HEAD
 static string mq_broker_ip = "pulsar://localhost:6650"; //for the broker running in localhost
 static string mq_test_topic = "Host-ts-1";
+=======
+>>>>>>> 74a78cf1bfe3cd1f26f4ecebde51de40e4b6cb06
 int processor_count = std::thread::hardware_concurrency();
 /*
   From previous tests, we found that, for x number of cores,
@@ -78,29 +86,6 @@ int processor_count = std::thread::hardware_concurrency();
 */
 int thread_pools_size = (processor_count == 0) ? 1 : ((ceil(1.3 * processor_count)) / 2);
 
-//
-// Test suite: pulsar_test_cases
-//
-// Testing the pulsar implementation where AlcorControlAgent is the consumer
-// and aca_test is acting as producer
-// Note: it will require a pulsar setup on localhost therefore this test is DISABLED by default
-//   it can be executed by:
-//
-//     aca_tests --gtest_also_run_disabled_tests --gtest_filter=*DISABLED_pulsar_consumer_test
-//
-TEST(pulsar_test_cases, DISABLED_pulsar_consumer_test)
-{
-  int retcode = 0;
-  const int MESSAGES_TO_SEND = 10;
-  string message = "Test Message";
-
-  ACA_Message_Pulsar_Producer producer(mq_broker_ip, mq_test_topic);
-
-  for (int i = 0; i < MESSAGES_TO_SEND; i++) {
-    retcode = producer.publish(message);
-    EXPECT_EQ(retcode, EXIT_SUCCESS);
-  }
-}
 
 static void aca_cleanup()
 {
