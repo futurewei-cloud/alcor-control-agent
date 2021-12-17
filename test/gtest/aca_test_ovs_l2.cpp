@@ -172,7 +172,7 @@ TEST(ovs_l2_test_cases, 2_ports_CREATE_test_traffic_plus_neighbor_internal)
   g_demo_mode = previous_demo_mode;
 
   // are the newly created ports there?
-  ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
+  ACA_OVS_L2_Programmer::get_instance().(
           "get Interface " + port_name_1 + " ofport", not_care_culminative_time, overall_rc);
   EXPECT_EQ(overall_rc, EXIT_SUCCESS);
   overall_rc = EXIT_SUCCESS;

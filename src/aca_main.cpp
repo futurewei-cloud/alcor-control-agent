@@ -46,21 +46,25 @@ static char BROKER_LIST[] = "pulsar://localhost:6650";
 static char PULSAR_TOPIC[] = "Host-ts-1";
 static char PULSAR_SUBSCRIPTION_NAME[] = "Test-Subscription";
 static char GRPC_SERVER_PORT[] = "50001";
+static char GRPC_SUBSCRIBE_SERVER_PORT[] = "50002";
 static char OFCTL_COMMAND[] = "monitor";
 static char OFCTL_TARGET[] = "br-int";
 
-using namespace std;
+using namespace std; SUBSCRIBE
 
 // Global variables
 std::thread *g_grpc_server_thread = NULL;
+std::thread *g_grpc_subscribe_server_thread = NULL;
 std::thread *g_grpc_client_thread = NULL;
 GoalStateProvisionerAsyncServer *g_grpc_server = NULL;
+SubscribeInfoProvisionerAsyncServer *g_grpc_subscribe_server = NULL;
 GoalStateProvisionerClientImpl *g_grpc_client = NULL;
 string g_broker_list = EMPTY_STRING;
 string g_pulsar_topic = EMPTY_STRING;
 string g_pulsar_subsription_name = EMPTY_STRING;
 string g_pulsar_hashed_key = "0";
 string g_grpc_server_port = EMPTY_STRING;
+string g_grpc_subscribeggi_server_port = EMPTY_STRING;
 string g_ofctl_command = EMPTY_STRING;
 string g_ofctl_target = EMPTY_STRING;
 string g_ofctl_options = EMPTY_STRING;
@@ -136,6 +140,23 @@ static void aca_cleanup()
     ACA_LOG_INFO("%s", "Cleaned up grpc server thread.\n");
   } else {
     ACA_LOG_ERROR("%s", "Unable to call delete, grpc server thread pointer is null.\n");
+  }
+
+  if (g_grpc_subscribe_server != NULL) {
+    g_grpc_subscribe_server->ShutDownServer();
+    delete g_grpc_subscribe_server;
+    g_grpc_subscribe_server = NULL;
+    ACA_LOG_INFO("%s", "Cleaned up grpc subscribe server.\n");
+  } else {
+    ACA_LOG_ERROR("%s", "Unable to call delete, grpc subscribe server pointer is null.\n");
+  }
+
+  if (g_grpc_subscribe_server_thread != NULL) {
+    delete g_grpc_subscribe_server_thread;
+    g_grpc_subscribe_server_thread = NULL;
+    ACA_LOG_INFO("%s", "Cleaned up grpc subscribe server thread.\n");
+  } else {
+    ACA_LOG_ERROR("%s", "Unable to call delete, grpc subscribe server thread pointer is null.\n");
   }
 
   // Stop the grpc client
@@ -253,6 +274,9 @@ int main(int argc, char *argv[])
   if (g_grpc_server_port == EMPTY_STRING) {
     g_grpc_server_port = GRPC_SERVER_PORT;
   }
+  if (g_grpc_subscribe_server_port == EMPTY_STRING) {
+    g_grpc_subscribe_server_port = GRPC_SUBSCRIBE
+  }
   if (g_ofctl_command == EMPTY_STRING) {
     g_ofctl_command = OFCTL_COMMAND;
   }
@@ -264,6 +288,13 @@ int main(int argc, char *argv[])
   g_grpc_server_thread = new std::thread(std::bind(
           &GoalStateProvisionerAsyncServer::RunServer, g_grpc_server, thread_pools_size));
   g_grpc_server_thread->detach();
+
+
+  // Create a separate thread to get subsribe info for pulsar
+  g_grpc_subscribe_server = new SubscribeInfoProvisionerAsyncServer();
+  g_grpc_subscribe_server_thread = new std::thread(std::bind(
+          &SubscribeInfoProvisionerAsyncServer::RunServer, g_grpc_subscribe_server));
+  g_grpc_subscribe_server_thread->detach();
 
   // Create a separate thread to run the grpc client.
   g_grpc_client = new GoalStateProvisionerClientImpl();
