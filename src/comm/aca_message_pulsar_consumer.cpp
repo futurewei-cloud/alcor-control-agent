@@ -30,6 +30,7 @@ using pulsar::StickyRange;
 
 namespace aca_message_pulsar
 {
+string aca_message_pulsar::ACA_Message_Pulsar_Consumer::empty_topic="";
 
 void listener(Consumer consumer, const Message& message){
   alcor::schema::GoalStateV2 deserialized_GoalState;
@@ -111,7 +112,6 @@ string ACA_Message_Pulsar_Consumer::getUnicastSubscriptionName() const
   return this->unicast_subscription_name;
 }
 
-
 bool ACA_Message_Pulsar_Consumer::unicastConsumerDispatched(int stickyHash){
   Result result;
   Consumer consumer;
@@ -147,6 +147,38 @@ bool ACA_Message_Pulsar_Consumer::multicastConsumerDispatched(){
   return EXIT_SUCCESS;
 }
 
+bool ACA_Message_Pulsar_Consumer::unicastResubscribe(string topic, int stickyHash)
+{
+    bool result;
+
+    result = unicastUnsubcribe();
+
+    if (result==EXIT_SUCCESS){
+        setUnicastTopicName(topic);
+        result = unicastConsumerDispatched(stickyHash);
+        if (result==EXIT_SUCCESS) {
+            return EXIT_SUCCESS;
+        }
+    }
+    ACA_LOG_ERROR("Failed to resubscribe unicast topic: %s\n", topic.c_str());
+    return EXIT_FAILURE;
+}
+
+bool ACA_Message_Pulsar_Consumer::unicastUnsubcribe()
+{
+    Result result;
+    if(this->unicast_topic_name==empty_topic){
+        ACA_LOG_INFO("The consumer already unsubscribe the unicast topic.");
+        return EXIT_SUCCESS;
+    }
+    result=this->unicast_consumer.unsubscribe();
+    if (result != Result::ResultOk){
+        ACA_LOG_ERROR("Failed to unsubscribe unicast topic: %s\n", this->unicast_topic_name.c_str());
+        return EXIT_FAILURE;
+    }
+    this->unicast_topic_name=empty_topic;
+    return EXIT_SUCCESS;
+}
 
 void ACA_Message_Pulsar_Consumer::setBrokers(string brokers)
 {
@@ -172,5 +204,6 @@ void ACA_Message_Pulsar_Consumer::setUnicastSubscriptionName(string subscription
 {
   this->unicast_subscription_name = subscription_name;
 }
+
 
 } // namespace aca_message_pulsar

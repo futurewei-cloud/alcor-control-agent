@@ -125,6 +125,23 @@ TEST(pulsar_test_cases, DISABLED_pulsar_unicast_consumer_test)
     g_demo_mode = previous_demo_mode;
 }
 
+//    sudo ./aca_tests --gtest_also_run_disabled_tests --gtest_filter=*DISABLED_pulsar_unicast_consumer_resubscribe_test
+TEST(pulsar_test_cases, DISABLED_pulsar_unicast_consumer_resubscribe_test)
+{
+    string cmd_string;
+    string mq_update_topic="update topic";
+    bool previous_demo_mode = g_demo_mode;
+    g_demo_mode = true;
+
+    aca_test_reset_environment();
+
+    ACA_Message_Pulsar_Consumer consumer(mq_test_topic, mq_broker_ip, mq_subscription);
+    consumer.unicastConsumerDispatched(mq_hash);
+    consumer.unicastResubscribe(mq_update_topic,mq_hash);
+    pause();
+
+    g_demo_mode = previous_demo_mode;
+}
 
 // This case tests the pulsar producer implementation and publishes a GoalState to the subscribed topic.
 // First run pulsar_consumer_test then execute

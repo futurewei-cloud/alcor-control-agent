@@ -48,6 +48,9 @@ class ACA_Message_Pulsar_Consumer {
     Consumer multicast_consumer;
     Consumer unicast_consumer;
 
+    static string empty_topic;
+//    static string recoverd_topic;
+
   private:
     void setMulticastSubscriptionName(string subscription_name);
 
@@ -59,7 +62,6 @@ class ACA_Message_Pulsar_Consumer {
 
     void setUnicastTopicName(string topic);
 
-    
 
   public:
     ACA_Message_Pulsar_Consumer(string topic, string brokers, string subscription_name);
@@ -80,9 +82,11 @@ class ACA_Message_Pulsar_Consumer {
 
     bool unicastConsumerDispatched(int stickyHash);
 
-    //static void listener(Consumer consumer, const Message& message);
+    bool unicastUnsubcribe();
 
-  
+    bool unicastResubscribe(string topic, int stickyHash);
+
+    //TODO: 断线恢复topic订阅
 };
 
 } // namespace aca_message_pulsar
