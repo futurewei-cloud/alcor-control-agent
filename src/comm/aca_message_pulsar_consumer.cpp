@@ -32,6 +32,9 @@ namespace aca_message_pulsar
 {
 string aca_message_pulsar::ACA_Message_Pulsar_Consumer::empty_topic="";
 
+string aca_message_pulsar::ACA_Message_Pulsar_Consumer::recovered_topic=
+        ACA_Message_Pulsar_Consumer::getRecoveredTopicName();
+
 void listener(Consumer consumer, const Message& message){
   alcor::schema::GoalStateV2 deserialized_GoalState;
   alcor::schema::GoalStateOperationReply gsOperationalReply;
@@ -65,6 +68,7 @@ void listener(Consumer consumer, const Message& message){
 ACA_Message_Pulsar_Consumer::ACA_Message_Pulsar_Consumer(string topic, string brokers, string subscription_name)
 {
   setUnicastTopicName(topic);
+  recovered_topic=topic;
   setMulticastTopicName(topic);
   setBrokers(brokers);
   setUnicastSubscriptionName(subscription_name);
@@ -77,7 +81,7 @@ ACA_Message_Pulsar_Consumer::ACA_Message_Pulsar_Consumer(string topic, string br
   ACA_LOG_DEBUG("Multicast consumer subscription name: %s\n", this->multicast_subscription_name.c_str());
 
   // Create the clients
-  //this->ptr_multicast_client= new Client(brokers);
+  this->ptr_multicast_client= new Client(brokers);
   this->ptr_unicast_client = new Client(brokers);
 }
 
@@ -110,6 +114,11 @@ string ACA_Message_Pulsar_Consumer::getUnicastTopicName() const
 string ACA_Message_Pulsar_Consumer::getUnicastSubscriptionName() const
 {
   return this->unicast_subscription_name;
+}
+
+string ACA_Message_Pulsar_Consumer::getRecoveredTopicName()
+{
+    return "recovered topic test";
 }
 
 bool ACA_Message_Pulsar_Consumer::unicastConsumerDispatched(int stickyHash){
@@ -155,6 +164,7 @@ bool ACA_Message_Pulsar_Consumer::unicastResubscribe(string topic, int stickyHas
 
     if (result==EXIT_SUCCESS){
         setUnicastTopicName(topic);
+        recovered_topic=topic;
         result = unicastConsumerDispatched(stickyHash);
         if (result==EXIT_SUCCESS) {
             return EXIT_SUCCESS;
@@ -171,7 +181,9 @@ bool ACA_Message_Pulsar_Consumer::unicastUnsubcribe()
         ACA_LOG_INFO("The consumer already unsubscribe the unicast topic.");
         return EXIT_SUCCESS;
     }
+
     result=this->unicast_consumer.unsubscribe();
+    printf("%s\n",this->unicast_consumer.getTopic().c_str());
     if (result != Result::ResultOk){
         ACA_LOG_ERROR("Failed to unsubscribe unicast topic: %s\n", this->unicast_topic_name.c_str());
         return EXIT_FAILURE;
