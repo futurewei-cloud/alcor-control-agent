@@ -60,7 +60,7 @@ find_path(LIBEVENT_INCLUDE_DIR
 FIND_LIBRARY(LIBUUID_LIBRARIES uuid)
 FIND_LIBRARY(RDKAFKA rdkafka /usr/lib/x86_64-linux-gnu NO_DEFAULT_PATH)
 FIND_LIBRARY(CPPKAFKA cppkafka /usr/local/lib NO_DEFAULT_PATH)
-FIND_LIBRARY(PULSAR pulsar /usr/local/lib NO_DEFAULT_PATH)
+FIND_LIBRARY(PULSAR pulsar /usr/lib NO_DEFAULT_PATH)
 FIND_LIBRARY(MESSAGEMANAGER messagemanager ${CMAKE_CURRENT_SOURCE_DIR}/../include NO_DEFAULT_PATH)
 link_libraries(${RDKAFKA} ${CPPKAFKA} ${PULSAR})
 link_libraries(/usr/lib/x86_64-linux-gnu/libuuid.so)
