@@ -15,6 +15,7 @@
 #include "aca_log.h"
 #include "aca_util.h"
 #include "aca_message_pulsar_consumer.h"
+#include "aca_grpc_subscribe.h"
 #include "aca_grpc.h"
 #include "aca_grpc_client.h"
 
@@ -29,6 +30,7 @@
 #include "aca_ovs_control.h"
 
 #include "goalstateprovisioner.grpc.pb.h"
+#include "subscribeinfoprovisioner.grpc.pb.h"
 #include <thread>
 #include <chrono>
 #include <unistd.h> /* for getopt */
@@ -50,7 +52,7 @@ static char GRPC_SUBSCRIBE_SERVER_PORT[] = "50002";
 static char OFCTL_COMMAND[] = "monitor";
 static char OFCTL_TARGET[] = "br-int";
 
-using namespace std; SUBSCRIBE
+using namespace std; 
 
 // Global variables
 std::thread *g_grpc_server_thread = NULL;
@@ -64,7 +66,7 @@ string g_pulsar_topic = EMPTY_STRING;
 string g_pulsar_subsription_name = EMPTY_STRING;
 string g_pulsar_hashed_key = "0";
 string g_grpc_server_port = EMPTY_STRING;
-string g_grpc_subscribeggi_server_port = EMPTY_STRING;
+string g_grpc_subscribe_server_port = EMPTY_STRING;
 string g_ofctl_command = EMPTY_STRING;
 string g_ofctl_target = EMPTY_STRING;
 string g_ofctl_options = EMPTY_STRING;
@@ -275,7 +277,7 @@ int main(int argc, char *argv[])
     g_grpc_server_port = GRPC_SERVER_PORT;
   }
   if (g_grpc_subscribe_server_port == EMPTY_STRING) {
-    g_grpc_subscribe_server_port = GRPC_SUBSCRIBE
+    g_grpc_subscribe_server_port = GRPC_SUBSCRIBE_SERVER_PORT;
   }
   if (g_ofctl_command == EMPTY_STRING) {
     g_ofctl_command = OFCTL_COMMAND;
@@ -293,7 +295,7 @@ int main(int argc, char *argv[])
   // Create a separate thread to get subsribe info for pulsar
   g_grpc_subscribe_server = new SubscribeInfoProvisionerAsyncServer();
   g_grpc_subscribe_server_thread = new std::thread(std::bind(
-          &SubscribeInfoProvisionerAsyncServer::RunServer, g_grpc_subscribe_server));
+          &SubscribeInfoProvisionerAsyncServer::RunServer, g_grpc_subscribe_server, 1));
   g_grpc_subscribe_server_thread->detach();
 
   // Create a separate thread to run the grpc client.

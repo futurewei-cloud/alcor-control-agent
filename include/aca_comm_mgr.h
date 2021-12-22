@@ -16,6 +16,7 @@
 #define ACA_COMM_MGR_H
 
 #include "goalstateprovisioner.grpc.pb.h"
+#include "subscribeinfoprovisioner.grpc.pb.h"
 
 using std::string;
 
@@ -36,6 +37,9 @@ class Aca_Comm_Manager {
 
   int update_goal_state(alcor::schema::GoalStateV2 &goal_state_message,
                         alcor::schema::GoalStateOperationReply &gsOperationReply);
+
+  int update_subscribe_info(alcor::schema::NodeSubscribeInfo &subscribe_info_message,
+                            alcor::schema::SubscribeOperationReply &subscribeOperationReply);
 
   // compiler will flag error when below is called
   Aca_Comm_Manager(Aca_Comm_Manager const &) = delete;

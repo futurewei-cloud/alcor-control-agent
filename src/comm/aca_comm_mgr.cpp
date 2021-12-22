@@ -17,7 +17,9 @@
 #include "aca_comm_mgr.h"
 #include "aca_goal_state_handler.h"
 #include "aca_dhcp_state_handler.h"
+#include "aca_message_pulsar_consumer.h"
 #include "goalstateprovisioner.grpc.pb.h"
+#include "subscribeinfoprovisioner.grpc.pb.h"
 
 using namespace std;
 using namespace alcor::schema;
@@ -286,6 +288,34 @@ int Aca_Comm_Manager::update_goal_state(GoalStateV2 &goal_state_message,
 
   return rc;
 }
+
+int Aca_Comm_Manager::update_subscribe_info(NodeSubscribeInfo &subscribe_info_message,
+                                        SubscribeOperationReply &subscribeOperationReply)
+{
+  int exec_command_rc = EXIT_SUCCESS;
+  int rc = EXIT_SUCCESS;
+  auto start = chrono::steady_clock::now();
+
+  
+  auto subscribe_finished_time = chrono::steady_clock::now();
+  //exec_command_rc = ACA_Message_Pulsar_Consumer::get_instance().
+  auto subscribe_operation_time =
+          cast_to_microseconds(subscribe_finished_time - start).count();
+
+  ACA_LOG_INFO("[METRICS] Elapsed time for subscribe operation took: %ld microseconds or %ld milliseconds\n",
+                subscribe_operation_time, us_to_ms(subscribe_operation_time));
+
+  OperationStatus operation_status;
+
+  if (exec_command_rc == EXIT_SUCCESS)
+    operation_status = OperationStatus::SUCCESS;
+  else
+    operation_status = OperationStatus::FAILURE;
+  subscribeOperationReply.set_operationstatus(operation_status);
+
+  return rc;
+}
+
 
 void Aca_Comm_Manager::print_goal_state(GoalState parsed_struct)
 {

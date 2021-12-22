@@ -71,11 +71,6 @@ string remote_ip_1="172.17.0.2"; // for docker network
 string remote_ip_2= "172.17.0.3"; // for docker network
 uint neighbors_to_create = 10;
 
-<<<<<<< HEAD
-static string mq_broker_ip = "pulsar://localhost:6650"; //for the broker running in localhost
-static string mq_test_topic = "Host-ts-1";
-=======
->>>>>>> 74a78cf1bfe3cd1f26f4ecebde51de40e4b6cb06
 int processor_count = std::thread::hardware_concurrency();
 /*
   From previous tests, we found that, for x number of cores,

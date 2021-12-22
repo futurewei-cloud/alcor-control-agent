@@ -24,8 +24,13 @@ set(aca_proto_srcs "${CMAKE_CURRENT_BINARY_DIR}/goalstateprovisioner.pb.cc")
 set(aca_proto_hdrs "${CMAKE_CURRENT_BINARY_DIR}/goalstateprovisioner.pb.h")
 set(aca_grpc_srcs "${CMAKE_CURRENT_BINARY_DIR}/goalstateprovisioner.grpc.pb.cc")
 set(aca_grpc_hdrs "${CMAKE_CURRENT_BINARY_DIR}/goalstateprovisioner.grpc.pb.h")
+
+set(aca_proto_sub_srcs "${CMAKE_CURRENT_BINARY_DIR}/subscribeinfoprovisioner.pb.cc")
+set(aca_proto_sub_hdrs "${CMAKE_CURRENT_BINARY_DIR}/subscribeinfoprovisioner.pb.h")
+set(aca_grpc_sub_srcs "${CMAKE_CURRENT_BINARY_DIR}/subscribeinfoprovisioner.grpc.pb.cc")
+set(aca_grpc_sub_hdrs "${CMAKE_CURRENT_BINARY_DIR}/subscribeinfoprovisioner.grpc.pb.h")
 add_custom_command(
-      OUTPUT "${aca_proto_srcs}" "${aca_proto_hdrs}" "${aca_grpc_srcs}" "${aca_grpc_hdrs}"
+      OUTPUT "${aca_proto_srcs}" "${aca_proto_hdrs}" "${aca_grpc_srcs}" "${aca_grpc_hdrs}" "${aca_proto_sub_srcs}" "${aca_proto__sub_hdrs}" "${aca_grpc_sub_srcs}" "${aca_grpc_sub_hdrs}"
       COMMAND ${_PROTOBUF_PROTOC}
       ARGS --grpc_out "${CMAKE_CURRENT_BINARY_DIR}"
         --cpp_out "${CMAKE_CURRENT_BINARY_DIR}"
@@ -37,4 +42,4 @@ add_custom_command(
 # Include generated *.pb.h files
 include_directories("${CMAKE_CURRENT_BINARY_DIR}")
  
-ADD_LIBRARY(grpc ${aca_proto_srcs} ${aca_proto_hdrs} ${aca_grpc_srcs} ${aca_grpc_hdrs})
+ADD_LIBRARY(grpc ${aca_proto_srcs} ${aca_proto_hdrs} ${aca_grpc_srcs} ${aca_grpc_hdrs} ${aca_proto_sub_srcs} ${aca_proto_sub_hdrs} ${aca_grpc_sub_srcs} ${aca_grpc_sub_hdrs})

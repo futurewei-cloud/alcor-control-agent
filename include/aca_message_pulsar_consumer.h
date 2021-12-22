@@ -80,6 +80,11 @@ class ACA_Message_Pulsar_Consumer {
 
     bool unicastConsumerDispatched(int stickyHash);
 
+
+
+    // reset topic and key info
+    bool reSubscribe(string topic, string key);
+
     //static void listener(Consumer consumer, const Message& message);
 
   
