@@ -156,6 +156,24 @@ bool ACA_Message_Pulsar_Consumer::multicastConsumerDispatched(){
   return EXIT_SUCCESS;
 }
 
+bool ACA_Message_Pulsar_Consumer::unicastUnsubcribe()
+{
+    Result result;
+    if(this->unicast_topic_name==empty_topic){
+        ACA_LOG_INFO("The consumer already unsubscribe the unicast topic.");
+        return EXIT_SUCCESS;
+    }
+
+    result=this->unicast_consumer.unsubscribe();
+    printf("%s\n",this->unicast_consumer.getTopic().c_str());
+    if (result != Result::ResultOk){
+        ACA_LOG_ERROR("Failed to unsubscribe unicast topic: %s\n", this->unicast_topic_name.c_str());
+        return EXIT_FAILURE;
+    }
+    this->unicast_topic_name=empty_topic;
+    return EXIT_SUCCESS;
+}
+
 bool ACA_Message_Pulsar_Consumer::unicastResubscribe(string topic, int stickyHash)
 {
     bool result;
@@ -174,22 +192,15 @@ bool ACA_Message_Pulsar_Consumer::unicastResubscribe(string topic, int stickyHas
     return EXIT_FAILURE;
 }
 
-bool ACA_Message_Pulsar_Consumer::unicastUnsubcribe()
-{
-    Result result;
-    if(this->unicast_topic_name==empty_topic){
-        ACA_LOG_INFO("The consumer already unsubscribe the unicast topic.");
-        return EXIT_SUCCESS;
-    }
 
-    result=this->unicast_consumer.unsubscribe();
-    printf("%s\n",this->unicast_consumer.getTopic().c_str());
-    if (result != Result::ResultOk){
-        ACA_LOG_ERROR("Failed to unsubscribe unicast topic: %s\n", this->unicast_topic_name.c_str());
-        return EXIT_FAILURE;
+bool ACA_Message_Pulsar_Consumer::unicastResubscribe(bool isSubscribe, string topic, string stickHash)
+{
+    if(!isSubscribe){
+        return unicastUnsubcribe();
     }
-    this->unicast_topic_name=empty_topic;
-    return EXIT_SUCCESS;
+    else{
+        return unicastResubscribe(topic, std::stoi(stickHash));
+    }
 }
 
 void ACA_Message_Pulsar_Consumer::setBrokers(string brokers)

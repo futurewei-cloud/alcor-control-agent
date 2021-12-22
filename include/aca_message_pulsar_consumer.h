@@ -88,6 +88,8 @@ class ACA_Message_Pulsar_Consumer {
     bool unicastUnsubcribe();
 
     bool unicastResubscribe(string topic, int stickyHash);
+
+    bool unicastResubscribe(bool isSubscribe, string topic="", string stickHash="");
 };
 
 } // namespace aca_message_pulsar
