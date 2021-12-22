@@ -25,6 +25,7 @@ using namespace std;
 using namespace alcor::schema;
 using namespace aca_goal_state_handler;
 using namespace aca_dhcp_state_handler;
+using namespace aca_message_pulsar;
 
 extern string g_rpc_server;
 extern string g_rpc_protocol;
@@ -298,7 +299,9 @@ int Aca_Comm_Manager::update_subscribe_info(NodeSubscribeInfo &subscribe_info_me
 
   
   auto subscribe_finished_time = chrono::steady_clock::now();
-  //exec_command_rc = ACA_Message_Pulsar_Consumer::get_instance().
+  exec_command_rc = ACA_Message_Pulsar_Consumer::get_instance().unicastResubscribe(subscribe_info_message.subscribe_operation(),
+                                                                                subscribe_info_message.topic(), 
+                                                                                subscribe_info_message.key());
   auto subscribe_operation_time =
           cast_to_microseconds(subscribe_finished_time - start).count();
 
