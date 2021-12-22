@@ -72,7 +72,9 @@ class ACA_Message_Pulsar_Consumer {
       ACA_Message_Pulsar_Consumer(string topic, string brokers, string subscription_name);
 
       ~ACA_Message_Pulsar_Consumer();
-      void init();
+
+      void init(string topic, string brokers, string subscription_name);
+
     string getBrokers() const;
 
     string getMulticastTopicName() const;

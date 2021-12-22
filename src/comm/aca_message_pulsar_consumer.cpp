@@ -94,7 +94,24 @@ ACA_Message_Pulsar_Consumer &ACA_Message_Pulsar_Consumer::get_instance()
     static ACA_Message_Pulsar_Consumer instance;
     return instance;
 }
+void ACA_Message_Pulsar_Consumer::init(string topic, string brokers, string subscription_name){
+    setUnicastTopicName(topic);
+    recovered_topic=topic;
+    setMulticastTopicName(topic);
+    setBrokers(brokers);
+    setUnicastSubscriptionName(subscription_name);
+    setMulticastSubscriptionName(subscription_name);
 
+    ACA_LOG_DEBUG("Broker list: %s\n", this->brokers_list.c_str());
+    ACA_LOG_DEBUG("Unicast consumer topic name: %s\n", this->unicast_topic_name.c_str());
+    ACA_LOG_DEBUG("Unicast consumer subscription name: %s\n", this->unicast_subscription_name.c_str());
+    ACA_LOG_DEBUG("Multicast consumer topic name: %s\n", this->multicast_topic_name.c_str());
+    ACA_LOG_DEBUG("Multicast consumer subscription name: %s\n", this->multicast_subscription_name.c_str());
+
+    // Create the clients
+    this->ptr_multicast_client= new Client(brokers);
+    this->ptr_unicast_client = new Client(brokers);
+}
 ACA_Message_Pulsar_Consumer::ACA_Message_Pulsar_Consumer(string topic, string brokers, string subscription_name)
 {
   setUnicastTopicName(topic);

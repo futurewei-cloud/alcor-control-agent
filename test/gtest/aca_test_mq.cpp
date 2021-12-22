@@ -100,6 +100,7 @@ TEST(pulsar_test_cases, DISABLED_pulsar_consumer_test)
 
     aca_test_reset_environment();
     ACA_Message_Pulsar_Consumer consumer=ACA_Message_Pulsar_Consumer::get_instance();
+    consumer.init(mq_test_topic, mq_broker_ip, mq_subscription);
 //    ACA_Message_Pulsar_Consumer consumer(mq_test_topic, mq_broker_ip, mq_subscription);
     consumer.multicastConsumerDispatched();
     pause();
@@ -119,6 +120,7 @@ TEST(pulsar_test_cases, DISABLED_pulsar_unicast_consumer_test)
     aca_test_reset_environment();
 
     ACA_Message_Pulsar_Consumer consumer = ACA_Message_Pulsar_Consumer::get_instance();
+    consumer.init(mq_test_topic, mq_broker_ip, mq_subscription);
     consumer.unicastConsumerDispatched(mq_hash);
     pause();
 
