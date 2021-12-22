@@ -65,6 +65,36 @@ void listener(Consumer consumer, const Message& message){
   consumer.acknowledge(message.getMessageId());
 }
 
+ACA_Message_Pulsar_Consumer::ACA_Message_Pulsar_Consumer()
+{
+    string default_brokers = "pulsar://localhost:6650";
+    string default_topic = "Host-ts-1";
+    string default_subscription_name = "test_subscription";
+
+    setUnicastTopicName(default_topic);
+    recovered_topic=default_topic;
+    setMulticastTopicName(default_topic);
+    setBrokers(default_brokers);
+    setUnicastSubscriptionName(default_subscription_name);
+    setMulticastSubscriptionName(default_subscription_name);
+
+    ACA_LOG_DEBUG("Broker list: %s\n", this->brokers_list.c_str());
+    ACA_LOG_DEBUG("Unicast consumer topic name: %s\n", this->unicast_topic_name.c_str());
+    ACA_LOG_DEBUG("Unicast consumer subscription name: %s\n", this->unicast_subscription_name.c_str());
+    ACA_LOG_DEBUG("Multicast consumer topic name: %s\n", this->multicast_topic_name.c_str());
+    ACA_LOG_DEBUG("Multicast consumer subscription name: %s\n", this->multicast_subscription_name.c_str());
+
+    // Create the clients
+    this->ptr_multicast_client= new Client(default_brokers);
+    this->ptr_unicast_client = new Client(default_brokers);
+}
+
+ACA_Message_Pulsar_Consumer &ACA_Message_Pulsar_Consumer::get_instance()
+{
+    static ACA_Message_Pulsar_Consumer instance;
+    return instance;
+}
+
 ACA_Message_Pulsar_Consumer::ACA_Message_Pulsar_Consumer(string topic, string brokers, string subscription_name)
 {
   setUnicastTopicName(topic);
@@ -134,6 +164,7 @@ bool ACA_Message_Pulsar_Consumer::unicastConsumerDispatched(int stickyHash){
 
   //Use key shared mode
   this->unicast_consumer_config.setConsumerType(ConsumerKeyShared).setKeySharedPolicy(keySharedPolicy).setMessageListener(listener);
+  ACA_LOG_INFO("%s\n",this->unicast_topic_name.c_str());
   result = this->ptr_unicast_client->subscribe(this->unicast_topic_name,this->unicast_subscription_name,this->unicast_consumer_config,this->unicast_consumer);
   if (result != Result::ResultOk){
     ACA_LOG_ERROR("Failed to subscribe unicast topic: %s\n", this->unicast_topic_name.c_str());
@@ -165,7 +196,6 @@ bool ACA_Message_Pulsar_Consumer::unicastUnsubcribe()
     }
 
     result=this->unicast_consumer.unsubscribe();
-    printf("%s\n",this->unicast_consumer.getTopic().c_str());
     if (result != Result::ResultOk){
         ACA_LOG_ERROR("Failed to unsubscribe unicast topic: %s\n", this->unicast_topic_name.c_str());
         return EXIT_FAILURE;

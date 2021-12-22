@@ -99,8 +99,8 @@ TEST(pulsar_test_cases, DISABLED_pulsar_consumer_test)
     g_demo_mode = true;
 
     aca_test_reset_environment();
-
-    ACA_Message_Pulsar_Consumer consumer(mq_test_topic, mq_broker_ip, mq_subscription);
+    ACA_Message_Pulsar_Consumer consumer=ACA_Message_Pulsar_Consumer::get_instance();
+//    ACA_Message_Pulsar_Consumer consumer(mq_test_topic, mq_broker_ip, mq_subscription);
     consumer.multicastConsumerDispatched();
     pause();
 
@@ -118,7 +118,7 @@ TEST(pulsar_test_cases, DISABLED_pulsar_unicast_consumer_test)
 
     aca_test_reset_environment();
 
-    ACA_Message_Pulsar_Consumer consumer(mq_test_topic, mq_broker_ip, mq_subscription);
+    ACA_Message_Pulsar_Consumer consumer = ACA_Message_Pulsar_Consumer::get_instance();
     consumer.unicastConsumerDispatched(mq_hash);
     pause();
 
@@ -150,7 +150,7 @@ TEST(pulsar_test_cases, DISABLED_pulsar_unicast_consumer_recover_test)
     g_demo_mode = previous_demo_mode;
 }
 
-//    sudo ./aca_tests --gtest_also_run_disabled_tests --gtest_filter=*DISABLED_pulsar_unicast_consumer_resubscribe_test
+//  sudo ./aca_tests --gtest_also_run_disabled_tests --gtest_filter=*DISABLED_pulsar_unicast_consumer_resubscribe_test
 TEST(pulsar_test_cases, DISABLED_pulsar_unicast_consumer_resubscribe_test)
 {
     string cmd_string;
@@ -160,9 +160,10 @@ TEST(pulsar_test_cases, DISABLED_pulsar_unicast_consumer_resubscribe_test)
 
     aca_test_reset_environment();
 
-    ACA_Message_Pulsar_Consumer consumer(mq_test_topic, mq_broker_ip, mq_subscription);
+    ACA_Message_Pulsar_Consumer consumer(mq_update_topic, mq_broker_ip, mq_subscription);
     consumer.unicastConsumerDispatched(mq_hash);
-    consumer.unicastResubscribe(mq_update_topic,mq_hash);
+    consumer.unicastResubscribe(false);
+    consumer.unicastResubscribe(true,mq_test_topic, to_string(mq_hash));
     pause();
 
     g_demo_mode = previous_demo_mode;
@@ -181,35 +182,30 @@ TEST(pulsar_test_cases, DISABLED_pulsar_hash_producer_test)
     string GoalStateString;
     unsigned char serializedGoalState[length];
 
-    GoalState GoalState_builder;
-    PortState *new_port_states = GoalState_builder.add_port_states();
-    SubnetState *new_subnet_states = GoalState_builder.add_subnet_states();
+    GoalStateV2 GoalState_builder;
+    PortState new_port_states;
+    SubnetState new_subnet_states;
 
-    ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
-            "del-br br-int", not_care_culminative_time, overall_rc);
+    aca_test_reset_environment();
 
-    ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
-            "del-br br-tun", not_care_culminative_time, overall_rc);
+    aca_test_create_default_port_state(&new_port_states);
+    auto &port_states_map = *GoalState_builder.mutable_port_states();
+    port_states_map[port_id_1] = new_port_states;
 
-    overall_rc = ACA_OVS_L2_Programmer::get_instance().setup_ovs_bridges_if_need();
-    ASSERT_EQ(overall_rc, EXIT_SUCCESS);
-    overall_rc = EXIT_SUCCESS;
+    aca_test_create_default_subnet_state(&new_subnet_states);
+    auto &subnet_states_map = *GoalState_builder.mutable_subnet_states();
+    subnet_states_map[subnet_id_1] = new_subnet_states;
 
-    // fill in port state structs
-    aca_test_create_default_port_state(new_port_states);
-
-    // fill in subnet state structs
-    aca_test_create_default_subnet_state(new_subnet_states);
 
     if(GoalState_builder.SerializeToString(&GoalStateString)){
-        ACA_LOG_INFO("%s","Successfully covert GoalState to message\n");
+        ACA_LOG_INFO("%s","Successfully covert GoalStateV2 to message\n");
     }
 
     ACA_Message_Pulsar_Producer producer(mq_broker_ip, mq_test_topic);
     retcode = producer.publish(GoalStateString,mq_key);
     EXPECT_EQ(retcode, EXIT_SUCCESS);
 
-    ACA_LOG_INFO("%s","Waiting for GoalState update.\n");
+    ACA_LOG_INFO("%s","Waiting for GoalStateV2 update.\n");
     sleep(1);
 
     ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(

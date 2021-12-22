@@ -65,10 +65,14 @@ class ACA_Message_Pulsar_Consumer {
   public:
       static string recovered_topic;
 
+      static ACA_Message_Pulsar_Consumer &get_instance();
+
+      ACA_Message_Pulsar_Consumer();
+
       ACA_Message_Pulsar_Consumer(string topic, string brokers, string subscription_name);
 
-    ~ACA_Message_Pulsar_Consumer();
-
+      ~ACA_Message_Pulsar_Consumer();
+      void init();
     string getBrokers() const;
 
     string getMulticastTopicName() const;
