@@ -66,12 +66,14 @@ link_libraries(/usr/lib/x86_64-linux-gnu/libuuid.so)
 link_libraries(/usr/lib/x86_64-linux-gnu/libevent_pthreads.so)
 link_libraries(/usr/lib/x86_64-linux-gnu/libpthread.so)
 link_libraries(/usr/local/lib/libopenvswitch.a) #this was installed by aca-machine-init.sh
+link_libraries(/root/lfu/marl/build/libmarl.a)
 include_directories(${RDKAFKA_INCLUDE_DIR} ${CPPKAFKA_INCLUDE_DIR} ${PULSAR_INCLUDE_DIR} ${LIBEVENT_INCLUDE_DIR})
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../include)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/proto3)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/grpc)
 include_directories(/usr/local/include/openvswitch)
 include_directories(/usr/local/include/openflow)
+include_directories(/root/lfu/marl/include)
 
 # Find Protobuf installation
 # Looks for protobuf-config.cmake file installed by Protobuf's cmake installation.

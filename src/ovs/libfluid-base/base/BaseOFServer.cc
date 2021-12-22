@@ -18,6 +18,9 @@
 
 #include <string>
 #include <sstream>
+#include <iostream>
+#include <thread>
+#include <chrono>
 
 namespace fluid_base {
 
@@ -67,9 +70,24 @@ BaseOFServer::BaseOFServer(const char* address_, const int port, const int nthre
     this->eventloops = new EventLoop*[nthreads];
     this->threads = new pthread_t[nthreads];
     memset(this->threads, 0, sizeof(pthread_t)*nthreads);
-    for (int i = 0; i < nthreads; i++) {
-        this->eventloops[i] = new EventLoop(i);
+
+    // Pass marl scheduler from main thread, since BaseOFServer/OFServer/OFController init is only called on main thread (by aca_main)
+    marl::Scheduler* scheduler = marl::Scheduler::get();
+    int get_iteration = 0;
+    while (NULL == scheduler && get_iteration < 5) {
+        scheduler = marl::Scheduler::get();
+
+        if (NULL != scheduler) {
+            break;
+        } else {
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            get_iteration++;
+        }
     }
+    for (int i = 0; i < nthreads; i++) {
+        this->eventloops[i] = new EventLoop(i, scheduler);
+    }
+
     // The first event loop will be used for connections, so we move to the
     // next one for the first connection
     eventloop = 0;

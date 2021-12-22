@@ -35,6 +35,11 @@
 #include <grpcpp/grpcpp.h>
 #include <cmath>
 
+#include "marl/defer.h"
+#include "marl/event.h"
+#include "marl/scheduler.h"
+#include "marl/waitgroup.h"
+
 using aca_message_pulsar::ACA_Message_Pulsar_Consumer;
 using aca_ovs_control::ACA_OVS_Control;
 using std::string;
@@ -67,6 +72,7 @@ string g_ncm_address = EMPTY_STRING;
 string g_ncm_port = EMPTY_STRING;
 string g_ovs_ctrl_address = "127.0.0.1";
 int g_ovs_ctrl_port = 1234;
+marl::Scheduler g_scheduler(marl::Scheduler::Config::allCores());
 
 // total time for execute_system_command in microseconds
 std::atomic_ulong g_total_execute_system_time(0);
@@ -80,7 +86,7 @@ std::atomic_ulong g_total_vpcs_table_mutex_time(0);
 std::atomic_ulong g_total_update_GS_time(0);
 
 bool g_demo_mode = false;
-bool g_debug_mode = false;
+bool g_debug_mode = true;
 int processor_count = std::thread::hardware_concurrency();
 /*
   From previous tests, we found that, for x number of cores,
@@ -153,6 +159,9 @@ static void aca_cleanup()
   } else {
     ACA_LOG_ERROR("%s", "Unable to call delete, grpc client thread pointer is null.\n");
   }
+
+  // Stop universal (thread_pool) task scheduler
+  g_scheduler.unbind();
 
   // Stop the ovs controller and clean up
   aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().clean_up_ovs_controller();
@@ -235,6 +244,7 @@ int main(int argc, char *argv[])
     }
   }
 
+  /*
   // fill in the information if not provided in command line args
   if (g_broker_list == EMPTY_STRING) {
     g_broker_list = BROKER_LIST;
@@ -265,6 +275,11 @@ int main(int argc, char *argv[])
   g_grpc_client_thread = new std::thread(
           std::bind(&GoalStateProvisionerClientImpl::RunClient, g_grpc_client));
   g_grpc_client_thread->detach();
+  */
+
+  // Create a marl scheduler using all the logical processors available to the process.
+  // Bind this scheduler to the main thread so we can call marl::schedule()
+  g_scheduler.bind();
 
   aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().get_local_host_ips();
 
@@ -287,8 +302,8 @@ int main(int argc, char *argv[])
   //// monitor br-tun for arp request message
   //ACA_OVS_Control::get_instance().monitor("br-tun", "resume");
 
-  ACA_Message_Pulsar_Consumer network_config_consumer(g_broker_list, g_pulsar_subsription_name);
-  rc = network_config_consumer.consumeDispatched(g_pulsar_topic);
+  //ACA_Message_Pulsar_Consumer network_config_consumer(g_broker_list, g_pulsar_subsription_name);
+  //rc = network_config_consumer.consumeDispatched(g_pulsar_topic);
 
   pause();
   aca_cleanup();

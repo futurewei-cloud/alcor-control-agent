@@ -25,6 +25,11 @@
 #include "libfluid-msg/of10msg.hh"
 #include "libfluid-msg/of13msg.hh"
 
+#include "marl/defer.h"
+#include "marl/event.h"
+#include "marl/scheduler.h"
+#include "marl/waitgroup.h"
+
 #include <arpa/inet.h>
 #include <atomic>
 #include <vector>

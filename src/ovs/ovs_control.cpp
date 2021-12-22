@@ -16,7 +16,11 @@
 #include "aca_log.h"
 #include "aca_util.h"
 #include "ovs_control.h"
-#include "aca_on_demand_engine.h"
+#undef OFP_ASSERT
+#undef CONTAINER_OF
+#undef ARRAY_SIZE
+#undef ROUND_UP
+//#include "aca_on_demand_engine.h"
 #include <sstream> // std::(istringstream)
 #include <string> // std::(string)
 #include <signal.h>
@@ -41,7 +45,7 @@
 #include <openvswitch/vlog.h>
 
 using namespace std;
-using namespace aca_on_demand_engine;
+//using namespace aca_on_demand_engine;
 
 extern std::atomic_ulong g_total_execute_openflow_time;
 
@@ -1012,7 +1016,7 @@ void OVS_Control::monitor_vconn(vconn *vconn, bool reply_to_echo_requests,
             The pin.packet here has the same memory address, even after multiple calls.
             If you intent to store it somewhere, it is advised to make a copy of it.
           */
-                    ACA_On_Demand_Engine::get_instance().parse_packet(in_port, pin.packet, 0);
+                    //ACA_On_Demand_Engine::get_instance().parse_packet(in_port, pin.packet, 0);
 
                     if (error) {
                         fprintf(stderr, "decoding packet-in failed: %s",

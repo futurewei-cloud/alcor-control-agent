@@ -46,6 +46,9 @@
 #undef ARRAY_SIZE
 #undef ROUND_UP
 #include "aca_on_demand_engine.h"
+#include <openvswitch/ofp-errors.h>
+//#include <openvswitch/ofp-packet.h>
+#include <openvswitch/ofp-util.h>
 
 using namespace std;
 using namespace aca_vlan_manager;
@@ -197,10 +200,10 @@ void ACA_On_Demand_Engine::process_async_grpc_replies()
                       to_string(replyStatus).c_str());
         ACA_LOG_DEBUG("Received hostOperationReply in thread id: [%ld]\n",
                      std::this_thread::get_id());
-        thread_pool_.push(std::bind(&ACA_On_Demand_Engine::process_async_replies_asyncly, this,
-                             request_id, replyStatus, received_ncm_reply_time));
-        ACA_LOG_DEBUG("After using the thread pool, we have %ld idle threads in the pool, thread pool size: %ld\n",
-                      thread_pool_.n_idle(), thread_pool_.size());
+        //thread_pool_.push(std::bind(&ACA_On_Demand_Engine::process_async_replies_asyncly, this,
+        //                     request_id, replyStatus, received_ncm_reply_time));
+        //ACA_LOG_DEBUG("After using the thread pool, we have %ld idle threads in the pool, thread pool size: %ld\n",
+        //              thread_pool_.n_idle(), thread_pool_.size());
       }
     } else {
       ACA_LOG_INFO("%s\n", "Got an GRPC reply that is NOT OK, don't need to process the data");
@@ -343,16 +346,17 @@ void ACA_On_Demand_Engine::on_demand(string uuid_for_call, OperationStatus statu
   }
 }
 
-void ACA_On_Demand_Engine::parse_packet(uint32_t in_port, void *packet, int of_connection_id)
+void ACA_On_Demand_Engine::parse_packet(uint32_t in_port, fluid_msg::of10::PacketIn pin, int of_connection_id)
 {
-  const struct ether_header *eth_header;
   /* The packet is larger than the ether_header struct,
-    but we just want to look at the first part of the packet
-    that contains the header. We force the compiler
-    to treat the pointer to the packet as just a pointer
-    to the ether_header. The data payload of the packet comes
-    after the headers. Different packet types have different header
-    lengths though, but the ethernet header is always the same (14 bytes) */
+     but we just want to look at the first part of the packet
+     that contains the header. We force the compiler
+     to treat the pointer to the packet as just a pointer
+     to the ether_header. The data payload of the packet comes
+     after the headers. Different packet types have different header
+     lengths though, but the ethernet header is always the same (14 bytes) */
+  const struct ether_header *eth_header;
+  void* packet = pin.data();
   eth_header = (struct ether_header *)packet;
 
   ACA_LOG_DEBUG("Source Mac: %s\n", ether_ntoa((ether_addr *)&eth_header->ether_shost));

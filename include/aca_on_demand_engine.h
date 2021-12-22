@@ -20,9 +20,8 @@
 #define STDOUT_FILENO 1 /* Standard output.  */
 
 #include "common.pb.h"
-#include <openvswitch/ofp-errors.h>
-//#include <openvswitch/ofp-packet.h>
-#include <openvswitch/ofp-util.h>
+#include "libfluid-msg/of10msg.hh"
+#include "libfluid-msg/of13msg.hh"
 #include <string>
 #include <thread>
 #include <netinet/ether.h>
@@ -31,11 +30,11 @@
 #include <unordered_map>
 #include "aca_log.h"
 #include "goalstateprovisioner.grpc.pb.h"
-#include "ctpl/ctpl_stl.h"
+//#include "ctpl/ctpl_stl.h"
 
 using namespace alcor::schema;
 using namespace std;
-using namespace ctpl;
+//using namespace ctpl;
 
 extern int thread_pools_size;
 
@@ -75,7 +74,7 @@ class ACA_On_Demand_Engine {
   its initial value should be the time  when clean_remaining_payload() was first called*/
   std::chrono::_V2::steady_clock::time_point last_time_cleaned_remaining_payload;
 
-  ctpl::thread_pool thread_pool_;
+  //ctpl::thread_pool thread_pool_;
 
   static ACA_On_Demand_Engine &get_instance();
 
@@ -87,7 +86,7 @@ class ACA_On_Demand_Engine {
    * example:
    *    ACA_ON_Demand_Engine::get_instance().parse_packet(1, packet) 
    */
-  void parse_packet(uint32_t in_port, void *packet, int of_connection_id);
+  void parse_packet(uint32_t in_port, fluid_msg::of10::PacketIn pin, int of_connection_id);
 
   void clean_remaining_payload();
   /*
@@ -183,7 +182,7 @@ class ACA_On_Demand_Engine {
     on_demand_payload_cleaning_thread = new std::thread(
             std::bind(&ACA_On_Demand_Engine::clean_remaining_payload, this));
     on_demand_payload_cleaning_thread->detach();
-    thread_pool_.resize(thread_pools_size);
+    //thread_pool_.resize(thread_pools_size);
   };
   ~ACA_On_Demand_Engine()
   {
@@ -191,7 +190,7 @@ class ACA_On_Demand_Engine {
     request_uuid_on_demand_payload_map.clear();
     delete on_demand_reply_processing_thread;
     delete on_demand_payload_cleaning_thread;
-    thread_pool_.stop();
+    //thread_pool_.stop();
   };
 };
 } // namespace aca_on_demand_engine
