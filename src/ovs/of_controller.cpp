@@ -67,12 +67,6 @@ void OFController::message_callback(OFConnection* ofconn, uint8_t type, void* da
         auto t = std::chrono::high_resolution_clock::now();
         ACA_LOG_INFO("OFController::message_callback - recv OFPT_BARRIER_REPLY on %ld\n", t.time_since_epoch().count());
     } else if (type == fluid_msg::of10::OFPT_PACKET_IN) {
-        ACA_LOG_INFO("OFController::message_callback - PACKET_IN from connection %ld\n", ofconn->get_id());
-        fluid_msg::of10::PacketIn* pin = new fluid_msg::of10::PacketIn();
-        pin->unpack((uint8_t *) data);
-        // uint32_t in_port = pin->match().in_port()->value();
-        uint32_t in_port = pin->in_port();
-
         //// pass new allocated memory of packet-in to ACA_On_Demand_Engine to determine which type of request it is
         //aca_on_demand_engine::ACA_On_Demand_Engine::get_instance().thread_pool_.push(
         //        std::bind(&aca_on_demand_engine::ACA_On_Demand_Engine::parse_packet,
@@ -80,9 +74,14 @@ void OFController::message_callback(OFConnection* ofconn, uint8_t type, void* da
         //                  in_port, (void *)pin->data(), ofconn->get_id()));
 
         marl::schedule([=] {
+            fluid_msg::of10::PacketIn* pin = new fluid_msg::of10::PacketIn();
+            pin->unpack((uint8_t *) data);
+            // uint32_t in_port = pin->match().in_port()->value();
+            uint32_t in_port = pin->in_port();
+
             aca_on_demand_engine::ACA_On_Demand_Engine::get_instance().parse_packet(
                     in_port,
-                    *pin,
+                    (void *)pin->data(),
                     ofconn->get_id());
         });
     } else if (type == 33) { // OFPRAW_OFPT14_BUNDLE_CONTROL

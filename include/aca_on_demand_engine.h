@@ -86,7 +86,7 @@ class ACA_On_Demand_Engine {
    * example:
    *    ACA_ON_Demand_Engine::get_instance().parse_packet(1, packet) 
    */
-  void parse_packet(uint32_t in_port, fluid_msg::of10::PacketIn pin, int of_connection_id);
+  void parse_packet(uint32_t in_port, void *packet, int of_connection_id);
 
   void clean_remaining_payload();
   /*

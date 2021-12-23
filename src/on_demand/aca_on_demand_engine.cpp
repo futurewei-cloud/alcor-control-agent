@@ -346,8 +346,9 @@ void ACA_On_Demand_Engine::on_demand(string uuid_for_call, OperationStatus statu
   }
 }
 
-void ACA_On_Demand_Engine::parse_packet(uint32_t in_port, fluid_msg::of10::PacketIn pin, int of_connection_id)
+void ACA_On_Demand_Engine::parse_packet(uint32_t in_port, void *packet, int of_connection_id)
 {
+  const struct ether_header *eth_header;
   /* The packet is larger than the ether_header struct,
      but we just want to look at the first part of the packet
      that contains the header. We force the compiler
@@ -355,8 +356,6 @@ void ACA_On_Demand_Engine::parse_packet(uint32_t in_port, fluid_msg::of10::Packe
      to the ether_header. The data payload of the packet comes
      after the headers. Different packet types have different header
      lengths though, but the ethernet header is always the same (14 bytes) */
-  const struct ether_header *eth_header;
-  void* packet = pin.data();
   eth_header = (struct ether_header *)packet;
 
   ACA_LOG_DEBUG("Source Mac: %s\n", ether_ntoa((ether_addr *)&eth_header->ether_shost));
