@@ -271,7 +271,7 @@ int ACA_ARP_Responder::_parse_arp_request(uint32_t in_port, vlan_message *vlanms
 {
   arp_entry_data stData;
   arp_table_data *current_arp_data = new arp_table_data;
-  arp_message *arpreply = nullptr;
+  //arp_message *arpreply = nullptr;
 
   // get the ip address from arp message
   stData.ipv4_address = _get_requested_ip(arpmsg);
@@ -288,10 +288,13 @@ int ACA_ARP_Responder::_parse_arp_request(uint32_t in_port, vlan_message *vlanms
   current_arp_data->mac_address = "6c:dd:ee:00:11:22";
 
   // put this .find here just to make sure that there's a lookup operation.
-  assert(!_arp_db.find(stData, current_arp_data));
+  //assert(!_arp_db.find(stData, current_arp_data));
 
-  arpreply = _pack_arp_reply(arpmsg, current_arp_data->mac_address);
-  arp_xmit(in_port, vlanmsg, arpreply, 1, of_connection_id);
+  marl::schedule([=] {
+    arp_message *arpreply = _pack_arp_reply(arpmsg, current_arp_data->mac_address);
+    arp_xmit(in_port, vlanmsg, arpreply, 1, of_connection_id);
+  });
+
   return EXIT_SUCCESS;
 
   /*
