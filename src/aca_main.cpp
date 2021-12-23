@@ -72,7 +72,6 @@ string g_ncm_address = EMPTY_STRING;
 string g_ncm_port = EMPTY_STRING;
 string g_ovs_ctrl_address = "127.0.0.1";
 int g_ovs_ctrl_port = 1234;
-marl::Scheduler g_scheduler(marl::Scheduler::Config::allCores());
 
 // total time for execute_system_command in microseconds
 std::atomic_ulong g_total_execute_system_time(0);
@@ -159,9 +158,6 @@ static void aca_cleanup()
   } else {
     ACA_LOG_ERROR("%s", "Unable to call delete, grpc client thread pointer is null.\n");
   }
-
-  // Stop universal (thread_pool) task scheduler
-  g_scheduler.unbind();
 
   // Stop the ovs controller and clean up
   aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().clean_up_ovs_controller();
@@ -279,7 +275,11 @@ int main(int argc, char *argv[])
 
   // Create a marl scheduler using all the logical processors available to the process.
   // Bind this scheduler to the main thread so we can call marl::schedule()
-  g_scheduler.bind();
+  marl::Scheduler::Config cfg_bind_hw_cores;
+  cfg_bind_hw_cores.setWorkerThreadCount(20);
+  marl::Scheduler task_scheduler(cfg_bind_hw_cores);
+  task_scheduler.bind();
+  defer(task_scheduler.unbind());
 
   aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().get_local_host_ips();
 
