@@ -164,8 +164,8 @@ TEST(pulsar_test_cases, DISABLED_pulsar_unicast_consumer_resubscribe_test)
 
     ACA_Message_Pulsar_Consumer consumer(mq_update_topic, mq_broker_ip, mq_subscription);
     consumer.unicastConsumerDispatched(mq_hash);
-    consumer.unicastResubscribe(false);
-    consumer.unicastResubscribe(true,mq_test_topic, to_string(mq_hash));
+    consumer.unicastResubscribe(true);
+    consumer.unicastResubscribe(false,mq_test_topic, to_string(mq_hash));
     pause();
 
     g_demo_mode = previous_demo_mode;
@@ -173,8 +173,8 @@ TEST(pulsar_test_cases, DISABLED_pulsar_unicast_consumer_resubscribe_test)
 
 // This case tests the pulsar producer implementation and publishes a GoalState to the subscribed topic.
 // First run pulsar_consumer_test then execute
-//      sudo ./aca_tests --gtest_also_run_disabled_tests --gtest_filter=*DISABLED_pulsar_hash_producer_test
-TEST(pulsar_test_cases, DISABLED_pulsar_hash_producer_test)
+//      sudo ./aca_tests --gtest_also_run_disabled_tests --gtest_filter=*DISABLED_pulsar_producer_test
+TEST(pulsar_test_cases, DISABLED_pulsar_producer_test)
 {
     int retcode = 0;
     int overall_rc=0;
@@ -209,50 +209,6 @@ TEST(pulsar_test_cases, DISABLED_pulsar_hash_producer_test)
 
     ACA_LOG_INFO("%s","Waiting for GoalStateV2 update.\n");
     sleep(1);
-
-    ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
-            "get Interface " + port_name_1 + " ofport", not_care_culminative_time, overall_rc);
-    EXPECT_EQ(overall_rc, EXIT_SUCCESS);
-    overall_rc = EXIT_SUCCESS;
-
-}
-
-// This case tests the pulsar producer implementation and publishes a GoalStateV2 to the subscribed topic.
-// First run pulsar_consumer_test then execute
-//      sudo ./aca_tests --gtest_also_run_disabled_tests --gtest_filter=*DISABLED_pulsar_producer_testv2
-
-TEST(pulsar_test_cases, DISABLED_pulsar_producer_testv2)
-{
-    int retcode=0;
-    int overall_rc=0;
-    ulong not_care_culminative_time;
-    string cmd_string;
-    string GoalStateString;
-
-    aca_test_reset_environment();
-
-    GoalStateV2 GoalState_builder;
-    PortState new_port_states;
-    SubnetState new_subnet_states;
-
-    aca_test_create_default_port_state(&new_port_states);
-    auto &port_states_map = *GoalState_builder.mutable_port_states();
-    port_states_map[port_id_1] = new_port_states;
-
-    aca_test_create_default_subnet_state(&new_subnet_states);
-    auto &subnet_states_map = *GoalState_builder.mutable_subnet_states();
-    subnet_states_map[subnet_id_1] = new_subnet_states;
-
-    if(GoalState_builder.SerializeToString(&GoalStateString)){
-        ACA_LOG_INFO("%s","Successfully covert GoalStateV2 to message\n");
-    }
-
-    ACA_Message_Pulsar_Producer producer(mq_broker_ip, mq_test_topic);
-    retcode = producer.publish(GoalStateString);
-    EXPECT_EQ(retcode, EXIT_SUCCESS);
-
-    ACA_LOG_INFO("%s","Waiting for GoalStateV2 update.\n");
-    sleep(2);
 
     ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
             "get Interface " + port_name_1 + " ofport", not_care_culminative_time, overall_rc);
