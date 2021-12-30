@@ -18,7 +18,9 @@
 #include "aca_comm_mgr.h"
 #include "aca_grpc.h"
 #include "aca_grpc_client.h"
+#include "aca_message_pulsar_producer.h"
 #include "goalstateprovisioner.grpc.pb.h"
+#include "subscribeinfoprovisioner.grpc.pb.h"
 #include "goalstate.pb.h"
 #include "cppkafka/buffer.h"
 #include <unistd.h> /* for getopt */
@@ -38,6 +40,7 @@
 static char EMPTY_STRING[] = "";
 static char LOCALHOST[] = "localhost";
 static char GRPC_PORT[] = "50001";
+static char SUBSCRIBE_PORT[] = "50002";
 
 using namespace std;
 using namespace alcor::schema;
@@ -46,6 +49,7 @@ using aca_comm_manager::Aca_Comm_Manager;
 // Global variables
 string g_grpc_server_ip = EMPTY_STRING;
 string g_grpc_port = EMPTY_STRING;
+string g_subscribe_port = EMPTY_STRING;
 string g_ofctl_command = EMPTY_STRING;
 string g_ofctl_target = EMPTY_STRING;
 string g_ofctl_options = EMPTY_STRING;
@@ -79,6 +83,7 @@ std::atomic_ulong g_total_vpcs_table_mutex_time(0);
 std::atomic_ulong g_total_update_GS_time(0);
 // total time for ACA message in microseconds
 std::atomic_ulong g_total_ACA_Message_time(0);
+
 bool g_demo_mode = false;
 bool g_debug_mode = false;
 
@@ -88,6 +93,7 @@ static string subnet_id_1 = "27330ae4-b718-11ea-b3de-111111111111";
 static string subnet1_gw_ip = "10.10.0.1";
 static string subnet1_gw_mac = "fa:16:3e:d7:f2:11";
 static string vmac_address_1 = "fa:16:3e:d7:f2:6c";
+static string broker_list= "pulsar://localhost:6650";
 
 using grpc::Channel;
 using grpc::ClientAsyncResponseReader;
@@ -446,6 +452,48 @@ class GoalStateProvisionerClient {
   std::unique_ptr<GoalStateProvisioner::Stub> stub_;
 };
 
+class SubscribeInfoProvisionerClient {
+public:
+    explicit SubscribeInfoProvisionerClient(std::shared_ptr<Channel> channel)
+            : stub_(SubscribeInfoProvisioner::NewStub(channel))
+    {
+    }
+
+    void push_info(NodeSubscribeInfo &subscribeInfo, SubscribeOperationReply &reply)
+    {
+        ClientContext context;
+
+        auto before_sync_call = std::chrono::steady_clock::now();
+
+        Status status = stub_->PushNodeSubscribeInfo(&context, subscribeInfo, &reply);
+
+        auto after_sync_call = std::chrono::steady_clock::now();
+
+        auto sync_call_time =
+                cast_to_microseconds(after_sync_call - before_sync_call).count();
+
+        ACA_LOG_INFO("[METRICS] PushNodeSubscribeInfo sync call took: %ld microseconds or %ld milliseconds\n",
+                     sync_call_time, us_to_ms(sync_call_time));
+
+        if (!status.ok()) {
+            ACA_LOG_ERROR("%s", "Subscribe info update failed\n");
+        }
+    }
+
+    void update_subscribe_info(const SubscribeOperation operation, const string key, const string topic, SubscribeOperationReply &reply)
+    {
+        NodeSubscribeInfo info;
+        info.set_subscribe_operation(operation);
+        info.set_key(key);
+        info.set_topic(topic);
+
+        push_info(info, reply);
+    }
+
+private:
+    std::unique_ptr<SubscribeInfoProvisioner::Stub> stub_;
+};
+
 // function to handle ctrl-c and kill process
 static void aca_signal_handler(int sig_num)
 {
@@ -704,6 +752,56 @@ int run_as_client()
   return rc;
 }
 
+int run_as_topic_client() {
+    int rc=1;
+    string hashValue="49775";
+    string key="9192a4d4-ffff-4ece-b3f0-8d36e3d88001";
+    string updateTopic="update topic";
+    SubscribeOperation operation=alcor::schema::Subscribe;
+
+    ACA_LOG_INFO("%s", "-------------- setup local subscribe info client --------------\n");
+    ACA_LOG_INFO("operation is %s\n","Subscribe");
+    ACA_LOG_INFO("subscribe key is %s\n",key.c_str());
+    ACA_LOG_INFO("subscribe topic is %s\n",updateTopic.c_str());
+    ACA_LOG_INFO("subscribe server is %s\n",string (g_grpc_server_ip + ":" + g_subscribe_port).c_str());
+
+    auto before_subscribe_client = std::chrono::steady_clock::now();
+
+    SubscribeInfoProvisionerClient subscribe_client(grpc::CreateChannel(
+            g_grpc_server_ip + ":" + g_subscribe_port, grpc::InsecureChannelCredentials()));
+
+    auto after_subscribe_client = std::chrono::steady_clock::now();
+    auto client_time =
+            cast_to_microseconds(after_subscribe_client-before_subscribe_client).count();
+    ACA_LOG_INFO("[METRICS] create subscribe client took: %ld microseconds or %ld milliseconds\n",
+                 client_time, us_to_ms(client_time));
+
+    ACA_LOG_INFO("%s", "-------------- sending one subscribe info --------------\n");
+
+    SubscribeOperationReply reply;
+    auto before_send_info = std::chrono::steady_clock::now();
+
+    subscribe_client.update_subscribe_info(operation, hashValue, updateTopic, reply);
+
+    auto after_send_info = std::chrono::steady_clock::now();
+    auto send_info_time =
+            cast_to_microseconds(after_send_info-before_send_info).count();
+    ACA_LOG_INFO("[METRICS] send_info call took: %ld microseconds or %ld milliseconds\n",
+                 send_info_time, us_to_ms(send_info_time));
+
+    ACA_LOG_INFO("%s", "-------------- sending one empty goalstate message --------------\n");
+    GoalStateV2 emptyGoalState;
+    string GoalStateString;
+
+    if(emptyGoalState.SerializeToString(&GoalStateString)){
+        ACA_LOG_INFO("%s","Successfully covert GoalStateV2 to message\n");
+    }
+
+    aca_message_pulsar::ACA_Message_Pulsar_Producer producer(broker_list, updateTopic);
+    rc = producer.publish(GoalStateString,key);
+    return rc;
+}
+
 int main(int argc, char *argv[])
 {
   int option;
@@ -749,11 +847,15 @@ int main(int argc, char *argv[])
   if (g_grpc_port == EMPTY_STRING) {
     g_grpc_port = GRPC_PORT;
   }
+  if(g_subscribe_port == EMPTY_STRING){
+      g_subscribe_port = SUBSCRIBE_PORT;
+  }
 
   if (g_run_as_server) {
     rc = RunServer();
   } else {
-    rc = run_as_client();
+//    rc = run_as_client();
+    rc = run_as_topic_client();
   }
   // Verify that the version of the library that we linked against is
   // compatible with the version of the headers we compiled against.
@@ -763,3 +865,5 @@ int main(int argc, char *argv[])
 
   return rc;
 }
+
+
