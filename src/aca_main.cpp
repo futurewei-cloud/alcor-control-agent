@@ -46,7 +46,7 @@ using std::string;
 static char EMPTY_STRING[] = "";
 static char BROKER_LIST[] = "pulsar://localhost:6650";
 static char PULSAR_TOPIC[] = "Host-ts-1";
-static char PULSAR_SUBSCRIPTION_NAME[] = "Test-Subscription";
+static char PULSAR_SUBSCRIPTION_NAME[] = "test-subscription";
 static char GRPC_SERVER_PORT[] = "50001";
 static char GRPC_SUBSCRIBE_SERVER_PORT[] = "50002";
 static char OFCTL_COMMAND[] = "monitor";
@@ -64,7 +64,7 @@ GoalStateProvisionerClientImpl *g_grpc_client = NULL;
 string g_broker_list = EMPTY_STRING;
 string g_pulsar_topic = EMPTY_STRING;
 string g_pulsar_subsription_name = EMPTY_STRING;
-string g_pulsar_hashed_key = "0";
+string g_pulsar_hashed_key = "49775";
 string g_grpc_server_port = EMPTY_STRING;
 string g_grpc_subscribe_server_port = EMPTY_STRING;
 string g_ofctl_command = EMPTY_STRING;
@@ -325,9 +325,8 @@ int main(int argc, char *argv[])
   //// monitor br-tun for arp request message
   //ACA_OVS_Control::get_instance().monitor("br-tun", "resume");
 
-  ACA_Message_Pulsar_Consumer network_config_consumer(g_pulsar_topic, g_broker_list, g_pulsar_subsription_name);
-  //network_config_consumer.multicastConsumerDispatched();
-  network_config_consumer.unicastConsumerDispatched(atoi(g_pulsar_hashed_key.c_str()));
+  ACA_Message_Pulsar_Consumer::get_instance().init(g_pulsar_topic, g_broker_list, g_pulsar_subsription_name);
+  ACA_Message_Pulsar_Consumer::get_instance().unicastConsumerDispatched(atoi(g_pulsar_hashed_key.c_str()));
 
   pause();
   aca_cleanup();
