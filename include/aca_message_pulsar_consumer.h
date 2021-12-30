@@ -63,13 +63,12 @@ class ACA_Message_Pulsar_Consumer {
 
 
   public:
-      static string recovered_topic;
 
       static ACA_Message_Pulsar_Consumer &get_instance();
 
       ACA_Message_Pulsar_Consumer();
 
-      ACA_Message_Pulsar_Consumer(string topic, string brokers, string subscription_name);
+//      ACA_Message_Pulsar_Consumer(string topic, string brokers, string subscription_name);
 
       ~ACA_Message_Pulsar_Consumer();
 
@@ -95,7 +94,7 @@ class ACA_Message_Pulsar_Consumer {
 
     bool unicastResubscribe(string topic, int stickyHash);
 
-    bool unicastResubscribe(bool isSubscribe, string topic="", string stickHash="");
+    bool unicastResubscribe(bool isUnSubscribe, string topic="", string stickHash="");
 };
 
 } // namespace aca_message_pulsar
