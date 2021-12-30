@@ -480,16 +480,14 @@ public:
         }
     }
 
-    void update_subscribe_info(const SubscribeOperation &operation, const string &key, const string &topic){
-
-        SubscribeOperationReply reply;
-
+    void update_subscribe_info(const SubscribeOperation operation, const string key, const string topic, SubscribeOperationReply &reply)
+    {
         NodeSubscribeInfo info;
         info.set_subscribe_operation(operation);
         info.set_key(key);
         info.set_topic(topic);
 
-        push_info(info,reply);
+        push_info(info, reply);
     }
 
 private:
@@ -780,10 +778,10 @@ int run_as_topic_client() {
 
     ACA_LOG_INFO("%s", "-------------- sending one subscribe info --------------\n");
 
-    GoalStateOperationReply reply;
+    SubscribeOperationReply reply;
     auto before_send_info = std::chrono::steady_clock::now();
 
-    subscribe_client.update_subscribe_info(operation, hashValue, updateTopic);
+    subscribe_client.update_subscribe_info(operation, hashValue, updateTopic, reply);
 
     auto after_send_info = std::chrono::steady_clock::now();
     auto send_info_time =
