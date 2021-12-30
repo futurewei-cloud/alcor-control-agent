@@ -90,25 +90,9 @@ static int mq_hash=49775; //  21485  49775
 
 // This case tests the pulsar consumer implementation.
 // First run this case by executing:
-//    ./aca_tests --gtest_also_run_disabled_tests --gtest_filter=*DISABLED_pulsar_consumer_test
+//    sudo ./aca_tests --gtest_also_run_disabled_tests --gtest_filter=*DISABLED_pulsar_unicast_consumer_test
 // Then run the following producer test cases.
 
-TEST(pulsar_test_cases, DISABLED_pulsar_consumer_test)
-{
-    bool previous_demo_mode = g_demo_mode;
-    g_demo_mode = true;
-
-    aca_test_reset_environment();
-    ACA_Message_Pulsar_Consumer consumer=ACA_Message_Pulsar_Consumer::get_instance();
-    consumer.init(mq_test_topic, mq_broker_ip, mq_subscription);
-//    ACA_Message_Pulsar_Consumer consumer(mq_test_topic, mq_broker_ip, mq_subscription);
-    consumer.multicastConsumerDispatched();
-    pause();
-
-    g_demo_mode = previous_demo_mode;
-}
-
-//    sudo ./aca_tests --gtest_also_run_disabled_tests --gtest_filter=*DISABLED_pulsar_unicast_consumer_test
 TEST(pulsar_test_cases, DISABLED_pulsar_unicast_consumer_test)
 {
     string cmd_string;
@@ -127,31 +111,6 @@ TEST(pulsar_test_cases, DISABLED_pulsar_unicast_consumer_test)
     g_demo_mode = previous_demo_mode;
 }
 
-//    sudo ./aca_tests --gtest_also_run_disabled_tests --gtest_filter=*DISABLED_pulsar_unicast_consumer_recover_test
-TEST(pulsar_test_cases, DISABLED_pulsar_unicast_consumer_recover_test)
-{
-    string cmd_string;
-    string mq_update_topic="update topic";
-    bool previous_demo_mode = g_demo_mode;
-    g_demo_mode = true;
-
-    aca_test_reset_environment();
-
-    auto* pt=
-            new ACA_Message_Pulsar_Consumer(mq_test_topic,mq_broker_ip,mq_subscription);
-    pt->unicastConsumerDispatched(mq_hash);
-    pt->unicastResubscribe(mq_update_topic,mq_hash);
-    delete pt;
-
-    pt=
-            new ACA_Message_Pulsar_Consumer(ACA_Message_Pulsar_Consumer::recovered_topic,mq_broker_ip,mq_subscription);
-    pt->unicastConsumerDispatched(mq_hash);
-
-    pause();
-
-    g_demo_mode = previous_demo_mode;
-}
-
 //  sudo ./aca_tests --gtest_also_run_disabled_tests --gtest_filter=*DISABLED_pulsar_unicast_consumer_resubscribe_test
 TEST(pulsar_test_cases, DISABLED_pulsar_unicast_consumer_resubscribe_test)
 {
@@ -162,7 +121,9 @@ TEST(pulsar_test_cases, DISABLED_pulsar_unicast_consumer_resubscribe_test)
 
     aca_test_reset_environment();
 
-    ACA_Message_Pulsar_Consumer consumer(mq_update_topic, mq_broker_ip, mq_subscription);
+    ACA_Message_Pulsar_Consumer consumer=
+            ACA_Message_Pulsar_Consumer::get_instance();
+    consumer.init(mq_update_topic, mq_broker_ip, mq_subscription);
     consumer.unicastConsumerDispatched(mq_hash);
     consumer.unicastResubscribe(true);
     consumer.unicastResubscribe(false,mq_test_topic, to_string(mq_hash));
