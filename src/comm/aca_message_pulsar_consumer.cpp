@@ -32,9 +32,6 @@ namespace aca_message_pulsar
 {
 string aca_message_pulsar::ACA_Message_Pulsar_Consumer::empty_topic="";
 
-string aca_message_pulsar::ACA_Message_Pulsar_Consumer::recovered_topic=
-        ACA_Message_Pulsar_Consumer::getRecoveredTopicName();
-
 void listener(Consumer consumer, const Message& message){
   alcor::schema::GoalStateV2 deserialized_GoalState;
   alcor::schema::GoalStateOperationReply gsOperationalReply;
@@ -67,26 +64,6 @@ void listener(Consumer consumer, const Message& message){
 
 ACA_Message_Pulsar_Consumer::ACA_Message_Pulsar_Consumer()
 {
-    string default_brokers = "pulsar://localhost:6650";
-    string default_topic = "Host-ts-1";
-    string default_subscription_name = "test_subscription";
-
-    setUnicastTopicName(default_topic);
-    recovered_topic=default_topic;
-    setMulticastTopicName(default_topic);
-    setBrokers(default_brokers);
-    setUnicastSubscriptionName(default_subscription_name);
-    setMulticastSubscriptionName(default_subscription_name);
-
-    ACA_LOG_DEBUG("Broker list: %s\n", this->brokers_list.c_str());
-    ACA_LOG_DEBUG("Unicast consumer topic name: %s\n", this->unicast_topic_name.c_str());
-    ACA_LOG_DEBUG("Unicast consumer subscription name: %s\n", this->unicast_subscription_name.c_str());
-    ACA_LOG_DEBUG("Multicast consumer topic name: %s\n", this->multicast_topic_name.c_str());
-    ACA_LOG_DEBUG("Multicast consumer subscription name: %s\n", this->multicast_subscription_name.c_str());
-
-    // Create the clients
-    this->ptr_multicast_client= new Client(default_brokers);
-    this->ptr_unicast_client = new Client(default_brokers);
 }
 
 ACA_Message_Pulsar_Consumer &ACA_Message_Pulsar_Consumer::get_instance()
@@ -96,7 +73,6 @@ ACA_Message_Pulsar_Consumer &ACA_Message_Pulsar_Consumer::get_instance()
 }
 void ACA_Message_Pulsar_Consumer::init(string topic, string brokers, string subscription_name){
     setUnicastTopicName(topic);
-    recovered_topic=topic;
     setMulticastTopicName(topic);
     setBrokers(brokers);
     setUnicastSubscriptionName(subscription_name);
@@ -112,25 +88,25 @@ void ACA_Message_Pulsar_Consumer::init(string topic, string brokers, string subs
     this->ptr_multicast_client= new Client(brokers);
     this->ptr_unicast_client = new Client(brokers);
 }
-ACA_Message_Pulsar_Consumer::ACA_Message_Pulsar_Consumer(string topic, string brokers, string subscription_name)
-{
-  setUnicastTopicName(topic);
-  recovered_topic=topic;
-  setMulticastTopicName(topic);
-  setBrokers(brokers);
-  setUnicastSubscriptionName(subscription_name);
-  setMulticastSubscriptionName(subscription_name);
-
-  ACA_LOG_DEBUG("Broker list: %s\n", this->brokers_list.c_str());
-  ACA_LOG_DEBUG("Unicast consumer topic name: %s\n", this->unicast_topic_name.c_str());
-  ACA_LOG_DEBUG("Unicast consumer subscription name: %s\n", this->unicast_subscription_name.c_str());
-  ACA_LOG_DEBUG("Multicast consumer topic name: %s\n", this->multicast_topic_name.c_str());
-  ACA_LOG_DEBUG("Multicast consumer subscription name: %s\n", this->multicast_subscription_name.c_str());
-
-  // Create the clients
-  this->ptr_multicast_client= new Client(brokers);
-  this->ptr_unicast_client = new Client(brokers);
-}
+//ACA_Message_Pulsar_Consumer::ACA_Message_Pulsar_Consumer(string topic, string brokers, string subscription_name)
+//{
+//  setUnicastTopicName(topic);
+//  recovered_topic=topic;
+//  setMulticastTopicName(topic);
+//  setBrokers(brokers);
+//  setUnicastSubscriptionName(subscription_name);
+//  setMulticastSubscriptionName(subscription_name);
+//
+//  ACA_LOG_DEBUG("Broker list: %s\n", this->brokers_list.c_str());
+//  ACA_LOG_DEBUG("Unicast consumer topic name: %s\n", this->unicast_topic_name.c_str());
+//  ACA_LOG_DEBUG("Unicast consumer subscription name: %s\n", this->unicast_subscription_name.c_str());
+//  ACA_LOG_DEBUG("Multicast consumer topic name: %s\n", this->multicast_topic_name.c_str());
+//  ACA_LOG_DEBUG("Multicast consumer subscription name: %s\n", this->multicast_subscription_name.c_str());
+//
+//  // Create the clients
+//  this->ptr_multicast_client= new Client(brokers);
+//  this->ptr_unicast_client = new Client(brokers);
+//}
 
 ACA_Message_Pulsar_Consumer::~ACA_Message_Pulsar_Consumer()
 {
@@ -208,7 +184,7 @@ bool ACA_Message_Pulsar_Consumer::unicastUnsubcribe()
 {
     Result result;
     if(this->unicast_topic_name==empty_topic){
-        ACA_LOG_INFO("The consumer already unsubscribe the unicast topic.");
+        ACA_LOG_INFO("The consumer already unsubscribe the unicast topic.\n");
         return EXIT_SUCCESS;
     }
 
@@ -229,7 +205,6 @@ bool ACA_Message_Pulsar_Consumer::unicastResubscribe(string topic, int stickyHas
 
     if (result==EXIT_SUCCESS){
         setUnicastTopicName(topic);
-        recovered_topic=topic;
         result = unicastConsumerDispatched(stickyHash);
         if (result==EXIT_SUCCESS) {
             return EXIT_SUCCESS;
@@ -240,9 +215,9 @@ bool ACA_Message_Pulsar_Consumer::unicastResubscribe(string topic, int stickyHas
 }
 
 
-bool ACA_Message_Pulsar_Consumer::unicastResubscribe(bool isSubscribe, string topic, string stickHash)
+bool ACA_Message_Pulsar_Consumer::unicastResubscribe(bool isUnSubscribe, string topic, string stickHash)
 {
-    if(!isSubscribe){
+    if(isUnSubscribe){
         return unicastUnsubcribe();
     }
     else{
