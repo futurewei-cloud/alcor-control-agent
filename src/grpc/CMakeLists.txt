@@ -30,7 +30,7 @@ set(aca_proto_sub_hdrs "${CMAKE_CURRENT_BINARY_DIR}/subscribeinfoprovisioner.pb.
 set(aca_grpc_sub_srcs "${CMAKE_CURRENT_BINARY_DIR}/subscribeinfoprovisioner.grpc.pb.cc")
 set(aca_grpc_sub_hdrs "${CMAKE_CURRENT_BINARY_DIR}/subscribeinfoprovisioner.grpc.pb.h")
 add_custom_command(
-      OUTPUT "${aca_proto_srcs}" "${aca_proto_hdrs}" "${aca_grpc_srcs}" "${aca_grpc_hdrs}" "${aca_proto_sub_srcs}" "${aca_proto__sub_hdrs}" "${aca_grpc_sub_srcs}" "${aca_grpc_sub_hdrs}"
+      OUTPUT "${aca_proto_srcs}" "${aca_proto_hdrs}" "${aca_grpc_srcs}" "${aca_grpc_hdrs}" "${aca_proto_sub_srcs}" "${aca_proto_sub_hdrs}" "${aca_grpc_sub_srcs}" "${aca_grpc_sub_hdrs}"
       COMMAND ${_PROTOBUF_PROTOC}
       ARGS --grpc_out "${CMAKE_CURRENT_BINARY_DIR}"
         --cpp_out "${CMAKE_CURRENT_BINARY_DIR}"
