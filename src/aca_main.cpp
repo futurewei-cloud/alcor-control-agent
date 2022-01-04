@@ -276,7 +276,7 @@ int main(int argc, char *argv[])
   // Create a marl scheduler using all the logical processors available to the process.
   // Bind this scheduler to the main thread so we can call marl::schedule()
   marl::Scheduler::Config cfg_bind_hw_cores;
-  cfg_bind_hw_cores.setWorkerThreadCount(20);
+  cfg_bind_hw_cores.setWorkerThreadCount(40);
   marl::Scheduler task_scheduler(cfg_bind_hw_cores);
   task_scheduler.bind();
   defer(task_scheduler.unbind());

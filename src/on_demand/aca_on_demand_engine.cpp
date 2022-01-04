@@ -381,7 +381,9 @@ void ACA_On_Demand_Engine::parse_packet(uint32_t in_port, void *packet, int of_c
       vlan_id = ntohs(vlanmsg->vlan_tci) & 0x0fff;
       ACA_LOG_INFO("vlan_id: %ld\n", vlan_id);
     }
-  } else if (ether_type == ETHERTYPE_ARP) {
+  }
+
+  if (ether_type == ETHERTYPE_ARP) {
     ACA_LOG_DEBUG("%s", "Ethernet Type: ARP (0x0806) \n");
     ACA_LOG_DEBUG("   From: %s\n", inet_ntoa(*(in_addr *)(base + 14 + vlan_len + 14)));
     ACA_LOG_DEBUG("     to: %s\n",
@@ -395,7 +397,6 @@ void ACA_On_Demand_Engine::parse_packet(uint32_t in_port, void *packet, int of_c
     //   ACA_LOG_INFO("arp_hdr + %ld = %ld\n", i , ntohs(*(uint16_t *)(arp_hdr + 6)));
     // }
     if (ntohs(*(uint16_t *)(arp_hdr + 6)) == 0x0001) {
-      /*
       if (aca_arp_responder::ACA_ARP_Responder::get_instance().arp_recv(
                   in_port, vlan_hdr, arp_hdr, of_connection_id) == ENOTSUP) {
         _protocol = Protocol::ARP;
@@ -406,11 +407,6 @@ void ACA_On_Demand_Engine::parse_packet(uint32_t in_port, void *packet, int of_c
         port_src = 0;
         port_dest = 0;
       }
-      */
-      marl::schedule([=] {
-        aca_arp_responder::ACA_ARP_Responder::get_instance().arp_recv(
-          in_port, vlan_hdr, arp_hdr, of_connection_id);
-      });
     }
   } else if (ether_type == ETHERTYPE_IP) {
     ACA_LOG_DEBUG("%s", "Ethernet Type: IP (0x0800) \n");
