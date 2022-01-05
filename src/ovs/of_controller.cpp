@@ -74,17 +74,18 @@ void OFController::message_callback(OFConnection* ofconn, uint8_t type, void* da
         //                  &aca_on_demand_engine::ACA_On_Demand_Engine::get_instance(),
         //                  in_port, (void *)pin->data(), ofconn->get_id()));
 
-        // marl::schedule([=] {
-        //     fluid_msg::of10::PacketIn* pin = new fluid_msg::of10::PacketIn();
-        //     pin->unpack((uint8_t *) data);
-        //     // uint32_t in_port = pin->match().in_port()->value();
-        //     uint32_t in_port = pin->in_port();
+        marl::schedule([=] {
+            // fluid_msg::of10::PacketIn* pin = new fluid_msg::of10::PacketIn();
+            // pin->unpack((uint8_t *) data);
+            // // uint32_t in_port = pin->match().in_port()->value();
+            // uint32_t in_port = pin->in_port();
 
-        //     aca_on_demand_engine::ACA_On_Demand_Engine::get_instance().parse_packet(
-        //             in_port,
-        //             (void *)pin->data(),
-        //             ofconn->get_id());
-        // });
+            // aca_on_demand_engine::ACA_On_Demand_Engine::get_instance().parse_packet(
+            //         in_port,
+            //         (void *)pin->data(),
+            //         ofconn->get_id());
+            std::this_thread::sleep_for(std::chrono::microseconds(100));
+        });
     } else if (type == 33) { // OFPRAW_OFPT14_BUNDLE_CONTROL
         auto t = std::chrono::high_resolution_clock::now();
 
