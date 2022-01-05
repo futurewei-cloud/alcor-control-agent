@@ -45,12 +45,15 @@
 #include <set>
 #include <stdlib.h>
 #include <unordered_map>
+#include <chrono>
+
 
 using namespace fluid_base;
 using namespace fluid_msg;
 
 class OFController : public OFServer {
 public:
+    std::atomic<int> packet_in_counter;
     OFController(const std::unordered_map<uint64_t, std::string> switch_dpid_map,
                  const std::unordered_map<std::string, std::string> port_id_map,
                  const char* address = "0.0.0.0",
@@ -66,7 +69,8 @@ public:
                          .echo_interval(30)
                          .keep_data_ownership(false)) {
                              packet_in_counter = 0;
-                             ACA_LOG_INFO("%s\n", "Inited packet_in_counter to zero"); 
+                            //  ACA_LOG_INFO("%s\n", "Inited packet_in_counter to zero");
+                            std::cout<<"Inited packet_in_counter to zero"<<std::endl; 
                                auto packet_in_counter_thread = new std::thread([&packet_in_counter](std::atomic<int> counter){
                                    auto current_counter = counter.load();
                                    std::cout<<"One second has passed, current packet in counter = " << current_counter << std::endl;
@@ -107,8 +111,6 @@ public:
 
 
 private:
-
-    std::atomic<int> packet_in_counter;
 
     // tracking xid (ovs transaction id)
     std::atomic<uint32_t> xid;
