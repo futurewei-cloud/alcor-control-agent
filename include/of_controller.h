@@ -57,8 +57,8 @@ public:
     void print_packet_in_counter(){
         while(true){
             auto current_counter = this->packet_in_counter.load();
-            std::cout<<"Current packet_in counter: " << current_counter <<endl;
-            std::this_thread::sleep_for(chrono::microseconds(1000));
+            std::cout<<"Current packet_in counter: " << current_counter <<std::endl;
+            std::this_thread::sleep_for(std::chrono::microseconds(1000));
         }
     };
     OFController(const std::unordered_map<uint64_t, std::string> switch_dpid_map,
