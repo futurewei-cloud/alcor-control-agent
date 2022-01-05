@@ -88,7 +88,7 @@ std::atomic<int> packet_in_counter(0);
 std::atomic<int> packet_out_counter(0);
 
 bool g_demo_mode = false;
-bool g_debug_mode = true;
+bool g_debug_mode = false;
 int processor_count = std::thread::hardware_concurrency();
 /*
   From previous tests, we found that, for x number of cores,
