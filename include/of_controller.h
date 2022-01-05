@@ -64,7 +64,16 @@ public:
                      OFServerSettings()
                          .supported_version(1) // OF version 1 is OF 1.0
                          .echo_interval(30)
-                         .keep_data_ownership(false)) { }
+                         .keep_data_ownership(false)) {
+                             packet_in_counter = 0;
+                             ACA_LOG_INFO("%s\n", "Inited packet_in_counter to zero"); 
+                               auto packet_in_counter_thread = new std::thread([&packet_in_counter](std::atomic<int> counter){
+                                   auto current_counter = counter.load();
+                                   std::cout<<"One second has passed, current packet in counter = " << current_counter << std::endl;
+                                   std::this_thread::sleep_for(chrono::milliseconds(1000));
+                               });
+                            packet_in_counter_thread->detach();
+                          }
 
     ~OFController() = default;
 
@@ -98,6 +107,9 @@ public:
 
 
 private:
+
+    std::atomic<int> packet_in_counter;
+
     // tracking xid (ovs transaction id)
     std::atomic<uint32_t> xid;
 
