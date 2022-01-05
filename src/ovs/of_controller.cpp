@@ -21,6 +21,8 @@
 
 using namespace fluid_base;
 using namespace fluid_msg;
+extern std::atomic<int> packet_in_counter;
+extern std::atomic<int> packet_out_counter;
 
 void OFController::stop() {
     switch_map_mutex.lock();

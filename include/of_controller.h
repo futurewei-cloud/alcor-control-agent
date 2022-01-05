@@ -50,13 +50,14 @@
 
 using namespace fluid_base;
 using namespace fluid_msg;
-
+extern std::atomic<int> packet_in_counter;
+extern std::atomic<int> packet_out_counter;
 class OFController : public OFServer {
 public:
-    std::atomic<int> packet_in_counter;
+    // std::atomic<int> packet_in_counter;
     void print_packet_in_counter(){
         while(true){
-            auto current_counter = this->packet_in_counter.load();
+            auto current_counter = packet_in_counter.load();
             std::cout<<"Current packet_in counter: " << current_counter <<std::endl;
             std::this_thread::sleep_for(std::chrono::milliseconds(1000));
         }
