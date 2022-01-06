@@ -27,6 +27,8 @@
 #include <openvswitch/ofp-util.h>
 #include <openvswitch/ofp-parse.h>
 #include <openvswitch/ofp-print.h>
+extern std::atomic<int> packet_in_counter;
+extern std::atomic<int> packet_out_counter;
 
 enum {
     ADD_FLOW = 0,
@@ -286,7 +288,10 @@ ofbuf_ptr_t create_packet_out(const char* option) {
     enum ofputil_protocol usable_protocols;
     struct ofputil_packet_out po;
     char *error;
-
+    packet_out_counter ++;
+    if (1){
+        return;
+    }
     error = parse_ofp_packet_out_str(&po, option, NULL, &usable_protocols);
     if (error) {
         ACA_LOG_ERROR("OFMessage - create_packet_out had error %s\n", error);

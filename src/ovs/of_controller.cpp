@@ -357,10 +357,7 @@ void OFController::packet_out(const char* br, const char* opt) {
 
 void OFController::packet_out(int of_connection_id, const char* opt) {
     OFConnection* ofconn_br = get_instance(of_connection_id);
-    packet_out_counter ++;
-    if (1){
-        return;
-    }
+
     if (NULL != ofconn_br) {
         send_packet_out(ofconn_br, create_packet_out(opt));
         // packet_out_counter ++;
