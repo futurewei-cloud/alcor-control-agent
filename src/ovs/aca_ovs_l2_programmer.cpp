@@ -41,6 +41,8 @@ mutex setup_ovs_bridges_mutex;
 extern std::atomic_ulong g_total_execute_ovsdb_time;
 extern std::atomic_ulong g_total_execute_openflow_time;
 extern bool g_demo_mode;
+extern std::atomic<int> packet_in_counter;
+extern std::atomic<int> packet_out_counter;
 
 namespace aca_ovs_l2_programmer
 {
@@ -668,7 +670,10 @@ void ACA_OVS_L2_Programmer::packet_out(const char *bridge, const char *options)
 {
   ACA_LOG_DEBUG("%s", "ACA_OVS_L2_Programmer::packet_out ---> Entering\n");
   auto openflow_client_start = chrono::steady_clock::now();
-
+  packet_out_counter ++;
+  if (1){
+    return;
+  }
   if (NULL != ofctrl) {
       ofctrl->packet_out(bridge, options);
   } else {

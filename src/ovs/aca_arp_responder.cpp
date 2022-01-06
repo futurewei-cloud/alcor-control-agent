@@ -251,10 +251,7 @@ void ACA_ARP_Responder::arp_xmit(uint32_t in_port, void *vlanmsg, void *message,
     //ACA_LOG_ERROR("%s", "Serialized ARP Reply is null!\n");
     return;
   }
-  packet_out_counter ++;
-  if (1){
-    return;
-  }
+
   if (is_found) {
     options = inport + whitespace + packetpre + packet + whitespace + action;
     //delete the constructed arp reply
