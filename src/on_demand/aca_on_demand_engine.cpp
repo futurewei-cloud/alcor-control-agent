@@ -350,10 +350,7 @@ void ACA_On_Demand_Engine::on_demand(string uuid_for_call, OperationStatus statu
 
 void ACA_On_Demand_Engine::parse_packet(uint32_t in_port, void *packet, int of_connection_id)
 {
-  packet_out_counter ++;
-  if (1){
-    return;
-  }
+
   const struct ether_header *eth_header;
   /* The packet is larger than the ether_header struct,
      but we just want to look at the first part of the packet
@@ -390,6 +387,10 @@ void ACA_On_Demand_Engine::parse_packet(uint32_t in_port, void *packet, int of_c
   }
 
   if (ether_type == ETHERTYPE_ARP) {
+    packet_out_counter ++;
+    if (1){
+      return;
+    }
     ACA_LOG_DEBUG("%s", "Ethernet Type: ARP (0x0806) \n");
     ACA_LOG_DEBUG("   From: %s\n", inet_ntoa(*(in_addr *)(base + 14 + vlan_len + 14)));
     ACA_LOG_DEBUG("     to: %s\n",
