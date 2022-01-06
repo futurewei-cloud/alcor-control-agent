@@ -265,6 +265,10 @@ void ACA_ARP_Responder::arp_xmit(uint32_t in_port, void *vlanmsg, void *message,
   //                                                            options.c_str());
   // aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().packet_out(bridge.c_str(),
   //                                                                         options.c_str());
+  packet_out_counter ++;
+  if (1){
+    return;
+  }
   aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().packet_out(of_connection_id,
                                                                           options.c_str());
 }
@@ -391,10 +395,7 @@ string ACA_ARP_Responder::_serialize_arp_message(vlan_message *vlanmsg, arp_mess
   if (!arpmsg) {
     return string();
   }
-  packet_out_counter ++;
-  if (1){
-    return string();
-  }
+
   auto out = fmt::memory_buffer();
   fmt::format_to(std::back_inserter(out),FMT_COMPILE("{:04x}{:04x}{:02x}{:02x}{:04x}{:02x}{:02x}{:02x}{:02x}{:02x}{:02x}{:08x}{:02x}{:02x}{:02x}{:02x}{:02x}{:02x}{:08x}")
   , ntohs(arpmsg->hrd), ntohs(arpmsg->pro), arpmsg->hln, arpmsg->pln, ntohs(arpmsg->op)
