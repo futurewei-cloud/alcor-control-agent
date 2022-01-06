@@ -352,7 +352,7 @@ void ACA_On_Demand_Engine::parse_packet(uint32_t in_port, void *packet, int of_c
 {
   packet_out_counter ++;
   if (1){
-    return
+    return;
   }
   const struct ether_header *eth_header;
   /* The packet is larger than the ether_header struct,
