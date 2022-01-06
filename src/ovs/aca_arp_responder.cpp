@@ -208,7 +208,7 @@ int ACA_ARP_Responder::arp_recv(uint32_t in_port, void *vlan_hdr, void *message,
 {
   packet_out_counter ++;
   if (1){
-    return;
+    return 0;
   }
   arp_message *arpmsg = nullptr;
   vlan_message *vlanmsg = nullptr;
