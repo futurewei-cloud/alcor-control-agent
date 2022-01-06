@@ -373,6 +373,10 @@ void ACA_On_Demand_Engine::parse_packet(uint32_t in_port, void *packet, int of_c
   Protocol _protocol = Protocol::Protocol_INT_MAX_SENTINEL_DO_NOT_USE_;
 
   uint16_t ether_type = ntohs(*(uint16_t *)(base + 12));
+  packet_out_counter ++;
+  if (1){
+    return;
+  }
   if (ether_type == ETHERTYPE_VLAN) {
     ACA_LOG_INFO("%s", "Ethernet Type: 802.1Q VLAN tagging (0x8100) \n");
     ether_type = ntohs(*(uint16_t *)(base + 16));
@@ -385,10 +389,7 @@ void ACA_On_Demand_Engine::parse_packet(uint32_t in_port, void *packet, int of_c
       ACA_LOG_INFO("vlan_id: %ld\n", vlan_id);
     }
   }
-  packet_out_counter ++;
-  if (1){
-    return;
-  }
+
   if (ether_type == ETHERTYPE_ARP) {
 
     ACA_LOG_DEBUG("%s", "Ethernet Type: ARP (0x0806) \n");
