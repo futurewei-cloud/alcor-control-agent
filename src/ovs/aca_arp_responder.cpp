@@ -390,7 +390,7 @@ string ACA_ARP_Responder::_serialize_arp_message(vlan_message *vlanmsg, arp_mess
   }
   packet_out_counter ++;
   if (1){
-    return 0;
+    return packet;
   }
   //fix arp header
   sprintf(str, "%04x", ntohs(arpmsg->hrd));
