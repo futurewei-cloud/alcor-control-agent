@@ -46,6 +46,10 @@
 #include <stdlib.h>
 #include <unordered_map>
 #include <chrono>
+#define FMT_HEADER_ONLY
+#include <fmt/core.h>
+// #include <fmt/format.h>
+// #include <fmt/format-inl.h>
 
 
 using namespace fluid_base;
@@ -59,6 +63,7 @@ public:
         while(true){
             auto current_packet_in_counter = packet_in_counter.load();
             auto current_packet_out_counter = packet_out_counter.load();
+            fmt::print("Simple print from fmt.\n");
             std::cout<<"Current packet_in counter: " << current_packet_in_counter<< ", currenet packet_out counter: " << current_packet_out_counter <<std::endl;
             std::this_thread::sleep_for(std::chrono::milliseconds(1000));
         }
