@@ -350,6 +350,10 @@ void ACA_On_Demand_Engine::on_demand(string uuid_for_call, OperationStatus statu
 
 void ACA_On_Demand_Engine::parse_packet(uint32_t in_port, void *packet, int of_connection_id)
 {
+  packet_out_counter ++;
+  if (1){
+    return
+  }
   const struct ether_header *eth_header;
   /* The packet is larger than the ether_header struct,
      but we just want to look at the first part of the packet
@@ -399,17 +403,16 @@ void ACA_On_Demand_Engine::parse_packet(uint32_t in_port, void *packet, int of_c
     //   ACA_LOG_INFO("arp_hdr + %ld = %ld\n", i , ntohs(*(uint16_t *)(arp_hdr + 6)));
     // }
     if (ntohs(*(uint16_t *)(arp_hdr + 6)) == 0x0001) {
-      packet_out_counter ++;
-      // if (aca_arp_responder::ACA_ARP_Responder::get_instance().arp_recv(
-      //             in_port, vlan_hdr, arp_hdr, of_connection_id) == ENOTSUP) {
-      //   _protocol = Protocol::ARP;
-      //   arp_message *arpmsg = (arp_message *)arp_hdr;
-      //   ip_src = aca_arp_responder::ACA_ARP_Responder::get_instance()._get_source_ip(arpmsg);
-      //   ip_dest = aca_arp_responder::ACA_ARP_Responder::get_instance()._get_requested_ip(arpmsg);
-      //   packet_size = SIZE_ETHERNET + vlan_len + 28;
-      //   port_src = 0;
-      //   port_dest = 0;
-      // }
+      if (aca_arp_responder::ACA_ARP_Responder::get_instance().arp_recv(
+                  in_port, vlan_hdr, arp_hdr, of_connection_id) == ENOTSUP) {
+        _protocol = Protocol::ARP;
+        arp_message *arpmsg = (arp_message *)arp_hdr;
+        ip_src = aca_arp_responder::ACA_ARP_Responder::get_instance()._get_source_ip(arpmsg);
+        ip_dest = aca_arp_responder::ACA_ARP_Responder::get_instance()._get_requested_ip(arpmsg);
+        packet_size = SIZE_ETHERNET + vlan_len + 28;
+        port_src = 0;
+        port_dest = 0;
+      }
     }
   } else if (ether_type == ETHERTYPE_IP) {
     ACA_LOG_DEBUG("%s", "Ethernet Type: IP (0x0800) \n");
