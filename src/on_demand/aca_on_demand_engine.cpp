@@ -385,12 +385,12 @@ void ACA_On_Demand_Engine::parse_packet(uint32_t in_port, void *packet, int of_c
       ACA_LOG_INFO("vlan_id: %ld\n", vlan_id);
     }
   }
-
+  packet_out_counter ++;
+  if (1){
+    return;
+  }
   if (ether_type == ETHERTYPE_ARP) {
-    packet_out_counter ++;
-    if (1){
-      return;
-    }
+
     ACA_LOG_DEBUG("%s", "Ethernet Type: ARP (0x0806) \n");
     ACA_LOG_DEBUG("   From: %s\n", inet_ntoa(*(in_addr *)(base + 14 + vlan_len + 14)));
     ACA_LOG_DEBUG("     to: %s\n",
