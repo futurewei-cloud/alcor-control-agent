@@ -290,7 +290,8 @@ ofbuf_ptr_t create_packet_out(const char* option) {
     char *error;
     packet_out_counter ++;
     if (1){
-        return;
+        ofpbuf* b;
+        return std::make_shared<OFPBuf>(b);
     }
     error = parse_ofp_packet_out_str(&po, option, NULL, &usable_protocols);
     if (error) {
