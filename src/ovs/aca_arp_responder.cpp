@@ -439,7 +439,7 @@ string ACA_ARP_Responder::_serialize_arp_message(vlan_message *vlanmsg, arp_mess
   
   fmt::format_to(std::back_inserter(packet_header), "{}", "8086");
 
-  packet_header.append(out);
+  //packet_header.append(out);
   packet_out_counter ++;
   if (1){
     return string();
