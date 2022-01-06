@@ -391,6 +391,13 @@ string ACA_ARP_Responder::_serialize_arp_message(vlan_message *vlanmsg, arp_mess
     return string();
   }
   auto out = fmt::memory_buffer();
+  fmt::format_to(std::back_inserter(out),"{:04x}{:04x}{:02x}{:02x}{:04x}{:02x}{:02x}{:02x}{:02x}{:02x}{:02x}{:08x}{:02x}{:02x}{:02x}{:02x}{:02x}{:02x}{:08x}"
+  , ntohs(arpmsg->hrd), ntohs(arpmsg->pro), arpmsg->hln, arpmsg->pln, ntohs(arpmsg->op)
+  , arpmsg->sha[0], arpmsg->sha[1], arpmsg->sha[2], arpmsg->sha[3], arpmsg->sha[4], arpmsg->sha[5], ntohl(arpmsg->spa)
+  , arpmsg->tha[0], arpmsg->tha[1], arpmsg->tha[2], arpmsg->tha[3], arpmsg->tha[4], arpmsg->tha[5], ntohl(arpmsg->tpa)
+  );
+
+  /*
   //fix arp header
   fmt::format_to(std::back_inserter(out), "{:04x}", ntohs(arpmsg->hrd));
   fmt::format_to(std::back_inserter(out), "{:04x}", ntohs(arpmsg->pro));
@@ -409,16 +416,22 @@ string ACA_ARP_Responder::_serialize_arp_message(vlan_message *vlanmsg, arp_mess
     fmt::format_to(std::back_inserter(out), "{:02x}", arpmsg->tha[i]);
   }
   fmt::format_to(std::back_inserter(out), "{:08x}", ntohl(arpmsg->tpa));
+  */
 
   //fix the ethernet header
   auto packet_header = fmt::memory_buffer();
+  fmt::format_to(std::back_inserter(packet_header), "{:02x}{:02x}{:02x}{:02x}{:02x}{:02x}{:02x}{:02x}{:02x}{:02x}{:02x}{:02x}"
+  , arpmsg->tha[0], arpmsg->tha[1], arpmsg->tha[2], arpmsg->tha[3], arpmsg->tha[4], arpmsg->tha[5]
+  , arpmsg->sha[0], arpmsg->sha[1], arpmsg->sha[2], arpmsg->sha[3], arpmsg->sha[4], arpmsg->sha[5]
+  );
+  /*
   for (int i = 0; i < 6; i++){
     fmt::format_to(std::back_inserter(packet_header), "{:02x}", arpmsg->tha[i]);
   }
   for (int i = 0; i < 6; i++){
     fmt::format_to(std::back_inserter(packet_header), "{:02x}", arpmsg->sha[i]);
   }
-
+  */
   if (vlanmsg){
     fmt::format_to(std::back_inserter(packet_header), "{:04x}", ntohs(vlanmsg->vlan_proto));
     fmt::format_to(std::back_inserter(packet_header), "{:04x}", ntohs(vlanmsg->vlan_tci));
