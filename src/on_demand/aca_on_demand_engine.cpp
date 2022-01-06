@@ -375,19 +375,20 @@ void ACA_On_Demand_Engine::parse_packet(uint32_t in_port, void *packet, int of_c
   uint16_t ether_type = ntohs(*(uint16_t *)(base + 12));
 
   if (ether_type == ETHERTYPE_VLAN) {
-    ACA_LOG_INFO("%s", "Ethernet Type: 802.1Q VLAN tagging (0x8100) \n");
+    // ACA_LOG_INFO("%s", "Ethernet Type: 802.1Q VLAN tagging (0x8100) \n");
+    packet_out_counter ++;
+    // if (1){
+    //   return;
+    // }
     ether_type = ntohs(*(uint16_t *)(base + 16));
     vlan_len = 4;
     vlan_hdr = (unsigned char *)(base + 12);
     vlanmsg = (vlan_message *)vlan_hdr;
     // get the vlan id from vlan header
-    packet_out_counter ++;
-    if (1){
-      return;
-    }
+
     if (vlanmsg) {
       vlan_id = ntohs(vlanmsg->vlan_tci) & 0x0fff;
-      ACA_LOG_INFO("vlan_id: %ld\n", vlan_id);
+      // ACA_LOG_INFO("vlan_id: %ld\n", vlan_id);
     }
   }
 

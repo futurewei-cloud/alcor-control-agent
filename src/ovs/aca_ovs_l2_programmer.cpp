@@ -705,9 +705,9 @@ void ACA_OVS_L2_Programmer::packet_out(int of_connection_id, const char *options
 
   g_total_execute_openflow_time += openflow_client_time_total_time;
 
-  ACA_LOG_INFO("Elapsed time for openflow client call took: %ld microseconds or %ld milliseconds.\n",
-               openflow_client_time_total_time,
-               us_to_ms(openflow_client_time_total_time));
+  // ACA_LOG_INFO("Elapsed time for openflow client call took: %ld microseconds or %ld milliseconds.\n",
+  //              openflow_client_time_total_time,
+  //              us_to_ms(openflow_client_time_total_time));
 
   ACA_LOG_DEBUG("%s", "ACA_OVS_L2_Programmer::packet_out ---> Exiting\n");
 }
