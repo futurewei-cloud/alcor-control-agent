@@ -436,13 +436,14 @@ string ACA_ARP_Responder::_serialize_arp_message(vlan_message *vlanmsg, arp_mess
     sprintf(str, "%04x", ntohs(vlanmsg->vlan_tci));
     packet_header.append(str);
   }
+
+  //arp protocol：0806
+  packet_header.append("0806");
+  packet.insert(0, packet_header);
   packet_out_counter ++;
   if (1){
     return string();
   }
-  //arp protocol：0806
-  packet_header.append("0806");
-  packet.insert(0, packet_header);
   return packet;
 }
 } // namespace aca_arp_responder
