@@ -22,6 +22,7 @@
 #include <errno.h>
 #include <unistd.h>
 #include <fmt/core.h>
+#include <fmt/compile.h>
 
 using namespace std;
 
@@ -391,7 +392,7 @@ string ACA_ARP_Responder::_serialize_arp_message(vlan_message *vlanmsg, arp_mess
     return string();
   }
   auto out = fmt::memory_buffer();
-  fmt::format_to(std::back_inserter(out),"{:04x}{:04x}{:02x}{:02x}{:04x}{:02x}{:02x}{:02x}{:02x}{:02x}{:02x}{:08x}{:02x}{:02x}{:02x}{:02x}{:02x}{:02x}{:08x}"
+  fmt::format_to(std::back_inserter(out),FMT_COMPILE("{:04x}{:04x}{:02x}{:02x}{:04x}{:02x}{:02x}{:02x}{:02x}{:02x}{:02x}{:08x}{:02x}{:02x}{:02x}{:02x}{:02x}{:02x}{:08x}")
   , ntohs(arpmsg->hrd), ntohs(arpmsg->pro), arpmsg->hln, arpmsg->pln, ntohs(arpmsg->op)
   , arpmsg->sha[0], arpmsg->sha[1], arpmsg->sha[2], arpmsg->sha[3], arpmsg->sha[4], arpmsg->sha[5], ntohl(arpmsg->spa)
   , arpmsg->tha[0], arpmsg->tha[1], arpmsg->tha[2], arpmsg->tha[3], arpmsg->tha[4], arpmsg->tha[5], ntohl(arpmsg->tpa)
@@ -420,7 +421,7 @@ string ACA_ARP_Responder::_serialize_arp_message(vlan_message *vlanmsg, arp_mess
 
   //fix the ethernet header
   auto packet_header = fmt::memory_buffer();
-  fmt::format_to(std::back_inserter(packet_header), "{:02x}{:02x}{:02x}{:02x}{:02x}{:02x}{:02x}{:02x}{:02x}{:02x}{:02x}{:02x}"
+  fmt::format_to(std::back_inserter(packet_header), FMT_COMPILE("{:02x}{:02x}{:02x}{:02x}{:02x}{:02x}{:02x}{:02x}{:02x}{:02x}{:02x}{:02x}")
   , arpmsg->tha[0], arpmsg->tha[1], arpmsg->tha[2], arpmsg->tha[3], arpmsg->tha[4], arpmsg->tha[5]
   , arpmsg->sha[0], arpmsg->sha[1], arpmsg->sha[2], arpmsg->sha[3], arpmsg->sha[4], arpmsg->sha[5]
   );
@@ -433,13 +434,13 @@ string ACA_ARP_Responder::_serialize_arp_message(vlan_message *vlanmsg, arp_mess
   }
   */
   if (vlanmsg){
-    fmt::format_to(std::back_inserter(packet_header), "{:04x}", ntohs(vlanmsg->vlan_proto));
-    fmt::format_to(std::back_inserter(packet_header), "{:04x}", ntohs(vlanmsg->vlan_tci));
+    fmt::format_to(std::back_inserter(packet_header), FMT_COMPILE("{:04x}"), ntohs(vlanmsg->vlan_proto));
+    fmt::format_to(std::back_inserter(packet_header), FMT_COMPILE("{:04x}"), ntohs(vlanmsg->vlan_tci));
   }
   
-  fmt::format_to(std::back_inserter(packet_header), "{}", "8086");
+  fmt::format_to(std::back_inserter(packet_header), FMT_COMPILE("{}"), "8086");
 
-  //packet_header.append(out);
+  packet_header.append(out);
   packet_out_counter ++;
   if (1){
     return string();
