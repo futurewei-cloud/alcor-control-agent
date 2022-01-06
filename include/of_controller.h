@@ -63,7 +63,7 @@ public:
         while(true){
             auto current_packet_in_counter = packet_in_counter.load();
             auto current_packet_out_counter = packet_out_counter.load();
-            fmt::print("Simple print from fmt.\n");
+            // fmt::print("Simple print from fmt.\n");
             std::cout<<"Current packet_in counter: " << current_packet_in_counter<< ", currenet packet_out counter: " << current_packet_out_counter <<std::endl;
             std::this_thread::sleep_for(std::chrono::milliseconds(1000));
         }

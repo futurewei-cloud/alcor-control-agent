@@ -206,10 +206,6 @@ int ACA_ARP_Responder::_validate_arp_entry(arp_config *arp_cfg_in)
 
 int ACA_ARP_Responder::arp_recv(uint32_t in_port, void *vlan_hdr, void *message, int of_connection_id)
 {
-  packet_out_counter ++;
-  if (1){
-    return 0;
-  }
   arp_message *arpmsg = nullptr;
   vlan_message *vlanmsg = nullptr;
 
@@ -392,7 +388,10 @@ string ACA_ARP_Responder::_serialize_arp_message(vlan_message *vlanmsg, arp_mess
   if (!arpmsg) {
     return string();
   }
-
+  packet_out_counter ++;
+  if (1){
+    return 0;
+  }
   //fix arp header
   sprintf(str, "%04x", ntohs(arpmsg->hrd));
   packet.append(str);
