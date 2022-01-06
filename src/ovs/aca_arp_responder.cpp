@@ -246,7 +246,7 @@ void ACA_ARP_Responder::arp_xmit(uint32_t in_port, void *vlanmsg, void *message,
 
   packet = _serialize_arp_message((vlan_message *)vlanmsg, arpmsg);
   if (packet.empty()) {
-    ACA_LOG_ERROR("%s", "Serialized ARP Reply is null!\n");
+    //ACA_LOG_ERROR("%s", "Serialized ARP Reply is null!\n");
     return;
   }
   if (is_found) {
