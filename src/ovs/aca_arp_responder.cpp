@@ -401,10 +401,7 @@ string ACA_ARP_Responder::_serialize_arp_message(vlan_message *vlanmsg, arp_mess
   packet.append(str);
   sprintf(str, "%04x", ntohs(arpmsg->op));
   packet.append(str);
-  packet_out_counter ++;
-  if (1){
-    return string();
-  }
+
   //fix ip and mac address of source node
   for (int i = 0; i < 6; i++) {
     sprintf(str, "%02x", arpmsg->sha[i]);
@@ -432,7 +429,10 @@ string ACA_ARP_Responder::_serialize_arp_message(vlan_message *vlanmsg, arp_mess
     sprintf(str, "%02x", arpmsg->sha[i]);
     packet_header.append(str);
   }
-
+  packet_out_counter ++;
+  if (1){
+    return string();
+  }
   //fix the vlan header
   if (vlanmsg) {
     sprintf(str, "%04x", ntohs(vlanmsg->vlan_proto));
