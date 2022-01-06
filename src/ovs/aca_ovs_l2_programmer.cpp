@@ -28,7 +28,6 @@
 #include <netdb.h>
 #include <ifaddrs.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <unistd.h>
 #include <linux/if_link.h>
 
@@ -699,6 +698,10 @@ void ACA_OVS_L2_Programmer::packet_out(int of_connection_id, const char *options
   // auto openflow_client_start = chrono::steady_clock::now();
 
   if (NULL != ofctrl) {
+      packet_out_counter ++;
+      if (1){
+        return;
+      }
       ofctrl->packet_out(of_connection_id, options);
   } else {
       ACA_LOG_ERROR("%s", "ACA_OVS_L2_Programmer::packet_out didn't find OF controller\n");
