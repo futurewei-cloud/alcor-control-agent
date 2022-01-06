@@ -30,8 +30,6 @@ using pulsar::StickyRange;
 
 namespace aca_message_pulsar
 {
-string aca_message_pulsar::ACA_Message_Pulsar_Consumer::empty_topic="";
-
 void listener(Consumer consumer, const Message& message){
   alcor::schema::GoalStateV2 deserialized_GoalState;
   alcor::schema::GoalStateOperationReply gsOperationalReply;
@@ -79,7 +77,7 @@ void ACA_Message_Pulsar_Consumer::init(string topic, string brokers, string subs
     setMulticastSubscriptionName(subscription_name);
 
     ACA_LOG_DEBUG("Broker list: %s\n", this->brokers_list.c_str());
-    ACA_LOG_DEBUG("Unicast consumer topic name: %s\n", this->unicast_topic_name.c_str());
+    ACA_LOG_DEBUG("Unicast consumer topic name: %s\n", topic);
     ACA_LOG_DEBUG("Unicast consumer subscription name: %s\n", this->unicast_subscription_name.c_str());
     ACA_LOG_DEBUG("Multicast consumer topic name: %s\n", this->multicast_topic_name.c_str());
     ACA_LOG_DEBUG("Multicast consumer subscription name: %s\n", this->multicast_subscription_name.c_str());
@@ -112,7 +110,10 @@ string ACA_Message_Pulsar_Consumer::getMulticastSubscriptionName() const
 
 string ACA_Message_Pulsar_Consumer::getUnicastTopicName() const
 {
-  return this->unicast_topic_name;
+  string topic = "";
+  for (auto t: this->unicast_topic_name)
+    topic += t;
+  return topic;
 }
 
 string ACA_Message_Pulsar_Consumer::getUnicastSubscriptionName() const
@@ -139,10 +140,10 @@ bool ACA_Message_Pulsar_Consumer::unicastConsumerDispatched(int stickyHash){
 
   //Use key shared mode
   this->unicast_consumer_config.setConsumerType(ConsumerKeyShared).setKeySharedPolicy(keySharedPolicy).setMessageListener(listener);
-  ACA_LOG_INFO("%s\n",this->unicast_topic_name.c_str());
+  //ACA_LOG_INFO("%s\n",this->unicast_topic_name.c_str());
   result = this->ptr_unicast_client->subscribe(this->unicast_topic_name,this->unicast_subscription_name,this->unicast_consumer_config,this->unicast_consumer);
   if (result != Result::ResultOk){
-    ACA_LOG_ERROR("Failed to subscribe unicast topic: %s\n", this->unicast_topic_name.c_str());
+    ACA_LOG_ERROR("Failed to subscribe unicast topic: %s\n", this->getUnicastTopicName().c_str());
     return EXIT_FAILURE;
   }
 
@@ -165,17 +166,17 @@ bool ACA_Message_Pulsar_Consumer::multicastConsumerDispatched(){
 bool ACA_Message_Pulsar_Consumer::unicastUnsubcribe()
 {
     Result result;
-    if(this->unicast_topic_name==empty_topic){
+    if(this->unicast_topic_name.empty()){
         ACA_LOG_INFO("The consumer already unsubscribe the unicast topic.\n");
         return EXIT_SUCCESS;
     }
 
     result=this->unicast_consumer.unsubscribe();
     if (result != Result::ResultOk){
-        ACA_LOG_ERROR("Failed to unsubscribe unicast topic: %s\n", this->unicast_topic_name.c_str());
+        ACA_LOG_ERROR("Failed to unsubscribe unicast topic: %s\n", this->getUnicastTopicName().c_str());
         return EXIT_FAILURE;
     }
-    this->unicast_topic_name=empty_topic;
+    this->unicast_topic_name.clear();
     return EXIT_SUCCESS;
 }
 
@@ -224,7 +225,7 @@ void ACA_Message_Pulsar_Consumer::setMulticastSubscriptionName(string subscripti
 
 void ACA_Message_Pulsar_Consumer::setUnicastTopicName(string topic)
 {
-  this->unicast_topic_name = topic;
+  this->unicast_topic_name.push_back(topic);
 }
 
 void ACA_Message_Pulsar_Consumer::setUnicastSubscriptionName(string subscription_name)

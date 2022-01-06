@@ -26,6 +26,7 @@
 
 using namespace pulsar;
 using std::string;
+using std::vector;
 
 namespace aca_message_pulsar
 {
@@ -37,7 +38,7 @@ class ACA_Message_Pulsar_Consumer {
     string unicast_subscription_name; // Subscription name of the unicast pulsar consumer
 
     string multicast_topic_name; //A string representation of the topic to be consumed, for example: /hostid/00000000-0000-0000-0000-000000000000/netwconf/
-    string unicast_topic_name; 
+    vector<string> unicast_topic_name = vector<string>(); 
 
     ConsumerConfiguration multicast_consumer_config; //Configuration of the mulitcast pulsar consumer
     ConsumerConfiguration unicast_consumer_config; //Configuration of the unicast pulsar consumer
@@ -47,8 +48,6 @@ class ACA_Message_Pulsar_Consumer {
 
     Consumer multicast_consumer;
     Consumer unicast_consumer;
-
-    static string empty_topic;
 
   private:
     void setMulticastSubscriptionName(string subscription_name);
