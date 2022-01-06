@@ -21,6 +21,7 @@
 #include <arpa/inet.h>
 #include <errno.h>
 #include <unistd.h>
+#include <fmt/core.h>
 
 using namespace std;
 
@@ -389,7 +390,49 @@ string ACA_ARP_Responder::_serialize_arp_message(vlan_message *vlanmsg, arp_mess
   if (!arpmsg) {
     return string();
   }
+  auto out = fmt::memory_buffer();
+  //fix arp header
+  fmt::format_to(std::back_inserter(out), "{:04x}", ntohs(arpmsg->hrd));
+  fmt::format_to(std::back_inserter(out), "{:04x}", ntohs(arpmsg->pro));
+  fmt::format_to(std::back_inserter(out), "{:02x}", arpmsg->hln);
+  fmt::format_to(std::back_inserter(out), "{:02x}", arpmsg->pln);
+  fmt::format_to(std::back_inserter(out), "{:04x}", ntohs(arpmsg->op));
 
+  //fix ip and mac address of source node
+  for (int i = 0; i < 6; i++){
+    fmt::format_to(std::back_inserter(out), "{:02x}", arpmsg->sha[i]);
+  }
+  fmt::format_to(std::back_inserter(out), "{:08x}", ntohl(arpmsg->spa));
+
+  //fix ip and mac address of target node
+  for (int i = 0; i < 6; i++){
+    fmt::format_to(std::back_inserter(out), "{:02x}", arpmsg->tha[i]);
+  }
+  fmt::format_to(std::back_inserter(out), "{:08x}", ntohl(arpmsg->tpa));
+
+  //fix the ethernet header
+  auto packet_header = fmt::memory_buffer();
+  for (int i = 0; i < 6; i++){
+    fmt::format_to(std::back_inserter(packet_header), "{:02x}", arpmsg->tha[i]);
+  }
+  for (int i = 0; i < 6; i++){
+    fmt::format_to(std::back_inserter(packet_header), "{:02x}", arpmsg->sha[i]);
+  }
+
+  if (vlanmsg){
+    fmt::format_to(std::back_inserter(packet_header), "{:04x}", ntohs(vlanmsg->vlan_proto));
+    fmt::format_to(std::back_inserter(packet_header), "{:04x}", ntohs(vlanmsg->vlan_tci));
+  }
+  
+  fmt::format_to(std::back_inserter(packet_header), "{}", "8086");
+
+  packet_header.append(out);
+  packet_out_counter ++;
+  if (1){
+    return string();
+  }
+  return fmt::to_string(packet_header);
+  /*
   //fix arp header
   sprintf(str, "%04x", ntohs(arpmsg->hrd));
   packet.append(str);
@@ -441,10 +484,8 @@ string ACA_ARP_Responder::_serialize_arp_message(vlan_message *vlanmsg, arp_mess
   //arp protocol：0806
   packet_header.append("0806");
   packet.insert(0, packet_header);
-  packet_out_counter ++;
-  if (1){
-    return string();
-  }
+
   return packet;
+  */
 }
 } // namespace aca_arp_responder
