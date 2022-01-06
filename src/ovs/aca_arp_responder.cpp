@@ -402,7 +402,7 @@ string ACA_ARP_Responder::_serialize_arp_message(vlan_message *vlanmsg, arp_mess
   packet.append(str);
   packet_out_counter ++;
   if (1){
-    return packet;
+    return string();
   }
   //fix ip and mac address of source node
   for (int i = 0; i < 6; i++) {
