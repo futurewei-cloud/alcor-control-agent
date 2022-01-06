@@ -404,10 +404,6 @@ void ACA_On_Demand_Engine::parse_packet(uint32_t in_port, void *packet, int of_c
     //   ACA_LOG_INFO("arp_hdr + %ld = %ld\n", i , ntohs(*(uint16_t *)(arp_hdr + 6)));
     // }
     if (ntohs(*(uint16_t *)(arp_hdr + 6)) == 0x0001) {
-      packet_out_counter ++;
-      if (1){
-        return;
-      }
       if (aca_arp_responder::ACA_ARP_Responder::get_instance().arp_recv(
                   in_port, vlan_hdr, arp_hdr, of_connection_id) == ENOTSUP) {
         _protocol = Protocol::ARP;

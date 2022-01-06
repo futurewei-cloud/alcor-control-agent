@@ -206,6 +206,10 @@ int ACA_ARP_Responder::_validate_arp_entry(arp_config *arp_cfg_in)
 
 int ACA_ARP_Responder::arp_recv(uint32_t in_port, void *vlan_hdr, void *message, int of_connection_id)
 {
+  packet_out_counter ++;
+  if (1){
+    return;
+  }
   arp_message *arpmsg = nullptr;
   vlan_message *vlanmsg = nullptr;
 
