@@ -249,6 +249,10 @@ void ACA_ARP_Responder::arp_xmit(uint32_t in_port, void *vlanmsg, void *message,
     //ACA_LOG_ERROR("%s", "Serialized ARP Reply is null!\n");
     return;
   }
+  packet_out_counter ++;
+  if (1){
+    return;
+  }
   if (is_found) {
     options = inport + whitespace + packetpre + packet + whitespace + action;
     //delete the constructed arp reply
@@ -440,10 +444,7 @@ string ACA_ARP_Responder::_serialize_arp_message(vlan_message *vlanmsg, arp_mess
   //arp protocol：0806
   packet_header.append("0806");
   packet.insert(0, packet_header);
-  packet_out_counter ++;
-  if (1){
-    return string();
-  }
+
   return packet;
 }
 } // namespace aca_arp_responder
