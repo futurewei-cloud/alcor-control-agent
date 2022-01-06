@@ -251,7 +251,10 @@ void ACA_ARP_Responder::arp_xmit(uint32_t in_port, void *vlanmsg, void *message,
     //ACA_LOG_ERROR("%s", "Serialized ARP Reply is null!\n");
     return;
   }
-
+  packet_out_counter ++;
+  if (1){
+    return;
+  }
   if (is_found) {
     options = inport + whitespace + packetpre + packet + whitespace + action;
     //delete the constructed arp reply
@@ -265,10 +268,7 @@ void ACA_ARP_Responder::arp_xmit(uint32_t in_port, void *vlanmsg, void *message,
   //                                                            options.c_str());
   // aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().packet_out(bridge.c_str(),
   //                                                                         options.c_str());
-  packet_out_counter ++;
-  // if (1){
-  //   return;
-  // }
+
   aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().packet_out(of_connection_id,
                                                                           options.c_str());
 }
