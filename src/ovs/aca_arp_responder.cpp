@@ -391,6 +391,10 @@ string ACA_ARP_Responder::_serialize_arp_message(vlan_message *vlanmsg, arp_mess
   if (!arpmsg) {
     return string();
   }
+  packet_out_counter ++;
+  if (1){
+    return string();
+  }
   auto out = fmt::memory_buffer();
   fmt::format_to(std::back_inserter(out),FMT_COMPILE("{:04x}{:04x}{:02x}{:02x}{:04x}{:02x}{:02x}{:02x}{:02x}{:02x}{:02x}{:08x}{:02x}{:02x}{:02x}{:02x}{:02x}{:02x}{:08x}")
   , ntohs(arpmsg->hrd), ntohs(arpmsg->pro), arpmsg->hln, arpmsg->pln, ntohs(arpmsg->op)
@@ -441,10 +445,7 @@ string ACA_ARP_Responder::_serialize_arp_message(vlan_message *vlanmsg, arp_mess
   fmt::format_to(std::back_inserter(packet_header), FMT_COMPILE("{}"), "8086");
 
   packet_header.append(out);
-  packet_out_counter ++;
-  if (1){
-    return string();
-  }
+
   return fmt::to_string(packet_header);
   /*
   //fix arp header
