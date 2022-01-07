@@ -288,18 +288,17 @@ ofbuf_ptr_t create_packet_out(const char* option) {
     enum ofputil_protocol usable_protocols;
     struct ofputil_packet_out po;
     char *error;
-    packet_out_counter ++;
+
+    error = parse_ofp_packet_out_str(&po, option, NULL, &usable_protocols);
+    if (error) {
+        ACA_LOG_ERROR("OFMessage - create_packet_out had error %s\n", error);
+    }
+
+    auto buf = ofputil_encode_packet_out(&po, DEFAULT_OF_VERSION);
+    // packet_out_counter ++;
     // if (1){
     //     ofpbuf* b;
     //     return std::make_shared<OFPBuf>(OFPBuf(b));
     // }
-
-    // error = parse_ofp_packet_out_str(&po, option, NULL, &usable_protocols);
-    // if (error) {
-    //     ACA_LOG_ERROR("OFMessage - create_packet_out had error %s\n", error);
-    // }
-
-    auto buf = ofputil_encode_packet_out(&po, DEFAULT_OF_VERSION);
-
     return std::make_shared<OFPBuf>(buf);
 }
