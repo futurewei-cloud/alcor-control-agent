@@ -77,7 +77,7 @@ void ACA_Message_Pulsar_Consumer::init(string topic, string brokers, string subs
     setMulticastSubscriptionName(subscription_name);
 
     ACA_LOG_DEBUG("Broker list: %s\n", this->brokers_list.c_str());
-    ACA_LOG_DEBUG("Unicast consumer topic name: %s\n", topic);
+    ACA_LOG_DEBUG("Unicast consumer topic name: %s\n", topic.c_str());
     ACA_LOG_DEBUG("Unicast consumer subscription name: %s\n", this->unicast_subscription_name.c_str());
     ACA_LOG_DEBUG("Multicast consumer topic name: %s\n", this->multicast_topic_name.c_str());
     ACA_LOG_DEBUG("Multicast consumer subscription name: %s\n", this->multicast_subscription_name.c_str());
@@ -119,12 +119,6 @@ string ACA_Message_Pulsar_Consumer::getUnicastTopicName() const
 string ACA_Message_Pulsar_Consumer::getUnicastSubscriptionName() const
 {
   return this->unicast_subscription_name;
-}
-
-//TODO: get recovered topic from database?
-string ACA_Message_Pulsar_Consumer::getRecoveredTopicName()
-{
-    return "recovered topic test";
 }
 
 bool ACA_Message_Pulsar_Consumer::unicastConsumerDispatched(int stickyHash){
