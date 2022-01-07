@@ -77,21 +77,26 @@ static string mq_test_topic = "Host-ts-1";
 static string mq_subscription = "test_subscription";
 static string mq_key="9192a4d4-ffff-4ece-b3f0-8d36e3d88001"; // 3dda2801-d675-4688-a63f-dcda8d327f50  9192a4d4-ffff-4ece-b3f0-8d36e3d88001
 static int mq_hash=49775; //  21485  49775
+static string mq_update_topics[6] =
+        {"update-topic","update-topic2","update-topic3","update-topic4","update-topic5","update-topic6"};
 
 //
 // Test suite: pulsar_test_cases
-//
+// This test suite contains three tests:
+//      1. basic pulsar consumer and producer test.
+//      2. pulsar consumer multi-subscribe test.
+//      3. pulsar consumer resubscribe test.
 // Note: it requires a pulsar setup on localhost therefore this test is DISABLED by default.
 // You will need three terminals:
 //      Terminal(1): run pulsar standalone.
 //      Terminal(2): run pulsar consumer test case.
-//      Terminal(3): run pulsar producer test cases.
+//      Terminal(3): run pulsar producer test case.
 
 
-// This case tests the pulsar consumer implementation.
-// First run this case by executing:
-//    sudo ./aca_tests --gtest_also_run_disabled_tests --gtest_filter=*DISABLED_pulsar_unicast_consumer_test
-// Then run the following producer test cases.
+// 1. Basic pulsar consumer and producer test.
+// Ensure you launched the pulsar then executing:
+//  sudo ./aca_tests --gtest_also_run_disabled_tests --gtest_filter=*DISABLED_pulsar_unicast_consumer_test
+//  sudo ./aca_tests --gtest_also_run_disabled_tests --gtest_filter=*DISABLED_pulsar_producer_test
 
 TEST(pulsar_test_cases, DISABLED_pulsar_unicast_consumer_test)
 {
@@ -103,38 +108,13 @@ TEST(pulsar_test_cases, DISABLED_pulsar_unicast_consumer_test)
 
     aca_test_reset_environment();
 
-    ACA_Message_Pulsar_Consumer consumer = ACA_Message_Pulsar_Consumer::get_instance();
-    consumer.init(mq_test_topic, mq_broker_ip, mq_subscription);
-    consumer.unicastConsumerDispatched(mq_hash);
+    ACA_Message_Pulsar_Consumer::get_instance().init(mq_test_topic, mq_broker_ip, mq_subscription);
+    ACA_Message_Pulsar_Consumer::get_instance().unicastConsumerDispatched(mq_hash);
     pause();
 
     g_demo_mode = previous_demo_mode;
 }
 
-//  sudo ./aca_tests --gtest_also_run_disabled_tests --gtest_filter=*DISABLED_pulsar_unicast_consumer_resubscribe_test
-TEST(pulsar_test_cases, DISABLED_pulsar_unicast_consumer_resubscribe_test)
-{
-    string cmd_string;
-    string mq_update_topic="update topic";
-    bool previous_demo_mode = g_demo_mode;
-    g_demo_mode = true;
-
-    aca_test_reset_environment();
-
-    ACA_Message_Pulsar_Consumer consumer=
-            ACA_Message_Pulsar_Consumer::get_instance();
-    consumer.init(mq_update_topic, mq_broker_ip, mq_subscription);
-    consumer.unicastConsumerDispatched(mq_hash);
-    consumer.unicastResubscribe(true);
-    consumer.unicastResubscribe(false,mq_test_topic, to_string(mq_hash));
-    pause();
-
-    g_demo_mode = previous_demo_mode;
-}
-
-// This case tests the pulsar producer implementation and publishes a GoalState to the subscribed topic.
-// First run pulsar_consumer_test then execute
-//      sudo ./aca_tests --gtest_also_run_disabled_tests --gtest_filter=*DISABLED_pulsar_producer_test
 TEST(pulsar_test_cases, DISABLED_pulsar_producer_test)
 {
     int retcode = 0;
@@ -176,4 +156,98 @@ TEST(pulsar_test_cases, DISABLED_pulsar_producer_test)
     EXPECT_EQ(overall_rc, EXIT_SUCCESS);
     overall_rc = EXIT_SUCCESS;
 
+}
+
+// 2. Pulsar consumer multi-subscribe test.
+// Ensure you launched the pulsar then executing:
+//  sudo ./aca_tests --gtest_also_run_disabled_tests --gtest_filter=*DISABLED_pulsar_unicast_consumer_multisubscribe_test
+//  sudo ./aca_tests --gtest_also_run_disabled_tests --gtest_filter=*DISABLED_pulsar_producer_multisubscribe_test
+
+TEST(pulsar_test_cases, DISABLED_pulsar_unicast_consumer_multisubscribe_test)
+{
+    string cmd_string;
+
+    bool previous_demo_mode = g_demo_mode;
+    g_demo_mode = true;
+
+    aca_test_reset_environment();
+
+    ACA_Message_Pulsar_Consumer consumer=
+            ACA_Message_Pulsar_Consumer::get_instance();
+    consumer.init(mq_test_topic, mq_broker_ip, mq_subscription);
+    consumer.unicastConsumerDispatched(mq_hash);
+    for(int i = 0; i < size(mq_update_topics); i++){
+        consumer.unicastResubscribe(false, mq_update_topics[i], to_string(mq_hash));
+    }
+    ACA_LOG_INFO("Current subscribe topics are: %s\n",consumer.getUnicastTopicName().c_str());
+    pause();
+
+    g_demo_mode = previous_demo_mode;
+}
+
+TEST(pulsar_test_cases, DISABLED_pulsar_producer_multisubscribe_test)
+{
+    int retcode = 0;
+    int overall_rc=0;
+    int length=1000;
+    ulong not_care_culminative_time;
+    string cmd_string;
+    string GoalStateString;
+    unsigned char serializedGoalState[length];
+
+    GoalStateV2 GoalState_builder;
+    PortState new_port_states;
+    SubnetState new_subnet_states;
+
+    aca_test_create_default_port_state(&new_port_states);
+    auto &port_states_map = *GoalState_builder.mutable_port_states();
+    port_states_map[port_id_1] = new_port_states;
+
+    aca_test_create_default_subnet_state(&new_subnet_states);
+    auto &subnet_states_map = *GoalState_builder.mutable_subnet_states();
+    subnet_states_map[subnet_id_1] = new_subnet_states;
+
+    for(int i=0; i< size(mq_update_topics); i++){
+        aca_test_reset_environment();
+
+        if(GoalState_builder.SerializeToString(&GoalStateString)){
+            ACA_LOG_INFO("%s","Successfully covert GoalStateV2 to message\n");
+        }
+
+        ACA_Message_Pulsar_Producer producer(mq_broker_ip, mq_update_topics[i]);
+        retcode = producer.publish(GoalStateString,mq_key);
+        EXPECT_EQ(retcode, EXIT_SUCCESS);
+
+        ACA_LOG_INFO("%s","Waiting for GoalStateV2 update.\n");
+        sleep(1);
+
+        ACA_OVS_L2_Programmer::get_instance().execute_ovsdb_command(
+                "get Interface " + port_name_1 + " ofport", not_care_culminative_time, overall_rc);
+        EXPECT_EQ(overall_rc, EXIT_SUCCESS);
+        overall_rc = EXIT_SUCCESS;
+    }
+}
+
+// 3. Pulsar consumer resubscribe test.
+// Ensure you launched the pulsar then executing:
+//  sudo ./aca_tests --gtest_also_run_disabled_tests --gtest_filter=*DISABLED_pulsar_unicast_consumer_resubscribe_test
+
+TEST(pulsar_test_cases, DISABLED_pulsar_unicast_consumer_resubscribe_test)
+{
+    string cmd_string;
+    string mq_update_topic="update topic";
+    bool previous_demo_mode = g_demo_mode;
+    g_demo_mode = true;
+
+    aca_test_reset_environment();
+
+    ACA_Message_Pulsar_Consumer consumer=
+            ACA_Message_Pulsar_Consumer::get_instance();
+    consumer.init(mq_update_topic, mq_broker_ip, mq_subscription);
+    consumer.unicastConsumerDispatched(mq_hash);
+    consumer.unicastResubscribe(true);
+    consumer.unicastResubscribe(false,mq_test_topic, to_string(mq_hash));
+    pause();
+
+    g_demo_mode = previous_demo_mode;
 }

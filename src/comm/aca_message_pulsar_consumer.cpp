@@ -36,7 +36,7 @@ void listener(Consumer consumer, const Message& message){
   int rc;
   Result result;
 
-  ACA_LOG_DEBUG("\n<=====incoming message: %s\n",
+  ACA_LOG_DEBUG("\n<=====incoming message: %s =====>\n",
                 message.getDataAsString().c_str());
 
   rc = Aca_Comm_Manager::get_instance().deserialize(
@@ -112,7 +112,7 @@ string ACA_Message_Pulsar_Consumer::getUnicastTopicName() const
 {
   string topic = "";
   for (auto t: this->unicast_topic_name)
-    topic += t;
+    topic += (t+" ");
   return topic;
 }
 
@@ -178,14 +178,12 @@ bool ACA_Message_Pulsar_Consumer::unicastResubscribe(string topic, int stickyHas
 {
     bool result;
 
-    result = unicastUnsubcribe();
 
-    if (result==EXIT_SUCCESS){
-        setUnicastTopicName(topic);
-        result = unicastConsumerDispatched(stickyHash);
-        if (result==EXIT_SUCCESS) {
-            return EXIT_SUCCESS;
-        }
+    setUnicastTopicName(topic);
+    this->unicast_consumer.unsubscribe(); // unsubscribe the pulsar topics to avoid warning.
+    result = unicastConsumerDispatched(stickyHash);
+    if (result==EXIT_SUCCESS) {
+        return EXIT_SUCCESS;
     }
     ACA_LOG_ERROR("Failed to resubscribe unicast topic: %s\n", topic.c_str());
     return EXIT_FAILURE;
