@@ -58,6 +58,8 @@ string g_ncm_port = EMPTY_STRING;
 string g_grpc_server_port = EMPTY_STRING;
 // by default, this should run as GRCP client, unless specified by the corresponding flag.
 bool g_run_as_server = false;
+bool g_run_as_topic_client = false;
+
 GoalStateProvisionerAsyncServer *g_grpc_server = NULL;
 GoalStateProvisionerClientImpl *g_grpc_client = NULL;
 // GoalStateProvisionerServer *g_test_grcp_server = NULL;
@@ -812,7 +814,7 @@ int main(int argc, char *argv[])
   signal(SIGINT, aca_signal_handler);
   signal(SIGTERM, aca_signal_handler);
 
-  while ((option = getopt(argc, argv, "s:p:dm")) != -1) {
+  while ((option = getopt(argc, argv, "s:p:dmt")) != -1) {
     switch (option) {
     case 's':
       g_grpc_server_ip = optarg;
@@ -826,6 +828,9 @@ int main(int argc, char *argv[])
     case 'm':
       g_run_as_server = true;
       break;
+    case 't':
+      g_run_as_topic_client = true;
+      break;
     default: /* the '?' case when the option is not recognized */
       /* specifying port not avaiable for now */
       fprintf(stderr,
@@ -833,7 +838,8 @@ int main(int argc, char *argv[])
               "\t\t[-s grpc server]\n"
               "\t\t[-p grpc port]\n"
               "\t\t[-d enable debug mode]\n"
-              "\t\t[-m If this flag is passed in, gs test runs as grpc server, which listens on localhost:54321; otherwise it runs as a grpc client]\n",
+              "\t\t[-m If this flag is passed in, gs test runs as grpc server, which listens on localhost:54321;]\n",
+              "\t\t[-t If this flag is passed in, gs test runs as grpc topic client, which publishes topic subscribe requests to localhost:50002; otherwise it runs as a grpc client]\n",
               argv[0]);
       exit(EXIT_FAILURE);
     }
@@ -853,9 +859,12 @@ int main(int argc, char *argv[])
 
   if (g_run_as_server) {
     rc = RunServer();
-  } else {
-//    rc = run_as_client();
-    rc = run_as_topic_client();
+  }
+  else if (g_run_as_topic_client){
+      rc = run_as_topic_client();
+  }
+  else {
+      rc = run_as_client();
   }
   // Verify that the version of the library that we linked against is
   // compatible with the version of the headers we compiled against.
