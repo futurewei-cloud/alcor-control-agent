@@ -266,8 +266,10 @@ void OFController::send_packet_out(OFConnection *ofconn, ofbuf_ptr_t &&po) {
     if (!po) {
         return;
     }
-
-    ofconn->send(po->data(), po->len());
+    
+    marl::schedule([=] {
+        ofconn->send(po->data(), po->len());
+    });
 }
 
 void OFController::send_bundle_flow_mods(OFConnection *ofconn, std::vector<ofmsg_ptr_t> flow_mods) {
