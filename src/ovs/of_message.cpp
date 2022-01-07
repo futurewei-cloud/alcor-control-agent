@@ -295,10 +295,6 @@ ofbuf_ptr_t create_packet_out(const char* option) {
     }
 
     auto buf = ofputil_encode_packet_out(&po, DEFAULT_OF_VERSION);
-    // packet_out_counter ++;
-    // if (1){
-    //     ofpbuf* b;
-    //     return std::make_shared<OFPBuf>(OFPBuf(b));
-    // }
+
     return std::make_shared<OFPBuf>(buf);
 }

@@ -359,12 +359,15 @@ void OFController::packet_out(int of_connection_id, const char* opt) {
     OFConnection* ofconn_br = get_instance(of_connection_id);
 
     if (NULL != ofconn_br) {
-
+        packet_out_counter ++;
+        if (1){
+            return;
+        }
         auto pkt_out = create_packet_out(opt);
         if(! pkt_out){
             return;
         }
-        send_packet_out(ofconn_br, pkt_out);
+        send_packet_out(ofconn_br, std::move(pkt_out));
         // packet_out_counter ++;
     } else {
         ACA_LOG_ERROR("OFController::packet_out - ovs connection to bridge %ld not found\n", of_connection_id);
