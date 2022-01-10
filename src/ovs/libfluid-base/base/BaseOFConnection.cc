@@ -227,9 +227,9 @@ BaseOFConnection::~BaseOFConnection() {
 }
 
 void BaseOFConnection::send(void* data, size_t len) {
-    marl::schedule([=] {
+    // marl::schedule([=] {
         bufferevent_write(this->m_implementation->bev, data, len);
-    });
+    // });
 }
 
 void BaseOFConnection::add_timed_callback(void* (*cb)(void*), int interval, void* arg) {

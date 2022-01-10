@@ -1,6 +1,10 @@
 #include "libfluid-base/base/BaseOFConnection.hh"
 #include "libfluid-base/OFConnection.hh"
-
+#include "libfluid-base/base/BaseOFConnection.hh"
+#include "marl/defer.h"
+#include "marl/event.h"
+#include "marl/scheduler.h"
+#include "marl/waitgroup.h"
 namespace fluid_base {
 
 OFConnection::OFConnection(BaseOFConnection* c, OFHandler* ofhandler) {
@@ -53,7 +57,9 @@ OFHandler* OFConnection::get_ofhandler() {
 
 void OFConnection::send(void* data, size_t len) {
     if (this->conn != NULL)
-        this->conn->send((uint8_t*) data, len);
+    // marl::schedule([=] {
+        this->conn->send((uint8_t*) data, len);    
+    // });
 }
 
 void OFConnection::add_timed_callback(void* (*cb)(void*),
