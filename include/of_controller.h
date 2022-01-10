@@ -116,6 +116,8 @@ public:
 
     void execute_flow(const std::string br, const std::string flow_str, const std::string action = "add");
 
+    void execute_flow(const int br, const std::string flow_str, const std::string action = "add");
+
     void packet_out(const char* br, const char* opt);
 
     void packet_out(int of_connection_id, const char* opt);

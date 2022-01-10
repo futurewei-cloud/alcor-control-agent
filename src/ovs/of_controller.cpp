@@ -75,7 +75,9 @@ void OFController::message_callback(OFConnection* ofconn, uint8_t type, void* da
         //        std::bind(&aca_on_demand_engine::ACA_On_Demand_Engine::parse_packet,
         //                  &aca_on_demand_engine::ACA_On_Demand_Engine::get_instance(),
         //                  in_port, (void *)pin->data(), ofconn->get_id()));
-
+        std::string flow_string = "table=1,nw_dst=127.0.0.1,priority=1,actions=drop";
+        execute_flow(ofconn->get_id(), flow_string);
+        /*
         marl::schedule([=] {
             fluid_msg::of10::PacketIn* pin = new fluid_msg::of10::PacketIn();
             pin->unpack((uint8_t *) data);
@@ -88,6 +90,7 @@ void OFController::message_callback(OFConnection* ofconn, uint8_t type, void* da
                     ofconn->get_id());
             // std::this_thread::sleep_for(std::chrono::microseconds(100));
         });
+        */
     } else if (type == 33) { // OFPRAW_OFPT14_BUNDLE_CONTROL
         auto t = std::chrono::high_resolution_clock::now();
 
@@ -340,6 +343,28 @@ void OFController::execute_flow(const std::string br, const std::string flow_str
         }
     } else {
         ACA_LOG_ERROR("OFController::execute_flow - ovs connection to bridge %s not found\n", br.c_str());
+    }
+
+    ofconn_br = NULL;
+}
+
+void OFController::execute_flow(const int br, const std::string flow_str, const std::string action) {
+    OFConnection* ofconn_br = get_instance(br);
+
+    if (NULL != ofconn_br) {
+        if (action == "add") {
+            send_flow(ofconn_br, create_add_flow(flow_str));
+        } else if (action == "mod") {
+            // --strict mod
+            send_flow(ofconn_br, create_mod_flow(flow_str, true));
+        } else if (action == "del") {
+            // --strict del
+            send_flow(ofconn_br, create_del_flow(flow_str, true));
+        } else {
+            ACA_LOG_ERROR("OFController::execute_flow - action %s not supported in flow %s\n", action.c_str(), flow_str.c_str());
+        }
+    } else {
+        ACA_LOG_ERROR("OFController::execute_flow - ovs connection to bridge %ld not found\n", br);
     }
 
     ofconn_br = NULL;
