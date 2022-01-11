@@ -79,15 +79,15 @@ public:
             port_id_map(port_id_map),
             OFServer(address, port, nthreads, secure,
                      OFServerSettings()
-                         .supported_version(1) // OF version 1 is OF 1.0
+                         .supported_version(4) // OF version 1 is OF 1.3
                          .echo_interval(30)
                          .keep_data_ownership(false)) {
                              packet_in_counter = 0;
                             //  ACA_LOG_INFO("%s\n", "Inited packet_in_counter to zero");
                             std::cout<<"Inited packet_in_counter to zero"<<std::endl; 
-                               auto packet_in_counter_thread = new std::thread(std::bind(
-          &OFController::print_packet_in_counter, this));
-                            packet_in_counter_thread->detach();
+        //                        auto packet_in_counter_thread = new std::thread(std::bind(
+        //   &OFController::print_packet_in_counter, this));
+        //                     packet_in_counter_thread->detach();
                           }
 
     ~OFController() = default;
