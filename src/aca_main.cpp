@@ -243,7 +243,7 @@ int main(int argc, char *argv[])
     }
   }
 
-  /*
+  
   // fill in the information if not provided in command line args
   if (g_broker_list == EMPTY_STRING) {
     g_broker_list = BROKER_LIST;
@@ -274,7 +274,7 @@ int main(int argc, char *argv[])
   g_grpc_client_thread = new std::thread(
           std::bind(&GoalStateProvisionerClientImpl::RunClient, g_grpc_client));
   g_grpc_client_thread->detach();
-  */
+  
 
   // Create a marl scheduler using all the logical processors available to the process.
   // Bind this scheduler to the main thread so we can call marl::schedule()
