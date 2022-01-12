@@ -669,10 +669,7 @@ void ACA_OVS_L2_Programmer::packet_out(const char *bridge, const char *options)
 {
   ACA_LOG_DEBUG("%s", "ACA_OVS_L2_Programmer::packet_out ---> Entering\n");
   auto openflow_client_start = chrono::steady_clock::now();
-  packet_out_counter ++;
-  if (1){
-    return;
-  }
+
   if (NULL != ofctrl) {
       ofctrl->packet_out(bridge, options);
   } else {

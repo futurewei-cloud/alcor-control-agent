@@ -158,7 +158,7 @@ OFConnection* OFController::get_instance(int of_connection_id) {
 
 void OFController::add_switch_to_conn_map(std::string bridge, int ofconn_id, OFConnection* ofconn) {
     switch_map_mutex.lock();
-    /*
+    
     auto ofconn_iter = switch_conn_map.find(bridge);
 
     // if found, remove
@@ -171,7 +171,7 @@ void OFController::add_switch_to_conn_map(std::string bridge, int ofconn_id, OFC
     }
 
     switch_conn_map[bridge] = ofconn;
-    */
+    
     if (switch_id_map.find(ofconn_id) != switch_id_map.end()) {
         switch_id_map.erase(ofconn_id);
     }
