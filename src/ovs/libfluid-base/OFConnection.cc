@@ -5,6 +5,8 @@
 #include "marl/event.h"
 #include "marl/scheduler.h"
 #include "marl/waitgroup.h"
+#include "aca_log.h"
+
 namespace fluid_base {
 
 OFConnection::OFConnection(BaseOFConnection* c, OFHandler* ofhandler) {
@@ -58,6 +60,7 @@ OFHandler* OFConnection::get_ofhandler() {
 void OFConnection::send(void* data, size_t len) {
     if (this->conn != NULL)
     // marl::schedule([=] {
+    ACA_LOG_INFO("%s\n", "Excute OFConnection::send");
         this->conn->send((uint8_t*) data, len);    
     // });
 }

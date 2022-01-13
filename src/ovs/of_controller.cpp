@@ -58,10 +58,12 @@ void OFController::message_callback(OFConnection* ofconn, uint8_t type, void* da
 
             // setup default flows for each bridge
             if (bridge_name == "br-int") {
+                ACA_LOG_DEBUG("%s\n", "Setting up default rules for br-int");
                 setup_default_br_int_flows();
             }
 
             if (bridge_name == "br-tun") {
+                ACA_LOG_DEBUG("%s\n", "Setting up default rules for br-tun");
                 setup_default_br_tun_flows();
             }
         }
