@@ -104,8 +104,8 @@ int ACA_ARP_Responder::add_arp_entry(arp_config *arp_cfg_in)
 
     _arp_db.insert(stData, current_arp_data);
 
-    ACA_LOG_DEBUG("Arp Entry with ip: %s and vlan id %u added\n",
-                  arp_cfg_in->ipv4_address.c_str(), arp_cfg_in->vlan_id);
+    // ACA_LOG_DEBUG("Arp Entry with ip: %s and vlan id %u added\n",
+    //               arp_cfg_in->ipv4_address.c_str(), arp_cfg_in->vlan_id);
 
     return EXIT_SUCCESS;
   } catch (std::invalid_argument &ia) {

@@ -335,7 +335,7 @@ int Aca_Goal_State_Handler::update_neighbor_states(GoalStateV2 &parsed_struct,
   int count = 1;
 
   for (auto &[neighbor_id, current_NeighborState] : parsed_struct.neighbor_states()) {
-    ACA_LOG_DEBUG("=====>parsing neighbor state: %s\n", neighbor_id.c_str());
+    //ACA_LOG_DEBUG("=====>parsing neighbor state: %s\n", neighbor_id.c_str());
 
     workitem_future.push_back(std::async(
             std::launch::async, &Aca_Goal_State_Handler::update_neighbor_state_workitem_v2,

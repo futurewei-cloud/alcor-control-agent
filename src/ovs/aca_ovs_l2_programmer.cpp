@@ -523,7 +523,7 @@ int ACA_OVS_L2_Programmer::create_or_update_l2_neighbor(const string virtual_ip,
                                                         const string remote_host_ip,
                                                         uint tunnel_id, ulong &culminative_time)
 {
-  ACA_LOG_DEBUG("%s", "ACA_OVS_L2_Programmer::create_or_update_l2_neighbor ---> Entering\n");
+  // ACA_LOG_DEBUG("%s", "ACA_OVS_L2_Programmer::create_or_update_l2_neighbor ---> Entering\n");
 
   if (virtual_ip.empty()) {
     throw std::invalid_argument("virtual_ip is empty");
@@ -544,8 +544,8 @@ int ACA_OVS_L2_Programmer::create_or_update_l2_neighbor(const string virtual_ip,
   int overall_rc = ACA_Vlan_Manager::get_instance().create_l2_neighbor(
           virtual_ip, virtual_mac, remote_host_ip, tunnel_id, culminative_time);
 
-  ACA_LOG_DEBUG("ACA_OVS_L2_Programmer::create_or_update_l2_neighbor <--- Exiting, overall_rc = %d\n",
-                overall_rc);
+  // ACA_LOG_DEBUG("ACA_OVS_L2_Programmer::create_or_update_l2_neighbor <--- Exiting, overall_rc = %d\n",
+  //               overall_rc);
 
   return overall_rc;
 }
@@ -641,8 +641,8 @@ void ACA_OVS_L2_Programmer::execute_openflow(ulong &culminative_time,
                                              const std::string flow_string,
                                              const std::string action)
 {
-  ACA_LOG_DEBUG("%s", "ACA_OVS_L2_Programmer::execute_openflow ---> Entering\n");
-  auto openflow_client_start = chrono::steady_clock::now();
+  // ACA_LOG_DEBUG("%s", "ACA_OVS_L2_Programmer::execute_openflow ---> Entering\n");
+  // auto openflow_client_start = chrono::steady_clock::now();
 
   if (NULL != ofctrl) {
     ofctrl->execute_flow(bridge, flow_string, action);
@@ -650,19 +650,19 @@ void ACA_OVS_L2_Programmer::execute_openflow(ulong &culminative_time,
     ACA_LOG_ERROR("%s", "ACA_OVS_L2_Programmer::execute_openflow didn't find OF controller\n");
   }
 
-  auto openflow_client_end = chrono::steady_clock::now();
-  auto openflow_client_time_total_time =
-          cast_to_microseconds(openflow_client_end - openflow_client_start).count();
+  // auto openflow_client_end = chrono::steady_clock::now();
+  // auto openflow_client_time_total_time =
+  //         cast_to_microseconds(openflow_client_end - openflow_client_start).count();
 
-  culminative_time += openflow_client_time_total_time;
+  // culminative_time += openflow_client_time_total_time;
 
-  g_total_execute_openflow_time += openflow_client_time_total_time;
+  // g_total_execute_openflow_time += openflow_client_time_total_time;
 
   // ACA_LOG_INFO("Elapsed time for openflow client call took: %ld microseconds or %ld milliseconds.\n",
   //              openflow_client_time_total_time,
   //              us_to_ms(openflow_client_time_total_time));
 
-  ACA_LOG_DEBUG("%s", "ACA_OVS_L2_Programmer::execute_openflow ---> Exiting\n");
+  // ACA_LOG_DEBUG("%s", "ACA_OVS_L2_Programmer::execute_openflow ---> Exiting\n");
 }
 
 void ACA_OVS_L2_Programmer::packet_out(const char *bridge, const char *options)
