@@ -18,6 +18,11 @@
 #include "goalstateprovisioner.grpc.pb.h"
 #include <future>
 
+#include "marl/defer.h"
+#include "marl/event.h"
+#include "marl/scheduler.h"
+#include "marl/waitgroup.h"
+
 using namespace alcor::schema;
 
 std::mutex gs_reply_mutex; // mutex for writing gs reply object
@@ -333,10 +338,17 @@ int Aca_Goal_State_Handler::update_neighbor_states(GoalStateV2 &parsed_struct,
   int rc;
   int overall_rc = EXIT_SUCCESS;
   int count = 1;
-
+  GoalStateV2* gsv2_ptr = &parsed_struct;
+  GoalStateOperationReply* reply_ptr = &gsOperationReply;
+  marl::WaitGroup neighbor_wait_group(parsed_struct.neighbor_states_size());
   for (auto &[neighbor_id, current_NeighborState] : parsed_struct.neighbor_states()) {
     //ACA_LOG_DEBUG("=====>parsing neighbor state: %s\n", neighbor_id.c_str());
+    marl::schedule([=] {
+      defer(neighbor_wait_group.done());
+      update_neighbor_state_workitem_v2(current_NeighborState, *gsv2_ptr, *reply_ptr);
+    });
 
+/*
     workitem_future.push_back(std::async(
             std::launch::async, &Aca_Goal_State_Handler::update_neighbor_state_workitem_v2,
             this, current_NeighborState, std::ref(parsed_struct),
@@ -353,14 +365,15 @@ int Aca_Goal_State_Handler::update_neighbor_states(GoalStateV2 &parsed_struct,
     } else {
       count++;
     }
+  */
   }
-
+/*
   for (int i = 0; i < workitem_future.size(); i++) {
     rc = workitem_future[i].get();
     if (rc != EXIT_SUCCESS)
       overall_rc = rc;
   }
-
+*/
   return overall_rc;
 }
 
