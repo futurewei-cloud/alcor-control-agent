@@ -375,6 +375,7 @@ int Aca_Goal_State_Handler::update_neighbor_states(GoalStateV2 &parsed_struct,
       overall_rc = rc;
   }
 */
+  neighbor_wait_group.wait();
   return overall_rc;
 }
 
