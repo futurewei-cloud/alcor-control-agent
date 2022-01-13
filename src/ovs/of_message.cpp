@@ -47,7 +47,7 @@ struct FreeDeleter {
 typedef std::unique_ptr<char, FreeDeleter<char>> OFString;
 typedef std::unique_ptr<ofpact, FreeDeleter<ofpact>> OFPact;
 
-const ofputil_protocol DEFAULT_OF_VERSION = OFPUTIL_P_OF10_NXM_TID;
+const ofputil_protocol DEFAULT_OF_VERSION = OFPUTIL_P_OF13_OXM;//OFPUTIL_P_OF10_NXM_TID;
 const ofputil_protocol BUNDLE_OF_VERSION  = OFPUTIL_P_OF14_OXM;
 
 class OFPBuf : public OFRawBuf {
