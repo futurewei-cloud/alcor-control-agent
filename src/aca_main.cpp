@@ -265,9 +265,9 @@ int main(int argc, char *argv[])
   }
 
   g_grpc_server = new GoalStateProvisionerAsyncServer();
-  g_grpc_server_thread = new std::thread(std::bind(
-          &GoalStateProvisionerAsyncServer::RunServer, g_grpc_server, thread_pools_size));
-  g_grpc_server_thread->detach();
+  // g_grpc_server_thread = new std::thread(std::bind(
+  //         &GoalStateProvisionerAsyncServer::RunServer, g_grpc_server, thread_pools_size));
+  // g_grpc_server_thread->detach();
 
   // Create a separate thread to run the grpc client.
   g_grpc_client = new GoalStateProvisionerClientImpl();
@@ -283,6 +283,10 @@ int main(int argc, char *argv[])
   marl::Scheduler task_scheduler(cfg_bind_hw_cores);
   task_scheduler.bind();
   defer(task_scheduler.unbind());
+
+  marl::schedule([=]{
+    g_grpc_server->RunServer(thread_pools_size);
+  });
 
   aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().get_local_host_ips();
 

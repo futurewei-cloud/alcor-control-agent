@@ -341,6 +341,7 @@ int Aca_Goal_State_Handler::update_neighbor_states(GoalStateV2 &parsed_struct,
   GoalStateV2* gsv2_ptr = &parsed_struct;
   GoalStateOperationReply* reply_ptr = &gsOperationReply;
   marl::WaitGroup neighbor_wait_group(parsed_struct.neighbor_states_size());
+  
   for (auto &[neighbor_id, current_NeighborState] : parsed_struct.neighbor_states()) {
     //ACA_LOG_DEBUG("=====>parsing neighbor state: %s\n", neighbor_id.c_str());
     marl::schedule([=] {
