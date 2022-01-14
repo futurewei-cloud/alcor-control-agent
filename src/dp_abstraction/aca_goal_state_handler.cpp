@@ -340,7 +340,8 @@ int Aca_Goal_State_Handler::update_neighbor_states(GoalStateV2 &parsed_struct,
   int count = 1;
   GoalStateV2* gsv2_ptr = &parsed_struct;
   GoalStateOperationReply* reply_ptr = &gsOperationReply;
-  marl::WaitGroup neighbor_wait_group(parsed_struct.neighbor_states().size());
+  int neighbor_size = parsed_struct.neighbor_states().size();
+  marl::WaitGroup neighbor_wait_group(neighbor_size);
 
   // std::cout<<"Set WaitGroup size to "<<parsed_struct.neighbor_states().size()<<std::endl;
   // std::atomic<int> neighbor_count;
