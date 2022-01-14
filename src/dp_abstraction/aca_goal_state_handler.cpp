@@ -371,7 +371,7 @@ int Aca_Goal_State_Handler::update_neighbor_states(GoalStateV2 &parsed_struct,
     }
   */
   }
-  std::cout<<"Count "<<neighbor_count.load()<<" neighbors in this GSV2"<<std::end;
+  std::cout<<"Count "<<neighbor_count.load()<<" neighbors in this GSV2"<<std::endl;
 /*
   for (int i = 0; i < workitem_future.size(); i++) {
     rc = workitem_future[i].get();
