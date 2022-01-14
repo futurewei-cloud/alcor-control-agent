@@ -350,8 +350,8 @@ int Aca_Goal_State_Handler::update_neighbor_states(GoalStateV2 &parsed_struct,
     // neighbor_count.fetch_add(1);
     neighbor_wait_group.add();
     marl::schedule([=] {
+      defer(neighbor_wait_group.done());
       update_neighbor_state_workitem_v2(current_NeighborState, *gsv2_ptr, *reply_ptr);
-      neighbor_wait_group.done();
     });
 
 /*
