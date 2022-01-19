@@ -69,7 +69,7 @@ void OFController::message_callback(OFConnection* ofconn, uint8_t type, void* da
         }
     } else if (type == fluid_msg::of13::OFPT_BARRIER_REPLY) {
         auto t = std::chrono::high_resolution_clock::now();
-        std::cout<<"OFController::message_callback - recv OFPT_BARRIER_REPLY on "<<t.time_since_epoch().count();
+        std::cout<<"OFController::message_callback - recv OFPT_BARRIER_REPLY on "<<t.time_since_epoch().count()<<std::endl;
         // ACA_LOG_INFO("OFController::message_callback - recv OFPT_BARRIER_REPLY on %ld\n", t.time_since_epoch().count());
     } else if (type == fluid_msg::of13::OFPT_PACKET_IN) {
         packet_in_counter ++;
