@@ -341,7 +341,7 @@ int Aca_Goal_State_Handler::update_neighbor_states(GoalStateV2 &parsed_struct,
   GoalStateV2* gsv2_ptr = &parsed_struct;
   GoalStateOperationReply* reply_ptr = &gsOperationReply;
   int neighbor_size = parsed_struct.neighbor_states().size();
-  marl::WaitGroup neighbor_wait_group(neighbor_size);
+  marl::WaitGroup neighbor_wait_group(0);
 
   // std::cout<<"Set WaitGroup size to "<<neighbor_size<<std::endl;
   std::atomic<int> neighbor_count;
@@ -357,10 +357,10 @@ int Aca_Goal_State_Handler::update_neighbor_states(GoalStateV2 &parsed_struct,
   for (auto &[neighbor_id, current_NeighborState] : parsed_struct.neighbor_states()) {
     //ACA_LOG_DEBUG("=====>parsing neighbor state: %s\n", neighbor_id.c_str());
     neighbor_count.fetch_add(1);
-    // neighbor_wait_group.add();
+    neighbor_wait_group.add();
     marl::schedule([=] {
+      defer(neighbor_wait_group.done());
       update_neighbor_state_workitem_v2(current_NeighborState, *gsv2_ptr, *reply_ptr);
-      neighbor_wait_group.done();
     });
   }
 /*
