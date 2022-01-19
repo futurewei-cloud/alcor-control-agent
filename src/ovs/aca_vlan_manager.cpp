@@ -29,6 +29,12 @@
 #include <shared_mutex>
 #include <arpa/inet.h>
 
+
+#include "marl/defer.h"
+#include "marl/event.h"
+#include "marl/scheduler.h"
+#include "marl/waitgroup.h"
+
 using namespace aca_ovs_control;
 using namespace aca_ovs_l2_programmer;
 using namespace aca_arp_responder;
@@ -208,7 +214,14 @@ int ACA_Vlan_Manager::create_l2_neighbor(string virtual_ip, string virtual_mac,
   stArpCfg.ipv4_address = virtual_ip;
   stArpCfg.vlan_id = internal_vlan_id;
 
-  overall_rc = ACA_ARP_Responder::get_instance().create_or_update_arp_entry(&stArpCfg);
+  auto overall_rc_ptr = & overall_rc;
+
+  auto arp_config_ptr = & stArpCfg;
+
+  // overall_rc = ACA_ARP_Responder::get_instance().create_or_update_arp_entry(&stArpCfg);
+  marl::schedule([=] {
+    *overall_rc_ptr = ACA_ARP_Responder::get_instance().create_or_update_arp_entry(arp_config_ptr);
+  });
 
   // ACA_LOG_DEBUG("create_l2_neighbor arp entry with ip = %s, vlan id = %u and mac = %s\n",
   //               virtual_ip.c_str(), internal_vlan_id, virtual_mac.c_str());
