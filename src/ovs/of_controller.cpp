@@ -69,7 +69,8 @@ void OFController::message_callback(OFConnection* ofconn, uint8_t type, void* da
         }
     } else if (type == fluid_msg::of13::OFPT_BARRIER_REPLY) {
         auto t = std::chrono::high_resolution_clock::now();
-        ACA_LOG_INFO("OFController::message_callback - recv OFPT_BARRIER_REPLY on %ld\n", t.time_since_epoch().count());
+        std::cout<<"OFController::message_callback - recv OFPT_BARRIER_REPLY on "<<t.time_since_epoch().count();
+        // ACA_LOG_INFO("OFController::message_callback - recv OFPT_BARRIER_REPLY on %ld\n", t.time_since_epoch().count());
     } else if (type == fluid_msg::of13::OFPT_PACKET_IN) {
         packet_in_counter ++;
         //// pass new allocated memory of packet-in to ACA_On_Demand_Engine to determine which type of request it is
@@ -278,6 +279,14 @@ void OFController::send_packet_out(OFConnection *ofconn, ofbuf_ptr_t &&po) {
     // marl::schedule([=] {
         ofconn->send(po->data(), po->len());
     // });
+}
+
+void OFController::send_barrier_req(const std::string br, uint32_t xid) {
+    OFConnection* ofconn_br = get_instance(br);
+
+    fluid_msg::of13::BarrierRequest barrier_req(xid);
+    ofconn_br->send(barrier_req.pack(), barrier_req.length());
+    ofconn_br = NULL;
 }
 
 void OFController::send_bundle_flow_mods(OFConnection *ofconn, std::vector<ofmsg_ptr_t> flow_mods) {

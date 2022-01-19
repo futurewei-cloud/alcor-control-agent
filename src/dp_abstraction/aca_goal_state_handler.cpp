@@ -16,6 +16,7 @@
 #include "aca_dataplane_ovs.h"
 #include "aca_goal_state_handler.h"
 #include "goalstateprovisioner.grpc.pb.h"
+#include "aca_ovs_l2_programmer.h"
 #include <future>
 
 #include "marl/defer.h"
@@ -334,14 +335,16 @@ int Aca_Goal_State_Handler::update_neighbor_state_workitem_v2(
 int Aca_Goal_State_Handler::update_neighbor_states(GoalStateV2 &parsed_struct,
                                                    GoalStateOperationReply &gsOperationReply)
 {
+  auto t = std::chrono::high_resolution_clock::now();
+  std::cout<< "Start processing neighbor states at "<<t.time_since_epoch().count()<<std::endl;
   std::vector<std::future<int> > workitem_future;
   int rc;
   int overall_rc = EXIT_SUCCESS;
   int count = 1;
   GoalStateV2* gsv2_ptr = &parsed_struct;
   GoalStateOperationReply* reply_ptr = &gsOperationReply;
-  int neighbor_size = parsed_struct.neighbor_states().size();
-  marl::WaitGroup neighbor_wait_group(0);
+  // int neighbor_size = parsed_struct.neighbor_states().size();
+  // marl::WaitGroup neighbor_wait_group(0);
 
   // std::cout<<"Set WaitGroup size to "<<neighbor_size<<std::endl;
   std::atomic<int> neighbor_count;
@@ -356,10 +359,10 @@ int Aca_Goal_State_Handler::update_neighbor_states(GoalStateV2 &parsed_struct,
   
   for (auto &[neighbor_id, current_NeighborState] : parsed_struct.neighbor_states()) {
     //ACA_LOG_DEBUG("=====>parsing neighbor state: %s\n", neighbor_id.c_str());
-    neighbor_count.fetch_add(1);
-    neighbor_wait_group.add();
+    // neighbor_count.fetch_add(1);
+    // neighbor_wait_group.add();
     marl::schedule([=] {
-      defer(neighbor_wait_group.done());
+      // defer(neighbor_wait_group.done());
       update_neighbor_state_workitem_v2(current_NeighborState, *gsv2_ptr, *reply_ptr);
     });
   }
@@ -382,6 +385,9 @@ int Aca_Goal_State_Handler::update_neighbor_states(GoalStateV2 &parsed_struct,
     }
   */
   std::cout<<"Count "<<neighbor_count.load()<<" neighbors in this GSV2"<<std::endl;
+
+  auto of_ctrler = aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().ofctrl;
+  of_ctrler->send_barrier_req("br-tun", 1000000); // set xid to 1,000,000
 /*
   for (int i = 0; i < workitem_future.size(); i++) {
     rc = workitem_future[i].get();
@@ -389,7 +395,7 @@ int Aca_Goal_State_Handler::update_neighbor_states(GoalStateV2 &parsed_struct,
       overall_rc = rc;
   }
 */
-  neighbor_wait_group.wait();
+  // neighbor_wait_group.wait();
   return overall_rc;
 }
 

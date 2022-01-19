@@ -122,6 +122,7 @@ public:
 
     void packet_out(int of_connection_id, const char* opt);
 
+    void send_barrier_req(const std::string br, uint32_t xid);
 
 private:
 
