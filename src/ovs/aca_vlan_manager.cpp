@@ -34,6 +34,7 @@ using namespace aca_ovs_l2_programmer;
 using namespace aca_arp_responder;
 
 extern std::atomic_ulong g_total_vpcs_table_mutex_time;
+atomic<int> processed_neighbor_state_count(0);
 
 namespace aca_vlan_manager
 {
@@ -213,6 +214,11 @@ int ACA_Vlan_Manager::create_l2_neighbor(string virtual_ip, string virtual_mac,
   //               virtual_ip.c_str(), internal_vlan_id, virtual_mac.c_str());
 
   // ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::create_l2_neighbor <--- Exiting\n");
+  processed_neighbor_state_count ++;
+  if(processed_neighbor_state_count.load() == 950000){ // send barrier request at 950k th neighbor
+    auto of_ctrler = aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().ofctrl;
+    of_ctrler->send_barrier_req("br-tun", 1000000); // set xid to 1,000,000
+  }
 
   return overall_rc;
 }

@@ -386,8 +386,6 @@ int Aca_Goal_State_Handler::update_neighbor_states(GoalStateV2 &parsed_struct,
   */
   std::cout<<"Count "<<neighbor_count.load()<<" neighbors in this GSV2"<<std::endl;
 
-  auto of_ctrler = aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().ofctrl;
-  of_ctrler->send_barrier_req("br-tun", 1000000); // set xid to 1,000,000
 /*
   for (int i = 0; i < workitem_future.size(); i++) {
     rc = workitem_future[i].get();
