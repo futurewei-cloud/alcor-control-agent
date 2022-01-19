@@ -247,12 +247,12 @@ int Aca_Comm_Manager::update_goal_state(GoalStateV2 &goal_state_message,
                 neighbor_operation_time, us_to_ms(neighbor_operation_time),
                 dhcp_operation_time, us_to_ms(dhcp_operation_time));
 */
-  std::cout<<"[METRICS] Elapsed time for message total operation took: "<< message_total_operation_time<<" microseconds or "<<us_to_ms(message_total_operation_time)<<" milliseconds\n"
-  <<"[METRICS] Elapsed time for gs printout operation took: "<<gs_printout_operation_time<<" microseconds or "<<us_to_ms(gs_printout_operation_time)<<" milliseconds\n"
-  <<"[METRICS] Elapsed time for router operation took: "<<router_operation_time<<" microseconds or "<<us_to_ms(router_operation_time)<<" milliseconds\n"
-  <<"[METRICS] Elapsed time for port operation took: "<<port_operation_time<<" microseconds or "<<us_to_ms(port_operation_time)<<" milliseconds\n"
-  <<"[METRICS] Elapsed time for neighbor operation took: "<<neighbor_operation_time<<" microseconds or "<<us_to_ms(neighbor_operation_time)<<" milliseconds\n"
-  <<"[METRICS] Elapsed time for dhcp operation took: "<<dhcp_operation_time<<" microseconds or "<<us_to_ms(dhcp_operation_time)<<" milliseconds\n"<<std::endl;
+//   std::cout<<"[METRICS] Elapsed time for message total operation took: "<< message_total_operation_time<<" microseconds or "<<us_to_ms(message_total_operation_time)<<" milliseconds\n"
+//   <<"[METRICS] Elapsed time for gs printout operation took: "<<gs_printout_operation_time<<" microseconds or "<<us_to_ms(gs_printout_operation_time)<<" milliseconds\n"
+//   <<"[METRICS] Elapsed time for router operation took: "<<router_operation_time<<" microseconds or "<<us_to_ms(router_operation_time)<<" milliseconds\n"
+//   <<"[METRICS] Elapsed time for port operation took: "<<port_operation_time<<" microseconds or "<<us_to_ms(port_operation_time)<<" milliseconds\n"
+//   <<"[METRICS] Elapsed time for neighbor operation took: "<<neighbor_operation_time<<" microseconds or "<<us_to_ms(neighbor_operation_time)<<" milliseconds\n"
+//   <<"[METRICS] Elapsed time for dhcp operation took: "<<dhcp_operation_time<<" microseconds or "<<us_to_ms(dhcp_operation_time)<<" milliseconds\n"<<std::endl;
   gsOperationReply.set_message_total_operation_time(
           message_total_operation_time + gsOperationReply.message_total_operation_time());
 
