@@ -746,7 +746,6 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
                                                       GoalStateV2 &parsed_struct,
                                                       GoalStateOperationReply &gsOperationReply)
 {
-  packet_out_counter++;
   int overall_rc;
   struct sockaddr_in sa;
   string virtual_ip_address;
@@ -769,7 +768,8 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
     // validate_fixed_ip_size_time = chrono::high_resolution_clock::now();
     // TODO: need to design the usage of current_NeighborConfiguration.revision_number()
     assert(current_NeighborConfiguration.revision_number() > 0);
-
+    packet_out_counter++;
+    
     for (int ip_index = 0;
          ip_index < current_NeighborConfiguration.fixed_ips_size(); ip_index++) {
       auto current_fixed_ip = current_NeighborConfiguration.fixed_ips(ip_index);
