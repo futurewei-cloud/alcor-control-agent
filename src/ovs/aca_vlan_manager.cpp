@@ -222,7 +222,7 @@ int ACA_Vlan_Manager::create_l2_neighbor(string virtual_ip, string virtual_mac,
 
   // auto overall_rc_ptr = & overall_rc;
 
-  auto arp_config_ptr = & stArpCfg;
+  // auto arp_config_ptr = & stArpCfg;
 
   overall_rc = ACA_ARP_Responder::get_instance().create_or_update_arp_entry(&stArpCfg);
 
