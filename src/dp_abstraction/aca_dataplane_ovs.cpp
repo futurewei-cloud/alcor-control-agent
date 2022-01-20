@@ -746,6 +746,8 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
                                                       GoalStateV2 &parsed_struct,
                                                       GoalStateOperationReply &gsOperationReply)
 {
+  packet_out_counter++;
+
   int overall_rc;
   struct sockaddr_in sa;
   string virtual_ip_address;
@@ -793,7 +795,6 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
         if (inet_pton(AF_INET, host_ip_address.c_str(), &(sa.sin_addr)) != 1) {
           throw std::invalid_argument("Neighbor host ip address is not in the expect format");
         }
-        packet_out_counter++;
 
         // Look up the subnet configuration to query for network type and tunnel_id
         auto subnetStateFound =
