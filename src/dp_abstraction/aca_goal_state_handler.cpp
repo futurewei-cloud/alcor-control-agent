@@ -364,8 +364,8 @@ int Aca_Goal_State_Handler::update_neighbor_states(GoalStateV2 &parsed_struct,
     //ACA_LOG_DEBUG("=====>parsing neighbor state: %s\n", neighbor_id.c_str());
     // neighbor_count.fetch_add(1);
     // neighbor_wait_group.add();
+    packet_in_counter++;
     marl::schedule([=] {
-      packet_in_counter++;
       // defer(neighbor_wait_group.done());
       update_neighbor_state_workitem_v2(current_NeighborState, *gsv2_ptr, *reply_ptr);
     });
