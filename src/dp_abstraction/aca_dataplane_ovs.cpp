@@ -768,7 +768,6 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
     // validate_fixed_ip_size_time = chrono::high_resolution_clock::now();
     // TODO: need to design the usage of current_NeighborConfiguration.revision_number()
     assert(current_NeighborConfiguration.revision_number() > 0);
-    packet_out_counter++;
     
     for (int ip_index = 0;
          ip_index < current_NeighborConfiguration.fixed_ips_size(); ip_index++) {
@@ -794,6 +793,7 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
         if (inet_pton(AF_INET, host_ip_address.c_str(), &(sa.sin_addr)) != 1) {
           throw std::invalid_argument("Neighbor host ip address is not in the expect format");
         }
+        packet_out_counter++;
 
         // Look up the subnet configuration to query for network type and tunnel_id
         auto subnetStateFound =
