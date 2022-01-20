@@ -208,19 +208,26 @@ int ACA_Vlan_Manager::create_l2_neighbor(string virtual_ip, string virtual_mac,
                                                                                 "br-tun",
                                                                                 match_string + action_string,
                                                                                 "add");
-
+  auto culminative_time_ptr = & culminative_time;
+  marl::schedule([=]{
+    aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().execute_openflow(*culminative_time_ptr,
+                                                                                "br-tun",
+                                                                                match_string + action_string,
+                                                                                "add");
+  });
   // create arp entry in arp responder for the l2 neighbor
   stArpCfg.mac_address = virtual_mac;
   stArpCfg.ipv4_address = virtual_ip;
   stArpCfg.vlan_id = internal_vlan_id;
 
-  auto overall_rc_ptr = & overall_rc;
+  // auto overall_rc_ptr = & overall_rc;
 
   auto arp_config_ptr = & stArpCfg;
 
+  overall_rc = ACA_ARP_Responder::get_instance().create_or_update_arp_entry(&stArpCfg);
+
   // overall_rc = ACA_ARP_Responder::get_instance().create_or_update_arp_entry(&stArpCfg);
   marl::schedule([=] {
-    *overall_rc_ptr = ACA_ARP_Responder::get_instance().create_or_update_arp_entry(arp_config_ptr);
   });
 
   // ACA_LOG_DEBUG("create_l2_neighbor arp entry with ip = %s, vlan id = %u and mac = %s\n",
