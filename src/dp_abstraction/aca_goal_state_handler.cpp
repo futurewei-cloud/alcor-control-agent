@@ -26,6 +26,9 @@
 
 using namespace alcor::schema;
 
+extern std::atomic<int> packet_in_counter;
+extern std::atomic<int> packet_out_counter;
+
 std::mutex gs_reply_mutex; // mutex for writing gs reply object
 const int resource_state_processing_batch_size = 10000; // batch size of concurrently processing a kind of resource states.
 namespace aca_goal_state_handler
@@ -362,6 +365,7 @@ int Aca_Goal_State_Handler::update_neighbor_states(GoalStateV2 &parsed_struct,
     // neighbor_count.fetch_add(1);
     // neighbor_wait_group.add();
     marl::schedule([=] {
+      packet_in_counter++;
       // defer(neighbor_wait_group.done());
       update_neighbor_state_workitem_v2(current_NeighborState, *gsv2_ptr, *reply_ptr);
     });

@@ -85,9 +85,9 @@ public:
                              packet_in_counter = 0;
                             //  ACA_LOG_INFO("%s\n", "Inited packet_in_counter to zero");
                             std::cout<<"Inited packet_in_counter to zero"<<std::endl; 
-        //                        auto packet_in_counter_thread = new std::thread(std::bind(
-        //   &OFController::print_packet_in_counter, this));
-        //                     packet_in_counter_thread->detach();
+                               auto packet_in_counter_thread = new std::thread(std::bind(
+          &OFController::print_packet_in_counter, this));
+                            packet_in_counter_thread->detach();
                           }
 
     ~OFController() = default;

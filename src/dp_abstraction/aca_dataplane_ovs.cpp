@@ -30,6 +30,9 @@ using namespace aca_ovs_l2_programmer;
 using namespace aca_ovs_l3_programmer;
 using namespace aca_zeta_programming;
 
+extern std::atomic<int> packet_in_counter;
+extern std::atomic<int> packet_out_counter;
+
 namespace aca_dataplane_ovs
 {
 static bool aca_lookup_subnet_info(GoalState &parsed_struct, const string targeted_subnet_id,
@@ -743,6 +746,7 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
                                                       GoalStateV2 &parsed_struct,
                                                       GoalStateOperationReply &gsOperationReply)
 {
+  packet_out_counter++;
   int overall_rc;
   struct sockaddr_in sa;
   string virtual_ip_address;
