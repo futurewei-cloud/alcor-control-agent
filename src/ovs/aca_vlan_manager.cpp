@@ -204,10 +204,10 @@ int ACA_Vlan_Manager::create_l2_neighbor(string virtual_ip, string virtual_mac,
                          "->NXM_NX_TUN_ID[],set_field:" + remote_host_ip +
                          "->tun_dst,output:" + VXLAN_GENERIC_OUTPORT_NUMBER;
 
-  aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().execute_openflow(culminative_time,
-                                                                                "br-tun",
-                                                                                match_string + action_string,
-                                                                                "add");
+  // aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().execute_openflow(culminative_time,
+  //                                                                               "br-tun",
+  //                                                                               match_string + action_string,
+  //                                                                               "add");
   auto culminative_time_ptr = & culminative_time;
   marl::schedule([=]{
     aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().execute_openflow(*culminative_time_ptr,
