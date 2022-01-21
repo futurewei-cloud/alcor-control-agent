@@ -733,9 +733,7 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
           overall_rc, culminative_dataplane_programming_time,
           culminative_network_configuration_time, operation_total_time);
 
-  if (overall_rc == EXIT_SUCCESS) {
-    ACA_LOG_INFO("%s", "Successfully configured the neighbor state.\n");
-  } else {
+  if (overall_rc != EXIT_SUCCESS) {
     ACA_LOG_ERROR("Unable to configure the neighbor state: rc=%d\n", overall_rc);
   }
 
@@ -912,9 +910,7 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
     overall_rc = -EFAULT;
   }
 
-  if (overall_rc == EXIT_SUCCESS) {
-    ACA_LOG_INFO("%s", "Successfully configured the neighbor state.\n");
-  } else {
+  if (overall_rc != EXIT_SUCCESS) {
     ACA_LOG_ERROR("Unable to configure the neighbor state: rc=%d\n", overall_rc);
   }
   
