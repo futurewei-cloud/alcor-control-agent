@@ -289,16 +289,16 @@ int ACA_ARP_Responder::_parse_arp_request(uint32_t in_port, vlan_message *vlanms
 
   // auto requested_ip = _get_requested_ip(arpmsg);
 
-  current_arp_data->mac_address = "6c:dd:ee:00:11:22";
+  // current_arp_data->mac_address = "6c:dd:ee:00:11:22";
 
-  // put this .find here just to make sure that there's a lookup operation.
-  assert(!_arp_db.find(stData, current_arp_data));
+  // // put this .find here just to make sure that there's a lookup operation.
+  // assert(!_arp_db.find(stData, current_arp_data));
 
-  arpreply = _pack_arp_reply(arpmsg, current_arp_data->mac_address);
-  arp_xmit(in_port, vlanmsg, arpreply, 1, of_connection_id);
-  return EXIT_SUCCESS;
+  // arpreply = _pack_arp_reply(arpmsg, current_arp_data->mac_address);
+  // arp_xmit(in_port, vlanmsg, arpreply, 1, of_connection_id);
+  // return EXIT_SUCCESS;
 
-  /*
+  
   // if not find the corresponding mac address in the db based on ip and vlan id, resubmit to table 22
   // else construct an arp reply
   if (!_arp_db.find(stData, current_arp_data)) {
@@ -313,7 +313,7 @@ int ACA_ARP_Responder::_parse_arp_request(uint32_t in_port, vlan_message *vlanms
     arp_xmit(in_port, vlanmsg, arpreply, 1, of_connection_id);
     return EXIT_SUCCESS;
   }
-  */
+  
 }
 
 arp_message *ACA_ARP_Responder::_pack_arp_reply(arp_message *arpreq, string mac_address)
