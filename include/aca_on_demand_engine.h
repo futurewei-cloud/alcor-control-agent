@@ -32,6 +32,11 @@
 #include "goalstateprovisioner.grpc.pb.h"
 //#include "ctpl/ctpl_stl.h"
 
+#include "marl/defer.h"
+#include "marl/event.h"
+#include "marl/scheduler.h"
+#include "marl/waitgroup.h"
+
 using namespace alcor::schema;
 using namespace std;
 //using namespace ctpl;
@@ -175,13 +180,19 @@ class ACA_On_Demand_Engine {
     int cores = std::thread::hardware_concurrency();
     ACA_LOG_DEBUG("This host has %ld cores, setting the size of the thread pools to be %ld\n",
                   cores, thread_pools_size);
-    on_demand_reply_processing_thread = new std::thread(
-            std::bind(&ACA_On_Demand_Engine::process_async_grpc_replies, this));
+    marl::schedule([=]{
+      process_async_grpc_replies();
+    });
+    marl::schedule([=]{
+      clean_remaining_payload();
+    });
+    // on_demand_reply_processing_thread = new std::thread(
+    //         std::bind(&ACA_On_Demand_Engine::process_async_grpc_replies, this));
 
-    on_demand_reply_processing_thread->detach();
-    on_demand_payload_cleaning_thread = new std::thread(
-            std::bind(&ACA_On_Demand_Engine::clean_remaining_payload, this));
-    on_demand_payload_cleaning_thread->detach();
+    // on_demand_reply_processing_thread->detach();
+    // on_demand_payload_cleaning_thread = new std::thread(
+    //         std::bind(&ACA_On_Demand_Engine::clean_remaining_payload, this));
+    // on_demand_payload_cleaning_thread->detach();
     //thread_pool_.resize(thread_pools_size);
   };
   ~ACA_On_Demand_Engine()

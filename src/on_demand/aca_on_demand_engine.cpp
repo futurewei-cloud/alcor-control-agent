@@ -202,6 +202,9 @@ void ACA_On_Demand_Engine::process_async_grpc_replies()
                       to_string(replyStatus).c_str());
         ACA_LOG_DEBUG("Received hostOperationReply in thread id: [%ld]\n",
                      std::this_thread::get_id());
+        marl::schedule([=]{
+          process_async_replies_asyncly(request_id, replyStatus, received_ncm_reply_time);
+        });
         //thread_pool_.push(std::bind(&ACA_On_Demand_Engine::process_async_replies_asyncly, this,
         //                     request_id, replyStatus, received_ncm_reply_time));
         //ACA_LOG_DEBUG("After using the thread pool, we have %ld idle threads in the pool, thread pool size: %ld\n",
