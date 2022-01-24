@@ -32,9 +32,6 @@ message(STATUS "Using gRPC ${gRPC_VERSION}")
 set(_GRPC_GRPCPP_UNSECURE gRPC::grpc++_unsecure)
 set(_GRPC_CPP_PLUGIN_EXECUTABLE $<TARGET_FILE:gRPC::grpc_cpp_plugin>)
 
-find_package(fmt)
-message(STATUS "Using fmt ${fmt_VERSION}")
-
 # Setup gtest
 enable_testing()
 find_package(GTest REQUIRED)
@@ -59,7 +56,6 @@ add_executable(
 # Link test executable against gtest & gtest_main
 target_link_libraries(aca_tests gtest gtest_main)
 target_link_libraries(aca_tests pulsar)
-target_link_libraries(aca_tests fmt)
 #target_link_libraries(aca_tests openvswitch)
 target_link_libraries(aca_tests AlcorControlAgentLib)
 target_link_libraries(aca_tests proto)
@@ -77,7 +73,6 @@ add_test(
 add_executable(gs_tests func_tests/gs_tests.cpp)
 
 target_link_libraries(gs_tests AlcorControlAgentLib)
-target_link_libraries(gs_tests fmt)
 target_link_libraries(gs_tests proto)
 target_link_libraries(gs_tests ${PROTOBUF_LIBRARY})
 target_link_libraries(gs_tests grpc)

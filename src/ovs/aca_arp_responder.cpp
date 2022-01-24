@@ -104,8 +104,8 @@ int ACA_ARP_Responder::add_arp_entry(arp_config *arp_cfg_in)
 
     _arp_db.insert(stData, current_arp_data);
 
-    // ACA_LOG_DEBUG("Arp Entry with ip: %s and vlan id %u added\n",
-    //               arp_cfg_in->ipv4_address.c_str(), arp_cfg_in->vlan_id);
+    ACA_LOG_DEBUG("Arp Entry with ip: %s and vlan id %u added\n",
+                  arp_cfg_in->ipv4_address.c_str(), arp_cfg_in->vlan_id);
 
     return EXIT_SUCCESS;
   } catch (std::invalid_argument &ia) {
@@ -206,7 +206,7 @@ int ACA_ARP_Responder::_validate_arp_entry(arp_config *arp_cfg_in)
 
 /************* Operation and procedure for dataplane *******************/
 
-int ACA_ARP_Responder::arp_recv(uint32_t in_port, void *vlan_hdr, void *message, int of_connection_id)
+int ACA_ARP_Responder::arp_recv(uint32_t in_port, void *vlan_hdr, void *message)
 {
   arp_message *arpmsg = nullptr;
   vlan_message *vlanmsg = nullptr;
@@ -225,10 +225,10 @@ int ACA_ARP_Responder::arp_recv(uint32_t in_port, void *vlan_hdr, void *message,
     return EXIT_FAILURE;
   }
 
-  return _parse_arp_request(in_port, vlanmsg, arpmsg, of_connection_id);
+  return _parse_arp_request(in_port, vlanmsg, arpmsg);
 }
 
-void ACA_ARP_Responder::arp_xmit(uint32_t in_port, void *vlanmsg, void *message, int is_found, int of_connection_id)
+void ACA_ARP_Responder::arp_xmit(uint32_t in_port, void *vlanmsg, void *message, int is_found)
 {
   arp_message *arpmsg = nullptr;
   string bridge = "br-tun";
@@ -248,7 +248,7 @@ void ACA_ARP_Responder::arp_xmit(uint32_t in_port, void *vlanmsg, void *message,
 
   packet = _serialize_arp_message((vlan_message *)vlanmsg, arpmsg);
   if (packet.empty()) {
-    //ACA_LOG_ERROR("%s", "Serialized ARP Reply is null!\n");
+    ACA_LOG_ERROR("%s", "Serialized ARP Reply is null!\n");
     return;
   }
 
@@ -261,17 +261,13 @@ void ACA_ARP_Responder::arp_xmit(uint32_t in_port, void *vlanmsg, void *message,
   }
 
   ACA_LOG_DEBUG("ACA_ARP_Responder sent arp packet to ovs: %s\n", options.c_str());
-  //aca_ovs_control::ACA_OVS_Control::get_instance().packet_out(bridge.c_str(),
-  //                                                            options.c_str());
-  // aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().packet_out(bridge.c_str(),
-  //                                                                         options.c_str());
 
-  aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().packet_out(of_connection_id,
+  aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().packet_out(bridge.c_str(),
                                                                           options.c_str());
 }
 
 int ACA_ARP_Responder::_parse_arp_request(uint32_t in_port, vlan_message *vlanmsg,
-                                          arp_message *arpmsg, int of_connection_id)
+                                          arp_message *arpmsg)
 {
   arp_entry_data stData;
   arp_table_data *current_arp_data = new arp_table_data;
@@ -286,18 +282,6 @@ int ACA_ARP_Responder::_parse_arp_request(uint32_t in_port, vlan_message *vlanms
   } else {
     stData.vlan_id = 0;
   }
-
-  // auto requested_ip = _get_requested_ip(arpmsg);
-
-  // current_arp_data->mac_address = "6c:dd:ee:00:11:22";
-
-  // // put this .find here just to make sure that there's a lookup operation.
-  // assert(!_arp_db.find(stData, current_arp_data));
-
-  // arpreply = _pack_arp_reply(arpmsg, current_arp_data->mac_address);
-  // arp_xmit(in_port, vlanmsg, arpreply, 1, of_connection_id);
-  // return EXIT_SUCCESS;
-
   
   // if not find the corresponding mac address in the db based on ip and vlan id, resubmit to table 22
   // else construct an arp reply
@@ -310,10 +294,9 @@ int ACA_ARP_Responder::_parse_arp_request(uint32_t in_port, vlan_message *vlanms
                   stData.ipv4_address.c_str(), stData.vlan_id,
                   current_arp_data->mac_address.c_str());
     arpreply = _pack_arp_reply(arpmsg, current_arp_data->mac_address);
-    arp_xmit(in_port, vlanmsg, arpreply, 1, of_connection_id);
+    arp_xmit(in_port, vlanmsg, arpreply, 1);
     return EXIT_SUCCESS;
   }
-  
 }
 
 arp_message *ACA_ARP_Responder::_pack_arp_reply(arp_message *arpreq, string mac_address)

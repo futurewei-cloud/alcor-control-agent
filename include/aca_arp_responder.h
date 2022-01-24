@@ -108,11 +108,11 @@ class ACA_ARP_Responder {
   int delete_arp_entry(arp_config *arp_config_in);
 
   /* Data plane Ops */
-  int arp_recv(uint32_t in_port, void *vlanmsg, void *message, int of_connection_id);
-  void arp_xmit(uint32_t in_port, void *vlanmsg, void *message, int is_find, int of_connection_id);
+  int arp_recv(uint32_t in_port, void *vlanmsg, void *message);
+  void arp_xmit(uint32_t in_port, void *vlanmsg, void *message, int is_find);
   string _get_requested_ip(arp_message *arpmsg);
   string _get_source_ip(arp_message *arpmsg);
-  int _parse_arp_request(uint32_t in_port, vlan_message *vlanmsg, arp_message *arpmsg, int of_connection_id);
+  int _parse_arp_request(uint32_t in_port, vlan_message *vlanmsg, arp_message *arpmsg);
 
   private:
   ACA_ARP_Responder();

@@ -85,9 +85,6 @@ std::atomic_ulong g_total_vpcs_table_mutex_time(0);
 // total time for goal state update in microseconds
 std::atomic_ulong g_total_update_GS_time(0);
 
-std::atomic<int> packet_in_counter(0);
-std::atomic<int> packet_out_counter(0);
-
 bool g_demo_mode = false;
 bool g_debug_mode = false;
 int processor_count = std::thread::hardware_concurrency();
@@ -270,27 +267,24 @@ int main(int argc, char *argv[])
   }
 
   g_grpc_server = new GoalStateProvisionerAsyncServer();
-  // g_grpc_server_thread = new std::thread(std::bind(
-  //         &GoalStateProvisionerAsyncServer::RunServer, g_grpc_server, thread_pools_size));
-  // g_grpc_server_thread->detach();
-
+  
   // Create a separate thread to run the grpc client.
   g_grpc_client = new GoalStateProvisionerClientImpl();
-  g_grpc_client_thread = new std::thread(
-          std::bind(&GoalStateProvisionerClientImpl::RunClient, g_grpc_client));
-  g_grpc_client_thread->detach();
-  
 
   // Create a marl scheduler using all the logical processors available to the process.
   // Bind this scheduler to the main thread so we can call marl::schedule()
   marl::Scheduler::Config cfg_bind_hw_cores;
-  cfg_bind_hw_cores.setWorkerThreadCount(40);
+  cfg_bind_hw_cores.setWorkerThreadCount(thread_pools_size * 2);
   marl::Scheduler task_scheduler(cfg_bind_hw_cores);
   task_scheduler.bind();
   defer(task_scheduler.unbind());
 
   marl::schedule([=]{
     g_grpc_server->RunServer(thread_pools_size);
+  });
+
+  marl::schedule([=]{
+    g_grpc_client->RunClient();
   });
 
   aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().get_local_host_ips();

@@ -89,9 +89,6 @@ message(STATUS "Using gRPC ${gRPC_VERSION}")
 set(_GRPC_GRPCPP_UNSECURE gRPC::grpc++_unsecure)
 set(_GRPC_CPP_PLUGIN_EXECUTABLE $<TARGET_FILE:gRPC::grpc_cpp_plugin>)
 
-find_package(fmt)
-message(STATUS "Using fmt ${fmt_VERSION}")
-
 add_library(AlcorControlAgentLib STATIC ${SOURCES})
 target_link_libraries(AlcorControlAgentLib event) #Libevent linking is '-levent', thus linked lib is 'event' in the cmd
 target_link_libraries(AlcorControlAgentLib ssl)
@@ -99,7 +96,6 @@ target_link_libraries(AlcorControlAgentLib crypto)
 target_link_libraries(AlcorControlAgentLib rt)
 
 add_executable(AlcorControlAgent aca_main.cpp)
-target_link_libraries(AlcorControlAgent fmt)
 target_link_libraries(AlcorControlAgent cppkafka)
 target_link_libraries(AlcorControlAgent rdkafka)
 target_link_libraries(AlcorControlAgent pulsar)

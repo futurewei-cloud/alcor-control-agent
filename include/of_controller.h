@@ -47,27 +47,12 @@
 #include <unordered_map>
 #include <chrono>
 #define FMT_HEADER_ONLY
-#include <fmt/core.h>
-// #include <fmt/format.h>
-// #include <fmt/format-inl.h>
-
 
 using namespace fluid_base;
 using namespace fluid_msg;
-extern std::atomic<int> packet_in_counter;
-extern std::atomic<int> packet_out_counter;
+
 class OFController : public OFServer {
 public:
-    // std::atomic<int> packet_in_counter;
-    void print_packet_in_counter(){
-        while(true){
-            auto current_packet_in_counter = packet_in_counter.load();
-            auto current_packet_out_counter = packet_out_counter.load();
-            // fmt::print("Simple print from fmt.\n");
-            std::cout<<"Current packet_in counter: " << current_packet_in_counter<< ", currenet packet_out counter: " << current_packet_out_counter <<std::endl;
-            std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-        }
-    };
     OFController(const std::unordered_map<uint64_t, std::string> switch_dpid_map,
                  const std::unordered_map<std::string, std::string> port_id_map,
                  const char* address = "0.0.0.0",
@@ -82,12 +67,7 @@ public:
                          .supported_version(4) // OF version 1 is OF 1.3
                          .echo_interval(30)
                          .keep_data_ownership(false)) {
-                             packet_in_counter = 0;
-                            //  ACA_LOG_INFO("%s\n", "Inited packet_in_counter to zero");
-                            std::cout<<"Inited packet_in_counter to zero"<<std::endl; 
-                               auto packet_in_counter_thread = new std::thread(std::bind(
-          &OFController::print_packet_in_counter, this));
-                            packet_in_counter_thread->detach();
+
                           }
 
     ~OFController() = default;
@@ -99,8 +79,6 @@ public:
     void connection_callback(OFConnection* ofconn, OFConnection::Event type) override;
 
     OFConnection* get_instance(std::string bridge);
-
-    OFConnection* get_instance(int of_connection_id);
 
     void add_switch_to_conn_map(std::string bridge, int ofconn_id, OFConnection* ofconn);
 
@@ -116,13 +94,7 @@ public:
 
     void execute_flow(const std::string br, const std::string flow_str, const std::string action = "add");
 
-    void execute_flow(const int br, const std::string flow_str, const std::string action = "add");
-
     void packet_out(const char* br, const char* opt);
-
-    void packet_out(int of_connection_id, const char* opt);
-
-    void send_barrier_req(const std::string br, uint32_t xid);
 
 private:
 

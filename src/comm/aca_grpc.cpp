@@ -48,7 +48,6 @@ Status GoalStateProvisionerAsyncServer::ShutDownServer()
   ACA_LOG_INFO("%s", "Shutdown server");
   server_->Shutdown();
   cq_->Shutdown();
-//   thread_pool_.stop();
   keepReadingFromCq_ = false;
   return Status::OK;
 }
@@ -280,15 +279,7 @@ void GoalStateProvisionerAsyncServer::AsyncWorkder()
 void GoalStateProvisionerAsyncServer::RunServer(int thread_pool_size)
 {
   ACA_LOG_INFO("Start of RunServer, pool size %ld\n", thread_pool_size);
-
-//   thread_pool_.resize(thread_pool_size);
-//   ACA_LOG_DEBUG("Async GRPC SERVER: Resized thread pool to %ld threads, start waiting for the pool to have enough threads\n",
-//                 thread_pool_size);
-//   /* wait for thread pool to initialize*/
-//   while (thread_pool_.n_idle() != thread_pool_.size()) {
-//     ACA_LOG_DEBUG("%s\n", "Still waiting...sleep 1 ms");
-//     std::this_thread::sleep_for(std::chrono::milliseconds(1));
-//   };
+  
   ACA_LOG_DEBUG("Async GRPC SERVER: finised resizing thread pool to %ld threads\n",
                 thread_pool_size);
   //  Create the server
@@ -336,7 +327,6 @@ void GoalStateProvisionerAsyncServer::RunServer(int thread_pool_size)
 
   for (int i = 0; i < thread_pool_size; i++) {
     ACA_LOG_DEBUG("Pushing the %ldth async worker into the pool", i);
-//     thread_pool_.push(std::bind(&GoalStateProvisionerAsyncServer::AsyncWorkder, this));
     marl::schedule([=]{
         AsyncWorkder();
     });

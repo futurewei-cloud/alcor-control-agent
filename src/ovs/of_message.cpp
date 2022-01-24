@@ -27,8 +27,7 @@
 #include <openvswitch/ofp-util.h>
 #include <openvswitch/ofp-parse.h>
 #include <openvswitch/ofp-print.h>
-extern std::atomic<int> packet_in_counter;
-extern std::atomic<int> packet_out_counter;
+
 
 enum {
     ADD_FLOW = 0,
@@ -47,7 +46,7 @@ struct FreeDeleter {
 typedef std::unique_ptr<char, FreeDeleter<char>> OFString;
 typedef std::unique_ptr<ofpact, FreeDeleter<ofpact>> OFPact;
 
-const ofputil_protocol DEFAULT_OF_VERSION = OFPUTIL_P_OF13_OXM;//OFPUTIL_P_OF10_NXM_TID;
+const ofputil_protocol DEFAULT_OF_VERSION = OFPUTIL_P_OF13_OXM;
 const ofputil_protocol BUNDLE_OF_VERSION  = OFPUTIL_P_OF14_OXM;
 
 class OFPBuf : public OFRawBuf {

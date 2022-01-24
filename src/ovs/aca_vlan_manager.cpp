@@ -29,18 +29,11 @@
 #include <shared_mutex>
 #include <arpa/inet.h>
 
-
-#include "marl/defer.h"
-#include "marl/event.h"
-#include "marl/scheduler.h"
-#include "marl/waitgroup.h"
-
 using namespace aca_ovs_control;
 using namespace aca_ovs_l2_programmer;
 using namespace aca_arp_responder;
 
 extern std::atomic_ulong g_total_vpcs_table_mutex_time;
-atomic<int> processed_neighbor_state_count(0);
 
 namespace aca_vlan_manager
 {
@@ -189,7 +182,7 @@ int ACA_Vlan_Manager::create_l2_neighbor(string virtual_ip, string virtual_mac,
                                          string remote_host_ip, uint tunnel_id,
                                          ulong & culminative_time)
 {
-  // ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::create_l2_neighbor ---> Entering\n");
+  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::create_l2_neighbor ---> Entering\n");
   int overall_rc;
   int internal_vlan_id = get_or_create_vlan_id(tunnel_id);
   arp_config stArpCfg;
@@ -214,25 +207,12 @@ int ACA_Vlan_Manager::create_l2_neighbor(string virtual_ip, string virtual_mac,
   stArpCfg.ipv4_address = virtual_ip;
   stArpCfg.vlan_id = internal_vlan_id;
 
-  // auto overall_rc_ptr = & overall_rc;
-
-  // auto arp_config_ptr = & stArpCfg;
-
   overall_rc = ACA_ARP_Responder::get_instance().create_or_update_arp_entry(&stArpCfg);
 
-  // overall_rc = ACA_ARP_Responder::get_instance().create_or_update_arp_entry(&stArpCfg);
-  // marl::schedule([=] {
-  // });
+  ACA_LOG_DEBUG("create_l2_neighbor arp entry with ip = %s, vlan id = %u and mac = %s\n",
+                virtual_ip.c_str(), internal_vlan_id, virtual_mac.c_str());
 
-  // ACA_LOG_DEBUG("create_l2_neighbor arp entry with ip = %s, vlan id = %u and mac = %s\n",
-  //               virtual_ip.c_str(), internal_vlan_id, virtual_mac.c_str());
-
-  // ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::create_l2_neighbor <--- Exiting\n");
-  processed_neighbor_state_count ++;
-  if(processed_neighbor_state_count.load() == 970000){ // send barrier request at 970k th neighbor
-    auto of_ctrler = aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().ofctrl;
-    of_ctrler->send_barrier_req("br-tun", 1000000); // set xid to 1,000,000
-  }
+  ACA_LOG_DEBUG("%s", "ACA_Vlan_Manager::create_l2_neighbor <--- Exiting\n");
 
   return overall_rc;
 }

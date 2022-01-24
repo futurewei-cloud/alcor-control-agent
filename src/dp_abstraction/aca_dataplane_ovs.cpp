@@ -30,9 +30,6 @@ using namespace aca_ovs_l2_programmer;
 using namespace aca_ovs_l3_programmer;
 using namespace aca_zeta_programming;
 
-extern std::atomic<int> packet_in_counter;
-extern std::atomic<int> packet_out_counter;
-
 namespace aca_dataplane_ovs
 {
 static bool aca_lookup_subnet_info(GoalState &parsed_struct, const string targeted_subnet_id,
@@ -744,8 +741,6 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
                                                       GoalStateV2 &parsed_struct,
                                                       GoalStateOperationReply &gsOperationReply)
 {
-  packet_out_counter++;
-
   int overall_rc;
   struct sockaddr_in sa;
   string virtual_ip_address;
@@ -768,7 +763,7 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
     // validate_fixed_ip_size_time = chrono::high_resolution_clock::now();
     // TODO: need to design the usage of current_NeighborConfiguration.revision_number()
     assert(current_NeighborConfiguration.revision_number() > 0);
-    
+
     for (int ip_index = 0;
          ip_index < current_NeighborConfiguration.fixed_ips_size(); ip_index++) {
       auto current_fixed_ip = current_NeighborConfiguration.fixed_ips(ip_index);
@@ -803,8 +798,8 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
           SubnetConfiguration current_SubnetConfiguration =
                   current_SubnetState.configuration();
 
-          // ACA_LOG_DEBUG("current_SubnetConfiguration subnet ID: %s.\n",
-          //               current_SubnetConfiguration.id().c_str());
+          ACA_LOG_DEBUG("current_SubnetConfiguration subnet ID: %s.\n",
+                        current_SubnetConfiguration.id().c_str());
 
           found_network_type = current_SubnetConfiguration.network_type();
 
@@ -821,15 +816,15 @@ int ACA_Dataplane_OVS::update_neighbor_state_workitem(NeighborState current_Neig
                         ip_index, current_fixed_ip.subnet_id().c_str());
           overall_rc = -EXIT_FAILURE;
         } else {
-          // ACA_LOG_DEBUG(
-          //         "Neighbor Operation:%s: id: %s, neighbor_type:%s, vpc_id:%s, network_type:%d, ip_index: %d,"
-          //         "virtual_ip_address:%s, virtual_mac_address:%s, neighbor_host_ip_address:%s, tunnel_id:%d\n",
-          //         aca_get_operation_string(current_NeighborState.operation_type()),
-          //         current_NeighborConfiguration.id().c_str(),
-          //         aca_get_neighbor_type_string(current_fixed_ip.neighbor_type()),
-          //         current_NeighborConfiguration.vpc_id().c_str(), found_network_type,
-          //         ip_index, virtual_ip_address.c_str(), virtual_mac_address.c_str(),
-          //         host_ip_address.c_str(), found_tunnel_id);
+          ACA_LOG_DEBUG(
+                  "Neighbor Operation:%s: id: %s, neighbor_type:%s, vpc_id:%s, network_type:%d, ip_index: %d,"
+                  "virtual_ip_address:%s, virtual_mac_address:%s, neighbor_host_ip_address:%s, tunnel_id:%d\n",
+                  aca_get_operation_string(current_NeighborState.operation_type()),
+                  current_NeighborConfiguration.id().c_str(),
+                  aca_get_neighbor_type_string(current_fixed_ip.neighbor_type()),
+                  current_NeighborConfiguration.vpc_id().c_str(), found_network_type,
+                  ip_index, virtual_ip_address.c_str(), virtual_mac_address.c_str(),
+                  host_ip_address.c_str(), found_tunnel_id);
 
           // with Alcor DVR, a cross subnet packet will be routed to the destination subnet.
           // that means a L3 neighbor will become a L2 neighbor, therefore, call the below

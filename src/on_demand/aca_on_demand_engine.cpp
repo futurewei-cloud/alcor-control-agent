@@ -59,8 +59,7 @@ extern std::atomic_ulong g_total_execute_system_time;
 extern bool g_demo_mode;
 extern string g_ncm_address, g_ncm_port;
 extern GoalStateProvisionerClientImpl *g_grpc_client;
-extern std::atomic<int> packet_in_counter;
-extern std::atomic<int> packet_out_counter;
+
 
 namespace aca_on_demand_engine
 {
@@ -138,7 +137,7 @@ void ACA_On_Demand_Engine::process_async_replies_asyncly(
 
     on_demand(request_id, replyStatus, request_payload->in_port,
               request_payload->packet, request_payload->packet_size,
-              request_payload->protocol, request_payload->insert_time, request_payload->of_connection_id);
+              request_payload->protocol, request_payload->insert_time);
     std::chrono::_V2::steady_clock::time_point start = std::chrono::steady_clock::now();
     /* Critical section begins */
     _payload_map_mutex.lock();
@@ -205,10 +204,6 @@ void ACA_On_Demand_Engine::process_async_grpc_replies()
         marl::schedule([=]{
           process_async_replies_asyncly(request_id, replyStatus, received_ncm_reply_time);
         });
-        //thread_pool_.push(std::bind(&ACA_On_Demand_Engine::process_async_replies_asyncly, this,
-        //                     request_id, replyStatus, received_ncm_reply_time));
-        //ACA_LOG_DEBUG("After using the thread pool, we have %ld idle threads in the pool, thread pool size: %ld\n",
-        //              thread_pool_.n_idle(), thread_pool_.size());
       }
     } else {
       ACA_LOG_INFO("%s\n", "Got an GRPC reply that is NOT OK, don't need to process the data");
@@ -250,7 +245,7 @@ void ACA_On_Demand_Engine::unknown_recv(uint16_t vlan_id, string ip_src,
 void ACA_On_Demand_Engine::on_demand(string uuid_for_call, OperationStatus status,
                                      uint32_t in_port, void *packet,
                                      int packet_size, Protocol protocol,
-                                     std::chrono::_V2::steady_clock::time_point insert_time, int of_connection_id)
+                                     std::chrono::_V2::steady_clock::time_point insert_time)
 {
   ACA_LOG_INFO("%s\n", "Inside of on_demand function");
   string bridge = "br-tun";
@@ -323,7 +318,7 @@ void ACA_On_Demand_Engine::on_demand(string uuid_for_call, OperationStatus statu
 
       int parse_arp_request_rc =
               aca_arp_responder::ACA_ARP_Responder::get_instance()._parse_arp_request(
-                      in_port, vlanmsg, arpmsg, of_connection_id);
+                      in_port, vlanmsg, arpmsg);
       if (parse_arp_request_rc == EXIT_SUCCESS) {
         ACA_LOG_DEBUG("%s", "On-demand arp request packet sent to arp_responder.\n");
 
@@ -340,7 +335,7 @@ void ACA_On_Demand_Engine::on_demand(string uuid_for_call, OperationStatus statu
       //aca_ovs_control::ACA_OVS_Control::get_instance().packet_out(
       //        bridge.c_str(), options.c_str());
       aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().packet_out(
-              of_connection_id, options.c_str());
+              bridge.c_str(), options.c_str());
       ACA_LOG_DEBUG("On-demand packet with protocol %d sent to ovs: %s\n",
                     protocol, options.c_str());
     }
@@ -351,7 +346,7 @@ void ACA_On_Demand_Engine::on_demand(string uuid_for_call, OperationStatus statu
   }
 }
 
-void ACA_On_Demand_Engine::parse_packet(uint32_t in_port, void *packet, int of_connection_id)
+void ACA_On_Demand_Engine::parse_packet(uint32_t in_port, void *packet)
 {
 
   const struct ether_header *eth_header;
@@ -378,17 +373,15 @@ void ACA_On_Demand_Engine::parse_packet(uint32_t in_port, void *packet, int of_c
   uint16_t ether_type = ntohs(*(uint16_t *)(base + 12));
 
   if (ether_type == ETHERTYPE_VLAN) {
-    // ACA_LOG_INFO("%s", "Ethernet Type: 802.1Q VLAN tagging (0x8100) \n");
+    ACA_LOG_INFO("%s", "Ethernet Type: 802.1Q VLAN tagging (0x8100) \n");
 
     ether_type = ntohs(*(uint16_t *)(base + 16));
     vlan_len = 4;
     vlan_hdr = (unsigned char *)(base + 12);
     vlanmsg = (vlan_message *)vlan_hdr;
     // get the vlan id from vlan header
-
     if (vlanmsg) {
       vlan_id = ntohs(vlanmsg->vlan_tci) & 0x0fff;
-      // ACA_LOG_INFO("vlan_id: %ld\n", vlan_id);
     }
   }
 
@@ -401,14 +394,9 @@ void ACA_On_Demand_Engine::parse_packet(uint32_t in_port, void *packet, int of_c
     /* compute arp message offset */
     unsigned char *arp_hdr = (unsigned char *)(base + SIZE_ETHERNET + vlan_len);
     /* arp request procedure,type = 1 */
-    // ACA_LOG_INFO("ntohs(*(uint16_t *)(arp_hdr + 6)) == %ld\n", ntohs(*(uint16_t *)(arp_hdr + 6)));
-    // ACA_LOG_INFO("arp_hdr + 6: %s", (arp_hdr + 6));
-    // for (int i = 0; i <= 6; i ++ ) {
-    //   ACA_LOG_INFO("arp_hdr + %ld = %ld\n", i , ntohs(*(uint16_t *)(arp_hdr + 6)));
-    // }
     if (ntohs(*(uint16_t *)(arp_hdr + 6)) == 0x0001) {
       if (aca_arp_responder::ACA_ARP_Responder::get_instance().arp_recv(
-                  in_port, vlan_hdr, arp_hdr, of_connection_id) == ENOTSUP) {
+                  in_port, vlan_hdr, arp_hdr) == ENOTSUP) {
         _protocol = Protocol::ARP;
         arp_message *arpmsg = (arp_message *)arp_hdr;
         ip_src = aca_arp_responder::ACA_ARP_Responder::get_instance()._get_source_ip(arpmsg);
@@ -550,7 +538,6 @@ void ACA_On_Demand_Engine::parse_packet(uint32_t in_port, void *packet, int of_c
     data->packet_size = packet_size;
     data->protocol = _protocol;
     data->insert_time = std::chrono::steady_clock::now();
-    data->of_connection_id = of_connection_id;
     std::chrono::_V2::steady_clock::time_point start = std::chrono::steady_clock::now();
 
     /* Sleep until the size is less than the max limit. */
