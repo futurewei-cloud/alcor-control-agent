@@ -77,10 +77,39 @@ bool ACA_Message_Pulsar_Producer::publish(string message)
 
   // Flush all produced messages
   producer.flush();
+  producer.close();
   return EXIT_SUCCESS;
 
 }
 
+bool ACA_Message_Pulsar_Producer::publish(string message, string orderingKey)
+{
+    Result result;
+
+    // Create a producer
+    Producer producer;
+    result = this->ptr_client->createProducer(this->topic_name,producer);
+    if(result != ResultOk){
+        ACA_LOG_ERROR("Failed to create producer, result=%d.\n", result);
+        return EXIT_FAILURE;
+    }
+
+    // Create a message
+    Message msg = MessageBuilder().setContent(message).setOrderingKey(orderingKey).build();
+    result = producer.send(msg);
+    if(result != ResultOk){
+        ACA_LOG_ERROR("Failed to send message %s.\n", message.c_str());
+        return EXIT_FAILURE;
+    }
+
+    ACA_LOG_INFO("Successfully send message %s\n", message.c_str());
+
+    // Flush all produced messages
+    producer.flush();
+    producer.close();
+    return EXIT_SUCCESS;
+
+}
 void ACA_Message_Pulsar_Producer::setBrokers(string brokers)
 {
   //TODO: validate string as IP address

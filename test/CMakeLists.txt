@@ -54,7 +54,7 @@ add_executable(
     gtest/aca_test_zeta_programming.cpp
     gtest/aca_test_arp.cpp
     gtest/aca_test_on_demand.cpp
-)
+        gtest/aca_test_mq.cpp)
 
 # Link test executable against gtest & gtest_main
 target_link_libraries(aca_tests gtest gtest_main)

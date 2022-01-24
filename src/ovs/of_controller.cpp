@@ -196,6 +196,8 @@ void OFController::add_switch_to_conn_map(std::string bridge, int ofconn_id, OFC
                  ofconn->get_id(), bridge.c_str());
 }
 
+// Removing a connection should be an atomic action, meaning that both removing from
+// switch_con_map and switch_id_map should be added under the same lock
 void OFController::remove_switch_from_conn_maps(std::string bridge, int ofconn_id){
     switch_map_mutex.lock();
 
