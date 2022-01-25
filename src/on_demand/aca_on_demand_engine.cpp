@@ -206,7 +206,7 @@ void ACA_On_Demand_Engine::process_async_grpc_replies()
         });
       }
     } else {
-      ACA_LOG_INFO("%s\n", "Got an GRPC reply that is NOT OK, don't need to process the data");
+      ACA_LOG_DEBUG("%s\n", "Got an GRPC reply that is NOT OK, don't need to process the data");
     }
   }
 }
@@ -247,7 +247,7 @@ void ACA_On_Demand_Engine::on_demand(string uuid_for_call, OperationStatus statu
                                      int packet_size, Protocol protocol,
                                      std::chrono::_V2::steady_clock::time_point insert_time)
 {
-  ACA_LOG_INFO("%s\n", "Inside of on_demand function");
+  ACA_LOG_DEBUG("%s\n", "Inside of on_demand function");
   string bridge = "br-tun";
   string inport = "in_port=controller";
   string whitespace = " ";
@@ -373,7 +373,7 @@ void ACA_On_Demand_Engine::parse_packet(uint32_t in_port, void *packet)
   uint16_t ether_type = ntohs(*(uint16_t *)(base + 12));
 
   if (ether_type == ETHERTYPE_VLAN) {
-    ACA_LOG_INFO("%s", "Ethernet Type: 802.1Q VLAN tagging (0x8100) \n");
+    ACA_LOG_DEBUG("%s", "Ethernet Type: 802.1Q VLAN tagging (0x8100) \n");
 
     ether_type = ntohs(*(uint16_t *)(base + 16));
     vlan_len = 4;

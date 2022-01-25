@@ -329,9 +329,9 @@ EXIT:
           culminative_network_configuration_time, operation_total_time);
 
   if (overall_rc == EXIT_SUCCESS) {
-    ACA_LOG_INFO("%s", "Successfully configured the port state.\n");
+    ACA_LOG_DEBUG("%s", "Successfully configured the port state.\n");
   } else if (overall_rc == EINPROGRESS) {
-    ACA_LOG_INFO("Port state returned pending: rc=%d\n", overall_rc);
+    ACA_LOG_DEBUG("Port state returned pending: rc=%d\n", overall_rc);
   } else {
     ACA_LOG_ERROR("Unable to configure the port state: rc=%d\n", overall_rc);
   }
@@ -541,9 +541,9 @@ int ACA_Dataplane_OVS::update_port_state_workitem(const PortState current_PortSt
           culminative_network_configuration_time, operation_total_time);
 
   if (overall_rc == EXIT_SUCCESS) {
-    ACA_LOG_INFO("%s", "Successfully configured the port state.\n");
+    ACA_LOG_DEBUG("%s", "Successfully configured the port state.\n");
   } else if (overall_rc == EINPROGRESS) {
-    ACA_LOG_INFO("Port state returned pending: rc=%d\n", overall_rc);
+    ACA_LOG_DEBUG("Port state returned pending: rc=%d\n", overall_rc);
   } else {
     ACA_LOG_ERROR("Unable to configure the port state: rc=%d\n", overall_rc);
   }
@@ -961,7 +961,7 @@ int ACA_Dataplane_OVS::update_router_state_workitem(RouterState current_RouterSt
           culminative_network_configuration_time, operation_total_time);
 
   if (overall_rc == EXIT_SUCCESS) {
-    ACA_LOG_INFO("%s", "Successfully configured the router state.\n");
+    ACA_LOG_DEBUG("%s", "Successfully configured the router state.\n");
   } else {
     ACA_LOG_ERROR("Unable to configure the router state: rc=%d\n", overall_rc);
   }
@@ -1018,7 +1018,7 @@ int ACA_Dataplane_OVS::update_router_state_workitem(RouterState current_RouterSt
           culminative_network_configuration_time, operation_total_time);
 
   if (overall_rc == EXIT_SUCCESS) {
-    ACA_LOG_INFO("%s", "Successfully configured the router state.\n");
+    ACA_LOG_DEBUG("%s", "Successfully configured the router state.\n");
   } else {
     ACA_LOG_ERROR("Unable to configure the router state: rc=%d\n", overall_rc);
   }
