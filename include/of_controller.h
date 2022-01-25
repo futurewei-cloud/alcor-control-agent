@@ -65,9 +65,7 @@ public:
             OFServer(address, port, nthreads, secure,
                      OFServerSettings()
                          .supported_version(4) // OF version 1 is OF 1.0 and version 4 is 1.3
-                         .echo_interval(30)
-                         .keep_data_ownership(false)) {
-
+                         .echo_interval(30)) {
                           }
 
     ~OFController() = default;
