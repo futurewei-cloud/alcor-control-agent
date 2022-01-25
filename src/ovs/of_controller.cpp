@@ -71,13 +71,11 @@ void OFController::message_callback(OFConnection* ofconn, uint8_t type, void* da
         pin->unpack((uint8_t *)data);
         uint32_t in_port = pin->match().in_port()->value();
         marl::schedule([=] {
-
             aca_on_demand_engine::ACA_On_Demand_Engine::get_instance().parse_packet(
                     in_port,
                     (void *)pin->data());
-        delete pin;
+            delete pin;
         });
-        
     } else if (type == 33) { // OFPRAW_OFPT14_BUNDLE_CONTROL
         auto t = std::chrono::high_resolution_clock::now();
 
