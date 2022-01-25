@@ -199,9 +199,9 @@ RUN echo "7--- installing marl ---" && \
     cd /var/local/git/marl && \
     git clone https://github.com/google/marl.git && \
     cd /var/local/git/marl/marl && \
-	git submodule update --init && \
-	mkdir /var/local/git/marl/marl/build && \
-	cd /var/local/git/marl/marl/build && \
-	cmake .. -DMARL_BUILD_EXAMPLES=1 -DMARL_BUILD_TESTS=1 && \
+    git submodule update --init && \
+    mkdir /var/local/git/marl/marl/build && \
+    cd /var/local/git/marl/marl/build && \
+    cmake .. -DMARL_BUILD_EXAMPLES=1 -DMARL_BUILD_TESTS=1 && \
     make && \
     cd ~
