@@ -199,8 +199,20 @@ echo "6--- installing openvswitch dependancies ---" && \
     test -f /usr/bin/ovs-vsctl && rm -rf /usr/local/sbin/ov* /usr/local/bin/ov* /usr/local/bin/vtep* && \
     cd ~
 
+echo "7--- installing marl ---" && \
+    mkdir -p /var/local/git/marl && \
+    cd /var/local/git/marl && \
+    git clone https://github.com/google/marl.git && \
+    cd /var/local/git/marl/marl && \
+	  git submodule update --init && \
+	  mkdir /var/local/git/marl/marl/build && \
+	  cd /var/local/git/marl/marl/build && \
+	  cmake .. -DMARL_BUILD_EXAMPLES=1 -DMARL_BUILD_TESTS=1 && \
+    make && \
+    cd ~
+
 PULSAR_RELEASE_TAG='pulsar-2.8.1'
-echo "7--- installing pulsar dependacies ---" && \
+echo "8--- installing pulsar dependacies ---" && \
     mkdir -p /var/local/git/pulsar && \
     wget https://archive.apache.org/dist/pulsar/${PULSAR_RELEASE_TAG}/DEB/apache-pulsar-client.deb -O /var/local/git/pulsar/apache-pulsar-client.deb && \
     wget https://archive.apache.org/dist/pulsar/${PULSAR_RELEASE_TAG}/DEB/apache-pulsar-client-dev.deb -O /var/local/git/pulsar/apache-pulsar-client-dev.deb && \
@@ -209,7 +221,7 @@ echo "7--- installing pulsar dependacies ---" && \
     rm -rf /var/local/git/pulsar 
     cd ~
 
-echo "8--- building alcor-control-agent"
+echo "9--- building alcor-control-agent"
 cd $BUILD/.. && cmake . && \
 # after cmake ., modify the generated link.txt s so that the "-lssl" and "-lcrypto" appears after the openvswitch, so that it can compile
 sed -i 's/\(-ldl -lrt -lm -lpthread\)/-lssl -lcrypto \1/' src/CMakeFiles/AlcorControlAgent.dir/link.txt && \
@@ -217,12 +229,12 @@ sed -i 's/\(-ldl -lrt -lm -lpthread\)/-lssl -lcrypto \1/' test/CMakeFiles/aca_te
 sed -i 's/\(-ldl -lrt -lm -lpthread\)/-lssl -lcrypto \1/' test/CMakeFiles/gs_tests.dir/link.txt && \
 make
 if [ -n "$1" -a "$1" = "delete-bridges" ]; then
-  echo "9--- deleting br-tun and br-int if requested"
+  echo "10--- deleting br-tun and br-int if requested"
   PATH=$PATH:/usr/local/share/openvswitch/scripts \
       LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib
   ovs-ctl --system-id=random --delete-bridges restart
 fi
 
-echo "10--- running alcor-control-agent"
+echo "11--- running alcor-control-agent"
 # sends output to null device, but stderr to console 
 nohup $BUILD/bin/AlcorControlAgent -d > /dev/null 2>&1 &
