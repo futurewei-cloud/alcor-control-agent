@@ -46,7 +46,7 @@
 #include <stdlib.h>
 #include <unordered_map>
 #include <chrono>
-#define FMT_HEADER_ONLY
+
 
 using namespace fluid_base;
 using namespace fluid_msg;
