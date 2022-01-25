@@ -104,9 +104,6 @@ private:
     // k is bridge name like 'br-int', v is OFConnection* obj
     std::unordered_map<std::string, OFConnection*> switch_conn_map;
 
-    // k is dpid like 1, 2, 3, v is OFConnection* obj
-    std::unordered_map<int, OFConnection*> switch_id_connection_map;
-
     // k is ofconnection id like '0', v is bridge name associated with it
     std::unordered_map<int, std::string> switch_id_map;
 
@@ -117,7 +114,6 @@ private:
     std::unordered_map<std::string, std::string> port_id_map;
 
     std::mutex switch_map_mutex;
-    std::mutex switch_id_connection_map_mutex;
 
     void send_flow(OFConnection *ofconn, ofmsg_ptr_t &&p);
 

@@ -30,7 +30,6 @@
 #include <unordered_map>
 #include "aca_log.h"
 #include "goalstateprovisioner.grpc.pb.h"
-//#include "ctpl/ctpl_stl.h"
 
 #include "marl/defer.h"
 #include "marl/event.h"
