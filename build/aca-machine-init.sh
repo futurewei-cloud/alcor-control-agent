@@ -236,5 +236,8 @@ if [ -n "$1" -a "$1" = "delete-bridges" ]; then
 fi
 
 echo "11--- running alcor-control-agent"
-# sends output to null device, but stderr to console 
-nohup $BUILD/bin/AlcorControlAgent -d > /dev/null 2>&1 &
+# kill current AlcorControlAgent process if any
+pkill -f AlcorControlAgent
+# launch newly built AlcorControlAgent with default debug mode as 'false'
+# sends output to null device, but stderr to console
+nohup $BUILD/bin/AlcorControlAgent > /dev/null 2>&1 &
