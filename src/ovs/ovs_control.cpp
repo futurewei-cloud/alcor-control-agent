@@ -13,6 +13,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+/*
+ This file is legacy code path, that we used vconn from ovs code to connect and manipulate ovs by the same way of ovs cmd tools
+ From 10/30/2021 release, ovs connection and events/flows manipulation are already handled by of_controller.cpp
+ We leave this legacy file for reference
+ */
+
 #include "aca_log.h"
 #include "aca_util.h"
 #include "aca_on_demand_engine.h"
