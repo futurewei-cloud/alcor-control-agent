@@ -15,12 +15,14 @@
 
 #include "aca_log.h"
 #include "aca_util.h"
-#include "ovs_control.h"
+#include "aca_on_demand_engine.h"
+
 #undef OFP_ASSERT
 #undef CONTAINER_OF
 #undef ARRAY_SIZE
 #undef ROUND_UP
-// #include "aca_on_demand_engine.h"
+#include "ovs_control.h"
+
 #include <sstream> // std::(istringstream)
 #include <string> // std::(string)
 #include <signal.h>
@@ -45,7 +47,7 @@
 #include <openvswitch/vlog.h>
 
 using namespace std;
-// using namespace aca_on_demand_engine;
+using namespace aca_on_demand_engine;
 
 extern std::atomic_ulong g_total_execute_openflow_time;
 
