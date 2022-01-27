@@ -79,6 +79,7 @@ std::atomic_ulong g_total_vpcs_table_mutex_time(0);
 std::atomic_ulong g_total_update_GS_time(0);
 // total time for ACA message in microseconds
 std::atomic_ulong g_total_ACA_Message_time(0);
+
 bool g_demo_mode = false;
 bool g_debug_mode = false;
 

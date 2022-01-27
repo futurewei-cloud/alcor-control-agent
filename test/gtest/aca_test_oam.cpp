@@ -13,6 +13,7 @@
 //     WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include "gtest/gtest.h"
+#include "aca_ovs_l2_programmer.h"
 #include "goalstateprovisioner.grpc.pb.h"
 #define private public
 #include "aca_zeta_oam_server.h"
@@ -20,7 +21,6 @@
 #include <string.h>
 #include "aca_vlan_manager.h"
 #include "aca_zeta_programming.h"
-#include "aca_ovs_l2_programmer.h"
 
 #undef OFP_ASSERT
 #undef CONTAINER_OF

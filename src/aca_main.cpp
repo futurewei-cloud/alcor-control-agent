@@ -35,6 +35,11 @@
 #include <grpcpp/grpcpp.h>
 #include <cmath>
 
+#include "marl/defer.h"
+#include "marl/event.h"
+#include "marl/scheduler.h"
+#include "marl/waitgroup.h"
+
 using aca_message_pulsar::ACA_Message_Pulsar_Consumer;
 using aca_ovs_control::ACA_OVS_Control;
 using std::string;
@@ -240,6 +245,7 @@ int main(int argc, char *argv[])
     }
   }
 
+  
   // fill in the information if not provided in command line args
   if (g_broker_list == EMPTY_STRING) {
     g_broker_list = BROKER_LIST;
@@ -261,15 +267,25 @@ int main(int argc, char *argv[])
   }
 
   g_grpc_server = new GoalStateProvisionerAsyncServer();
-  g_grpc_server_thread = new std::thread(std::bind(
-          &GoalStateProvisionerAsyncServer::RunServer, g_grpc_server, thread_pools_size));
-  g_grpc_server_thread->detach();
-
+  
   // Create a separate thread to run the grpc client.
   g_grpc_client = new GoalStateProvisionerClientImpl();
-  g_grpc_client_thread = new std::thread(
-          std::bind(&GoalStateProvisionerClientImpl::RunClient, g_grpc_client));
-  g_grpc_client_thread->detach();
+
+  // Create a marl scheduler using all the logical processors available to the process.
+  // Bind this scheduler to the main thread so we can call marl::schedule()
+  marl::Scheduler::Config cfg_bind_hw_cores;
+  cfg_bind_hw_cores.setWorkerThreadCount(thread_pools_size * 2);
+  marl::Scheduler task_scheduler(cfg_bind_hw_cores);
+  task_scheduler.bind();
+  defer(task_scheduler.unbind());
+
+  marl::schedule([=]{
+    g_grpc_server->RunServer(thread_pools_size);
+  });
+
+  marl::schedule([=]{
+    g_grpc_client->RunClient();
+  });
 
   aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().get_local_host_ips();
 

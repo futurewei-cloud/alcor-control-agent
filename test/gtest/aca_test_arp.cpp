@@ -13,10 +13,10 @@
 //     WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include "gtest/gtest.h"
+#include "aca_ovs_l2_programmer.h"
 #define private public
 #include "aca_arp_responder.h"
 #include "aca_net_config.h"
-#include "aca_ovs_l2_programmer.h"
 #include "aca_comm_mgr.h"
 #include "aca_util.h"
 #include "goalstate.pb.h"

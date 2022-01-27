@@ -46,6 +46,9 @@
 #undef ARRAY_SIZE
 #undef ROUND_UP
 #include "aca_on_demand_engine.h"
+#include <openvswitch/ofp-errors.h>
+//#include <openvswitch/ofp-packet.h>
+#include <openvswitch/ofp-util.h>
 
 using namespace std;
 using namespace aca_vlan_manager;
@@ -56,6 +59,7 @@ extern std::atomic_ulong g_total_execute_system_time;
 extern bool g_demo_mode;
 extern string g_ncm_address, g_ncm_port;
 extern GoalStateProvisionerClientImpl *g_grpc_client;
+
 
 namespace aca_on_demand_engine
 {
@@ -197,13 +201,12 @@ void ACA_On_Demand_Engine::process_async_grpc_replies()
                       to_string(replyStatus).c_str());
         ACA_LOG_DEBUG("Received hostOperationReply in thread id: [%ld]\n",
                      std::this_thread::get_id());
-        thread_pool_.push(std::bind(&ACA_On_Demand_Engine::process_async_replies_asyncly, this,
-                             request_id, replyStatus, received_ncm_reply_time));
-        ACA_LOG_DEBUG("After using the thread pool, we have %ld idle threads in the pool, thread pool size: %ld\n",
-                      thread_pool_.n_idle(), thread_pool_.size());
+        marl::schedule([=]{
+          process_async_replies_asyncly(request_id, replyStatus, received_ncm_reply_time);
+        });
       }
     } else {
-      ACA_LOG_INFO("%s\n", "Got an GRPC reply that is NOT OK, don't need to process the data");
+      ACA_LOG_DEBUG("%s\n", "Got an GRPC reply that is NOT OK, don't need to process the data");
     }
   }
 }
@@ -228,7 +231,7 @@ void ACA_On_Demand_Engine::unknown_recv(uint16_t vlan_id, string ip_src,
   new_state_requests->set_ethertype(EtherType::IPV4);
   std::chrono::_V2::steady_clock::time_point call_ncm_time =
           std::chrono::steady_clock::now();
-  ACA_LOG_DEBUG("For UUID: [%s], calling NCM for info of IP [%s] at: [%ld], tunnel_id: []\n",
+  ACA_LOG_DEBUG("For UUID: [%s], calling NCM for info of IP [%s] at: [%ld], tunnel_id: [%ld]\n",
                 uuid_str, ip_dest.c_str(), call_ncm_time, tunnel_id);
   std::chrono::_V2::high_resolution_clock::time_point start =
           std::chrono::high_resolution_clock::now();
@@ -244,7 +247,7 @@ void ACA_On_Demand_Engine::on_demand(string uuid_for_call, OperationStatus statu
                                      int packet_size, Protocol protocol,
                                      std::chrono::_V2::steady_clock::time_point insert_time)
 {
-  ACA_LOG_INFO("%s\n", "Inside of on_demand function");
+  ACA_LOG_DEBUG("%s\n", "Inside of on_demand function");
   string bridge = "br-tun";
   string inport = "in_port=controller";
   string whitespace = " ";
@@ -345,14 +348,15 @@ void ACA_On_Demand_Engine::on_demand(string uuid_for_call, OperationStatus statu
 
 void ACA_On_Demand_Engine::parse_packet(uint32_t in_port, void *packet)
 {
+
   const struct ether_header *eth_header;
   /* The packet is larger than the ether_header struct,
-    but we just want to look at the first part of the packet
-    that contains the header. We force the compiler
-    to treat the pointer to the packet as just a pointer
-    to the ether_header. The data payload of the packet comes
-    after the headers. Different packet types have different header
-    lengths though, but the ethernet header is always the same (14 bytes) */
+     but we just want to look at the first part of the packet
+     that contains the header. We force the compiler
+     to treat the pointer to the packet as just a pointer
+     to the ether_header. The data payload of the packet comes
+     after the headers. Different packet types have different header
+     lengths though, but the ethernet header is always the same (14 bytes) */
   eth_header = (struct ether_header *)packet;
 
   ACA_LOG_DEBUG("Source Mac: %s\n", ether_ntoa((ether_addr *)&eth_header->ether_shost));
@@ -367,8 +371,10 @@ void ACA_On_Demand_Engine::parse_packet(uint32_t in_port, void *packet)
   Protocol _protocol = Protocol::Protocol_INT_MAX_SENTINEL_DO_NOT_USE_;
 
   uint16_t ether_type = ntohs(*(uint16_t *)(base + 12));
+
   if (ether_type == ETHERTYPE_VLAN) {
-    ACA_LOG_INFO("%s", "Ethernet Type: 802.1Q VLAN tagging (0x8100) \n");
+    ACA_LOG_DEBUG("%s", "Ethernet Type: 802.1Q VLAN tagging (0x8100) \n");
+
     ether_type = ntohs(*(uint16_t *)(base + 16));
     vlan_len = 4;
     vlan_hdr = (unsigned char *)(base + 12);
@@ -380,6 +386,7 @@ void ACA_On_Demand_Engine::parse_packet(uint32_t in_port, void *packet)
   }
 
   if (ether_type == ETHERTYPE_ARP) {
+
     ACA_LOG_DEBUG("%s", "Ethernet Type: ARP (0x0806) \n");
     ACA_LOG_DEBUG("   From: %s\n", inet_ntoa(*(in_addr *)(base + 14 + vlan_len + 14)));
     ACA_LOG_DEBUG("     to: %s\n",
