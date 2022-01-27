@@ -1013,10 +1013,10 @@ void OVS_Control::monitor_vconn(vconn *vconn, bool reply_to_echo_requests,
                                                      &buffer_idp, &continuation);
                     uint32_t in_port = pin.flow_metadata.flow.in_port.ofp_port;
                     /*
-            The pin.packet here has the same memory address, even after multiple calls.
-            If you intent to store it somewhere, it is advised to make a copy of it.
-          */
-                    // ACA_On_Demand_Engine::get_instance().parse_packet(in_port, pin.packet);
+                     The pin.packet here has the same memory address, even after multiple calls.
+                     If you intent to store it somewhere, it is advised to make a copy of it.
+                     */
+                    ACA_On_Demand_Engine::get_instance().parse_packet(in_port, pin.packet);
 
                     if (error) {
                         fprintf(stderr, "decoding packet-in failed: %s",
