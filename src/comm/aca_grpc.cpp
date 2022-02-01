@@ -31,6 +31,11 @@
 #include "aca_log.h"
 #include "aca_grpc.h"
 
+#include "marl/defer.h"
+#include "marl/event.h"
+#include "marl/scheduler.h"
+#include "marl/waitgroup.h"
+
 extern string g_grpc_server_port;
 extern string g_ncm_address;
 extern string g_ncm_port;
@@ -43,7 +48,6 @@ Status GoalStateProvisionerAsyncServer::ShutDownServer()
   ACA_LOG_INFO("%s", "Shutdown server");
   server_->Shutdown();
   cq_->Shutdown();
-  thread_pool_.stop();
   keepReadingFromCq_ = false;
   return Status::OK;
 }
@@ -214,14 +218,19 @@ void GoalStateProvisionerAsyncServer::ProcessPushGoalStatesStreamAsyncCall(
           streamingCall->status_ = AsyncGoalStateProvionerCallBase::CallStatus::SENT;
           streamingCall->hasReadFromStream = false;
           streamingCall->stream_.Write(streamingCall->gsOperationReply_, baseCall);
-          streamingCall->gsOperationReply_.Clear();
         }
       }
       break;
     case AsyncGoalStateProvionerCallBase::CallStatus::SENT:
-      ACA_LOG_DEBUG("%s\n", "Nothing to do when a PushGoalStatesStream call in at SENT state");
+      streamingCall->status_ = AsyncGoalStateProvionerCallBase::CallStatus::DESTROY;
+      streamingCall->stream_.Finish(Status::OK, baseCall);
+      break;
+    case AsyncGoalStateProvionerCallBase::CallStatus::DESTROY:
+      streamingCall->gsOperationReply_.Clear();
+      delete (PushGoalStatesStreamAsyncCall *)baseCall;
       break;
     default:
+      ACA_LOG_DEBUG("%s\n", "PushGoalStatesStream call in at DEFAULT state");
       break;
     }
   }
@@ -270,15 +279,7 @@ void GoalStateProvisionerAsyncServer::AsyncWorkder()
 void GoalStateProvisionerAsyncServer::RunServer(int thread_pool_size)
 {
   ACA_LOG_INFO("Start of RunServer, pool size %ld\n", thread_pool_size);
-
-  thread_pool_.resize(thread_pool_size);
-  ACA_LOG_DEBUG("Async GRPC SERVER: Resized thread pool to %ld threads, start waiting for the pool to have enough threads\n",
-                thread_pool_size);
-  /* wait for thread pool to initialize*/
-  while (thread_pool_.n_idle() != thread_pool_.size()) {
-    ACA_LOG_DEBUG("%s\n", "Still waiting...sleep 1 ms");
-    std::this_thread::sleep_for(std::chrono::milliseconds(1));
-  };
+  
   ACA_LOG_DEBUG("Async GRPC SERVER: finised resizing thread pool to %ld threads\n",
                 thread_pool_size);
   //  Create the server
@@ -326,6 +327,8 @@ void GoalStateProvisionerAsyncServer::RunServer(int thread_pool_size)
 
   for (int i = 0; i < thread_pool_size; i++) {
     ACA_LOG_DEBUG("Pushing the %ldth async worker into the pool", i);
-    thread_pool_.push(std::bind(&GoalStateProvisionerAsyncServer::AsyncWorkder, this));
+    marl::schedule([=]{
+        AsyncWorkder();
+    });
   }
 }

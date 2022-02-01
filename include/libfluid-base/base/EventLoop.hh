@@ -17,6 +17,9 @@
 #ifndef __EVENTLOOP_HH__
 #define __EVENTLOOP_HH__
 
+#include "marl/defer.h"
+#include "marl/scheduler.h"
+
 namespace fluid_base {
 
 class BaseOFServer;
@@ -41,7 +44,7 @@ public:
 
     @param id event loop id
     */
-    EventLoop(int id);
+    EventLoop(int id, marl::Scheduler* scheduler);
     ~EventLoop();
 
     /**
@@ -80,6 +83,7 @@ private:
     class LibEventEventLoop;
     friend class LibEventEventLoop;
     LibEventEventLoop* m_implementation;
+    marl::Scheduler* m_scheduler;
 };
 
 }

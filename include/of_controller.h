@@ -25,6 +25,11 @@
 #include "libfluid-msg/of10msg.hh"
 #include "libfluid-msg/of13msg.hh"
 
+#include "marl/defer.h"
+#include "marl/event.h"
+#include "marl/scheduler.h"
+#include "marl/waitgroup.h"
+
 #include <arpa/inet.h>
 #include <atomic>
 #include <vector>
@@ -40,6 +45,8 @@
 #include <set>
 #include <stdlib.h>
 #include <unordered_map>
+#include <chrono>
+
 
 using namespace fluid_base;
 using namespace fluid_msg;
@@ -56,8 +63,10 @@ public:
             switch_dpid_map(switch_dpid_map),
             port_id_map(port_id_map),
             OFServer(address, port, nthreads, secure,
-                     OFServerSettings().supported_version(4) // OF version 0x04 is OF 1.3
-                         .echo_interval(30)) { }
+                     OFServerSettings()
+                         .supported_version(4) // OF version 1 is OF 1.0 and version 4 is 1.3
+                         .echo_interval(30)) {
+                          }
 
     ~OFController() = default;
 
@@ -75,6 +84,8 @@ public:
 
     void remove_switch_from_conn_map(int ofconn_id);
 
+    void remove_switch_from_conn_maps(std::string bridge, int ofconn_id);
+
     void setup_default_br_int_flows();
 
     void setup_default_br_tun_flows();
@@ -84,6 +95,7 @@ public:
     void packet_out(const char* br, const char* opt);
 
 private:
+
     // tracking xid (ovs transaction id)
     std::atomic<uint32_t> xid;
 

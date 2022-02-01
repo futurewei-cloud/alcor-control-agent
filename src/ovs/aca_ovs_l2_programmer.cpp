@@ -28,7 +28,6 @@
 #include <netdb.h>
 #include <ifaddrs.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <unistd.h>
 #include <linux/if_link.h>
 
@@ -598,7 +597,7 @@ void ACA_OVS_L2_Programmer::execute_ovsdb_command(const std::string cmd_string,
 
   g_total_execute_ovsdb_time += ovsdb_client_time_total_time;
 
-  ACA_LOG_INFO("Elapsed time for ovsdb client call took: %ld microseconds or %ld milliseconds. rc: %d, cmd: [%s]\n",
+  ACA_LOG_DEBUG("Elapsed time for ovsdb client call took: %ld microseconds or %ld milliseconds. rc: %d, cmd: [%s]\n",
                ovsdb_client_time_total_time, us_to_ms(ovsdb_client_time_total_time),
                rc, ovsdb_cmd_string.c_str());
 
@@ -628,7 +627,7 @@ void ACA_OVS_L2_Programmer::execute_openflow_command(const std::string cmd_strin
 
   g_total_execute_openflow_time += openflow_client_time_total_time;
 
-  ACA_LOG_INFO("Elapsed time for openflow client call took: %ld microseconds or %ld milliseconds. rc: %d\n",
+  ACA_LOG_DEBUG("Elapsed time for openflow client call took: %ld microseconds or %ld milliseconds. rc: %d\n",
                openflow_client_time_total_time,
                us_to_ms(openflow_client_time_total_time), rc);
 
@@ -657,9 +656,9 @@ void ACA_OVS_L2_Programmer::execute_openflow(ulong &culminative_time,
 
   g_total_execute_openflow_time += openflow_client_time_total_time;
 
-  // ACA_LOG_INFO("Elapsed time for openflow client call took: %ld microseconds or %ld milliseconds.\n",
-  //              openflow_client_time_total_time,
-  //              us_to_ms(openflow_client_time_total_time));
+  ACA_LOG_DEBUG("Elapsed time for openflow client call took: %ld microseconds or %ld milliseconds.\n",
+               openflow_client_time_total_time,
+               us_to_ms(openflow_client_time_total_time));
 
   ACA_LOG_DEBUG("%s", "ACA_OVS_L2_Programmer::execute_openflow ---> Exiting\n");
 }
@@ -681,7 +680,7 @@ void ACA_OVS_L2_Programmer::packet_out(const char *bridge, const char *options)
 
   g_total_execute_openflow_time += openflow_client_time_total_time;
 
-  ACA_LOG_INFO("Elapsed time for openflow client call took: %ld microseconds or %ld milliseconds.\n",
+  ACA_LOG_DEBUG("Elapsed time for openflow client call took: %ld microseconds or %ld milliseconds.\n",
                openflow_client_time_total_time,
                us_to_ms(openflow_client_time_total_time));
 

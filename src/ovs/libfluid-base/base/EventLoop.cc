@@ -17,11 +17,14 @@ private:
     struct event_base *base;
 };
 
-EventLoop::EventLoop(int id) {
+EventLoop::EventLoop(int id, marl::Scheduler* scheduler) {
     this->id = id;
     this->m_implementation = new EventLoop::LibEventEventLoop;
 
     this->m_implementation->base = event_base_new();
+
+    // pass marl scheduler from main thread (OFController : OFServer initialization)
+    this->m_scheduler = scheduler;
 
     this->stopped = false;
     if (!this->m_implementation->base) {
@@ -52,6 +55,10 @@ EventLoop::~EventLoop() {
 void EventLoop::run() {
     // Only run if EventLoop::stop hasn't been called first
     if (stopped) return;
+
+    //// The m_scheduler is passed from main thread (OFController : OFServer construction), and then bind it in each new Eventloop pthread_create
+    m_scheduler->bind();
+    defer(m_scheduler->unbind());
 
     event_base_dispatch(this->m_implementation->base);
     // See note in EventLoop::EventLoop. Here we disable the virtual event

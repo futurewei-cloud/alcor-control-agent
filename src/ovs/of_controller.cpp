@@ -67,15 +67,15 @@ void OFController::message_callback(OFConnection* ofconn, uint8_t type, void* da
         auto t = std::chrono::high_resolution_clock::now();
         ACA_LOG_INFO("OFController::message_callback - recv OFPT_BARRIER_REPLY on %ld\n", t.time_since_epoch().count());
     } else if (type == fluid_msg::of13::OFPT_PACKET_IN) {
-        fluid_msg::of13::PacketIn *pin = new of13::PacketIn();
-        pin->unpack((uint8_t *) data);
+        fluid_msg::of13::PacketIn *pin = new fluid_msg::of13::PacketIn();
+        pin->unpack((uint8_t *)data);
         uint32_t in_port = pin->match().in_port()->value();
-
-        // pass new allocated memory of packet-in to ACA_On_Demand_Engine to determine which type of request it is
-        aca_on_demand_engine::ACA_On_Demand_Engine::get_instance().thread_pool_.push(
-                std::bind(&aca_on_demand_engine::ACA_On_Demand_Engine::parse_packet,
-                          &aca_on_demand_engine::ACA_On_Demand_Engine::get_instance(),
-                          in_port, (void *)pin->data()));
+        marl::schedule([=] {
+            aca_on_demand_engine::ACA_On_Demand_Engine::get_instance().parse_packet(
+                    in_port,
+                    (void *)pin->data());
+            delete pin;
+        });
     } else if (type == 33) { // OFPRAW_OFPT14_BUNDLE_CONTROL
         auto t = std::chrono::high_resolution_clock::now();
 
@@ -98,13 +98,11 @@ void OFController::connection_callback(OFConnection* ofconn, OFConnection::Event
     } else if (type == OFConnection::EVENT_CLOSED) {
         std::string bridge = switch_id_map[ofconn->get_id()];
         ACA_LOG_WARN("OFController::connection_callback - ovs connection id=%d closed by user, remove %s from switch map\n", ofconn->get_id(), bridge.c_str());
-        remove_switch_from_conn_map(ofconn->get_id());
-        remove_switch_from_conn_map(bridge);
+        remove_switch_from_conn_maps(bridge, ofconn->get_id());
     } else if (type == OFConnection::EVENT_DEAD) {
         std::string bridge = switch_id_map[ofconn->get_id()];
         ACA_LOG_WARN("OFController::connection_callback - ovs connection id=%d closed due to inactivity, remove %s from switch map\n", ofconn->get_id(), bridge.c_str());
-        remove_switch_from_conn_map(ofconn->get_id());
-        remove_switch_from_conn_map(bridge);
+        remove_switch_from_conn_maps(bridge, ofconn->get_id());
     }
 }
 
@@ -122,23 +120,60 @@ OFConnection* OFController::get_instance(std::string bridge) {
     return ofconn;
 }
 
+// Adding a connection should be an atomic action, meaning that both adding to
+// switch_con_map and switch_id_map should be added under the same lock
 void OFController::add_switch_to_conn_map(std::string bridge, int ofconn_id, OFConnection* ofconn) {
     switch_map_mutex.lock();
-    if (switch_conn_map.find(bridge) != switch_conn_map.end()) {
-        // if existing already, remove then insert to update
-        remove_switch_from_conn_map(bridge);
-    }
-    switch_conn_map[bridge] = ofconn;
+    auto ofconn_iter = switch_conn_map.find(bridge);
 
-    if (switch_id_map.find(ofconn_id) != switch_id_map.end()) {
-        // if existing already, remove then insert to update
-        remove_switch_from_conn_map(ofconn_id);
+    // if found, remove
+    if (ofconn_iter != switch_conn_map.end()) {
+        if (NULL != ofconn_iter->second) { // k is bridge name, v is OFConnection*
+            ofconn_iter->second->close();
+        }
+        ACA_LOG_DEBUG("Removed ofconn_name: %s from switch_conn_map, when adding a new connection with the same name\n", bridge.c_str());
+        switch_conn_map.erase(bridge);
     }
+
+    switch_conn_map[bridge] = ofconn;
+    
+    if (switch_id_map.find(ofconn_id) != switch_id_map.end()) {
+        switch_id_map.erase(ofconn_id);
+    }
+
     switch_id_map[ofconn_id] = bridge;
+    
     switch_map_mutex.unlock();
+
 
     ACA_LOG_INFO("OFController::add_switch_to_conn_map - ovs connection id=%d bridge=%s added to switch map\n",
                  ofconn->get_id(), bridge.c_str());
+}
+
+// Removing a connection should be an atomic action, meaning that both removing from
+// switch_con_map and switch_id_map should be added under the same lock
+void OFController::remove_switch_from_conn_maps(std::string bridge, int ofconn_id){
+    switch_map_mutex.lock();
+
+    // if found, remove
+    if (switch_id_map.find(ofconn_id) != switch_id_map.end()) {
+        switch_id_map.erase(ofconn_id);
+    }
+
+    auto ofconn_iter = switch_conn_map.find(bridge);
+
+    // if found, remove
+    if (ofconn_iter != switch_conn_map.end()) {
+        if (NULL != ofconn_iter->second) { // k is bridge name, v is OFConnection*
+            ofconn_iter->second->close();
+        }
+        switch_conn_map.erase(bridge);
+    }
+    
+    switch_map_mutex.unlock();
+
+    ACA_LOG_INFO("OFController::remove_switch_from_conn_map - ovs connection bridge=%s removed from switch map\n",
+                 bridge.c_str());
 }
 
 void OFController::remove_switch_from_conn_map(std::string bridge) {
@@ -184,7 +219,7 @@ void OFController::send_packet_out(OFConnection *ofconn, ofbuf_ptr_t &&po) {
     if (!po) {
         return;
     }
-
+    
     ofconn->send(po->data(), po->len());
 }
 

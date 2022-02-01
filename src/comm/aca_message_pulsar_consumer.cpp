@@ -24,25 +24,66 @@ using pulsar::ConsumerConfiguration;
 using pulsar::Consumer;
 using pulsar::Message;
 using pulsar::Result;
+using pulsar::KeySharedPolicy;
+using pulsar::StickyRange;
 
 
 namespace aca_message_pulsar
 {
-ACA_Message_Pulsar_Consumer::ACA_Message_Pulsar_Consumer(string brokers, string subscription_name)
+
+void listener(Consumer consumer, const Message& message){
+  alcor::schema::GoalStateV2 deserialized_GoalState;
+  alcor::schema::GoalStateOperationReply gsOperationalReply;
+  int rc;
+  Result result;
+
+  ACA_LOG_DEBUG("\n<=====incoming message: %s\n",
+                message.getDataAsString().c_str());
+
+  rc = Aca_Comm_Manager::get_instance().deserialize(
+          (unsigned char *)message.getData(), message.getLength(), deserialized_GoalState);
+  if (rc == EXIT_SUCCESS) {
+    rc = Aca_Comm_Manager::get_instance().update_goal_state(
+                deserialized_GoalState, gsOperationalReply);
+
+
+    if (rc != EXIT_SUCCESS) {
+      ACA_LOG_ERROR("Failed to update host with latest goal state, rc=%d.\n", rc);
+    } else {
+      ACA_LOG_INFO("Successfully updated host with latest goal state %d.\n", rc);
+    }
+
+  } else {
+    ACA_LOG_ERROR("Deserialization failed with error code %d.\n", rc);
+  }
+
+  // Now acknowledge message
+  consumer.acknowledge(message.getMessageId());
+}
+
+ACA_Message_Pulsar_Consumer::ACA_Message_Pulsar_Consumer(string topic, string brokers, string subscription_name)
 {
+  setUnicastTopicName(topic);
+  setMulticastTopicName(topic);
   setBrokers(brokers);
-  setSubscriptionName(subscription_name);
+  setUnicastSubscriptionName(subscription_name);
+  setMulticastSubscriptionName(subscription_name);
 
   ACA_LOG_DEBUG("Broker list: %s\n", this->brokers_list.c_str());
-  ACA_LOG_DEBUG("Consumer subscription name: %s\n", this->subscription_name.c_str());
+  ACA_LOG_DEBUG("Unicast consumer topic name: %s\n", this->unicast_topic_name.c_str());
+  ACA_LOG_DEBUG("Unicast consumer subscription name: %s\n", this->unicast_subscription_name.c_str());
+  ACA_LOG_DEBUG("Multicast consumer topic name: %s\n", this->multicast_topic_name.c_str());
+  ACA_LOG_DEBUG("Multicast consumer subscription name: %s\n", this->multicast_subscription_name.c_str());
 
-  // Create the client
-  this->ptr_client= new Client(brokers);
+  // Create the clients
+  //this->ptr_multicast_client= new Client(brokers);
+  this->ptr_unicast_client = new Client(brokers);
 }
 
 ACA_Message_Pulsar_Consumer::~ACA_Message_Pulsar_Consumer()
 {
-  delete this->ptr_client;
+  delete this->ptr_multicast_client;
+  delete this->ptr_unicast_client;
 }
 
 string ACA_Message_Pulsar_Consumer::getBrokers() const
@@ -50,91 +91,86 @@ string ACA_Message_Pulsar_Consumer::getBrokers() const
   return this->brokers_list;
 }
 
-string ACA_Message_Pulsar_Consumer::getLastTopicName() const
+string ACA_Message_Pulsar_Consumer::getMulticastTopicName() const
 {
-  return this->topic_name;
+  return this->multicast_topic_name;
 }
 
-string ACA_Message_Pulsar_Consumer::getSubscriptionName() const
+string ACA_Message_Pulsar_Consumer::getMulticastSubscriptionName() const
 {
-  return this->subscription_name;
+  return this->multicast_subscription_name;
 }
 
-void ACA_Message_Pulsar_Consumer::setSubscriptionName(string subscription_name)
+string ACA_Message_Pulsar_Consumer::getUnicastTopicName() const
 {
-  this->subscription_name = subscription_name;
+  return this->unicast_topic_name;
 }
 
-bool ACA_Message_Pulsar_Consumer::consumeDispatched(string topic)
+string ACA_Message_Pulsar_Consumer::getUnicastSubscriptionName() const
 {
-  alcor::schema::GoalState deserialized_GoalState;
-  alcor::schema::GoalStateOperationReply gsOperationalReply;
-  int rc;
-  int overall_rc = EXIT_SUCCESS;
+  return this->unicast_subscription_name;
+}
+
+
+bool ACA_Message_Pulsar_Consumer::unicastConsumerDispatched(int stickyHash){
   Result result;
-  Message message;
   Consumer consumer;
-  result = this->ptr_client->subscribe(topic,this->subscription_name,this->consumer_config,consumer);
+  KeySharedPolicy keySharedPolicy;
 
+  keySharedPolicy.setKeySharedMode(STICKY);
+  // Set sticky ranges with specified hash value
+
+  StickyRange stickyRange = std::make_pair(stickyHash,stickyHash);
+  keySharedPolicy.setStickyRanges({stickyRange});
+
+  //Use key shared mode
+  this->unicast_consumer_config.setConsumerType(ConsumerKeyShared).setKeySharedPolicy(keySharedPolicy).setMessageListener(listener);
+  result = this->ptr_unicast_client->subscribe(this->unicast_topic_name,this->unicast_subscription_name,this->unicast_consumer_config,this->unicast_consumer);
   if (result != Result::ResultOk){
-    ACA_LOG_ERROR("Failed to subscribe topic: %s\n", topic.c_str());
+    ACA_LOG_ERROR("Failed to subscribe unicast topic: %s\n", this->unicast_topic_name.c_str());
     return EXIT_FAILURE;
   }
 
-  ACA_LOG_DEBUG("Consumer consuming messages from topic: %s\n", topic.c_str());
-
-  //Receive message
-  while(true){
-    result = consumer.receive(message);
-
-    if (result != Result::ResultOk) {
-      ACA_LOG_ERROR("Failed to receive message from topic: %s\n",topic.c_str());
-      return EXIT_FAILURE;
-    }
-
-    else{
-      // Print the ordering key (if any)
-      if (message.hasOrderingKey()) {
-        ACA_LOG_DEBUG("%s  -> ", message.getOrderingKey().c_str());
-      }
-      // Print the payload
-      ACA_LOG_DEBUG("\n<=====incoming message: %s\n",
-                    message.getDataAsString().c_str());
-
-      rc = Aca_Comm_Manager::get_instance().deserialize(
-              (unsigned char *)message.getData(), message.getLength(), deserialized_GoalState);
-      if (rc == EXIT_SUCCESS) {
-        rc = Aca_Comm_Manager::get_instance().update_goal_state(
-                    deserialized_GoalState, gsOperationalReply);
-
-      // TODO: send gsOperationalReply back to controller 
-
-        if (rc != EXIT_SUCCESS) {
-          ACA_LOG_ERROR("Failed to update host with latest goal state, rc=%d.\n", rc);
-          overall_rc = rc;
-        } else {
-          ACA_LOG_INFO("Successfully updated host with latest goal state %d.\n", rc);
-        }
-      } else {
-        ACA_LOG_ERROR("Deserialization failed with error code %d.\n", rc);
-        overall_rc = rc;
-      }
-
-      // Now acknowledge message
-      consumer.acknowledge(message);
-    }
-  }
-  return overall_rc;
+  return EXIT_SUCCESS;
 }
+
+bool ACA_Message_Pulsar_Consumer::multicastConsumerDispatched(){
+  Result result;
+
+  // Use the default exclusive mode
+  this->multicast_consumer_config.setMessageListener(listener);
+  result = this->ptr_multicast_client->subscribe(this->multicast_topic_name,this->multicast_subscription_name,this->multicast_consumer_config,this->multicast_consumer);
+  if (result != Result::ResultOk){
+    ACA_LOG_ERROR("Failed to subscribe multicast topic: %s\n", this->multicast_topic_name.c_str());
+    return EXIT_FAILURE;
+  }
+  return EXIT_SUCCESS;
+}
+
 
 void ACA_Message_Pulsar_Consumer::setBrokers(string brokers)
 {
   this->brokers_list = brokers;
 }
 
-void ACA_Message_Pulsar_Consumer::setLastTopicName(string topic)
+void ACA_Message_Pulsar_Consumer::setMulticastTopicName(string topic)
 {
-  this->topic_name = topic;
+  this->multicast_topic_name = topic;
+}
+
+void ACA_Message_Pulsar_Consumer::setMulticastSubscriptionName(string subscription_name)
+{
+  this->multicast_subscription_name = subscription_name;
+}
+
+void ACA_Message_Pulsar_Consumer::setUnicastTopicName(string topic)
+{
+  this->unicast_topic_name = topic;
+}
+
+void ACA_Message_Pulsar_Consumer::setUnicastSubscriptionName(string subscription_name)
+{
+  this->unicast_subscription_name = subscription_name;
 }
 
 } // namespace aca_message_pulsar
