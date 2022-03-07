@@ -36,18 +36,18 @@ void listener(Consumer consumer, const Message& message){
   int rc;
   Result result;
 
-  ACA_LOG_DEBUG("%s","ACA_PULSAR_MQ: Successfully received the incoming message.\n");
-  ACA_LOG_DEBUG("%s","ACA_PULSAR_MQ: Start deserializing the message to GoalState...\n");
-  ACA_LOG_DEBUG("%s","<====================================================>\n");
+  ACA_LOG_INFO("%s","ACA_PULSAR_MQ: Successfully received the incoming message.\n");
+  ACA_LOG_INFO("%s","ACA_PULSAR_MQ: Start deserializing the message to GoalState...\n");
+  ACA_LOG_INFO("%s","<====================================================>\n");
   rc = Aca_Comm_Manager::get_instance().deserialize(
           (unsigned char *)message.getData(), message.getLength(), deserialized_GoalState);
-  ACA_LOG_DEBUG("%s","<====================================================>\n");
+  ACA_LOG_INFO("%s","<====================================================>\n");
   if (rc == EXIT_SUCCESS) {
-    ACA_LOG_DEBUG("%s","ACA_PULSAR_MQ: Start updating GoalState...\n");
-    ACA_LOG_DEBUG("%s","<====================================================>\n");
+    ACA_LOG_INFO("%s","ACA_PULSAR_MQ: Start updating GoalState...\n");
+    ACA_LOG_INFO("%s","<====================================================>\n");
     rc = Aca_Comm_Manager::get_instance().update_goal_state(
                 deserialized_GoalState, gsOperationalReply);
-    ACA_LOG_DEBUG("%s","<====================================================>\n");
+    ACA_LOG_INFO("%s","<====================================================>\n");
     if (rc != EXIT_SUCCESS) {
       ACA_LOG_ERROR("ACA_PULSAR_MQ: ERROR, failed to update host with latest goal state, rc=%d.\n", rc);
     } else {

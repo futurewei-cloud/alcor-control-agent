@@ -174,7 +174,8 @@ void GoalStateProvisionerAsyncServer::ProcessPushGoalStatesStreamAsyncCall(
           //  process goalstateV2 in the thread pool
           //  It has read from the stream, now to GoalStateV2 should not be empty
           //  and we need to process it.
-          ACA_LOG_DEBUG("%s\n", "This call has already read from the stream, now we process the gsv2...");
+          ACA_LOG_DEBUG("%s\n", "ACA_GRPC: This call has already read from the stream, now we process the gsv2...");
+          
 
           if (streamingCall->goalStateV2_.neighbor_states_size() == 1) {
             // if there's only one neighbor state, it means that it is pushed
@@ -189,16 +190,17 @@ void GoalStateProvisionerAsyncServer::ProcessPushGoalStatesStreamAsyncCall(
           }
           std::chrono::_V2::steady_clock::time_point start =
                   std::chrono::steady_clock::now();
+          ACA_LOG_INFO("%s\n", "ACA_GRPC: Start updating GoalStateV2...");
           int rc = Aca_Comm_Manager::get_instance().update_goal_state(
                   streamingCall->goalStateV2_, streamingCall->gsOperationReply_);
           if (rc == EXIT_SUCCESS) {
-            ACA_LOG_INFO("Control Fast Path streaming - Successfully updated host with latest goal state %d.\n",
+            ACA_LOG_INFO("ACA_GRPC: Control Fast Path streaming - Successfully updated host with latest goal state %d.\n",
                          rc);
           } else if (rc == EINPROGRESS) {
-            ACA_LOG_INFO("Control Fast Path streaming - Update host with latest goal state returned pending, rc=%d.\n",
+            ACA_LOG_INFO("ACA_GRPC: Control Fast Path streaming - Update host with latest goal state returned pending, rc=%d.\n",
                          rc);
           } else {
-            ACA_LOG_ERROR("Control Fast Path streaming - Failed to update host with latest goal state, rc=%d.\n",
+            ACA_LOG_ERROR("ACA_GRPC: Control Fast Path streaming - Failed to update host with latest goal state, rc=%d.\n",
                           rc);
           }
           std::chrono::_V2::steady_clock::time_point end =
