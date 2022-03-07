@@ -55,60 +55,56 @@ void ACA_Message_Pulsar_Producer::setTopicName(string topic)
 
 bool ACA_Message_Pulsar_Producer::publish(string message)
 {
-  Result result;
-
   // Create a producer
   Producer producer;
-  result = this->ptr_client->createProducer(this->topic_name,producer);
-  if(result != ResultOk){
-    ACA_LOG_ERROR("Failed to create producer, result=%d.\n", result);
+  Result createProducerResult = this->ptr_client->createProducer(this->topic_name,producer);
+  if(createProducerResult != ResultOk){
+    ACA_LOG_ERROR("ACA_PULSAR_MQ: Failed to create producer, result=%d.\n", createProducerResult);
     return EXIT_FAILURE;
   }
 
   // Create a message
   Message msg = MessageBuilder().setContent(message).build();
-  result = producer.send(msg);
-  if(result != ResultOk){
-    ACA_LOG_ERROR("Failed to send message %s.\n", message.c_str());
+
+  if(producer.send(msg) != ResultOk){
+    ACA_LOG_ERROR("ACA_PULSAR_MQ: Failed to send message -> %s.\n", message.c_str());
     return EXIT_FAILURE;
   }
-
-  ACA_LOG_INFO("Successfully send message %s\n", message.c_str());
-
-  // Flush all produced messages
-  producer.flush();
-  producer.close();
-  return EXIT_SUCCESS;
-
-}
-
-bool ACA_Message_Pulsar_Producer::publish(string message, string orderingKey)
-{
-    Result result;
-
-    // Create a producer
-    Producer producer;
-    result = this->ptr_client->createProducer(this->topic_name,producer);
-    if(result != ResultOk){
-        ACA_LOG_ERROR("Failed to create producer, result=%d.\n", result);
-        return EXIT_FAILURE;
-    }
-
-    // Create a message
-    Message msg = MessageBuilder().setContent(message).setOrderingKey(orderingKey).build();
-    result = producer.send(msg);
-    if(result != ResultOk){
-        ACA_LOG_ERROR("Failed to send message %s.\n", message.c_str());
-        return EXIT_FAILURE;
-    }
-
-    ACA_LOG_INFO("Successfully send message %s\n", message.c_str());
+  else{
+    ACA_LOG_INFO("ACA_PULSAR_MQ: Successfully send message %s.\n", message.c_str());
 
     // Flush all produced messages
     producer.flush();
     producer.close();
     return EXIT_SUCCESS;
+  }
+}
 
+bool ACA_Message_Pulsar_Producer::publish(string message, string orderingKey)
+{
+    // Create a producer
+    Producer producer;
+    Result createProducerResult = this->ptr_client->createProducer(this->topic_name,producer);
+    if(createProducerResult != ResultOk){
+        ACA_LOG_ERROR("ACA_PULSAR_MQ: Failed to create producer, result=%d.\n", createProducerResult);
+        return EXIT_FAILURE;
+    }
+
+    // Create a message
+    Message msg = MessageBuilder().setContent(message).setOrderingKey(orderingKey).build();
+    
+    if(producer.send(msg) != ResultOk){
+        ACA_LOG_ERROR("ACA_PULSAR_MQ: Failed to send message %s.\n", message.c_str());
+        return EXIT_FAILURE;
+    }
+    else{
+        ACA_LOG_INFO("ACA_PULSAR_MQ: Successfully send message %s.\n", message.c_str());
+
+        // Flush all produced messages
+        producer.flush();
+        producer.close();
+        return EXIT_SUCCESS;
+    }
 }
 void ACA_Message_Pulsar_Producer::setBrokers(string brokers)
 {
