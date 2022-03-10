@@ -22,6 +22,7 @@
 #include <errno.h>
 #include <unistd.h>
 
+
 using namespace std;
 
 namespace aca_arp_responder
@@ -249,6 +250,7 @@ void ACA_ARP_Responder::arp_xmit(uint32_t in_port, void *vlanmsg, void *message,
     ACA_LOG_ERROR("%s", "Serialized ARP Reply is null!\n");
     return;
   }
+
   if (is_found) {
     options = inport + whitespace + packetpre + packet + whitespace + action;
     //delete the constructed arp reply
@@ -258,8 +260,7 @@ void ACA_ARP_Responder::arp_xmit(uint32_t in_port, void *vlanmsg, void *message,
   }
 
   ACA_LOG_DEBUG("ACA_ARP_Responder sent arp packet to ovs: %s\n", options.c_str());
-  //aca_ovs_control::ACA_OVS_Control::get_instance().packet_out(bridge.c_str(),
-  //                                                            options.c_str());
+
   aca_ovs_l2_programmer::ACA_OVS_L2_Programmer::get_instance().packet_out(bridge.c_str(),
                                                                           options.c_str());
 }
@@ -280,7 +281,7 @@ int ACA_ARP_Responder::_parse_arp_request(uint32_t in_port, vlan_message *vlanms
   } else {
     stData.vlan_id = 0;
   }
-
+  
   // if not find the corresponding mac address in the db based on ip and vlan id, resubmit to table 22
   // else construct an arp reply
   if (!_arp_db.find(stData, current_arp_data)) {

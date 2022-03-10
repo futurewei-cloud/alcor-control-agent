@@ -13,10 +13,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+/*
+ This file is legacy code path, that we used vconn from ovs code to connect and manipulate ovs by the same way of ovs cmd tools
+ From 9/30/2021 release, ovs connection and events/flows manipulation are already handled by of_controller.cpp
+ We leave this legacy file for reference
+ */
+
 #include "aca_log.h"
 #include "aca_util.h"
-#include "ovs_control.h"
 #include "aca_on_demand_engine.h"
+
+#undef OFP_ASSERT
+#undef CONTAINER_OF
+#undef ARRAY_SIZE
+#undef ROUND_UP
+#include "ovs_control.h"
+
 #include <sstream> // std::(istringstream)
 #include <string> // std::(string)
 #include <signal.h>
@@ -1009,9 +1021,9 @@ void OVS_Control::monitor_vconn(vconn *vconn, bool reply_to_echo_requests,
                                                      &buffer_idp, &continuation);
                     uint32_t in_port = pin.flow_metadata.flow.in_port.ofp_port;
                     /*
-            The pin.packet here has the same memory address, even after multiple calls.
-            If you intent to store it somewhere, it is advised to make a copy of it.
-          */
+                     The pin.packet here has the same memory address, even after multiple calls.
+                     If you intent to store it somewhere, it is advised to make a copy of it.
+                     */
                     ACA_On_Demand_Engine::get_instance().parse_packet(in_port, pin.packet);
 
                     if (error) {

@@ -76,7 +76,20 @@ BaseOFClient::~BaseOFClient() {
 bool BaseOFClient::start(bool block) {
     this->blocking = block;
 
-    this->evloop = new EventLoop(0);
+    // Pass marl scheduler from main thread, where BaseOFClient/OFClient is called (in aca_main we don't use OFClient)
+    marl::Scheduler* scheduler = marl::Scheduler::get();
+    int get_iteration = 0;
+    while (NULL == scheduler && get_iteration < 5) {
+        scheduler = marl::Scheduler::get();
+
+        if (NULL != scheduler) {
+            break;
+        } else {
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            get_iteration++;
+        }
+    }
+    this->evloop = new EventLoop(0, scheduler);
 
     // connect to ovs-db server and assign it to the event loop
     if (!this->connect()) {

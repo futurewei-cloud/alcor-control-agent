@@ -11,7 +11,9 @@ FIND_LIBRARY(MESSAGEMANAGER messagemanager ${CMAKE_CURRENT_SOURCE_DIR}/../includ
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../include)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../src/proto3)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../src/grpc)
+include_directories(/var/local/git/marl/marl/include)
 link_libraries(${PULSAR})
+link_libraries(/var/local/git/marl/marl/build/libmarl.a)
 
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
@@ -49,7 +51,7 @@ add_executable(
     gtest/aca_test_zeta_programming.cpp
     gtest/aca_test_arp.cpp
     gtest/aca_test_on_demand.cpp
-)
+        gtest/aca_test_mq.cpp)
 
 # Link test executable against gtest & gtest_main
 target_link_libraries(aca_tests gtest gtest_main)
