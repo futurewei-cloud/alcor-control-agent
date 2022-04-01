@@ -260,4 +260,5 @@ function install_dependencis {
     nohup $BUILD/bin/AlcorControlAgent > /dev/null 2>&1 &
 }
 
-download_dependencis
+#download_dependencis
+install_dependencis
