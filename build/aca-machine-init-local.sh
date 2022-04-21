@@ -14,48 +14,45 @@
 #     FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
 #     WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-BUILD="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
-echo "build path is $BUILD"
-
 function download_dependencis {
-    rm -rf /var/local/git
-    mkdir -p /var/local/git
+    rm -rf ${DEP_PATH}
+    mkdir -p ${DEP_PATH}
 
     echo "d.3--- re-downloading cppkafka ---" && \
-        rm -rf /var/local/git/cppkafka
-        git clone https://github.com/mfontanini/cppkafka.git /var/local/git/cppkafka
+        rm -rf ${DEP_PATH}/cppkafka
+        git clone https://github.com/mfontanini/cppkafka.git ${DEP_PATH}/cppkafka
     
     GRPC_RELEASE_TAG="v1.24.x"
     echo "d.5--- re-downloading grpc repo ---" && \
-        rm -rf /var/local/git/grpc && \
-        git clone -b $GRPC_RELEASE_TAG https://github.com/grpc/grpc /var/local/git/grpc
-        cd /var/local/git/grpc && \
+        rm -rf ${DEP_PATH}/grpc && \
+        git clone -b $GRPC_RELEASE_TAG https://github.com/grpc/grpc ${DEP_PATH}/grpc
+        cd ${DEP_PATH}/grpc && \
         git submodule update --init && \
-        cd /var/local/git/grpc/third_party/cares/cares && \
+        cd ${DEP_PATH}/grpc/third_party/cares/cares && \
         git fetch origin && \
-        git checkout cares-1_15_0 && \
+        git checkout cares-1_15_0
 
 
     echo "d.6--- re-downloading openvswitch ---" && \
-        rm -rf /var/local/git/openvswitch && \
-        git clone -b "branch-2.12" https://github.com/openvswitch/ovs.git /var/local/git/openvswitch && \
-        cd /var/local/git/openvswitch && \
+        rm -rf ${DEP_PATH}/openvswitch && \
+        git clone -b "branch-2.12" https://github.com/openvswitch/ovs.git ${DEP_PATH}/openvswitch && \
+        cd ${DEP_PATH}/openvswitch && \
         wget https://www.openvswitch.org/releases/openvswitch-2.9.8.tar.gz && \
         tar -xvzf openvswitch-2.9.8.tar.gz
 
     echo "d.7--- re-dowloading marl---" && \
-        rm -rf /var/local/git/marl && \
-        mkdir -p /var/local/git/marl && \
-        cd /var/local/git/marl && \
+        rm -rf ${DEP_PATH}/marl && \
+        mkdir -p ${DEP_PATH}/marl && \
+        cd ${DEP_PATH}/marl && \
         git clone https://github.com/google/marl.git && \
-        cd /var/local/git/marl/marl && \
+        cd ${DEP_PATH}/marl/marl && \
         git submodule update --init
 
     PULSAR_RELEASE_TAG='pulsar-2.8.1'
     echo "d.8--- re-downloading pulsar dependacies ---" && \
-        mkdir -p /var/local/git/pulsar && \
-        wget https://archive.apache.org/dist/pulsar/${PULSAR_RELEASE_TAG}/DEB/apache-pulsar-client.deb -O /var/local/git/pulsar/apache-pulsar-client.deb && \
-        wget https://archive.apache.org/dist/pulsar/${PULSAR_RELEASE_TAG}/DEB/apache-pulsar-client-dev.deb -O /var/local/git/pulsar/apache-pulsar-client-dev.deb
+        mkdir -p ${DEP_PATH}/pulsar && \
+        wget https://archive.apache.org/dist/pulsar/${PULSAR_RELEASE_TAG}/DEB/apache-pulsar-client.deb -O ${DEP_PATH}/pulsar/apache-pulsar-client.deb && \
+        wget https://archive.apache.org/dist/pulsar/${PULSAR_RELEASE_TAG}/DEB/apache-pulsar-client-dev.deb -O ${DEP_PATH}/pulsar/apache-pulsar-client-dev.deb
 }
 
 function install_dependencis {
@@ -110,7 +107,7 @@ function install_dependencis {
 
     echo "3--- installing cppkafka ---" && \
         apt-get update -y && apt-get install -y cmake 
-        cd /var/local/git/cppkafka && \
+        cd ${DEP_PATH}/cppkafka && \
         mkdir build && \
         cd build && \
         cmake .. && \
@@ -128,27 +125,27 @@ function install_dependencis {
     # installing grpc and its dependencies
     echo "5--- cloning grpc repo ---" && \
         echo "--- installing c-ares ---" && \
-        cd /var/local/git/grpc/third_party/cares/cares && \
+        cd ${DEP_PATH}/grpc/third_party/cares/cares && \
         mkdir -p cmake/build && \
         cd cmake/build && \
         cmake -DCMAKE_BUILD_TYPE=Release ../.. && \
         make -j4 install && \
         cd ../../../../.. && \
         echo "--- installing protobuf ---" && \
-        cd /var/local/git/grpc/third_party/protobuf && \
+        cd ${DEP_PATH}/grpc/third_party/protobuf && \
         mkdir -p cmake/build && \
         cd cmake/build && \
         cmake -Dprotobuf_BUILD_TESTS=OFF -DCMAKE_BUILD_TYPE=Release .. && \
         make -j4 install && \
         cd ../../../.. && \
         echo "--- installing grpc ---" && \
-        cd /var/local/git/grpc && \
+        cd ${DEP_PATH}/grpc && \
         mkdir -p cmake/build && \
         cd cmake/build && \
         cmake -DgRPC_INSTALL=ON -DgRPC_BUILD_TESTS=OFF -DgRPC_PROTOBUF_PROVIDER=package -DgRPC_ZLIB_PROVIDER=package -DgRPC_CARES_PROVIDER=package -DgRPC_SSL_PROVIDER=package -DCMAKE_BUILD_TYPE=Release ../.. && \
         make -j4 install && \
         echo "--- installing google test ---" && \
-        cd /var/local/git/grpc/third_party/googletest && \
+        cd ${DEP_PATH}/grpc/third_party/googletest && \
         cmake -Dgtest_build_samples=ON -DBUILD_SHARED_LIBS=ON . && \
         make && \
         make install && \
@@ -207,15 +204,15 @@ function install_dependencis {
         sudo python2.7 /tmp/get-pip.py && \
         sudo pip2 install six && \
         apt-get install -y libevent-dev && \
-        mkdir -p /var/local/git/openvswitch && \
-        cd /var/local/git/openvswitch && \
+        mkdir -p ${DEP_PATH}/openvswitch && \
+        cd ${DEP_PATH}/openvswitch && \
         ./boot.sh && \
         ./configure --prefix=/usr/local --localstatedir=/var --sysconfdir=/etc --enable-shared --enable-ndebug && \
         make && \
         make install && \
         cp ./lib/vconn-provider.h /usr/local/include/openvswitch && \
         cp ./include/openvswitch/namemap.h /usr/local/include/openvswitch && \
-        cd /var/local/git/openvswitch && \
+        cd ${DEP_PATH}/openvswitch && \
         cd openvswitch-2.9.8 && \
         ./configure && make && \
         cp $OVS_INCLUDE_HEADERS /usr/local/include/openvswitch && \
@@ -225,16 +222,16 @@ function install_dependencis {
         cd ~
 
     echo "7--- installing marl ---" && \
-        cd /var/local/git/marl/marl && \
-        mkdir /var/local/git/marl/marl/build && \
-        cd /var/local/git/marl/marl/build && \
+        cd ${DEP_PATH}/marl/marl && \
+        mkdir ${DEP_PATH}/marl/marl/build && \
+        cd ${DEP_PATH}/marl/marl/build && \
         cmake .. -DMARL_BUILD_EXAMPLES=1 -DMARL_BUILD_TESTS=1 && \
         make && \
         cd ~
 
     PULSAR_RELEASE_TAG='pulsar-2.8.1'
     echo "8--- installing pulsar dependacies ---" && \
-        cd /var/local/git/pulsar && \
+        cd ${DEP_PATH}/pulsar && \
         apt install -y ./apache-pulsar-client*.deb
         cd ~
 
@@ -260,5 +257,39 @@ function install_dependencis {
     nohup $BUILD/bin/AlcorControlAgent > /dev/null 2>&1 &
 }
 
-#download_dependencis
-install_dependencis
+
+BUILD="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+echo "build path is $BUILD"
+DEP_PATH="/var/local/git"
+
+while getopts "dD:iI:" opt; do
+case $opt in
+  d)
+    echo "Download dependencis"
+    download_dependencis
+    ;;
+  D)
+    echo "Download dependencis to $OPTARG"
+    DEP_PATH=$OPTARG
+    download_dependencis
+    ;;
+  i)
+    echo "Install dependencis"
+    install_dependencis
+    ;;
+  I)
+    echo "Install dependencis from $OPTARG"
+    DEP_PATH=$OPTARG
+    install_dependencis
+    ;;
+  \?)
+    echo "Invalid arguements"
+esac
+done
+
+if [ $OPTIND -eq 1 ]; then
+  echo "Download and install dependencis"
+  download_dependencis
+  install_dependencis
+fi
+shift $((OPTIND-1))
