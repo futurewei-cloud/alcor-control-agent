@@ -262,7 +262,8 @@ BUILD="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 echo "build path is $BUILD"
 DEP_PATH="/var/local/git"
 
-while getopts "dD:iI:" opt; do
+# while getopts "dD:iI:" opt; do
+while getopts "dD:i" opt; do
 case $opt in
   d)
     echo "Download dependencis"
@@ -277,11 +278,11 @@ case $opt in
     echo "Install dependencis"
     install_dependencis
     ;;
-  I)
-    echo "Install dependencis from $OPTARG"
-    DEP_PATH=$OPTARG
-    install_dependencis
-    ;;
+#   I)
+#     echo "Install dependencis from $OPTARG"
+#     DEP_PATH=$OPTARG
+#     install_dependencis
+#     ;;
   \?)
     echo "Invalid arguements"
 esac
