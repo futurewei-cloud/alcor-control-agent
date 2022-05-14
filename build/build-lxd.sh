@@ -27,7 +27,7 @@ rm -rf lxd.tar.xz \
 lxc launch aca aca
 lxc exec aca -- bash -c "chmod +x /root/aca/build/aca-machine-init.sh"
 lxc exec aca -- bash -c "/root/aca/build/aca-machine-init.sh"
-chown -R 100000:100000 /etc/run/openvswitch
+chown -R lxd /etc/run/openvswitch
 lxc config device add aca modules disk source=/lib/modules path=/lib/modules && \ 
     lxc config device add aca log disk source=/var/log/openvswitch path=/var/log/openvswitch && \ 
     lxc config device add aca lib disk source=/var/lib/openvswitch path=/var/lib/openvswitch && \
