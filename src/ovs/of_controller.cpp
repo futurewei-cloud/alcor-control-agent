@@ -259,11 +259,14 @@ void OFController::setup_default_br_tun_flows() {
 
     if (NULL != ofconn_br_tun) {
         send_flow(ofconn_br_tun, create_add_flow("table=0,priority=0, actions=NORMAL"));
-        send_flow(ofconn_br_tun, create_add_flow("table=0,priority=50,arp,arp_op=1, actions=CONTROLLER"));
+        /*  Commented out this line so that the arp requests doesn't trigger the on-demnand workflow with NCM,
+         *  and the packets will be sent to Arion Wings.*/
+//        send_flow(ofconn_br_tun, create_add_flow("table=0,priority=50,arp,arp_op=1, actions=CONTROLLER"));
         send_flow(ofconn_br_tun, create_add_flow("table=0,priority=1,in_port=" + port_id_map["patch-int"] + " actions=resubmit(,2)"));
         send_flow(ofconn_br_tun, create_add_flow("table=2,priority=1,dl_dst=00:00:00:00:00:00/01:00:00:00:00:00 actions=resubmit(,20)"));
         send_flow(ofconn_br_tun, create_add_flow("table=2,priority=1,dl_dst=01:00:00:00:00:00/01:00:00:00:00:00 actions=resubmit(,22)"));
-        send_flow(ofconn_br_tun, create_add_flow("table=20,priority=1 actions=CONTROLLER"));
+        /*  Changed this from CONTROLLER to resubmit to table 22, which is the Arion Wing group.*/
+        send_flow(ofconn_br_tun, create_add_flow("table=20,priority=1 actions=resubmit(,22)"));
         send_flow(ofconn_br_tun, create_add_flow("table=2,priority=25,icmp,icmp_type=8,in_port=" + port_id_map["patch-int"] + " actions=resubmit(,52)"));
         send_flow(ofconn_br_tun, create_add_flow("table=52,priority=1 actions=resubmit(,20)"));
         send_flow(ofconn_br_tun, create_add_flow("table=0,priority=25,in_port=" + port_id_map["vxlan-generic"] + " actions=resubmit(,4)"));
