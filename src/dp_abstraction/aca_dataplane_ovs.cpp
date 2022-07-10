@@ -353,6 +353,7 @@ int ACA_Dataplane_OVS::update_port_state_workitem(const PortState current_PortSt
   string virtual_mac_address;
   string host_ip_address;
   string port_cidr;
+  vector<GatewayConfiguration> found_arion_gateways;
   GatewayConfiguration found_zeta_gateway;
   ulong culminative_dataplane_programming_time = 0;
   ulong culminative_network_configuration_time = 0;
@@ -433,6 +434,14 @@ int ACA_Dataplane_OVS::update_port_state_workitem(const PortState current_PortSt
             break;
           }
         }
+        for (auto current_gateway_configuration : parsed_struct.gateway_states()) {
+            GatewayState current_gateway_state = current_gateway_configuration.second;
+            GatewayType current_gateway_type = current_gateway_state.configuration().gateway_type();
+            if (current_gateway_type == ARION) {
+                found_arion_gateways.push_back(current_gateway_state.configuration());
+            }
+        }
+        ACA_LOG_INFO("Found %d ARION GWs.", found_arion_gateways.size());
       }
     }
 
@@ -473,6 +482,14 @@ int ACA_Dataplane_OVS::update_port_state_workitem(const PortState current_PortSt
         // Update the zeta settings of vpc
         overall_rc = ACA_Zeta_Programming::get_instance().create_zeta_config(
                 found_zeta_gateway, found_tunnel_id);
+      }
+
+      for (auto arion_gateway_configuration : found_arion_gateways) {
+          string subnet_cidr;
+          subnet_cidr = parsed_struct.subnet_states().
+                  find(arion_gateway_configuration.arion_info().subnet_id())
+                          ->second.configuration().cidr();
+          overall_rc = ACA_Zeta_Programming::get_instance().create_arion_config(found_zeta_gateway,subnet_cidr, found_tunnel_id);
       }
 
       break;
