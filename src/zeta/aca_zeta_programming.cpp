@@ -238,12 +238,16 @@ int ACA_Zeta_Programming::create_arion_config(const alcor::schema::GatewayConfig
         _zeta_config_table.find(current_AuxGateway.id(), current_zeta_cfg);
         overall_rc = _create_zeta_group_entry(current_zeta_cfg);
 
-        ACA_LOG_INFO("Creating thread for port %d.\n", oam_port);
-        std::thread *oam_port_listener_thread = NULL;
-        // TODO: Need to track, and kill this thread when this zeta config is deleted.
-        oam_port_listener_thread = new std::thread(std::bind(&start_upd_listener, oam_port));
-        oam_port_listener_thread->detach();
-        ACA_LOG_INFO("Created thread for port %d and it is detached.\n", oam_port);
+        if (std::find(this->_listening_oam_ports.begin(), this->_listening_oam_ports.end(), oam_port) == this->_listening_oam_ports.end()){
+            ACA_LOG_INFO("Creating thread for port %d.\n", oam_port);
+            std::thread *oam_port_listener_thread = NULL;
+            // TODO: Need to track, and kill this thread when this zeta config is deleted.
+            oam_port_listener_thread = new std::thread(std::bind(&start_upd_listener, oam_port));
+            oam_port_listener_thread->detach();
+            ACA_LOG_INFO("Created thread for port %d and it is detached.\n", oam_port);
+        }else{
+            ACA_LOG_INFO("There already is a running thread for port %d, no need to create another one.\n", oam_port);
+        }
     } else {
         for (auto destination : current_AuxGateway.destinations()) {
             FWD_Info target_fwd(destination.ip_address(), destination.mac_address());
@@ -313,16 +317,12 @@ int ACA_Zeta_Programming::create_zeta_config(const alcor::schema::GatewayConfigu
     _zeta_config_table.find(current_AuxGateway.id(), current_zeta_cfg);
     overall_rc = _create_zeta_group_entry(current_zeta_cfg);
 
-    if (std::find(this->_listening_oam_ports.begin(), this->_listening_oam_ports.end(), oam_port) == this->_listening_oam_ports.end()){
-        ACA_LOG_INFO("Creating thread for port %d.\n", oam_port);
-        std::thread *oam_port_listener_thread = NULL;
-        // TODO: Need to track, and kill this thread when this zeta config is deleted.
-        oam_port_listener_thread = new std::thread(std::bind(&start_upd_listener, oam_port));
-        oam_port_listener_thread->detach();
-        ACA_LOG_INFO("Created thread for port %d and it is detached.\n", oam_port);
-    }else{
-        ACA_LOG_INFO("There already is a running thread for port %d, no need to create another one.\n", oam_port);
-    }
+    ACA_LOG_INFO("Creating thread for port %d.\n", oam_port);
+    std::thread *oam_port_listener_thread = NULL;
+    // TODO: Need to track, and kill this thread when this zeta config is deleted.
+    oam_port_listener_thread = new std::thread(std::bind(&start_upd_listener, oam_port));
+    oam_port_listener_thread->detach();
+    ACA_LOG_INFO("Created thread for port %d and it is detached.\n", oam_port);
   } else {
     for (auto destination : current_AuxGateway.destinations()) {
       FWD_Info target_fwd(destination.ip_address(), destination.mac_address());
