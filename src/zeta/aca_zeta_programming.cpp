@@ -229,7 +229,7 @@ int ACA_Zeta_Programming::create_arion_config(const alcor::schema::GatewayConfig
     bool bucket_not_found = false;
     CTSL::HashMap<FWD_Info, int *, FWD_Info_Hash> new_zeta_buckets;
 
-    uint oam_port = current_AuxGateway.zeta_info().port_inband_operation();
+    uint oam_port = current_AuxGateway.arion_info().port_inband_operation();
 
     // -----critical section starts-----
     _zeta_config_table_mutex.lock();

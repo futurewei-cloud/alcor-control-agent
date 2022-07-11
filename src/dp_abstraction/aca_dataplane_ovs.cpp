@@ -486,10 +486,11 @@ int ACA_Dataplane_OVS::update_port_state_workitem(const PortState current_PortSt
 
       for (auto arion_gateway_configuration : found_arion_gateways) {
           string subnet_cidr;
+          ACA_LOG_INFO("Looking for this ");
           subnet_cidr = parsed_struct.subnet_states().
                   find(arion_gateway_configuration.arion_info().subnet_id())
                           ->second.configuration().cidr();
-          overall_rc = ACA_Zeta_Programming::get_instance().create_arion_config(found_zeta_gateway,subnet_cidr, found_tunnel_id);
+          overall_rc = ACA_Zeta_Programming::get_instance().create_arion_config(arion_gateway_configuration, subnet_cidr, found_tunnel_id);
       }
 
       break;
