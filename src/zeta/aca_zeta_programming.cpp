@@ -288,10 +288,10 @@ int ACA_Zeta_Programming::create_arion_config(const alcor::schema::GatewayConfig
         ACA_LOG_INFO("%s", "The vpc currently has not auxgateway set!\n");
         ACA_Vlan_Manager::get_instance().set_zeta_gateway(tunnel_id,
                                                           current_AuxGateway.id());
-        _create_arion_group_punt_rule(tunnel_id, subnet_cidr, current_zeta_cfg->group_id);
     } else {
         ACA_LOG_INFO("%s", "The vpc currently has an auxgateway set!\n");
     }
+    _create_arion_group_punt_rule(tunnel_id, subnet_cidr, current_zeta_cfg->group_id);
 
     ACA_LOG_DEBUG("ACA_Zeta_Programming::create_arion_config <--- Exiting, overall_rc = %d\n",
                   overall_rc);
