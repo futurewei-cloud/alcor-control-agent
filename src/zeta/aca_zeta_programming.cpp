@@ -278,7 +278,6 @@ int ACA_Zeta_Programming::create_arion_config(const alcor::schema::GatewayConfig
     }
     _zeta_config_table_mutex.unlock();
     // -----critical section ends-----
-    _create_group_punt_rule(tunnel_id, current_zeta_cfg->group_id);
 
     // set punt for for this tunnel_id and subnet.
 
