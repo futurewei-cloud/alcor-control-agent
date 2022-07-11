@@ -99,7 +99,7 @@ int ACA_Zeta_Programming::_create_arion_group_punt_rule(uint tunnel_id, const st
 
     for (auto dl_type : dl_types) {
         string opt = "add-flow br-tun table=22,priority=50,dl_vlan=" + to_string(vlan_id) +
-                     ",dl_type=" + to_string(dl_type) + ",nw_dst" + subnet_cidr +
+                     ",dl_type=" + to_string(dl_type) + ",nw_dst=" + subnet_cidr +
                      ",actions=\"strip_vlan,load:" + to_string(tunnel_id) +
                      "->NXM_NX_TUN_ID[],group:" + to_string(group_id) + "\"";
 
