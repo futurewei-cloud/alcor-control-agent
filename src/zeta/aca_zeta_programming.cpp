@@ -91,6 +91,9 @@ int ACA_Zeta_Programming::_create_arion_group_punt_rule(uint tunnel_id, const st
     dl_types.push_back(ETHERTYPE_VLAN);
     dl_types.push_back(ETHERTYPE_ARP);
     dl_types.push_back(ETHERTYPE_IP);
+    dl_types.push_back(IPPROTO_TCP);
+    dl_types.push_back(IPPROTO_UDP);
+    dl_types.push_back(IPPROTO_ICMP);
 
     unsigned long not_care_culminative_time;
     int overall_rc = EXIT_SUCCESS;
