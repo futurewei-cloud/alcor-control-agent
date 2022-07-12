@@ -85,15 +85,15 @@ void ACA_Zeta_Programming::clear_all_data()
 int ACA_Zeta_Programming::_create_arion_group_punt_rule(uint tunnel_id, const string& subnet_cidr, uint group_id)
 {
     ACA_LOG_DEBUG("%s", "ACA_Zeta_Programming::_create_arion_group_punt_rule ---> Entering\n");
-    vector<int> dl_types;
+    vector<string> dl_types;
     // need to specify dl_type for ovs rules, as we need to match the subnet cidr, which makes the ovs rule l3.
     // supporting VLAN, ARP and IP for now.
-    dl_types.push_back(ETHERTYPE_VLAN);
-    dl_types.push_back(ETHERTYPE_ARP);
-    dl_types.push_back(ETHERTYPE_IP);
-    dl_types.push_back(IPPROTO_TCP);
-    dl_types.push_back(IPPROTO_UDP);
-    dl_types.push_back(IPPROTO_ICMP);
+    dl_types.push_back("vlan");
+    dl_types.push_back("arp");
+    dl_types.push_back("ip");
+    dl_types.push_back("tcp");
+    dl_types.push_back("udp");
+    dl_types.push_back("icmp");
 
     unsigned long not_care_culminative_time;
     int overall_rc = EXIT_SUCCESS;
@@ -101,8 +101,8 @@ int ACA_Zeta_Programming::_create_arion_group_punt_rule(uint tunnel_id, const st
     uint vlan_id = ACA_Vlan_Manager::get_instance().get_or_create_vlan_id(tunnel_id);
 
     for (auto dl_type : dl_types) {
-        string opt = "add-flow br-tun table=22,priority=50,dl_vlan=" + to_string(vlan_id) +
-                     ",dl_type=" + to_string(dl_type) + ",nw_dst=" + subnet_cidr +
+        string opt = "add-flow br-tun " + dl_type + ",table=22,priority=50,dl_vlan=" + to_string(vlan_id) +
+                     ",,nw_dst=" + subnet_cidr +
                      ",actions=\"strip_vlan,load:" + to_string(tunnel_id) +
                      "->NXM_NX_TUN_ID[],group:" + to_string(group_id) + "\"";
 
