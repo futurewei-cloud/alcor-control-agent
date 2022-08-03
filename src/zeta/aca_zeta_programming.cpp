@@ -88,12 +88,8 @@ int ACA_Zeta_Programming::_create_arion_group_punt_rule(uint tunnel_id, const st
     vector<string> dl_types;
     // need to specify dl_type for ovs rules, as we need to match the subnet cidr, which makes the ovs rule l3.
     // supporting VLAN, ARP and IP for now.
-    dl_types.push_back("vlan");
     dl_types.push_back("arp");
     dl_types.push_back("ip");
-    dl_types.push_back("tcp");
-    dl_types.push_back("udp");
-    dl_types.push_back("icmp");
 
     unsigned long not_care_culminative_time;
     int overall_rc = EXIT_SUCCESS;
