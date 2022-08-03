@@ -18,4 +18,3 @@ add_compile_options(-Wall -Wextra -pedantic -Wpedantic -Wno-error -Wno-unused-va
 
 add_subdirectory(src)
 add_subdirectory(test)
-add_subdirectory(socket_client)
