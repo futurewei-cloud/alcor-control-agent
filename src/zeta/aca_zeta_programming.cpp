@@ -82,6 +82,42 @@ void ACA_Zeta_Programming::clear_all_data()
   ACA_LOG_DEBUG("%s", "ACA_Zeta_Programming::clear_all_data <--- Exiting\n");
 }
 
+int ACA_Zeta_Programming::_create_arion_group_punt_rule(uint tunnel_id, const string& subnet_cidr, uint group_id)
+{
+    ACA_LOG_DEBUG("%s", "ACA_Zeta_Programming::_create_arion_group_punt_rule ---> Entering\n");
+    vector<string> dl_types;
+    // need to specify dl_type for ovs rules, as we need to match the subnet cidr, which makes the ovs rule l3.
+    // supporting VLAN, ARP and IP for now.
+    dl_types.push_back("arp");
+    dl_types.push_back("ip");
+
+    unsigned long not_care_culminative_time;
+    int overall_rc = EXIT_SUCCESS;
+
+    uint vlan_id = ACA_Vlan_Manager::get_instance().get_or_create_vlan_id(tunnel_id);
+
+    for (auto dl_type : dl_types) {
+        string opt = dl_type + ",table=22,priority=50,dl_vlan=" + to_string(vlan_id) +
+                     ",,nw_dst=" + subnet_cidr +
+                     ",actions=\"strip_vlan,load:" + to_string(tunnel_id) +
+                     "->NXM_NX_TUN_ID[],group:" + to_string(group_id) + "\"";
+
+        ACA_OVS_L2_Programmer::get_instance().execute_openflow(
+                not_care_culminative_time, "br-tun", opt, "add");
+    }
+
+
+    if (overall_rc == EXIT_SUCCESS) {
+        ACA_LOG_INFO("%s", "_create_arion_group_punt_rule succeeded!\n");
+    } else {
+        ACA_LOG_ERROR("_create_arion_group_punt_rule failed!!! overrall_rc: %d\n", overall_rc);
+    }
+
+    ACA_LOG_DEBUG("ACA_Zeta_Programming::_create_arion_group_punt_rule <--- Exiting, overall_rc = %d\n",
+                  overall_rc);
+    return overall_rc;
+}
+
 int ACA_Zeta_Programming::_create_group_punt_rule(uint tunnel_id, uint group_id)
 {
   ACA_LOG_DEBUG("%s", "ACA_Zeta_Programming::_create_group_punt_rule ---> Entering\n");
@@ -182,6 +218,84 @@ void start_upd_listener(uint oam_port_number)
     aca_zeta_oam_server::ACA_Zeta_Oam_Server::get_instance().oams_recv(
             (uint32_t)oam_port_number, packet_content);
   }
+}
+
+int ACA_Zeta_Programming::create_arion_config(const alcor::schema::GatewayConfiguration current_AuxGateway,
+                                              string subnet_cidr, uint tunnel_id){
+    ACA_LOG_DEBUG("%s", "ACA_Zeta_Programming::create_arion_config ---> Entering\n");
+    int overall_rc = EXIT_SUCCESS;
+    zeta_config *current_zeta_cfg;
+    bool bucket_not_found = false;
+    CTSL::HashMap<FWD_Info, int *, FWD_Info_Hash> new_zeta_buckets;
+
+    uint oam_port = current_AuxGateway.arion_info().port_inband_operation();
+
+    // -----critical section starts-----
+    _zeta_config_table_mutex.lock();
+    if (!_zeta_config_table.find(current_AuxGateway.id(), current_zeta_cfg)) {
+        create_entry(current_AuxGateway.id(), oam_port, current_AuxGateway);
+        _zeta_config_table.find(current_AuxGateway.id(), current_zeta_cfg);
+        overall_rc = _create_zeta_group_entry(current_zeta_cfg);
+
+        if (std::find(this->_listening_oam_ports.begin(), this->_listening_oam_ports.end(), oam_port) == this->_listening_oam_ports.end()){
+            ACA_LOG_INFO("Creating thread for port %d.\n", oam_port);
+            std::thread *oam_port_listener_thread = NULL;
+            // TODO: Need to track, and kill this thread when this zeta config is deleted.
+            oam_port_listener_thread = new std::thread(std::bind(&start_upd_listener, oam_port));
+            oam_port_listener_thread->detach();
+            ACA_LOG_INFO("Created thread for port %d and it is detached.\n", oam_port);
+        }else{
+            ACA_LOG_INFO("There already is a running thread for port %d, no need to create another one.\n", oam_port);
+        }
+    } else {
+        for (auto destination : current_AuxGateway.destinations()) {
+            FWD_Info target_fwd(destination.ip_address(), destination.mac_address());
+
+            int *not_used = nullptr;
+
+            if (current_zeta_cfg->zeta_buckets.find(target_fwd, not_used)) {
+                continue;
+            } else {
+                bucket_not_found |= true;
+                break;
+            }
+            new_zeta_buckets.insert(target_fwd, nullptr);
+        }
+
+        // If the buckets have changed, update the buckets and group table rules.
+        if (bucket_not_found == true) {
+            current_zeta_cfg->zeta_buckets.clear();
+            for (auto destination : current_AuxGateway.destinations()) {
+                FWD_Info target_fwd =
+                        FWD_Info(destination.ip_address(), destination.mac_address());
+
+                current_zeta_cfg->zeta_buckets.insert(target_fwd, nullptr);
+            }
+
+            overall_rc = _update_zeta_group_entry(current_zeta_cfg);
+        }
+    }
+    _zeta_config_table_mutex.unlock();
+    // -----critical section ends-----
+
+
+
+    // get the current auxgateway_id of vpc
+    string current_zeta_id = ACA_Vlan_Manager::get_instance().get_zeta_gateway_id(tunnel_id);
+    if (current_zeta_id.empty()) {
+        ACA_LOG_INFO("%s", "The vpc currently has not auxgateway set!\n");
+        ACA_Vlan_Manager::get_instance().set_zeta_gateway(tunnel_id,
+                                                          current_AuxGateway.id());
+    } else {
+        ACA_LOG_INFO("%s", "The vpc currently has an auxgateway set!\n");
+    }
+
+    // set punt for for this tunnel_id and subnet.
+    _create_arion_group_punt_rule(tunnel_id, subnet_cidr, current_zeta_cfg->group_id);
+
+    ACA_LOG_DEBUG("ACA_Zeta_Programming::create_arion_config <--- Exiting, overall_rc = %d\n",
+                  overall_rc);
+    return overall_rc;
 }
 
 int ACA_Zeta_Programming::create_zeta_config(const alcor::schema::GatewayConfiguration current_AuxGateway,

@@ -84,6 +84,9 @@ class ACA_Zeta_Programming {
   int create_zeta_config(const alcor::schema::GatewayConfiguration current_AuxGateway,
                          uint tunnel_id);
 
+  int create_arion_config(const alcor::schema::GatewayConfiguration current_AuxGateway,
+                          string subnet_cidr, uint tunnel_id);
+
   int delete_zeta_config(const alcor::schema::GatewayConfiguration current_AuxGateway,
                          uint tunnel_id);
 
@@ -96,6 +99,7 @@ class ACA_Zeta_Programming {
   bool group_rule_info_correct(uint group_id, string gws_ip, string gws_mac);
 
   private:
+  int _create_arion_group_punt_rule(uint tunnel_id, const string& subnet_cidr, uint group_id);
   int _create_group_punt_rule(uint tunnel_id, uint group_id);
   int _delete_group_punt_rule(uint tunnel_id);
 
@@ -111,6 +115,9 @@ class ACA_Zeta_Programming {
 
   // mutex for reading and writing to _zeta_config_table
   mutex _zeta_config_table_mutex;
+
+  // record if there is already a port of that element listening.
+  vector<uint> _listening_oam_ports;
 };
 } // namespace aca_zeta_programming
 #endif // #ifndef ACA_ZETA_PROGRAMMING_H
