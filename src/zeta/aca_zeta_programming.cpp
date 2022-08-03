@@ -97,13 +97,13 @@ int ACA_Zeta_Programming::_create_arion_group_punt_rule(uint tunnel_id, const st
     uint vlan_id = ACA_Vlan_Manager::get_instance().get_or_create_vlan_id(tunnel_id);
 
     for (auto dl_type : dl_types) {
-        string opt = "add-flow br-tun " + dl_type + ",table=22,priority=50,dl_vlan=" + to_string(vlan_id) +
+        string opt = dl_type + ",table=22,priority=50,dl_vlan=" + to_string(vlan_id) +
                      ",,nw_dst=" + subnet_cidr +
                      ",actions=\"strip_vlan,load:" + to_string(tunnel_id) +
                      "->NXM_NX_TUN_ID[],group:" + to_string(group_id) + "\"";
 
-        ACA_OVS_L2_Programmer::get_instance().execute_openflow_command(
-                opt, not_care_culminative_time, overall_rc);
+        ACA_OVS_L2_Programmer::get_instance().execute_openflow(
+                not_care_culminative_time, "br-tun", opt, "add");
     }
 
 
@@ -278,7 +278,6 @@ int ACA_Zeta_Programming::create_arion_config(const alcor::schema::GatewayConfig
     _zeta_config_table_mutex.unlock();
     // -----critical section ends-----
 
-    // set punt for for this tunnel_id and subnet.
 
 
     // get the current auxgateway_id of vpc
@@ -290,6 +289,8 @@ int ACA_Zeta_Programming::create_arion_config(const alcor::schema::GatewayConfig
     } else {
         ACA_LOG_INFO("%s", "The vpc currently has an auxgateway set!\n");
     }
+
+    // set punt for for this tunnel_id and subnet.
     _create_arion_group_punt_rule(tunnel_id, subnet_cidr, current_zeta_cfg->group_id);
 
     ACA_LOG_DEBUG("ACA_Zeta_Programming::create_arion_config <--- Exiting, overall_rc = %d\n",
