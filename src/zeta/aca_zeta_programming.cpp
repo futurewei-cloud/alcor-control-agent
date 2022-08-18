@@ -99,8 +99,8 @@ int ACA_Zeta_Programming::_create_arion_group_punt_rule(uint tunnel_id, const st
     for (auto dl_type : dl_types) {
         string opt = dl_type + ",table=22,priority=50,dl_vlan=" + to_string(vlan_id) +
                      ",,nw_dst=" + subnet_cidr +
-                     ",actions=\"strip_vlan,load:" + to_string(tunnel_id) +
-                     "->NXM_NX_TUN_ID[],group:" + to_string(group_id) + "\"";
+                     ",actions=strip_vlan,load:" + to_string(tunnel_id) +
+                     "->NXM_NX_TUN_ID[],group:" + to_string(group_id);
 
         ACA_OVS_L2_Programmer::get_instance().execute_openflow(
                 not_care_culminative_time, "br-tun", opt, "add");
