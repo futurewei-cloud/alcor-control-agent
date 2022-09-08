@@ -319,10 +319,5 @@ void GoalStateProvisionerAsyncServer::RunServer(int thread_pool_size)
            &pushGoalStatesStreamAsyncCallInstance->stream_, cq_.get(),
            cq_.get(), pushGoalStatesStreamAsyncCallInstance);
 
-   for (int i = 0; i < thread_pool_size; i++) {
-       ACA_LOG_DEBUG("Pushing the %ldth async worker into the pool", i);
-       marl::schedule([=]{
-           AsyncWorkder();
-       });
-   }
+   AsyncWorkder();
 }
